@@ -15,9 +15,27 @@
     "reviewScore": 88,
     "reviewCount": 824,
     "suitableFor": ["캠핑", "차박"],
-    "pros": ["강한 냉방 성능", "균형 잡힌 가격", "국내 A/S 접근성"],
-    "cons": ["초경량 제품은 아님", "배터리 단독 사용시간은 보통"],
-    "reviewEvidence": ["한낮 텐트 내부 온도를 낮추는 체감이 확실하다는 의견이 많음", "취침 모드에서는 소음이 부담스럽지 않다는 평가가 반복됨"]
+    "pros": [
+      "강한 냉방 성능",
+      "균형 잡힌 가격",
+      "국내 A/S 접근성"
+    ],
+    "cons": [
+      "초경량 제품은 아님",
+      "배터리 단독 사용시간은 보통"
+    ],
+    "reviewEvidence": [
+      "한낮 텐트 내부 온도를 낮추는 체감이 확실하다는 의견이 많음",
+      "취침 모드에서는 소음이 부담스럽지 않다는 평가가 반복됨"
+    ],
+    "popularityScore": 84,
+    "brandTrustScore": 82,
+    "salesRankScore": 80,
+    "availabilityScore": 91,
+    "recencyScore": 88,
+    "dataSource": ["테스트 데이터"],
+    "dataCheckedAt": "2026-08-04",
+    "isDiscontinued": false
   },
   {
     "id": 2,
@@ -35,9 +53,27 @@
     "reviewScore": 81,
     "reviewCount": 516,
     "suitableFor": ["캠핑", "차박"],
-    "pros": ["가벼운 무게", "비교적 낮은 가격", "쉬운 설치"],
-    "cons": ["대형 텐트 냉방에는 한계", "배터리 지속시간이 짧다는 의견"],
-    "reviewEvidence": ["혼자 옮기기 편하고 설치가 단순하다는 평가가 많음", "소형 텐트나 차박 공간에서는 만족도가 높음"]
+    "pros": [
+      "가벼운 무게",
+      "비교적 낮은 가격",
+      "쉬운 설치"
+    ],
+    "cons": [
+      "대형 텐트 냉방에는 한계",
+      "배터리 지속시간이 짧다는 의견"
+    ],
+    "reviewEvidence": [
+      "혼자 옮기기 편하고 설치가 단순하다는 평가가 많음",
+      "소형 텐트나 차박 공간에서는 만족도가 높음"
+    ],
+    "popularityScore": 75,
+    "brandTrustScore": 70,
+    "salesRankScore": 78,
+    "availabilityScore": 89,
+    "recencyScore": 82,
+    "dataSource": ["테스트 데이터"],
+    "dataCheckedAt": "2026-08-04",
+    "isDiscontinued": false
   },
   {
     "id": 3,
@@ -55,9 +91,27 @@
     "reviewScore": 92,
     "reviewCount": 1942,
     "suitableFor": ["캠핑", "차박", "실내 보조냉방"],
-    "pros": ["뛰어난 배터리 확장성", "높은 냉방 성능", "완성도 높은 앱 연동"],
-    "cons": ["높은 가격", "무게와 부피 부담"],
-    "reviewEvidence": ["전용 배터리 조합의 편의성과 지속시간 만족도가 높음", "가격은 높지만 성능과 완성도는 확실하다는 평가가 많음"]
+    "pros": [
+      "뛰어난 배터리 확장성",
+      "높은 냉방 성능",
+      "완성도 높은 앱 연동"
+    ],
+    "cons": [
+      "높은 가격",
+      "무게와 부피 부담"
+    ],
+    "reviewEvidence": [
+      "전용 배터리 조합의 편의성과 지속시간 만족도가 높음",
+      "가격은 높지만 성능과 완성도는 확실하다는 평가가 많음"
+    ],
+    "popularityScore": 94,
+    "brandTrustScore": 93,
+    "salesRankScore": 92,
+    "availabilityScore": 86,
+    "recencyScore": 80,
+    "dataSource": ["테스트 데이터"],
+    "dataCheckedAt": "2026-08-04",
+    "isDiscontinued": false
   },
   {
     "id": 4,
@@ -75,9 +129,27 @@
     "reviewScore": 86,
     "reviewCount": 731,
     "suitableFor": ["캠핑", "차박"],
-    "pros": ["압도적인 휴대성", "전용 배터리 사용", "작은 공간에 적합"],
-    "cons": ["높은 가격", "국내 A/S 접근성 우려"],
-    "reviewEvidence": ["휴대성과 설치 편의성은 경쟁 제품보다 확실히 좋다는 평가", "작은 공간에서는 효과적이지만 넓은 텐트에는 부족할 수 있다는 의견"]
+    "pros": [
+      "압도적인 휴대성",
+      "전용 배터리 사용",
+      "작은 공간에 적합"
+    ],
+    "cons": [
+      "높은 가격",
+      "국내 A/S 접근성 우려"
+    ],
+    "reviewEvidence": [
+      "휴대성과 설치 편의성은 경쟁 제품보다 확실히 좋다는 평가",
+      "작은 공간에서는 효과적이지만 넓은 텐트에는 부족할 수 있다는 의견"
+    ],
+    "popularityScore": 87,
+    "brandTrustScore": 81,
+    "salesRankScore": 84,
+    "availabilityScore": 77,
+    "recencyScore": 76,
+    "dataSource": ["테스트 데이터"],
+    "dataCheckedAt": "2026-08-04",
+    "isDiscontinued": false
   },
   {
     "id": 5,
@@ -95,8 +167,26 @@
     "reviewScore": 78,
     "reviewCount": 288,
     "suitableFor": ["차박", "실내 보조냉방"],
-    "pros": ["합리적인 가격", "단순한 조작", "준수한 기본 성능"],
-    "cons": ["소음 호불호", "배터리 성능이 약함"],
-    "reviewEvidence": ["가격 대비 냉방 체감은 괜찮다는 평가", "강풍 모드 소음이 크다는 의견이 반복됨"]
+    "pros": [
+      "합리적인 가격",
+      "단순한 조작",
+      "준수한 기본 성능"
+    ],
+    "cons": [
+      "소음 호불호",
+      "배터리 성능이 약함"
+    ],
+    "reviewEvidence": [
+      "가격 대비 냉방 체감은 괜찮다는 평가",
+      "강풍 모드 소음이 크다는 의견이 반복됨"
+    ],
+    "popularityScore": 67,
+    "brandTrustScore": 68,
+    "salesRankScore": 65,
+    "availabilityScore": 81,
+    "recencyScore": 74,
+    "dataSource": ["테스트 데이터"],
+    "dataCheckedAt": "2026-08-04",
+    "isDiscontinued": false
   }
 ]
