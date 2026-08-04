@@ -1,0 +1,21 @@
+Project D v3.2 업데이트 방법
+
+1. VS Code 터미널에서 npm run dev가 실행 중이면 Ctrl+C로 종료합니다.
+2. 이 압축파일 안의 frontend 폴더를 기존 Project D 폴더의 frontend 폴더와 교체합니다.
+   - 기존 frontend 폴더는 frontend_backup_v31로 이름을 바꿔 보관하세요.
+3. VS Code에서 새 frontend 폴더를 엽니다.
+4. 터미널에서 npm install을 실행합니다.
+5. npm run build를 실행해 성공 여부를 확인합니다.
+6. 성공하면 아래 명령어를 한 줄씩 실행합니다.
+   git add .
+   git commit -m "Upgrade landing page to v3.2"
+   git push
+7. Vercel이 자동으로 새 버전을 배포합니다.
+
+이번 버전 포함 내용
+- 메인 화면 프리미엄 디자인 개편
+- 실제 추천 결과 예시 카드 추가
+- AI 구매 의사결정 플랫폼 메시지 강화
+- 제품군 확장 영역 개선
+- 모바일 반응형 개선
+- /search, /question, /result 프로덕션 빌드 오류 수정 포함
