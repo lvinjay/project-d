@@ -1,13 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Header from "../../../components/Header";
+import AutoReviewReceiver from "../../../components/AutoReviewReceiver";
+import ClipboardReviewLoader from "../../../components/ClipboardReviewLoader";
+import { supabase } from "../../../lib/supabase";
 
 type ReviewPoint = {
   topic: string;
   summary: string;
   evidenceCount: number;
 };
+
+type CriterionScoreMap = Record<string, number | null>;
+type CriterionReasonMap = Record<string, string>;
 
 type ReviewAnalysis = {
   productName: string;
@@ -19,6 +31,19 @@ type ReviewAnalysis = {
   bestFor: string[];
   notFor: string[];
   confidenceScore: number;
+  criterionScores: CriterionScoreMap;
+  criterionReasons: CriterionReasonMap;
+};
+
+type RegisteredProduct = {
+  id: string;
+  category: string;
+  product_name: string;
+  source_url: string;
+  review_analysis: ReviewAnalysis | null;
+  criterion_scores: CriterionScoreMap;
+  created_at: string;
+  updated_at: string;
 };
 
 type AnalyzeResponse = {
@@ -27,21 +52,94 @@ type AnalyzeResponse = {
   message?: string;
 };
 
-export default function AdminReviewPage() {
-  const [productName, setProductName] = useState(
-    "브리즐 이동식 캠핑 에어컨",
-  );
+function AdminReviewContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const [reviewText, setReviewText] = useState("");
+  const productId = searchParams.get("id") ?? "";
+
+  const [product, setProduct] =
+    useState<RegisteredProduct | null>(null);
+
+  const [productName, setProductName] =
+    useState("");
+
+  const [reviewText, setReviewText] =
+    useState("");
 
   const [analysis, setAnalysis] =
     useState<ReviewAnalysis | null>(null);
 
+  const [isLoadingProduct, setIsLoadingProduct] =
+    useState(true);
+
   const [isAnalyzing, setIsAnalyzing] =
     useState(false);
 
+  const [isSaving, setIsSaving] =
+    useState(false);
+
+  const [saveMessage, setSaveMessage] =
+    useState("");
+
   const [errorMessage, setErrorMessage] =
     useState("");
+
+  const loadProduct = useCallback(async () => {
+    if (!productId) {
+      setErrorMessage(
+        "분석할 제품 정보가 없습니다. 관리자 제품 목록에서 리뷰 분석 버튼을 눌러 주세요.",
+      );
+      setIsLoadingProduct(false);
+      return;
+    }
+
+    setIsLoadingProduct(true);
+    setErrorMessage("");
+
+    try {
+      const { data, error } = await supabase
+        .from("products")
+        .select(
+          "id, category, product_name, source_url, review_analysis, criterion_scores, created_at, updated_at",
+        )
+        .eq("id", productId)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      const loadedProduct =
+        data as RegisteredProduct;
+
+      setProduct(loadedProduct);
+      setProductName(loadedProduct.product_name);
+
+      if (loadedProduct.review_analysis) {
+        setAnalysis(
+          loadedProduct.review_analysis,
+        );
+      }
+    } catch (error) {
+      console.error(
+        "제품 정보 불러오기 실패:",
+        error,
+      );
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "제품 정보를 불러오지 못했습니다.",
+      );
+    } finally {
+      setIsLoadingProduct(false);
+    }
+  }, [productId]);
+
+  useEffect(() => {
+    void loadProduct();
+  }, [loadProduct]);
 
   function getReviews() {
     return reviewText
@@ -50,11 +148,66 @@ export default function AdminReviewPage() {
       .filter((review) => review.length > 0);
   }
 
+  async function saveAnalysis(
+    nextAnalysis: ReviewAnalysis,
+  ) {
+    if (!productId) {
+      throw new Error(
+        "저장할 제품 ID가 없습니다.",
+      );
+    }
+
+    setIsSaving(true);
+    setSaveMessage("");
+
+    try {
+      const { error } = await supabase
+        .from("products")
+        .update({
+          review_analysis: nextAnalysis,
+          criterion_scores:
+            nextAnalysis.criterionScores,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", productId);
+
+      if (error) {
+        throw error;
+      }
+
+      setProduct((current) =>
+        current
+          ? {
+              ...current,
+              review_analysis: nextAnalysis,
+              criterion_scores:
+                nextAnalysis.criterionScores,
+              updated_at:
+                new Date().toISOString(),
+            }
+          : current,
+      );
+
+      setSaveMessage(
+        "AI 분석 결과를 Supabase에 저장했습니다.",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   async function analyzeReviews() {
     const normalizedProductName =
       productName.trim();
 
     const reviews = getReviews();
+
+    if (!productId) {
+      alert(
+        "관리자 제품 목록에서 분석할 제품을 선택하세요.",
+      );
+      return;
+    }
 
     if (!normalizedProductName) {
       alert("제품명을 입력하세요.");
@@ -70,6 +223,7 @@ export default function AdminReviewPage() {
 
     setIsAnalyzing(true);
     setAnalysis(null);
+    setSaveMessage("");
     setErrorMessage("");
 
     try {
@@ -78,10 +232,14 @@ export default function AdminReviewPage() {
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
           },
           body: JSON.stringify({
-            productName: normalizedProductName,
+            productName:
+              normalizedProductName,
+            category:
+              product?.category ?? "",
             reviews,
           }),
         },
@@ -99,12 +257,19 @@ export default function AdminReviewPage() {
 
       if (!result.analysis) {
         throw new Error(
-          "분석 결과가 없습니다.",
+          "AI 분석 결과가 없습니다.",
         );
       }
 
       setAnalysis(result.analysis);
+
+      await saveAnalysis(result.analysis);
     } catch (error) {
+      console.error(
+        "리뷰 분석 또는 저장 실패:",
+        error,
+      );
+
       setErrorMessage(
         error instanceof Error
           ? error.message
@@ -130,6 +295,29 @@ export default function AdminReviewPage() {
     );
   }
 
+  function returnToProducts() {
+    router.push("/admin");
+  }
+
+  if (isLoadingProduct) {
+    return (
+      <main>
+        <Header />
+
+        <section className="container emptyState">
+          <h1>
+            Supabase에서 제품 정보를
+            불러오는 중입니다.
+          </h1>
+
+          <p className="sectionLead">
+            잠시만 기다려 주세요.
+          </p>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main>
       <Header />
@@ -147,19 +335,115 @@ export default function AdminReviewPage() {
         </h1>
 
         <p className="sectionLead">
-          상품 리뷰를 한 줄에 하나씩
-          붙여넣으면 반복되는 장점과 단점,
-          구매 전 주의사항을 분석합니다.
+          리뷰 분석 결과는 제품별로
+          Supabase에 저장됩니다.
         </p>
 
-        <div
-          className="card"
-          style={{
-            marginTop: 28,
-            padding: 28,
-          }}
+        <button
+          type="button"
+          className="secondaryButton"
+          onClick={returnToProducts}
+          style={{ marginTop: 18 }}
         >
-          <div className="field">
+          제품 목록으로 돌아가기
+        </button>
+
+        {product ? (
+          <div
+            className="card"
+            style={{
+              marginTop: 24,
+              padding: 22,
+              background: "#eef6ff",
+              border:
+                "1px solid #b9d8ff",
+            }}
+          >
+            <strong>선택한 제품</strong>
+
+            <h2
+              style={{
+                margin: "12px 0 8px",
+              }}
+            >
+              {product.product_name}
+            </h2>
+
+            <p
+              style={{
+                margin: 0,
+                color: "#315b88",
+              }}
+            >
+              카테고리: {product.category}
+            </p>
+
+            <a
+              href={product.source_url}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: "inline-block",
+                marginTop: 12,
+                wordBreak: "break-all",
+              }}
+            >
+              상품 페이지 열기
+            </a>
+
+            {product.review_analysis ? (
+              <p
+                style={{
+                  margin: "14px 0 0",
+                  fontWeight: 700,
+                  color: "#067647",
+                }}
+              >
+                저장된 리뷰 분석 결과가
+                있습니다.
+              </p>
+            ) : (
+              <p
+                style={{
+                  margin: "14px 0 0",
+                  color: "#667085",
+                }}
+              >
+                아직 저장된 리뷰 분석 결과가
+                없습니다.
+              </p>
+            )}
+          </div>
+        ) : null}
+
+<div
+  className="card"
+  style={{
+    marginTop: 24,
+    padding: 28,
+  }}
+>
+  <AutoReviewReceiver
+    productId={productId}
+    disabled={
+      isLoadingProduct ||
+      isAnalyzing ||
+      isSaving
+    }
+onReviewsReceived={(nextReviewText) => {
+  setReviewText(nextReviewText);
+  setSaveMessage("");
+  setErrorMessage("");
+
+  setTimeout(() => {
+    document
+      .getElementById("analyze-button")
+      ?.click();
+  }, 500);
+}}
+  />
+
+  <div className="field">
             <label htmlFor="productName">
               <span>제품명</span>
             </label>
@@ -174,14 +458,15 @@ export default function AdminReviewPage() {
                 )
               }
               placeholder="제품명을 입력하세요."
+              disabled={
+                isAnalyzing || isSaving
+              }
             />
           </div>
 
           <div className="field">
             <label htmlFor="reviews">
-              <span>
-                리뷰 내용
-              </span>
+              <span>리뷰 내용</span>
 
               <strong>
                 {getReviews().length}개
@@ -201,6 +486,9 @@ export default function AdminReviewPage() {
                 "리뷰를 한 줄에 하나씩 붙여넣으세요.\n예: 냉방 성능은 좋지만 생각보다 무겁습니다."
               }
               rows={12}
+              disabled={
+                isAnalyzing || isSaving
+              }
               style={{
                 resize: "vertical",
                 minHeight: 260,
@@ -210,57 +498,114 @@ export default function AdminReviewPage() {
           </div>
 
           <div
+  style={{
+    display: "grid",
+    gap: 12,
+    marginTop: 14,
+  }}
+>
+  <ClipboardReviewLoader
+    disabled={isAnalyzing || isSaving}
+    onReviewsLoaded={(nextReviewText) => {
+      setReviewText(nextReviewText);
+      setSaveMessage("");
+      setErrorMessage("");
+    }}
+  />
+
+  <div
+    style={{
+      display: "flex",
+      gap: 12,
+      flexWrap: "wrap",
+    }}
+  >
+    <button
+      type="button"
+      className="secondaryButton"
+      onClick={insertTestReviews}
+      disabled={
+        isAnalyzing || isSaving
+      }
+    >
+      테스트 리뷰 넣기
+    </button>
+
+<button
+  id="analyze-button"
+  type="button"
+  className="primaryButton"
+  onClick={analyzeReviews}
+      disabled={
+        isAnalyzing ||
+        isSaving ||
+        !product
+      }
+      style={{
+        flex: 1,
+        minWidth: 220,
+      }}
+    >
+      {isAnalyzing
+        ? "AI가 리뷰를 분석하는 중..."
+        : isSaving
+          ? "분석 결과 저장 중..."
+          : analysis
+            ? "리뷰 다시 분석하기"
+            : "리뷰 AI 분석 시작"}
+    </button>
+  </div>
+</div>
+        </div>
+
+        {saveMessage ? (
+          <div
+            className="card"
             style={{
-              display: "flex",
-              gap: 12,
-              flexWrap: "wrap",
-              marginTop: 14,
+              marginTop: 20,
+              padding: 20,
+              background: "#f6fef9",
+              border:
+                "1px solid #abefc6",
             }}
           >
-            <button
-              type="button"
-              className="secondaryButton"
-              onClick={insertTestReviews}
-              disabled={isAnalyzing}
+            <strong
+              style={{ color: "#067647" }}
             >
-              테스트 리뷰 넣기
-            </button>
+              저장 완료
+            </strong>
 
-            <button
-              type="button"
-              className="primaryButton"
-              onClick={analyzeReviews}
-              disabled={isAnalyzing}
+            <p
               style={{
-                flex: 1,
-                minWidth: 220,
+                margin: "8px 0 0",
+                color: "#067647",
               }}
             >
-              {isAnalyzing
-                ? "AI가 리뷰를 분석하는 중..."
-                : "리뷰 AI 분석 시작"}
-            </button>
+              {saveMessage}
+            </p>
           </div>
-        </div>
+        ) : null}
 
         {errorMessage ? (
           <div
             className="card"
             style={{
-              marginTop: 24,
-              padding: 22,
-              border: "1px solid #f2b8b5",
+              marginTop: 20,
+              padding: 20,
               background: "#fff4f4",
+              border:
+                "1px solid #f2b8b5",
             }}
           >
             <strong>
-              분석에 실패했습니다.
+              오류가 발생했습니다.
             </strong>
 
             <p
               style={{
                 margin: "8px 0 0",
                 color: "#b42318",
+                lineHeight: 1.7,
               }}
             >
               {errorMessage}
@@ -281,7 +626,8 @@ export default function AdminReviewPage() {
               style={{ padding: 28 }}
             >
               <span className="pill">
-                리뷰 {analysis.reviewCount}개 분석
+                리뷰{" "}
+                {analysis.reviewCount}개 분석
               </span>
 
               <h2
@@ -319,7 +665,9 @@ export default function AdminReviewPage() {
               className="card"
               style={{ padding: 28 }}
             >
-              <h2>반복적으로 확인된 장점</h2>
+              <h2>
+                반복적으로 확인된 장점
+              </h2>
 
               {analysis.positivePoints
                 .length === 0 ? (
@@ -342,7 +690,8 @@ export default function AdminReviewPage() {
                           padding: 18,
                           border:
                             "1px solid #d1fadf",
-                          background: "#f6fef9",
+                          background:
+                            "#f6fef9",
                           borderRadius: 14,
                         }}
                       >
@@ -352,8 +701,7 @@ export default function AdminReviewPage() {
 
                         <p
                           style={{
-                            margin:
-                              "8px 0 0",
+                            margin: "8px 0",
                             lineHeight: 1.7,
                           }}
                         >
@@ -366,7 +714,10 @@ export default function AdminReviewPage() {
                           }}
                         >
                           관련 근거 약{" "}
-                          {point.evidenceCount}건
+                          {
+                            point.evidenceCount
+                          }
+                          건
                         </small>
                       </article>
                     ),
@@ -379,7 +730,9 @@ export default function AdminReviewPage() {
               className="card"
               style={{ padding: 28 }}
             >
-              <h2>반복적으로 확인된 단점</h2>
+              <h2>
+                반복적으로 확인된 단점
+              </h2>
 
               {analysis.negativePoints
                 .length === 0 ? (
@@ -402,7 +755,8 @@ export default function AdminReviewPage() {
                           padding: 18,
                           border:
                             "1px solid #fedf89",
-                          background: "#fffaeb",
+                          background:
+                            "#fffaeb",
                           borderRadius: 14,
                         }}
                       >
@@ -412,8 +766,7 @@ export default function AdminReviewPage() {
 
                         <p
                           style={{
-                            margin:
-                              "8px 0 0",
+                            margin: "8px 0",
                             lineHeight: 1.7,
                           }}
                         >
@@ -426,7 +779,10 @@ export default function AdminReviewPage() {
                           }}
                         >
                           관련 근거 약{" "}
-                          {point.evidenceCount}건
+                          {
+                            point.evidenceCount
+                          }
+                          건
                         </small>
                       </article>
                     ),
@@ -441,20 +797,28 @@ export default function AdminReviewPage() {
             >
               <h2>구매 전 확인사항</h2>
 
-              <ul
-                style={{
-                  lineHeight: 1.9,
-                  paddingLeft: 22,
-                }}
-              >
-                {analysis.cautions.map(
-                  (caution, index) => (
-                    <li key={index}>
-                      {caution}
-                    </li>
-                  ),
-                )}
-              </ul>
+              {analysis.cautions.length ===
+              0 ? (
+                <p className="sectionLead">
+                  별도로 확인된 주의사항이
+                  없습니다.
+                </p>
+              ) : (
+                <ul
+                  style={{
+                    lineHeight: 1.9,
+                    paddingLeft: 22,
+                  }}
+                >
+                  {analysis.cautions.map(
+                    (item, index) => (
+                      <li key={index}>
+                        {item}
+                      </li>
+                    ),
+                  )}
+                </ul>
+              )}
             </section>
 
             <section
@@ -501,5 +865,33 @@ export default function AdminReviewPage() {
         ) : null}
       </section>
     </main>
+  );
+}
+
+function AdminReviewLoading() {
+  return (
+    <main>
+      <Header />
+
+      <section className="container emptyState">
+        <h1>
+          제품 분석 화면을 준비하고 있습니다.
+        </h1>
+
+        <p className="sectionLead">
+          잠시만 기다려 주세요.
+        </p>
+      </section>
+    </main>
+  );
+}
+
+export default function AdminReviewPage() {
+  return (
+    <Suspense
+      fallback={<AdminReviewLoading />}
+    >
+      <AdminReviewContent />
+    </Suspense>
   );
 }
