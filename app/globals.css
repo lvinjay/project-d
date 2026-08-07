@@ -642,3 +642,77 @@ button, input, select { font: inherit; }
     text-align: left;
   }
 }
+
+
+/* Mobile header menu */
+.mobileMenuButton {
+  display: none;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  color: #101828;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .headerInner {
+    position: relative;
+    padding: 14px 18px;
+  }
+
+  .brand {
+    font-size: 21px;
+  }
+
+  .brand small {
+    display: block;
+    font-size: 9px;
+    letter-spacing: 1.4px;
+  }
+
+  .mobileMenuButton {
+    display: inline-flex;
+  }
+
+  .nav {
+    display: none;
+    position: absolute;
+    top: calc(100% + 1px);
+    left: 12px;
+    right: 12px;
+    padding: 14px;
+    gap: 6px;
+    flex-direction: column;
+    align-items: stretch;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: 0 18px 45px rgba(16, 24, 40, 0.16);
+  }
+
+  .nav.navOpen {
+    display: flex;
+  }
+
+  .nav a {
+    display: block;
+    width: 100%;
+    padding: 13px 14px;
+    border-radius: 10px;
+  }
+
+  .nav a:not(.headerCta):hover {
+    background: #f2f4f7;
+  }
+
+  .nav .headerCta {
+    margin-top: 4px;
+    text-align: center;
+  }
+}
