@@ -716,3 +716,293 @@ button, input, select { font: inherit; }
     text-align: center;
   }
 }
+
+/* =========================================================
+   Project D - Final Mobile Responsive Fix
+   PC layout is untouched
+   ========================================================= */
+@media (max-width: 650px) {
+
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .container,
+  .advisorResultContainer,
+  .questionContainer,
+  .advisorContainer {
+    width: 100%;
+    max-width: 100%;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  /* 결과 페이지 상단 */
+  .advisorResultHero {
+    padding: 42px 0 38px;
+  }
+
+  .advisorResultHero h1 {
+    font-size: 32px;
+    line-height: 1.18;
+    letter-spacing: -1.3px;
+    word-break: keep-all;
+  }
+
+  .advisorResultHero p {
+    font-size: 15px;
+    line-height: 1.65;
+    word-break: keep-all;
+  }
+
+  /* 1위 추천 */
+  .advisorWinnerCard {
+    display: block;
+    width: 100%;
+    padding: 22px 18px;
+  }
+
+  .advisorWinnerCard h2 {
+    font-size: 27px;
+    line-height: 1.3;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  .advisorWinnerCard p {
+    font-size: 14px;
+    line-height: 1.7;
+    word-break: keep-all;
+  }
+
+  .advisorWinnerScore {
+    width: 100%;
+    min-width: 0;
+    margin-top: 20px;
+    padding: 18px;
+  }
+
+  /* 결과 정보 영역 */
+  .advisorResultInfoGrid,
+  .advisorCriteriaGrid,
+  .advisorBreakdownTable {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .advisorResultPanel,
+  .advisorPriorityEvidence {
+    min-width: 0;
+    padding: 20px 18px;
+  }
+
+  /* 순위 제목 */
+  .advisorRankingHeading {
+    display: block;
+  }
+
+  .advisorRankingHeading h2 {
+    font-size: 25px;
+    line-height: 1.3;
+    word-break: keep-all;
+  }
+
+  .advisorRankingHeading p {
+    margin-top: 14px;
+    font-size: 14px;
+    line-height: 1.7;
+    word-break: keep-all;
+  }
+
+  /* 핵심: 모바일 순위 카드 완전 1열화 */
+  .advisorRankCard {
+    width: 100%;
+    min-width: 0;
+    padding: 18px 16px;
+    overflow: hidden;
+  }
+
+  .advisorRankMain {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    width: 100%;
+    min-width: 0;
+    gap: 12px;
+    align-items: start;
+  }
+
+  .advisorRankNumber {
+    width: 44px;
+    height: 44px;
+    font-size: 19px;
+  }
+
+  .advisorRankContent {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .advisorRankContent h3 {
+    width: 100%;
+    margin: 0 0 8px;
+    font-size: 19px;
+    line-height: 1.45;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    white-space: normal;
+  }
+
+  .advisorRankContent p {
+    width: 100%;
+    font-size: 14px;
+    line-height: 1.65;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    white-space: normal;
+  }
+
+  .advisorRankMeta {
+    width: 100%;
+    gap: 6px;
+  }
+
+  .advisorRankMeta span {
+    max-width: 100%;
+    white-space: normal;
+    word-break: keep-all;
+  }
+
+  .advisorRankScore {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+    margin-top: 4px;
+    text-align: left;
+  }
+
+  .advisorRankScore strong {
+    font-size: 30px;
+  }
+
+  /* 버튼 */
+  .advisorRankActions,
+  .advisorResultActions {
+    width: 100%;
+    justify-content: stretch;
+    gap: 8px;
+  }
+
+  .advisorRankActions > *,
+  .advisorResultActions > * {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+    text-align: center;
+  }
+
+  /* 세부 점수 */
+  .advisorBreakdownTable {
+    width: 100%;
+  }
+
+  .advisorBreakdownTable div {
+    min-width: 0;
+  }
+
+  /* 구매상담 화면 */
+  .advisorHero {
+    padding: 46px 16px 42px;
+  }
+
+  .advisorHero h1 {
+    font-size: 34px;
+    line-height: 1.2;
+    letter-spacing: -1.5px;
+    word-break: keep-all;
+  }
+
+  .advisorHero p {
+    font-size: 15px;
+    line-height: 1.65;
+    word-break: keep-all;
+  }
+
+  .advisorSearch {
+    width: 100%;
+  }
+
+  .advisorIntroCard {
+    padding: 20px 18px;
+  }
+
+  .advisorIntroCard h2 {
+    font-size: 26px;
+    line-height: 1.35;
+    word-break: keep-all;
+  }
+
+  .advisorSection {
+    margin-top: 42px;
+  }
+
+  .advisorSectionHeading h2 {
+    font-size: 27px;
+    line-height: 1.35;
+    word-break: keep-all;
+  }
+
+  /* 질문 화면 */
+  .questionHero {
+    padding: 46px 16px 42px;
+  }
+
+  .questionHero h1 {
+    font-size: 32px;
+    line-height: 1.2;
+    letter-spacing: -1.4px;
+    word-break: keep-all;
+  }
+
+  .questionHero p {
+    font-size: 15px;
+  }
+
+  .questionBlock {
+    margin-top: 36px;
+  }
+
+  .questionHeading h2 {
+    font-size: 25px;
+    line-height: 1.35;
+    word-break: keep-all;
+  }
+
+  .questionSummary {
+    padding: 21px 18px;
+  }
+
+  .questionSummary h2 {
+    font-size: 26px;
+    line-height: 1.35;
+    word-break: keep-all;
+  }
+
+  /* sticky 하단 영역 모바일 */
+  .advisorStickyAction,
+  .questionActionBar,
+  .stickyAction {
+    position: static;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .advisorStickyAction button,
+  .questionActionBar button,
+  .stickyAction button {
+    width: 100%;
+  }
+}
+
