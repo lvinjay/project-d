@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     const { data, error } = await supabase
       .from("category_profiles")
       .select(
-        "id, category, title, introduction, criteria, use_cases, candidate_limit, updated_at",
+        "id, category, title, introduction, criteria, personalization_questions, use_cases, candidate_limit, updated_at",
       )
       .eq("category", category)
       .maybeSingle();

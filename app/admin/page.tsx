@@ -9,12 +9,26 @@ import { useRouter } from "next/navigation";
 
 import Header from "../../components/Header";
 import BookmarkletCopyButton from "../../components/BookmarkletCopyButton";
+import DetailBookmarkletCopyButton from "../../components/DetailBookmarkletCopyButton";
 import ProductEditPanel, {
   type EditableProduct,
 } from "../../components/ProductEditPanel";
 import { supabase } from "../../lib/supabase";
 
-type RegisteredProduct = EditableProduct;
+type RegisteredProduct = EditableProduct & {
+  product_detail_analysis?: Record<string, unknown> | null;
+  product_detail_updated_at?: string | null;
+  review_raw_data?: {
+    reviews?: string[];
+    collectionStats?: {
+      total: number;
+      ranking: number;
+      latest: number;
+      lowScore: number;
+    } | null;
+    savedAt?: string;
+  } | null;
+};
 
 type ProductDraft = {
   category: string;
@@ -33,8 +47,42 @@ type ExtractProductResponse = {
   };
 };
 
+type FetchReviewsResponse = {
+  success?: boolean;
+  message?: string;
+  count?: number;
+  reviewTexts?: string[];
+  collectionStats?: {
+    total: number;
+    ranking: number;
+    latest: number;
+    lowScore: number;
+  };
+};
+
+type AnalyzeReviewsResponse = {
+  success?: boolean;
+  message?: string;
+  analysis?: Record<string, unknown>;
+};
+
+type ProductDetailAnalysisResponse = {
+  success: boolean;
+  message?: string;
+  analysis?: {
+    price?: string | null;
+    keySpecs?: Array<{ name: string; value: string; evidence?: string }>;
+    sellerClaims?: string[];
+    differentiators?: string[];
+    installationAndUse?: string[];
+    warrantyAndService?: string[];
+    maintenanceAndConsumables?: string[];
+    cautions?: string[];
+  };
+};
+
 const PRODUCT_SELECT_FIELDS =
-  "id, category, product_name, source_url, checkout_merchant_no, origin_product_no, review_analysis, created_at, updated_at";
+  "id, category, product_name, source_url, checkout_merchant_no, origin_product_no, review_analysis, review_raw_data, product_detail_analysis, product_detail_updated_at, created_at, updated_at";
 
 const initialDraft: ProductDraft = {
   category: "캠핑용 에어컨",
@@ -71,7 +119,28 @@ export default function AdminPage() {
   const [isExtracting, setIsExtracting] =
     useState(false);
 
+  const [isGeneratingCriteria, setIsGeneratingCriteria] =
+    useState(false);
+
+  const [criteriaMessage, setCriteriaMessage] =
+    useState("");
+
+  const [isGeneratingProductScores, setIsGeneratingProductScores] =
+    useState(false);
+
+  const [productScoresMessage, setProductScoresMessage] =
+    useState("");
+
+  const [isBulkReanalyzingReviews, setIsBulkReanalyzingReviews] =
+    useState(false);
+
+  const [bulkReviewMessage, setBulkReviewMessage] =
+    useState("");
+
   const [deletingId, setDeletingId] =
+    useState("");
+
+  const [analyzingDetailId, setAnalyzingDetailId] =
     useState("");
 
   const [editingId, setEditingId] =
@@ -246,6 +315,68 @@ export default function AdminPage() {
       );
     } finally {
       setIsExtracting(false);
+    }
+  }
+
+  async function analyzeProductDetail(
+    product: RegisteredProduct,
+  ) {
+    setAnalyzingDetailId(product.id);
+    setErrorMessage("");
+
+    try {
+      const response = await fetch(
+        "/api/analyze-product-detail",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            productId: product.id,
+          }),
+        },
+      );
+
+      const contentType =
+        response.headers.get("content-type") ?? "";
+
+      if (!contentType.includes("application/json")) {
+        const text = await response.text();
+        throw new Error(
+          `상세정보 분석 API가 JSON이 아닌 응답을 반환했습니다. (${response.status}) ${text.slice(0, 120)}`,
+        );
+      }
+
+      const result =
+        (await response.json()) as ProductDetailAnalysisResponse;
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message ??
+            "제품 상세정보 분석에 실패했습니다.",
+        );
+      }
+
+      alert(
+        result.message ??
+          "제품 상세정보 AI 분석을 완료했습니다.",
+      );
+
+      await loadProducts();
+    } catch (error) {
+      console.error(
+        "제품 상세정보 분석 실패:",
+        error,
+      );
+
+      alert(
+        error instanceof Error
+          ? error.message
+          : "제품 상세정보 분석에 실패했습니다.",
+      );
+    } finally {
+      setAnalyzingDetailId("");
     }
   }
 
@@ -425,8 +556,327 @@ export default function AdminPage() {
     );
   }
 
+  async function bulkReanalyzeReviewEvidence() {
+    const category = draft.category.trim();
+
+    if (!category) {
+      alert("카테고리를 입력하세요.");
+      return;
+    }
+
+    const categoryProducts = registeredProducts.filter(
+      (product) => product.category === category,
+    );
+
+    const targets = categoryProducts.filter(
+      (product) =>
+        Array.isArray(product.review_raw_data?.reviews) &&
+        (product.review_raw_data?.reviews?.length ?? 0) > 0,
+    );
+
+    if (targets.length === 0) {
+      alert(
+        `"${category}" 카테고리에 재분석용 리뷰 원문이 저장된 제품이 없습니다.`,
+      );
+      return;
+    }
+
+    if (targets.length !== categoryProducts.length) {
+      const missingNames = categoryProducts
+        .filter(
+          (product) =>
+            !Array.isArray(product.review_raw_data?.reviews) ||
+            (product.review_raw_data?.reviews?.length ?? 0) === 0,
+        )
+        .map((product) => product.product_name)
+        .join(", ");
+
+      alert(
+        `리뷰 원문이 없는 제품이 있어 일괄 재분석을 중단합니다.\n\n${missingNames}\n\n해당 제품의 리뷰를 먼저 한 번 수집해 저장해 주세요.`,
+      );
+      return;
+    }
+
+    setIsBulkReanalyzingReviews(true);
+    setBulkReviewMessage("");
+    setErrorMessage("");
+
+    let completed = 0;
+
+    try {
+      for (const product of targets) {
+        const reviews =
+          product.review_raw_data?.reviews ?? [];
+        const savedCollectionStats =
+          product.review_raw_data?.collectionStats ?? null;
+
+        setBulkReviewMessage(
+          `${targets.length}개 중 ${completed + 1}번째: ${product.product_name} · DB 저장 리뷰 ${reviews.length}개 AI 재분석 중...`,
+        );
+
+        const analyzeResponse = await fetch(
+          "/api/analyze-reviews",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              productName: product.product_name,
+              category: product.category,
+              reviews,
+              collectionStats: savedCollectionStats,
+            }),
+          },
+        );
+
+        const analyzeResult =
+          (await analyzeResponse.json()) as AnalyzeReviewsResponse;
+
+        if (
+          !analyzeResponse.ok ||
+          !analyzeResult.success ||
+          !analyzeResult.analysis
+        ) {
+          throw new Error(
+            `${product.product_name}: ${
+              analyzeResult.message ??
+              "저장된 리뷰 원문의 AI 재분석에 실패했습니다."
+            }`,
+          );
+        }
+
+        const { error: updateError } =
+          await supabase
+            .from("products")
+            .update({
+              review_analysis:
+                analyzeResult.analysis,
+              updated_at:
+                new Date().toISOString(),
+            })
+            .eq("id", product.id);
+
+        if (updateError) {
+          throw updateError;
+        }
+
+        completed += 1;
+      }
+
+      setBulkReviewMessage(
+        `${completed}개 제품의 저장 리뷰 재분석 완료. 제품별 점수를 새 근거로 다시 계산하는 중...`,
+      );
+
+      const scoreResponse = await fetch(
+        "/api/generate-product-scores",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ category }),
+        },
+      );
+
+      const scoreResult =
+        (await scoreResponse.json()) as {
+          success?: boolean;
+          message?: string;
+        };
+
+      if (!scoreResponse.ok || !scoreResult.success) {
+        throw new Error(
+          scoreResult.message ??
+            "리뷰 재분석은 완료됐지만 제품별 점수 재생성에 실패했습니다.",
+        );
+      }
+
+      setBulkReviewMessage(
+        `${completed}개 제품 완료 · DB에 저장된 리뷰 원문으로 재분석 · 제품별 점수까지 갱신했습니다. 네이버 리뷰 재수집은 하지 않았습니다.`,
+      );
+
+      await loadProducts();
+    } catch (error) {
+      console.error(
+        "리뷰 근거 일괄 재분석 실패:",
+        error,
+      );
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : "리뷰 근거 일괄 재분석에 실패했습니다.";
+
+      setErrorMessage(message);
+      alert(message);
+    } finally {
+      setIsBulkReanalyzingReviews(false);
+    }
+  }
+
+  async function generateCategoryCriteria() {
+    const category = draft.category.trim();
+
+    if (!category) {
+      alert("카테고리를 입력하세요.");
+      return;
+    }
+
+    const categoryProducts = registeredProducts.filter(
+      (product) => product.category === category,
+    );
+
+    if (categoryProducts.length < 3) {
+      alert(
+        `"${category}" 카테고리 제품을 최소 3개 등록한 뒤 실행하세요.`,
+      );
+      return;
+    }
+
+    const analyzedCount = categoryProducts.filter(
+      (product) => product.review_analysis,
+    ).length;
+
+    if (analyzedCount < 3) {
+      alert(
+        `"${category}" 카테고리에서 리뷰 분석 완료 제품이 최소 3개 필요합니다.`,
+      );
+      return;
+    }
+
+    setIsGeneratingCriteria(true);
+    setCriteriaMessage("");
+    setErrorMessage("");
+
+    try {
+      const response = await fetch(
+        "/api/generate-category-criteria",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ category }),
+        },
+      );
+
+      const result = (await response.json()) as {
+        success?: boolean;
+        message?: string;
+        criteria?: Array<{ label?: string }>;
+      };
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message ??
+            "구매기준 자동 생성에 실패했습니다.",
+        );
+      }
+
+      const labels = Array.isArray(result.criteria)
+        ? result.criteria
+            .map((criterion) => criterion.label?.trim())
+            .filter(Boolean)
+            .join(" · ")
+        : "";
+
+      setCriteriaMessage(
+        labels
+          ? `자동 생성 완료: ${labels}`
+          : result.message ?? "구매기준 자동 생성이 완료되었습니다.",
+      );
+    } catch (error) {
+      console.error("구매기준 자동 생성 실패:", error);
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : "구매기준 자동 생성에 실패했습니다.";
+
+      setErrorMessage(message);
+      alert(message);
+    } finally {
+      setIsGeneratingCriteria(false);
+    }
+  }
+
+  async function generateProductScores() {
+    const category = draft.category.trim();
+
+    if (!category) {
+      alert("카테고리를 입력하세요.");
+      return;
+    }
+
+    const categoryProducts = registeredProducts.filter(
+      (product) => product.category === category,
+    );
+
+    if (categoryProducts.length < 2) {
+      alert(`"${category}" 카테고리 제품을 최소 2개 등록한 뒤 실행하세요.`);
+      return;
+    }
+
+    setIsGeneratingProductScores(true);
+    setProductScoresMessage("");
+    setErrorMessage("");
+
+    try {
+      const response = await fetch("/api/generate-product-scores", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ category }),
+      });
+
+      const contentType = response.headers.get("content-type") ?? "";
+      if (!contentType.includes("application/json")) {
+        const text = await response.text();
+        throw new Error(
+          `제품별 점수 생성 API가 JSON이 아닌 응답을 반환했습니다. (${response.status}) ${text.slice(0, 120)}`,
+        );
+      }
+
+      const result = (await response.json()) as {
+        success?: boolean;
+        message?: string;
+        updatedCount?: number;
+        productCount?: number;
+        cacheHit?: boolean;
+      };
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message ?? "제품별 점수 자동 생성에 실패했습니다.");
+      }
+
+      const count = result.updatedCount ?? result.productCount;
+
+      setProductScoresMessage(
+        result.cacheHit
+          ? result.message ??
+              "변경된 데이터가 없어 기존 제품별 점수를 그대로 사용했습니다."
+          : result.message ??
+              (typeof count === "number"
+                ? `제품 ${count}개의 비교 점수를 새 기준으로 생성했습니다.`
+                : "제품별 비교 점수 생성이 완료되었습니다."),
+      );
+    } catch (error) {
+      console.error("제품별 점수 자동 생성 실패:", error);
+      const message =
+        error instanceof Error ? error.message : "제품별 점수 자동 생성에 실패했습니다.";
+      setErrorMessage(message);
+      alert(message);
+    } finally {
+      setIsGeneratingProductScores(false);
+    }
+  }
+
   const isWorking =
-    isSaving || isExtracting;
+    isSaving ||
+    isExtracting ||
+    isGeneratingCriteria ||
+    isGeneratingProductScores ||
+    isBulkReanalyzingReviews;
 
   return (
     <main>
@@ -668,19 +1118,135 @@ export default function AdminPage() {
               </p>
             </div>
 
-            <button
-              type="button"
-              className="secondaryButton"
-              onClick={() =>
-                void loadProducts()
-              }
-              disabled={isLoading}
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                flexWrap: "wrap",
+              }}
             >
-              {isLoading
-                ? "불러오는 중..."
-                : "목록 새로고침"}
-            </button>
+              <button
+                type="button"
+                className="secondaryButton"
+                onClick={() =>
+                  void generateCategoryCriteria()
+                }
+                disabled={isLoading || isGeneratingCriteria || isBulkReanalyzingReviews}
+              >
+                {isGeneratingCriteria
+                  ? "AI가 구매기준 분석 중..."
+                  : "AI 구매기준 자동 생성"}
+              </button>
+
+              <button
+                type="button"
+                className="secondaryButton"
+                onClick={() =>
+                  void bulkReanalyzeReviewEvidence()
+                }
+                disabled={
+                  isLoading ||
+                  isGeneratingCriteria ||
+                  isGeneratingProductScores ||
+                  isBulkReanalyzingReviews
+                }
+              >
+                {isBulkReanalyzingReviews
+                  ? "리뷰 근거 일괄 재분석 중..."
+                  : "리뷰 근거 일괄 재분석"}
+              </button>
+
+              <button
+                type="button"
+                className="secondaryButton"
+                onClick={() => void generateProductScores()}
+                disabled={
+                  isLoading ||
+                  isGeneratingCriteria ||
+                  isGeneratingProductScores ||
+                  isBulkReanalyzingReviews
+                }
+              >
+                {isGeneratingProductScores
+                  ? "AI가 제품별 점수 계산 중..."
+                  : "AI 제품별 점수 자동 생성"}
+              </button>
+
+              <button
+                type="button"
+                className="secondaryButton"
+                onClick={() =>
+                  void loadProducts()
+                }
+                disabled={isLoading}
+              >
+                {isLoading
+                  ? "불러오는 중..."
+                  : "목록 새로고침"}
+              </button>
+            </div>
           </div>
+
+          {bulkReviewMessage ? (
+            <div
+              style={{
+                marginTop: 18,
+                padding: 16,
+                borderRadius: 12,
+                background: "#f8fafc",
+                border: "1px solid #d0d5dd",
+                color: "#344054",
+                lineHeight: 1.7,
+              }}
+            >
+              <strong>리뷰 근거 일괄 재분석</strong>
+              <p style={{ margin: "6px 0 0" }}>
+                {bulkReviewMessage}
+              </p>
+            </div>
+          ) : null}
+
+          {criteriaMessage ? (
+            <div
+              style={{
+                marginTop: 18,
+                padding: 16,
+                borderRadius: 12,
+                background: "#f0f9ff",
+                border: "1px solid #b9e6fe",
+                color: "#026aa2",
+                lineHeight: 1.7,
+              }}
+            >
+              <strong>AI 구매기준 생성 완료</strong>
+              <p style={{ margin: "6px 0 0" }}>
+                {criteriaMessage}
+              </p>
+              <p style={{ margin: "6px 0 0", color: "#475467" }}>
+                신버전 Advisor를 새로고침하면 새 기준을 확인할 수 있습니다.
+              </p>
+            </div>
+          ) : null}
+
+          {productScoresMessage ? (
+            <div
+              style={{
+                marginTop: 18,
+                padding: 16,
+                borderRadius: 12,
+                background: "#f6fef9",
+                border: "1px solid #abefc6",
+                color: "#067647",
+                lineHeight: 1.7,
+              }}
+            >
+              <strong>AI 제품별 점수 생성 완료</strong>
+              <p style={{ margin: "6px 0 0" }}>{productScoresMessage}</p>
+              <p style={{ margin: "6px 0 0", color: "#475467" }}>
+                데이터가 변경된 경우에만 AI가 전체 제품을 다시 평가합니다.
+              </p>
+            </div>
+          ) : null}
 
           {isLoading ? (
             <div
@@ -763,6 +1329,12 @@ export default function AdminPage() {
                             {product.review_analysis ? (
                               <span className="pill">
                                 리뷰 분석 완료
+                              </span>
+                            ) : null}
+
+                            {product.product_detail_analysis ? (
+                              <span className="pill">
+                                상세정보 분석 완료
                               </span>
                             ) : null}
                           </div>
@@ -862,6 +1434,15 @@ export default function AdminPage() {
                               "flex-start",
                           }}
                         >
+                          <DetailBookmarkletCopyButton
+                            productId={product.id}
+                            productName={product.product_name}
+                            hasAnalysis={Boolean(
+                              product.product_detail_analysis,
+                            )}
+                            disabled={deletingId === product.id}
+                          />
+
                           <button
                             type="button"
                             className="primaryButton"

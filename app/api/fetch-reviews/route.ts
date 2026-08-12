@@ -33,7 +33,7 @@ const REVIEW_API_URL =
   "https://brand.naver.com/n/v1/contents/reviews/query-pages";
 
 const PAGE_SIZE = 20;
-const MAX_REVIEWS = 100;
+const MAX_REVIEWS = 200;
 
 function sleep(milliseconds: number) {
   return new Promise((resolve) =>
@@ -99,17 +99,19 @@ export async function POST(request: Request) {
     const reviewTexts: string[] = [];
     const reviewIds = new Set<string>();
 
-    const maximumPages = Math.ceil(
-      maxReviews / PAGE_SIZE,
-    );
-
     let requestedPages = 0;
     let totalElements: number | null = null;
 
-    for (
-      let page = 1;
-      page <= maximumPages;
-      page += 1
+    const collectionStats = {
+      total: 0,
+      ranking: 0,
+      latest: 0,
+      lowScore: 0,
+    };
+
+    async function requestReviewPage(
+      page: number,
+      sortType: string,
     ) {
       const response =
         await axios.post<NaverReviewResponse>(
@@ -119,8 +121,7 @@ export async function POST(request: Request) {
             originProductNo,
             page,
             pageSize: PAGE_SIZE,
-            reviewSearchSortType:
-              "REVIEW_RANKING",
+            reviewSearchSortType: sortType,
           },
           {
             timeout: 15000,
@@ -134,7 +135,7 @@ export async function POST(request: Request) {
               Origin:
                 "https://brand.naver.com",
               Referer:
-                "https://brand.naver.com/brizl/products/10087709433",
+                "https://brand.naver.com/",
               "User-Agent":
                 "Mozilla/5.0",
             },
@@ -145,31 +146,10 @@ export async function POST(request: Request) {
       requestedPages += 1;
 
       if (response.status !== 200) {
-        console.error(
-          "Naver review API status:",
-          response.status,
-          response.data,
-        );
-
-        return NextResponse.json(
-          {
-            success: false,
-            message:
-              "네이버 리뷰 API에서 정상 응답을 받지 못했습니다.",
-            naverStatus: response.status,
-            requestedPages,
-            collectedCount:
-              reviewTexts.length,
-          },
-          { status: 502 },
+        throw new Error(
+          `네이버 리뷰 API 요청 실패(${sortType}, ${page}페이지, HTTP ${response.status})`,
         );
       }
-
-      const reviews = Array.isArray(
-        response.data.contents,
-      )
-        ? response.data.contents
-        : [];
 
       if (
         typeof response.data.totalElements ===
@@ -179,53 +159,146 @@ export async function POST(request: Request) {
           response.data.totalElements;
       }
 
-      if (reviews.length === 0) {
-        break;
-      }
+      return Array.isArray(response.data.contents)
+        ? response.data.contents
+        : [];
+    }
 
-      for (const review of reviews) {
-        const content =
-          typeof review.reviewContent ===
-          "string"
-            ? review.reviewContent
-                .replace(/\s+/g, " ")
-                .trim()
-            : "";
+    async function addReviews(
+      sortType: string,
+      targetCount: number,
+      statKey: "ranking" | "latest" | "lowScore",
+      maxPages: number,
+    ) {
+      let added = 0;
 
-        if (!content) {
-          continue;
+      for (
+        let page = 1;
+        page <= maxPages &&
+        added < targetCount &&
+        reviewTexts.length < maxReviews;
+        page += 1
+      ) {
+        const reviews = await requestReviewPage(
+          page,
+          sortType,
+        );
+
+        if (reviews.length === 0) {
+          break;
         }
 
-        const id =
-          typeof review.contentsId ===
-          "string"
-            ? review.contentsId
-            : content;
+        for (const review of reviews) {
+          const content =
+            typeof review.reviewContent ===
+            "string"
+              ? review.reviewContent
+                  .replace(/\s+/g, " ")
+                  .trim()
+              : "";
 
-        if (reviewIds.has(id)) {
-          continue;
+          if (!content) {
+            continue;
+          }
+
+          const id =
+            typeof review.contentsId ===
+            "string"
+              ? review.contentsId
+              : content;
+
+          if (reviewIds.has(id)) {
+            continue;
+          }
+
+          reviewIds.add(id);
+          reviewTexts.push(content);
+          added += 1;
+          collectionStats[statKey] += 1;
+
+          if (
+            added >= targetCount ||
+            reviewTexts.length >= maxReviews
+          ) {
+            break;
+          }
         }
-
-        reviewIds.add(id);
-        reviewTexts.push(content);
 
         if (
+          reviews.length < PAGE_SIZE ||
           reviewTexts.length >= maxReviews
         ) {
           break;
         }
-      }
 
-      if (
-        reviewTexts.length >= maxReviews ||
-        response.data.last === true ||
-        reviews.length < PAGE_SIZE
-      ) {
-        break;
+        await sleep(500);
       }
-
-      await sleep(1000);
     }
+
+    const rankingTarget = Math.min(
+      100,
+      maxReviews,
+    );
+    const latestTarget = Math.min(
+      50,
+      Math.max(0, maxReviews - rankingTarget),
+    );
+    const lowScoreTarget = Math.min(
+      50,
+      Math.max(
+        0,
+        maxReviews -
+          rankingTarget -
+          latestTarget,
+      ),
+    );
+
+    await addReviews(
+      "REVIEW_RANKING",
+      rankingTarget,
+      "ranking",
+      8,
+    );
+
+    if (latestTarget > 0) {
+      await addReviews(
+        "REVIEW_CREATE_DATE_DESC",
+        latestTarget,
+        "latest",
+        6,
+      );
+    }
+
+    if (lowScoreTarget > 0) {
+      await addReviews(
+        "REVIEW_SCORE_ASC",
+        lowScoreTarget,
+        "lowScore",
+        6,
+      );
+    }
+
+    // 중복 때문에 200개를 못 채운 경우 추천순/최신순에서 추가 보충
+    if (reviewTexts.length < maxReviews) {
+      await addReviews(
+        "REVIEW_RANKING",
+        maxReviews - reviewTexts.length,
+        "ranking",
+        10,
+      );
+    }
+
+    if (reviewTexts.length < maxReviews) {
+      await addReviews(
+        "REVIEW_CREATE_DATE_DESC",
+        maxReviews - reviewTexts.length,
+        "latest",
+        10,
+      );
+    }
+
+    collectionStats.total =
+      reviewTexts.length;
 
     return NextResponse.json({
       success: true,
@@ -236,6 +309,7 @@ export async function POST(request: Request) {
       totalElements,
       count: reviewTexts.length,
       reviewTexts,
+      collectionStats,
     });
   } catch (error) {
     console.error(

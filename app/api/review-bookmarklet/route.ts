@@ -168,11 +168,11 @@ function createBookmarklet(
       projectTab.document.body.innerHTML=
         "<div style='font-family:sans-serif;padding:40px'>"+
         "<h2>정확한 리뷰 정보를 확인했습니다.</h2>"+
-        "<p>최대 100개의 리뷰를 수집하고 있습니다.</p>"+
+        "<p>추천순·최신순·평점 낮은순을 섞어 최대 200개의 리뷰를 수집하고 있습니다.</p>"+
         "</div>";
     }
 
-    const requestReviews=async(page)=>{
+    const requestReviews=async(page,sortType)=>{
       const response=await originalFetch(reviewApi,{
         method:"POST",
         headers:{
@@ -185,13 +185,15 @@ function createBookmarklet(
           originProductNo,
           page,
           pageSize:20,
-          reviewSearchSortType:"REVIEW_RANKING"
+          reviewSearchSortType:sortType
         })
       });
 
       if(response.status===204){return null;}
       if(!response.ok){
-        throw new Error("리뷰 "+page+"페이지 요청 실패: HTTP "+response.status);
+        throw new Error(
+          "리뷰 "+page+"페이지 요청 실패("+sortType+"): HTTP "+response.status
+        );
       }
 
       const contentType=response.headers.get("content-type")||"";
@@ -206,29 +208,75 @@ function createBookmarklet(
     const reviews=[];
     const seen=new Set();
 
-    for(let page=1;page<=5;page+=1){
-      const contents=await requestReviews(page);
-      if(!contents){break;}
+    const addReviews=async(sortType,targetCount,maxPages)=>{
+      let added=0;
 
-      for(const review of contents){
-        const text=
-          typeof review.reviewContent==="string"
-            ? review.reviewContent.replace(/\\s+/g," ").trim()
-            : "";
+      for(let page=1;page<=maxPages;page+=1){
+        const contents=await requestReviews(page,sortType);
+        if(!contents){break;}
 
-        if(text&&!seen.has(text)){
-          seen.add(text);
-          reviews.push(text);
+        for(const review of contents){
+          const reviewText=
+            typeof review.reviewContent==="string"
+              ? review.reviewContent.replace(/\\s+/g," ").trim()
+              : "";
+
+          if(reviewText&&!seen.has(reviewText)){
+            seen.add(reviewText);
+            reviews.push(reviewText);
+            added+=1;
+          }
+
+          if(added>=targetCount||reviews.length>=200){break;}
         }
 
-        if(reviews.length>=100){break;}
+        if(
+          added>=targetCount||
+          reviews.length>=200||
+          contents.length<20
+        ){break;}
+
+        await new Promise(resolve=>setTimeout(resolve,500));
       }
 
-      if(reviews.length>=100||contents.length<20){break;}
-      await new Promise(resolve=>setTimeout(resolve,700));
+      return added;
+    };
+
+    const collectionStats={
+      ranking:0,
+      latest:0,
+      lowScore:0,
+      total:0
+    };
+
+    collectionStats.ranking+=await addReviews("REVIEW_RANKING",100,8);
+
+    if(reviews.length<200){
+      collectionStats.latest+=await addReviews("REVIEW_CREATE_DATE_DESC",50,6);
     }
 
-    const result=reviews.slice(0,100);
+    if(reviews.length<200){
+      collectionStats.lowScore+=await addReviews("REVIEW_SCORE_ASC",50,6);
+    }
+
+    if(reviews.length<200){
+      collectionStats.ranking+=await addReviews(
+        "REVIEW_RANKING",
+        200-reviews.length,
+        10
+      );
+    }
+
+    if(reviews.length<200){
+      collectionStats.latest+=await addReviews(
+        "REVIEW_CREATE_DATE_DESC",
+        200-reviews.length,
+        10
+      );
+    }
+
+    const result=reviews.slice(0,200);
+    collectionStats.total=result.length;
     if(result.length===0){
       throw new Error("수집된 리뷰가 없습니다.");
     }
@@ -241,6 +289,7 @@ function createBookmarklet(
       sourceUrl:cleanSourceUrl,
       checkoutMerchantNo,
       originProductNo,
+      collectionStats,
       reviews:result
     });
 
@@ -248,7 +297,11 @@ function createBookmarklet(
 
     alert(
       "Project D\\n정확한 판매자 번호와 원상품 번호를 자동으로 확인했습니다.\\n"+
-      "리뷰 "+result.length+"개를 수집했습니다.\\n분석과 저장이 자동으로 진행됩니다."
+      "리뷰 "+result.length+"개를 수집했습니다.\\n"+
+      "(추천순 "+collectionStats.ranking+
+      " · 최신순 "+collectionStats.latest+
+      " · 낮은평점순 "+collectionStats.lowScore+")\\n"+
+      "분석과 저장이 자동으로 진행됩니다."
     );
   }catch(error){
     restore();

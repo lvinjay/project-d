@@ -15,7 +15,7 @@ function normalizeClipboardReviews(value: string) {
     )
     .filter((review) => review.length > 0);
 
-  return [...new Set(reviews)].slice(0, 100);
+  return [...new Set(reviews)].slice(0, 200);
 }
 
 export default function ClipboardReviewLoader({

@@ -6,11 +6,19 @@ import {
   useState,
 } from "react";
 
+export type ReviewCollectionStats = {
+  total: number;
+  ranking: number;
+  latest: number;
+  lowScore: number;
+};
+
 type AutoReviewReceiverProps = {
   productId: string;
   disabled?: boolean;
   onReviewsReceived: (
     reviewText: string,
+    collectionStats?: ReviewCollectionStats,
   ) => void;
 };
 
@@ -20,6 +28,7 @@ type TransferPayload = {
   sourceUrl?: unknown;
   checkoutMerchantNo?: unknown;
   originProductNo?: unknown;
+  collectionStats?: unknown;
   reviews?: unknown;
 };
 
@@ -43,7 +52,31 @@ function normalizeReviews(value: unknown) {
     )
     .filter((review) => review.length > 0);
 
-  return [...new Set(reviews)].slice(0, 100);
+  return [...new Set(reviews)].slice(0, 200);
+}
+
+function normalizeCollectionStats(
+  value: unknown,
+  fallbackTotal: number,
+): ReviewCollectionStats | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const row = value as Record<string, unknown>;
+  const safeCount = (raw: unknown) => {
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed >= 0
+      ? Math.floor(parsed)
+      : 0;
+  };
+
+  return {
+    total: safeCount(row.total) || fallbackTotal,
+    ranking: safeCount(row.ranking),
+    latest: safeCount(row.latest),
+    lowScore: safeCount(row.lowScore),
+  };
 }
 
 function normalizePositiveInteger(
@@ -205,13 +238,22 @@ export default function AutoReviewReceiver({
           );
         }
 
+        const collectionStats =
+          normalizeCollectionStats(
+            payload.collectionStats,
+            reviews.length,
+          );
+
         onReviewsReceived(
           reviews.join("\n"),
+          collectionStats,
         );
 
         setIsSuccess(true);
         setMessage(
-          `판매자 번호와 원상품 번호를 자동 저장하고, 네이버 리뷰 ${reviews.length}개를 전달받았습니다.`,
+          collectionStats
+            ? `판매자 번호와 원상품 번호를 자동 저장하고, 네이버 리뷰 ${reviews.length}개를 전달받았습니다.`
+            : `판매자 번호와 원상품 번호를 자동 저장하고, 네이버 리뷰 ${reviews.length}개를 전달받았습니다.`,
         );
       } catch (error) {
         console.error(

@@ -8,7 +8,9 @@ import {
 } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Header from "../../../components/Header";
-import AutoReviewReceiver from "../../../components/AutoReviewReceiver";
+import AutoReviewReceiver, {
+  type ReviewCollectionStats,
+} from "../../../components/AutoReviewReceiver";
 import ClipboardReviewLoader from "../../../components/ClipboardReviewLoader";
 import { supabase } from "../../../lib/supabase";
 
@@ -33,6 +35,7 @@ type ReviewAnalysis = {
   confidenceScore: number;
   criterionScores: CriterionScoreMap;
   criterionReasons: CriterionReasonMap;
+  collectionStats?: ReviewCollectionStats;
 };
 
 type RegisteredProduct = {
@@ -42,6 +45,11 @@ type RegisteredProduct = {
   source_url: string;
   review_analysis: ReviewAnalysis | null;
   criterion_scores: CriterionScoreMap;
+  review_raw_data?: {
+    reviews?: string[];
+    collectionStats?: ReviewCollectionStats | null;
+    savedAt?: string;
+  } | null;
   created_at: string;
   updated_at: string;
 };
@@ -66,6 +74,9 @@ function AdminReviewContent() {
 
   const [reviewText, setReviewText] =
     useState("");
+
+  const [collectionStats, setCollectionStats] =
+    useState<ReviewCollectionStats | null>(null);
 
   const [analysis, setAnalysis] =
     useState<ReviewAnalysis | null>(null);
@@ -101,7 +112,7 @@ function AdminReviewContent() {
       const { data, error } = await supabase
         .from("products")
         .select(
-          "id, category, product_name, source_url, review_analysis, criterion_scores, created_at, updated_at",
+          "id, category, product_name, source_url, review_analysis, criterion_scores, review_raw_data, created_at, updated_at",
         )
         .eq("id", productId)
         .single();
@@ -120,6 +131,27 @@ function AdminReviewContent() {
         setAnalysis(
           loadedProduct.review_analysis,
         );
+
+        if (loadedProduct.review_analysis.collectionStats) {
+          setCollectionStats(
+            loadedProduct.review_analysis.collectionStats,
+          );
+        }
+      }
+
+      if (
+        loadedProduct.review_raw_data &&
+        Array.isArray(loadedProduct.review_raw_data.reviews)
+      ) {
+        setReviewText(
+          loadedProduct.review_raw_data.reviews.join("\n"),
+        );
+
+        if (loadedProduct.review_raw_data.collectionStats) {
+          setCollectionStats(
+            loadedProduct.review_raw_data.collectionStats,
+          );
+        }
       }
     } catch (error) {
       console.error(
@@ -161,13 +193,21 @@ function AdminReviewContent() {
     setSaveMessage("");
 
     try {
+      const reviews = getReviews();
+      const savedAt = new Date().toISOString();
+
       const { error } = await supabase
         .from("products")
         .update({
           review_analysis: nextAnalysis,
           criterion_scores:
             nextAnalysis.criterionScores,
-          updated_at: new Date().toISOString(),
+          review_raw_data: {
+            reviews,
+            collectionStats,
+            savedAt,
+          },
+          updated_at: savedAt,
         })
         .eq("id", productId);
 
@@ -182,6 +222,12 @@ function AdminReviewContent() {
               review_analysis: nextAnalysis,
               criterion_scores:
                 nextAnalysis.criterionScores,
+              review_raw_data: {
+                reviews: getReviews(),
+                collectionStats,
+                savedAt:
+                  new Date().toISOString(),
+              },
               updated_at:
                 new Date().toISOString(),
             }
@@ -189,7 +235,7 @@ function AdminReviewContent() {
       );
 
       setSaveMessage(
-        "AI 분석 결과를 Supabase에 저장했습니다.",
+        "AI 분석 결과와 리뷰 원문을 Supabase에 저장했습니다.",
       );
     } finally {
       setIsSaving(false);
@@ -241,6 +287,7 @@ function AdminReviewContent() {
             category:
               product?.category ?? "",
             reviews,
+            collectionStats,
           }),
         },
       );
@@ -413,6 +460,20 @@ function AdminReviewContent() {
                 없습니다.
               </p>
             )}
+
+            {Array.isArray(product.review_raw_data?.reviews) ? (
+              <p
+                style={{
+                  margin: "10px 0 0",
+                  fontWeight: 700,
+                  color: "#155eef",
+                }}
+              >
+                리뷰 원문{" "}
+                {product.review_raw_data?.reviews?.length ?? 0}개가
+                재분석용으로 저장되어 있습니다.
+              </p>
+            ) : null}
           </div>
         ) : null}
 
@@ -430,8 +491,9 @@ function AdminReviewContent() {
       isAnalyzing ||
       isSaving
     }
-onReviewsReceived={(nextReviewText) => {
+onReviewsReceived={(nextReviewText, nextCollectionStats) => {
   setReviewText(nextReviewText);
+  setCollectionStats(nextCollectionStats ?? null);
   setSaveMessage("");
   setErrorMessage("");
 
@@ -496,6 +558,32 @@ onReviewsReceived={(nextReviewText) => {
               }}
             />
           </div>
+
+          {collectionStats ? (
+            <div
+              style={{
+                marginTop: 12,
+                padding: "12px 14px",
+                borderRadius: 10,
+                background: "#f8fafc",
+                border: "1px solid #e2e8f0",
+                color: "#475569",
+                lineHeight: 1.6,
+              }}
+            >
+              <strong style={{ color: "#0f172a" }}>
+                수집 리뷰 {collectionStats.total}개
+              </strong>
+              {" "}
+              (
+              추천순 {collectionStats.ranking}
+              {" · "}
+              최신순 {collectionStats.latest}
+              {" · "}
+              낮은평점순 {collectionStats.lowScore}
+              )
+            </div>
+          ) : null}
 
           <div
   style={{
