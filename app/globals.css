@@ -1006,3 +1006,40 @@ button, input, select { font: inherit; }
   }
 }
 
+
+/* Mobile ranking CTA final fix */
+@media (max-width: 650px) {
+
+  .advisorRankMain > :last-child {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    justify-content: stretch !important;
+  }
+
+  .advisorRankMain > :last-child .advisorRankScore {
+    width: 100% !important;
+    min-width: 0 !important;
+    text-align: left !important;
+  }
+
+  .advisorRankMain > :last-child .primaryButton {
+    display: flex !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    justify-content: center !important;
+    align-items: center !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .advisorRankActions {
+    width: 100% !important;
+  }
+
+  .advisorRankActions .secondaryButton {
+    width: 100% !important;
+  }
+}
+
