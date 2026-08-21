@@ -1,0 +1,845 @@
+﻿
+  lib\resolveNaverBrandProductUrl.ts:1:import {
+> lib\resolveNaverBrandProductUrl.ts:2:  findBrandStoreMappin
+g,
+  lib\resolveNaverBrandProductUrl.ts:3:  saveBrandStoreMappin
+g,
+  lib\resolveNaverBrandProductUrl.ts:4:} from "./brandStoreMa
+ppings";
+  lib\resolveNaverBrandProductUrl.ts:5:type SerpApiResult = {
+  lib\resolveNaverBrandProductUrl.ts:6:  ads_results?: {
+  lib\resolveNaverBrandProductUrl.ts:7:    site?: string;
+  lib\resolveNaverBrandProductUrl.ts:8:    title?: string;
+  lib\resolveNaverBrandProductUrl.ts:9:    sub_title?: string
+;
+  lib\resolveNaverBrandProductUrl.ts:10:    description?: str
+ing;
+  lib\resolveNaverBrandProductUrl.ts:11:  }[];
+  lib\resolveNaverBrandProductUrl.ts:12:
+  lib\resolveNaverBrandProductUrl.ts:13:  web_results?: {
+  lib\resolveNaverBrandProductUrl.ts:14:    title?: string;
+  lib\resolveNaverBrandProductUrl.ts:15:    link?: string;
+  lib\resolveNaverBrandProductUrl.ts:16:    snippet?: string;
+  lib\resolveNaverBrandProductUrl.ts:17:  }[];
+  lib\resolveNaverBrandProductUrl.ts:18:
+  lib\resolveNaverBrandProductUrl.ts:19:  shopping_results?: 
+{
+  lib\resolveNaverBrandProductUrl.ts:20:    title?: string;
+  lib\resolveNaverBrandProductUrl.ts:21:    link?: string;
+  lib\resolveNaverBrandProductUrl.ts:22:    stores?: string;
+  lib\resolveNaverBrandProductUrl.ts:23:    price?: number | 
+string;
+  lib\resolveNaverBrandProductUrl.ts:24:    rating?: number |
+ string;
+  lib\resolveNaverBrandProductUrl.ts:25:    reviews?: number 
+| string;
+  lib\resolveNaverBrandProductUrl.ts:26:  }[];
+  lib\resolveNaverBrandProductUrl.ts:27:};
+  lib\resolveNaverBrandProductUrl.ts:28:
+  lib\resolveNaverBrandProductUrl.ts:29:type SerpApiResponse 
+=
+  lib\resolveNaverBrandProductUrl.ts:30:  SerpApiResult & {
+  lib\resolveNaverBrandProductUrl.ts:31:    error?: string;
+  lib\resolveNaverBrandProductUrl.ts:32:  };
+  lib\resolveNaverBrandProductUrl.ts:33:
+  lib\resolveNaverBrandProductUrl.ts:34:type CanonicalCandida
+te = {
+> lib\resolveNaverBrandProductUrl.ts:35:  productId: string;
+  lib\resolveNaverBrandProductUrl.ts:36:  brandSite: string;
+  lib\resolveNaverBrandProductUrl.ts:37:  canonicalUrl: strin
+g;
+  lib\resolveNaverBrandProductUrl.ts:38:  title: string;
+  lib\resolveNaverBrandProductUrl.ts:39:};
+  lib\resolveNaverBrandProductUrl.ts:40:
+  lib\resolveNaverBrandProductUrl.ts:41:function normalizeBra
+ndSite(
+  lib\resolveNaverBrandProductUrl.ts:42:  value: unknown,
+  lib\resolveNaverBrandProductUrl.ts:43:) {
+  lib\resolveNaverBrandProductUrl.ts:44:  const text =
+  lib\resolveNaverBrandProductUrl.ts:45:    String(value ?? "
+")
+  lib\resolveNaverBrandProductUrl.ts:46:      .trim();
+  lib\resolveNaverBrandProductUrl.ts:47:
+  lib\resolveNaverBrandProductUrl.ts:48:  const match =
+  lib\resolveNaverBrandProductUrl.ts:49:    text.match(
+  lib\resolveNaverBrandProductUrl.ts:50:      /(?:https?:\/\/
+)?brand\.naver\.com\/([a-zA-Z0-9_-]+)/i,
+  lib\resolveNaverBrandProductUrl.ts:51:    );
+  lib\resolveNaverBrandProductUrl.ts:52:
+  lib\resolveNaverBrandProductUrl.ts:53:  if (!match) {
+  lib\resolveNaverBrandProductUrl.ts:54:    return "";
+  lib\resolveNaverBrandProductUrl.ts:55:  }
+  lib\resolveNaverBrandProductUrl.ts:56:
+  lib\resolveNaverBrandProductUrl.ts:57:  return (
+  lib\resolveNaverBrandProductUrl.ts:58:    "https://brand.na
+ver.com/" +
+  lib\resolveNaverBrandProductUrl.ts:59:    match[1]
+  lib\resolveNaverBrandProductUrl.ts:60:  );
+  lib\resolveNaverBrandProductUrl.ts:61:}
+  lib\resolveNaverBrandProductUrl.ts:62:
+  lib\resolveNaverBrandProductUrl.ts:63:function normalizeCan
+onicalProductUrl(
+  lib\resolveNaverBrandProductUrl.ts:64:  value: unknown,
+  lib\resolveNaverBrandProductUrl.ts:65:) {
+  lib\resolveNaverBrandProductUrl.ts:66:  const text =
+  lib\resolveNaverBrandProductUrl.ts:67:    String(value ?? "
+")
+  lib\resolveNaverBrandProductUrl.ts:68:      .trim();
+  lib\resolveNaverBrandProductUrl.ts:69:
+  lib\resolveNaverBrandProductUrl.ts:70:  const match =
+  lib\resolveNaverBrandProductUrl.ts:71:    text.match(
+  lib\resolveNaverBrandProductUrl.ts:72:      /https?:\/\/bra
+nd\.naver\.com\/([a-zA-Z0-9_-]+)\/products\/(\d+)/i,
+  lib\resolveNaverBrandProductUrl.ts:73:    );
+  lib\resolveNaverBrandProductUrl.ts:74:
+  lib\resolveNaverBrandProductUrl.ts:75:  if (!match) {
+  lib\resolveNaverBrandProductUrl.ts:76:    return null;
+  lib\resolveNaverBrandProductUrl.ts:77:  }
+  lib\resolveNaverBrandProductUrl.ts:78:
+  lib\resolveNaverBrandProductUrl.ts:79:  const brandSite =
+  lib\resolveNaverBrandProductUrl.ts:80:    `https://brand.na
+ver.com/${match[1]}`;
+  lib\resolveNaverBrandProductUrl.ts:81:
+> lib\resolveNaverBrandProductUrl.ts:82:  const productId =
+  lib\resolveNaverBrandProductUrl.ts:83:    match[2];
+  lib\resolveNaverBrandProductUrl.ts:84:
+  lib\resolveNaverBrandProductUrl.ts:85:  return {
+> lib\resolveNaverBrandProductUrl.ts:86:    productId,
+  lib\resolveNaverBrandProductUrl.ts:87:    brandSite,
+  lib\resolveNaverBrandProductUrl.ts:88:    canonicalUrl:
+> lib\resolveNaverBrandProductUrl.ts:89:      `${brandSite}/p
+roducts/${productId}`,
+  lib\resolveNaverBrandProductUrl.ts:90:  };
+  lib\resolveNaverBrandProductUrl.ts:91:}
+  lib\resolveNaverBrandProductUrl.ts:92:
+  lib\resolveNaverBrandProductUrl.ts:93:async function search
+Naver(
+  lib\resolveNaverBrandProductUrl.ts:94:  query: string,
+  lib\resolveNaverBrandProductUrl.ts:95:): Promise<SerpApiRes
+ponse> {
+  lib\resolveNaverBrandProductUrl.ts:96:  const apiKey =
+  lib\resolveNaverBrandProductUrl.ts:97:    process.env.SERPA
+PI_API_KEY;
+  lib\resolveNaverBrandProductUrl.ts:98:
+  lib\resolveNaverBrandProductUrl.ts:99:  if (!apiKey) {
+  lib\resolveNaverBrandProductUrl.ts:100:    throw new Error(
+  lib\resolveNaverBrandProductUrl.ts:101:      "SERPAPI_API_K
+EY가 설정되지 않았습니다.",
+  lib\resolveNaverBrandProductUrl.ts:102:    );
+  lib\resolveNaverBrandProductUrl.ts:103:  }
+  lib\resolveNaverBrandProductUrl.ts:104:
+  lib\resolveNaverBrandProductUrl.ts:105:  const params =
+> lib\resolveNaverBrandProductUrl.ts:106:    new URLSearchPar
+ams({
+  lib\resolveNaverBrandProductUrl.ts:107:      engine: "naver
+",
+  lib\resolveNaverBrandProductUrl.ts:108:      query,
+  lib\resolveNaverBrandProductUrl.ts:109:      where: "nexear
+ch",
+  lib\resolveNaverBrandProductUrl.ts:110:      output: "json"
+,
+  lib\resolveNaverBrandProductUrl.ts:111:      api_key: apiKe
+y,
+  lib\resolveNaverBrandProductUrl.ts:112:    });
+  lib\resolveNaverBrandProductUrl.ts:113:
+  lib\resolveNaverBrandProductUrl.ts:114:  const response =
+  lib\resolveNaverBrandProductUrl.ts:115:    await fetch(
+  lib\resolveNaverBrandProductUrl.ts:116:      "https://serpa
+pi.com/search?" +
+  lib\resolveNaverBrandProductUrl.ts:117:        params.toStr
+ing(),
+  lib\resolveNaverBrandProductUrl.ts:118:      {
+  lib\resolveNaverBrandProductUrl.ts:119:        cache: "no-s
+tore",
+  lib\resolveNaverBrandProductUrl.ts:120:      },
+  lib\resolveNaverBrandProductUrl.ts:121:    );
+  lib\resolveNaverBrandProductUrl.ts:122:
+  lib\resolveNaverBrandProductUrl.ts:123:  const data =
+  lib\resolveNaverBrandProductUrl.ts:124:    (await response.
+json()) as
+  lib\resolveNaverBrandProductUrl.ts:125:      SerpApiRespons
+e;
+  lib\resolveNaverBrandProductUrl.ts:126:
+  lib\resolveNaverBrandProductUrl.ts:127:  if (
+  lib\resolveNaverBrandProductUrl.ts:128:    !response.ok ||
+  lib\resolveNaverBrandProductUrl.ts:129:    data.error
+  lib\resolveNaverBrandProductUrl.ts:130:  ) {
+  lib\resolveNaverBrandProductUrl.ts:131:    throw new Error(
+  lib\resolveNaverBrandProductUrl.ts:132:      data.error ??
+  lib\resolveNaverBrandProductUrl.ts:133:        `SerpApi 검색 
+실패 (${response.status})`,
+  lib\resolveNaverBrandProductUrl.ts:134:    );
+  lib\resolveNaverBrandProductUrl.ts:135:  }
+  lib\resolveNaverBrandProductUrl.ts:136:
+  lib\resolveNaverBrandProductUrl.ts:137:  return data;
+  lib\resolveNaverBrandProductUrl.ts:138:}
+  lib\resolveNaverBrandProductUrl.ts:139:
+  lib\resolveNaverBrandProductUrl.ts:140:function extractBran
+dSites(
+  lib\resolveNaverBrandProductUrl.ts:141:  data: SerpApiResul
+t,
+  lib\resolveNaverBrandProductUrl.ts:142:) {
+  lib\resolveNaverBrandProductUrl.ts:143:  const sites =
+  lib\resolveNaverBrandProductUrl.ts:144:    new Set<string>(
+);
+  lib\resolveNaverBrandProductUrl.ts:145:
+  lib\resolveNaverBrandProductUrl.ts:146:  const add = (
+  lib\resolveNaverBrandProductUrl.ts:292:      [
+  lib\resolveNaverBrandProductUrl.ts:293:        result.title
+,
+  lib\resolveNaverBrandProductUrl.ts:294:        result.snipp
+et,
+  lib\resolveNaverBrandProductUrl.ts:295:      ]
+  lib\resolveNaverBrandProductUrl.ts:296:        .filter(Bool
+ean)
+  lib\resolveNaverBrandProductUrl.ts:297:        .join(" ");
+  lib\resolveNaverBrandProductUrl.ts:298:
+  lib\resolveNaverBrandProductUrl.ts:299:    const match =
+  lib\resolveNaverBrandProductUrl.ts:300:      combined.match
+(
+  lib\resolveNaverBrandProductUrl.ts:301:        /브랜드\s*[:：]\
+s*([가-힣A-Za-z0-9._+-]+)/,
+  lib\resolveNaverBrandProductUrl.ts:302:      );
+  lib\resolveNaverBrandProductUrl.ts:303:
+  lib\resolveNaverBrandProductUrl.ts:304:    if (match?.[1]) 
+{
+  lib\resolveNaverBrandProductUrl.ts:305:      return match[1
+].trim();
+  lib\resolveNaverBrandProductUrl.ts:306:    }
+  lib\resolveNaverBrandProductUrl.ts:307:  }
+  lib\resolveNaverBrandProductUrl.ts:308:
+  lib\resolveNaverBrandProductUrl.ts:309:  return "";
+  lib\resolveNaverBrandProductUrl.ts:310:}
+  lib\resolveNaverBrandProductUrl.ts:311:
+> lib\resolveNaverBrandProductUrl.ts:312:function getProductI
+d(
+  lib\resolveNaverBrandProductUrl.ts:313:  productUrl: string
+,
+  lib\resolveNaverBrandProductUrl.ts:314:) {
+  lib\resolveNaverBrandProductUrl.ts:315:  const match =
+  lib\resolveNaverBrandProductUrl.ts:316:    productUrl.match
+(
+  lib\resolveNaverBrandProductUrl.ts:317:      /\/(?:main\/)?
+products\/(\d+)/,
+  lib\resolveNaverBrandProductUrl.ts:318:    );
+  lib\resolveNaverBrandProductUrl.ts:319:
+  lib\resolveNaverBrandProductUrl.ts:320:  return (
+  lib\resolveNaverBrandProductUrl.ts:321:    match?.[1] ??
+  lib\resolveNaverBrandProductUrl.ts:322:    ""
+  lib\resolveNaverBrandProductUrl.ts:323:  );
+  lib\resolveNaverBrandProductUrl.ts:324:}
+  lib\resolveNaverBrandProductUrl.ts:325:
+  lib\resolveNaverBrandProductUrl.ts:326:function cleanProduc
+tName(
+  lib\resolveNaverBrandProductUrl.ts:327:  value: string,
+  lib\resolveNaverBrandProductUrl.ts:328:) {
+  lib\resolveNaverBrandProductUrl.ts:329:  return value
+  lib\resolveNaverBrandProductUrl.ts:330:    .replace(
+  lib\resolveNaverBrandProductUrl.ts:331:      /\[[^\]]*\]/g,
+  lib\resolveNaverBrandProductUrl.ts:332:      " ",
+  lib\resolveNaverBrandProductUrl.ts:333:    )
+  lib\resolveNaverBrandProductUrl.ts:334:    .replace(
+  lib\resolveNaverBrandProductUrl.ts:335:      /\([^)]*\)/g,
+  lib\resolveNaverBrandProductUrl.ts:336:      " ",
+  lib\resolveNaverBrandProductUrl.ts:337:    )
+  lib\resolveNaverBrandProductUrl.ts:338:    .replace(
+  lib\resolveNaverBrandProductUrl.ts:339:      /[,/|]+/g,
+  lib\resolveNaverBrandProductUrl.ts:340:      " ",
+  lib\resolveNaverBrandProductUrl.ts:341:    )
+  lib\resolveNaverBrandProductUrl.ts:342:    .replace(
+  lib\resolveNaverBrandProductUrl.ts:343:      /\s+/g,
+  lib\resolveNaverBrandProductUrl.ts:344:      " ",
+  lib\resolveNaverBrandProductUrl.ts:345:    )
+  lib\resolveNaverBrandProductUrl.ts:346:    .trim();
+  lib\resolveNaverBrandProductUrl.ts:347:}
+  lib\resolveNaverBrandProductUrl.ts:348:
+  lib\resolveNaverBrandProductUrl.ts:349:function getUsefulTo
+kens(
+  lib\resolveNaverBrandProductUrl.ts:350:  productName: strin
+g,
+  lib\resolveNaverBrandProductUrl.ts:351:) {
+  lib\resolveNaverBrandProductUrl.ts:352:  const ignored =
+  lib\resolveNaverBrandProductUrl.ts:390:      productName,
+  lib\resolveNaverBrandProductUrl.ts:391:    ).split(" ");
+  lib\resolveNaverBrandProductUrl.ts:392:
+  lib\resolveNaverBrandProductUrl.ts:393:  return (
+  lib\resolveNaverBrandProductUrl.ts:394:    tokens.find(
+  lib\resolveNaverBrandProductUrl.ts:395:      (token) =>
+  lib\resolveNaverBrandProductUrl.ts:396:        token.length
+ >= 2 &&
+  lib\resolveNaverBrandProductUrl.ts:397:        ![
+  lib\resolveNaverBrandProductUrl.ts:398:          "로봇청소기",
+  lib\resolveNaverBrandProductUrl.ts:399:          "청소기",
+  lib\resolveNaverBrandProductUrl.ts:400:          "로봇",
+  lib\resolveNaverBrandProductUrl.ts:401:        ].includes(t
+oken),
+  lib\resolveNaverBrandProductUrl.ts:402:    ) ?? ""
+  lib\resolveNaverBrandProductUrl.ts:403:  );
+  lib\resolveNaverBrandProductUrl.ts:404:}
+  lib\resolveNaverBrandProductUrl.ts:405:
+  lib\resolveNaverBrandProductUrl.ts:406:function candidateSc
+ore(
+  lib\resolveNaverBrandProductUrl.ts:407:  candidate:
+  lib\resolveNaverBrandProductUrl.ts:408:    CanonicalCandida
+te,
+  lib\resolveNaverBrandProductUrl.ts:409:  productName: strin
+g,
+> lib\resolveNaverBrandProductUrl.ts:410:  expectedProductId:
+ string,
+  lib\resolveNaverBrandProductUrl.ts:411:) {
+  lib\resolveNaverBrandProductUrl.ts:412:  if (
+> lib\resolveNaverBrandProductUrl.ts:413:    expectedProductI
+d &&
+> lib\resolveNaverBrandProductUrl.ts:414:    candidate.produc
+tId ===
+> lib\resolveNaverBrandProductUrl.ts:415:      expectedProduc
+tId
+  lib\resolveNaverBrandProductUrl.ts:416:  ) {
+  lib\resolveNaverBrandProductUrl.ts:417:    return 1000;
+  lib\resolveNaverBrandProductUrl.ts:418:  }
+  lib\resolveNaverBrandProductUrl.ts:419:
+  lib\resolveNaverBrandProductUrl.ts:420:  const wantedTokens
+ =
+  lib\resolveNaverBrandProductUrl.ts:421:    getUsefulTokens(
+  lib\resolveNaverBrandProductUrl.ts:422:      productName,
+  lib\resolveNaverBrandProductUrl.ts:423:    )
+  lib\resolveNaverBrandProductUrl.ts:424:      .map(
+  lib\resolveNaverBrandProductUrl.ts:425:        (token) =>
+  lib\resolveNaverBrandProductUrl.ts:426:          token.toLo
+werCase(),
+  lib\resolveNaverBrandProductUrl.ts:427:      );
+  lib\resolveNaverBrandProductUrl.ts:428:
+  lib\resolveNaverBrandProductUrl.ts:429:  const title =
+  lib\resolveNaverBrandProductUrl.ts:430:    candidate.title
+  lib\resolveNaverBrandProductUrl.ts:431:      .toLowerCase()
+;
+  lib\resolveNaverBrandProductUrl.ts:432:
+  lib\resolveNaverBrandProductUrl.ts:433:  let score = 0;
+  lib\resolveNaverBrandProductUrl.ts:434:
+  lib\resolveNaverBrandProductUrl.ts:435:  for (
+  lib\resolveNaverBrandProductUrl.ts:436:    const token of
+  lib\resolveNaverBrandProductUrl.ts:437:    wantedTokens
+  lib\resolveNaverBrandProductUrl.ts:438:  ) {
+  lib\resolveNaverBrandProductUrl.ts:439:    if (
+  lib\resolveNaverBrandProductUrl.ts:440:      title.includes
+(token)
+  lib\resolveNaverBrandProductUrl.ts:441:    ) {
+  lib\resolveNaverBrandProductUrl.ts:442:      score += 10;
+  lib\resolveNaverBrandProductUrl.ts:443:    }
+  lib\resolveNaverBrandProductUrl.ts:444:  }
+  lib\resolveNaverBrandProductUrl.ts:445:
+  lib\resolveNaverBrandProductUrl.ts:446:  return score;
+  lib\resolveNaverBrandProductUrl.ts:447:}
+  lib\resolveNaverBrandProductUrl.ts:448:
+  lib\resolveNaverBrandProductUrl.ts:449:export async functio
+n resolveNaverBrandProductUrl(
+  lib\resolveNaverBrandProductUrl.ts:450:  productUrl: string
+,
+  lib\resolveNaverBrandProductUrl.ts:451:  productName: strin
+g,
+  lib\resolveNaverBrandProductUrl.ts:452:) {
+  lib\resolveNaverBrandProductUrl.ts:453:  /*
+  lib\resolveNaverBrandProductUrl.ts:454:    direct smartstor
+e/brand URL이면
+  lib\resolveNaverBrandProductUrl.ts:455:    여기서 상품번호가 바로 잡힌다
+.
+  lib\resolveNaverBrandProductUrl.ts:456:
+  lib\resolveNaverBrandProductUrl.ts:457:    ader/cr3 같은 중간 U
+RL이면
+> lib\resolveNaverBrandProductUrl.ts:458:    productId는 빈 문자열
+로 시작하고,
+  lib\resolveNaverBrandProductUrl.ts:459:    아래 SerpApi 공식상품 
+검색에서
+> lib\resolveNaverBrandProductUrl.ts:460:    실제 productId를 다시
+ 확보한다.
+  lib\resolveNaverBrandProductUrl.ts:461:  */
+> lib\resolveNaverBrandProductUrl.ts:462:  const inputProduct
+Id =
+> lib\resolveNaverBrandProductUrl.ts:463:    getProductId(
+  lib\resolveNaverBrandProductUrl.ts:464:      productUrl,
+  lib\resolveNaverBrandProductUrl.ts:465:    );
+  lib\resolveNaverBrandProductUrl.ts:466:
+  lib\resolveNaverBrandProductUrl.ts:467:  const cleanedName 
+=
+  lib\resolveNaverBrandProductUrl.ts:468:    cleanProductName
+(
+  lib\resolveNaverBrandProductUrl.ts:469:      productName,
+  lib\resolveNaverBrandProductUrl.ts:470:    );
+  lib\resolveNaverBrandProductUrl.ts:471:
+  lib\resolveNaverBrandProductUrl.ts:472:  const usefulTokens
+ =
+  lib\resolveNaverBrandProductUrl.ts:473:    getUsefulTokens(
+  lib\resolveNaverBrandProductUrl.ts:474:      productName,
+  lib\resolveNaverBrandProductUrl.ts:475:    );
+  lib\resolveNaverBrandProductUrl.ts:476:
+  lib\resolveNaverBrandProductUrl.ts:477:  const initialBrand
+Candidate =
+  lib\resolveNaverBrandProductUrl.ts:478:    getBrandCandidat
+e(
+  lib\resolveNaverBrandProductUrl.ts:479:      productName,
+  lib\resolveNaverBrandProductUrl.ts:480:    );
+  lib\resolveNaverBrandProductUrl.ts:481:
+  lib\resolveNaverBrandProductUrl.ts:482:  /*
+  lib\resolveNaverBrandProductUrl.ts:483:    이미 학습된 브랜드스토어가 있
+으면
+  lib\resolveNaverBrandProductUrl.ts:484:    SerpApi 검색 전에 즉시
+ 재사용.
+  lib\resolveNaverBrandProductUrl.ts:485:  */
+  lib\resolveNaverBrandProductUrl.ts:486:  if (
+> lib\resolveNaverBrandProductUrl.ts:487:    inputProductId &
+&
+  lib\resolveNaverBrandProductUrl.ts:488:    initialBrandCand
+idate
+  lib\resolveNaverBrandProductUrl.ts:489:  ) {
+  lib\resolveNaverBrandProductUrl.ts:490:    const learned =
+> lib\resolveNaverBrandProductUrl.ts:491:      await findBran
+dStoreMapping([
+  lib\resolveNaverBrandProductUrl.ts:492:        initialBrand
+Candidate,
+  lib\resolveNaverBrandProductUrl.ts:493:      ]);
+  lib\resolveNaverBrandProductUrl.ts:494:
+  lib\resolveNaverBrandProductUrl.ts:495:    if (
+  lib\resolveNaverBrandProductUrl.ts:496:      learned?.brand
+Site
+  lib\resolveNaverBrandProductUrl.ts:497:    ) {
+  lib\resolveNaverBrandProductUrl.ts:498:      return {
+  lib\resolveNaverBrandProductUrl.ts:499:        success: tru
+e as const,
+  lib\resolveNaverBrandProductUrl.ts:500:
+> lib\resolveNaverBrandProductUrl.ts:501:        productId:
+> lib\resolveNaverBrandProductUrl.ts:502:          inputProdu
+ctId,
+  lib\resolveNaverBrandProductUrl.ts:503:
+  lib\resolveNaverBrandProductUrl.ts:504:        brandName:
+  lib\resolveNaverBrandProductUrl.ts:505:          learned.br
+andName ||
+  lib\resolveNaverBrandProductUrl.ts:506:          initialBra
+ndCandidate,
+  lib\resolveNaverBrandProductUrl.ts:507:
+  lib\resolveNaverBrandProductUrl.ts:508:        brandSite:
+  lib\resolveNaverBrandProductUrl.ts:509:          learned.br
+andSite,
+  lib\resolveNaverBrandProductUrl.ts:510:
+  lib\resolveNaverBrandProductUrl.ts:511:        canonicalUrl
+:
+> lib\resolveNaverBrandProductUrl.ts:512:          `${learned
+.brandSite}/products/${inputProductId}`,
+  lib\resolveNaverBrandProductUrl.ts:513:
+  lib\resolveNaverBrandProductUrl.ts:514:        triedQueries
+:
+  lib\resolveNaverBrandProductUrl.ts:515:          [] as stri
+ng[],
+  lib\resolveNaverBrandProductUrl.ts:516:      };
+  lib\resolveNaverBrandProductUrl.ts:517:    }
+  lib\resolveNaverBrandProductUrl.ts:518:  }
+  lib\resolveNaverBrandProductUrl.ts:519:
+  lib\resolveNaverBrandProductUrl.ts:520:  const modelTokens 
+=
+  lib\resolveNaverBrandProductUrl.ts:521:    usefulTokens
+  lib\resolveNaverBrandProductUrl.ts:522:      .filter(
+  lib\resolveNaverBrandProductUrl.ts:523:        (token) =>
+  lib\resolveNaverBrandProductUrl.ts:524:          token !==
+  lib\resolveNaverBrandProductUrl.ts:525:          initialBra
+ndCandidate,
+  lib\resolveNaverBrandProductUrl.ts:526:      )
+  lib\resolveNaverBrandProductUrl.ts:527:      .slice(
+  lib\resolveNaverBrandProductUrl.ts:528:        0,
+  lib\resolveNaverBrandProductUrl.ts:529:        3,
+  lib\resolveNaverBrandProductUrl.ts:530:      );
+  lib\resolveNaverBrandProductUrl.ts:531:
+  lib\resolveNaverBrandProductUrl.ts:532:  const triedQueries
+:
+  lib\resolveNaverBrandProductUrl.ts:533:    string[] = [];
+  lib\resolveNaverBrandProductUrl.ts:534:
+  lib\resolveNaverBrandProductUrl.ts:535:  let brandName = ""
+;
+  lib\resolveNaverBrandProductUrl.ts:536:
+  lib\resolveNaverBrandProductUrl.ts:537:  const canonicalCan
+didates:
+  lib\resolveNaverBrandProductUrl.ts:538:    CanonicalCandida
+te[] = [];
+  lib\resolveNaverBrandProductUrl.ts:539:
+  lib\resolveNaverBrandProductUrl.ts:540:  const brandSites =
+  lib\resolveNaverBrandProductUrl.ts:541:    new Set<string>(
+);
+  lib\resolveNaverBrandProductUrl.ts:542:
+  lib\resolveNaverBrandProductUrl.ts:543:  const tryQuery =
+  lib\resolveNaverBrandProductUrl.ts:544:    async (
+  lib\resolveNaverBrandProductUrl.ts:545:      query: string,
+  lib\resolveNaverBrandProductUrl.ts:546:    ) => {
+  lib\resolveNaverBrandProductUrl.ts:547:      const normaliz
+ed =
+  lib\resolveNaverBrandProductUrl.ts:548:        query
+  lib\resolveNaverBrandProductUrl.ts:549:          .replace(
+  lib\resolveNaverBrandProductUrl.ts:550:            /\s+/g,
+  lib\resolveNaverBrandProductUrl.ts:551:            " ",
+  lib\resolveNaverBrandProductUrl.ts:552:          )
+  lib\resolveNaverBrandProductUrl.ts:593:          )
+  lib\resolveNaverBrandProductUrl.ts:594:        ) {
+  lib\resolveNaverBrandProductUrl.ts:595:          canonicalC
+andidates.push(
+  lib\resolveNaverBrandProductUrl.ts:596:            candidat
+e,
+  lib\resolveNaverBrandProductUrl.ts:597:          );
+  lib\resolveNaverBrandProductUrl.ts:598:        }
+  lib\resolveNaverBrandProductUrl.ts:599:      }
+  lib\resolveNaverBrandProductUrl.ts:600:
+  lib\resolveNaverBrandProductUrl.ts:601:      if (!brandName
+) {
+  lib\resolveNaverBrandProductUrl.ts:602:        brandName =
+  lib\resolveNaverBrandProductUrl.ts:603:          extractBra
+ndName(
+  lib\resolveNaverBrandProductUrl.ts:604:            data,
+  lib\resolveNaverBrandProductUrl.ts:605:          );
+  lib\resolveNaverBrandProductUrl.ts:606:      }
+  lib\resolveNaverBrandProductUrl.ts:607:    };
+  lib\resolveNaverBrandProductUrl.ts:608:
+  lib\resolveNaverBrandProductUrl.ts:609:  /*
+  lib\resolveNaverBrandProductUrl.ts:610:    상품번호가 이미 있으면
+  lib\resolveNaverBrandProductUrl.ts:611:    기존에 성공했던 강한 검색부터
+ 사용.
+  lib\resolveNaverBrandProductUrl.ts:612:  */
+> lib\resolveNaverBrandProductUrl.ts:613:  if (inputProductId
+) {
+  lib\resolveNaverBrandProductUrl.ts:614:    await tryQuery(
+> lib\resolveNaverBrandProductUrl.ts:615:      `${inputProduc
+tId} ${cleanedName}`,
+  lib\resolveNaverBrandProductUrl.ts:616:    );
+  lib\resolveNaverBrandProductUrl.ts:617:  }
+  lib\resolveNaverBrandProductUrl.ts:618:
+  lib\resolveNaverBrandProductUrl.ts:619:  /*
+  lib\resolveNaverBrandProductUrl.ts:620:    중간 URL 또는 상품번호 미
+확보 상황에서는
+  lib\resolveNaverBrandProductUrl.ts:621:    상품명 자체로 공식 브랜드 상
+품을 찾는다.
+  lib\resolveNaverBrandProductUrl.ts:622:  */
+  lib\resolveNaverBrandProductUrl.ts:623:  await tryQuery(
+  lib\resolveNaverBrandProductUrl.ts:624:    `${cleanedName} 
+brand.naver.com`,
+  lib\resolveNaverBrandProductUrl.ts:625:  );
+  lib\resolveNaverBrandProductUrl.ts:626:
+  lib\resolveNaverBrandProductUrl.ts:627:  if (
+  lib\resolveNaverBrandProductUrl.ts:628:    initialBrandCand
+idate
+  lib\resolveNaverBrandProductUrl.ts:629:  ) {
+  lib\resolveNaverBrandProductUrl.ts:630:    const shortModel
+ =
+  lib\resolveNaverBrandProductUrl.ts:631:      modelTokens
+  lib\resolveNaverBrandProductUrl.ts:632:        .slice(0, 2)
+  lib\resolveNaverBrandProductUrl.ts:633:        .join(" ");
+  lib\resolveNaverBrandProductUrl.ts:634:
+  lib\resolveNaverBrandProductUrl.ts:635:    await tryQuery(
+  lib\resolveNaverBrandProductUrl.ts:636:      `site:brand.na
+ver.com ${initialBrandCandidate} ${shortModel}`,
+  lib\resolveNaverBrandProductUrl.ts:637:    );
+  lib\resolveNaverBrandProductUrl.ts:638:  }
+  lib\resolveNaverBrandProductUrl.ts:639:
+  lib\resolveNaverBrandProductUrl.ts:640:  const modelLike =
+  lib\resolveNaverBrandProductUrl.ts:641:    usefulTokens.fil
+ter(
+  lib\resolveNaverBrandProductUrl.ts:642:      (token) =>
+  lib\resolveNaverBrandProductUrl.ts:643:        /[a-zA-Z]/.t
+est(
+  lib\resolveNaverBrandProductUrl.ts:644:          token,
+  lib\resolveNaverBrandProductUrl.ts:645:        ) ||
+  lib\resolveNaverBrandProductUrl.ts:646:        /\d/.test(
+  lib\resolveNaverBrandProductUrl.ts:647:          token,
+  lib\resolveNaverBrandProductUrl.ts:648:        ),
+  lib\resolveNaverBrandProductUrl.ts:649:    );
+  lib\resolveNaverBrandProductUrl.ts:650:
+  lib\resolveNaverBrandProductUrl.ts:651:  if (
+  lib\resolveNaverBrandProductUrl.ts:652:    initialBrandCand
+idate &&
+  lib\resolveNaverBrandProductUrl.ts:653:    modelLike.length
+ > 0
+  lib\resolveNaverBrandProductUrl.ts:654:  ) {
+  lib\resolveNaverBrandProductUrl.ts:655:    await tryQuery(
+  lib\resolveNaverBrandProductUrl.ts:656:      `${initialBran
+dCandidate} ${modelLike
+  lib\resolveNaverBrandProductUrl.ts:657:        .slice(0, 3)
+  lib\resolveNaverBrandProductUrl.ts:658:        .join(" ")} 
+공식`,
+  lib\resolveNaverBrandProductUrl.ts:659:    );
+  lib\resolveNaverBrandProductUrl.ts:660:  }
+  lib\resolveNaverBrandProductUrl.ts:661:
+  lib\resolveNaverBrandProductUrl.ts:662:  /*
+  lib\resolveNaverBrandProductUrl.ts:663:    공식 상품 URL 후보가 확보
+됐으면
+  lib\resolveNaverBrandProductUrl.ts:664:    상품번호 일치 또는 상품명 토
+큰 일치도가
+  lib\resolveNaverBrandProductUrl.ts:665:    가장 높은 후보를 선택한다.
+  lib\resolveNaverBrandProductUrl.ts:666:  */
+  lib\resolveNaverBrandProductUrl.ts:667:  const rankedCandid
+ates =
+  lib\resolveNaverBrandProductUrl.ts:668:    [...canonicalCan
+didates]
+  lib\resolveNaverBrandProductUrl.ts:669:      .map(
+  lib\resolveNaverBrandProductUrl.ts:670:        (candidate) 
+=> ({
+  lib\resolveNaverBrandProductUrl.ts:671:          candidate,
+  lib\resolveNaverBrandProductUrl.ts:672:          score:
+  lib\resolveNaverBrandProductUrl.ts:673:            candidat
+eScore(
+  lib\resolveNaverBrandProductUrl.ts:674:              candid
+ate,
+  lib\resolveNaverBrandProductUrl.ts:675:              produc
+tName,
+> lib\resolveNaverBrandProductUrl.ts:676:              inputP
+roductId,
+  lib\resolveNaverBrandProductUrl.ts:677:            ),
+  lib\resolveNaverBrandProductUrl.ts:678:        }),
+  lib\resolveNaverBrandProductUrl.ts:679:      )
+  lib\resolveNaverBrandProductUrl.ts:680:      .sort(
+  lib\resolveNaverBrandProductUrl.ts:681:        (a, b) =>
+  lib\resolveNaverBrandProductUrl.ts:682:          b.score -
+  lib\resolveNaverBrandProductUrl.ts:683:          a.score,
+  lib\resolveNaverBrandProductUrl.ts:684:      );
+  lib\resolveNaverBrandProductUrl.ts:685:
+  lib\resolveNaverBrandProductUrl.ts:686:  const best =
+  lib\resolveNaverBrandProductUrl.ts:687:    rankedCandidates
+[0];
+  lib\resolveNaverBrandProductUrl.ts:688:
+  lib\resolveNaverBrandProductUrl.ts:689:  if (
+  lib\resolveNaverBrandProductUrl.ts:690:    best &&
+  lib\resolveNaverBrandProductUrl.ts:691:    (
+> lib\resolveNaverBrandProductUrl.ts:692:      inputProductId
+  lib\resolveNaverBrandProductUrl.ts:693:        ? best.candi
+date
+> lib\resolveNaverBrandProductUrl.ts:694:            .product
+Id ===
+> lib\resolveNaverBrandProductUrl.ts:695:          inputProdu
+ctId
+  lib\resolveNaverBrandProductUrl.ts:696:        : best.score
+ > 0 ||
+  lib\resolveNaverBrandProductUrl.ts:697:          canonicalC
+andidates.length ===
+  lib\resolveNaverBrandProductUrl.ts:698:            1
+  lib\resolveNaverBrandProductUrl.ts:699:    )
+  lib\resolveNaverBrandProductUrl.ts:700:  ) {
+  lib\resolveNaverBrandProductUrl.ts:701:    const resolvedBr
+andName =
+  lib\resolveNaverBrandProductUrl.ts:702:      brandName ||
+  lib\resolveNaverBrandProductUrl.ts:703:      initialBrandCa
+ndidate;
+  lib\resolveNaverBrandProductUrl.ts:704:
+  lib\resolveNaverBrandProductUrl.ts:705:    try {
+  lib\resolveNaverBrandProductUrl.ts:706:      await saveBran
+dStoreMapping(
+  lib\resolveNaverBrandProductUrl.ts:707:        [
+  lib\resolveNaverBrandProductUrl.ts:708:          initialBra
+ndCandidate,
+  lib\resolveNaverBrandProductUrl.ts:709:          brandName,
+  lib\resolveNaverBrandProductUrl.ts:710:          resolvedBr
+andName,
+  lib\resolveNaverBrandProductUrl.ts:711:        ],
+  lib\resolveNaverBrandProductUrl.ts:712:        best.candida
+te
+  lib\resolveNaverBrandProductUrl.ts:713:          .brandSite
+,
+  lib\resolveNaverBrandProductUrl.ts:714:        {
+  lib\resolveNaverBrandProductUrl.ts:715:          source:
+  lib\resolveNaverBrandProductUrl.ts:716:            "serpapi
+_product_match",
+  lib\resolveNaverBrandProductUrl.ts:717:          confidence
+:
+  lib\resolveNaverBrandProductUrl.ts:718:            100,
+  lib\resolveNaverBrandProductUrl.ts:719:        },
+  lib\resolveNaverBrandProductUrl.ts:720:      );
+  lib\resolveNaverBrandProductUrl.ts:721:    } catch (error) 
+{
+  lib\resolveNaverBrandProductUrl.ts:722:      console.warn(
+  lib\resolveNaverBrandProductUrl.ts:723:        "Brand mappi
+ng save warning:",
+  lib\resolveNaverBrandProductUrl.ts:724:        error,
+  lib\resolveNaverBrandProductUrl.ts:725:      );
+  lib\resolveNaverBrandProductUrl.ts:726:    }
+  lib\resolveNaverBrandProductUrl.ts:727:
+  lib\resolveNaverBrandProductUrl.ts:728:    return {
+  lib\resolveNaverBrandProductUrl.ts:729:      success: true 
+as const,
+  lib\resolveNaverBrandProductUrl.ts:730:
+> lib\resolveNaverBrandProductUrl.ts:731:      productId:
+  lib\resolveNaverBrandProductUrl.ts:732:        best.candida
+te
+> lib\resolveNaverBrandProductUrl.ts:733:          .productId
+,
+  lib\resolveNaverBrandProductUrl.ts:734:
+  lib\resolveNaverBrandProductUrl.ts:735:      brandName:
+  lib\resolveNaverBrandProductUrl.ts:736:        resolvedBran
+dName,
+  lib\resolveNaverBrandProductUrl.ts:737:
+  lib\resolveNaverBrandProductUrl.ts:738:      brandSite:
+  lib\resolveNaverBrandProductUrl.ts:739:        best.candida
+te
+  lib\resolveNaverBrandProductUrl.ts:740:          .brandSite
+,
+  lib\resolveNaverBrandProductUrl.ts:741:
+  lib\resolveNaverBrandProductUrl.ts:742:      canonicalUrl:
+  lib\resolveNaverBrandProductUrl.ts:743:        best.candida
+te
+  lib\resolveNaverBrandProductUrl.ts:744:          .canonical
+Url,
+  lib\resolveNaverBrandProductUrl.ts:745:
+  lib\resolveNaverBrandProductUrl.ts:746:      triedQueries,
+  lib\resolveNaverBrandProductUrl.ts:747:    };
+  lib\resolveNaverBrandProductUrl.ts:748:  }
+  lib\resolveNaverBrandProductUrl.ts:749:
+  lib\resolveNaverBrandProductUrl.ts:750:  /*
+  lib\resolveNaverBrandProductUrl.ts:751:    상품번호는 알고 있지만 검색결
+과에서
+  lib\resolveNaverBrandProductUrl.ts:752:    정확한 상품 URL을 직접 얻
+지 못한 경우,
+  lib\resolveNaverBrandProductUrl.ts:753:    공식 브랜드스토어만 확인되면 
+기존 방식대로
+> lib\resolveNaverBrandProductUrl.ts:754:    brandSite + prod
+uctId를 조합한다.
+  lib\resolveNaverBrandProductUrl.ts:755:  */
+  lib\resolveNaverBrandProductUrl.ts:756:  if (
+> lib\resolveNaverBrandProductUrl.ts:757:    inputProductId &
+&
+  lib\resolveNaverBrandProductUrl.ts:758:    brandSites.size 
+> 0
+  lib\resolveNaverBrandProductUrl.ts:759:  ) {
+  lib\resolveNaverBrandProductUrl.ts:760:    const brandSite 
+=
+  lib\resolveNaverBrandProductUrl.ts:761:      [...brandSites
+][0];
+  lib\resolveNaverBrandProductUrl.ts:762:
+  lib\resolveNaverBrandProductUrl.ts:763:    const resolvedBr
+andName =
+  lib\resolveNaverBrandProductUrl.ts:764:      brandName ||
+  lib\resolveNaverBrandProductUrl.ts:765:      initialBrandCa
+ndidate;
+  lib\resolveNaverBrandProductUrl.ts:766:
+  lib\resolveNaverBrandProductUrl.ts:767:    try {
+  lib\resolveNaverBrandProductUrl.ts:768:      await saveBran
+dStoreMapping(
+  lib\resolveNaverBrandProductUrl.ts:769:        [
+  lib\resolveNaverBrandProductUrl.ts:770:          initialBra
+ndCandidate,
+  lib\resolveNaverBrandProductUrl.ts:771:          brandName,
+  lib\resolveNaverBrandProductUrl.ts:772:          resolvedBr
+andName,
+  lib\resolveNaverBrandProductUrl.ts:773:        ],
+  lib\resolveNaverBrandProductUrl.ts:774:        brandSite,
+  lib\resolveNaverBrandProductUrl.ts:775:        {
+  lib\resolveNaverBrandProductUrl.ts:776:          source:
+  lib\resolveNaverBrandProductUrl.ts:777:            "serpapi
+_brand_site",
+  lib\resolveNaverBrandProductUrl.ts:778:          confidence
+:
+  lib\resolveNaverBrandProductUrl.ts:779:            95,
+  lib\resolveNaverBrandProductUrl.ts:780:        },
+  lib\resolveNaverBrandProductUrl.ts:781:      );
+  lib\resolveNaverBrandProductUrl.ts:782:    } catch (error) 
+{
+  lib\resolveNaverBrandProductUrl.ts:783:      console.warn(
+  lib\resolveNaverBrandProductUrl.ts:784:        "Brand mappi
+ng save warning:",
+  lib\resolveNaverBrandProductUrl.ts:785:        error,
+  lib\resolveNaverBrandProductUrl.ts:786:      );
+  lib\resolveNaverBrandProductUrl.ts:787:    }
+  lib\resolveNaverBrandProductUrl.ts:788:
+  lib\resolveNaverBrandProductUrl.ts:789:    return {
+  lib\resolveNaverBrandProductUrl.ts:790:      success: true 
+as const,
+  lib\resolveNaverBrandProductUrl.ts:791:
+> lib\resolveNaverBrandProductUrl.ts:792:      productId:
+> lib\resolveNaverBrandProductUrl.ts:793:        inputProduct
+Id,
+  lib\resolveNaverBrandProductUrl.ts:794:
+  lib\resolveNaverBrandProductUrl.ts:795:      brandName:
+  lib\resolveNaverBrandProductUrl.ts:796:        resolvedBran
+dName,
+  lib\resolveNaverBrandProductUrl.ts:797:
+  lib\resolveNaverBrandProductUrl.ts:798:      brandSite,
+  lib\resolveNaverBrandProductUrl.ts:799:
+  lib\resolveNaverBrandProductUrl.ts:800:      canonicalUrl:
+> lib\resolveNaverBrandProductUrl.ts:801:        `${brandSite
+}/products/${inputProductId}`,
+  lib\resolveNaverBrandProductUrl.ts:802:
+  lib\resolveNaverBrandProductUrl.ts:803:      triedQueries,
+  lib\resolveNaverBrandProductUrl.ts:804:    };
+  lib\resolveNaverBrandProductUrl.ts:805:  }
+  lib\resolveNaverBrandProductUrl.ts:806:
+> lib\resolveNaverBrandProductUrl.ts:807:  if (inputProductId
+) {
+  lib\resolveNaverBrandProductUrl.ts:808:    const learned =
+> lib\resolveNaverBrandProductUrl.ts:809:      await findBran
+dStoreMapping([
+  lib\resolveNaverBrandProductUrl.ts:810:        initialBrand
+Candidate,
+  lib\resolveNaverBrandProductUrl.ts:811:        brandName,
+  lib\resolveNaverBrandProductUrl.ts:812:      ]);
+  lib\resolveNaverBrandProductUrl.ts:813:
+  lib\resolveNaverBrandProductUrl.ts:814:    if (
+  lib\resolveNaverBrandProductUrl.ts:815:      learned?.brand
+Site
+  lib\resolveNaverBrandProductUrl.ts:816:    ) {
+  lib\resolveNaverBrandProductUrl.ts:817:      return {
+  lib\resolveNaverBrandProductUrl.ts:818:        success: tru
+e as const,
+  lib\resolveNaverBrandProductUrl.ts:819:
+> lib\resolveNaverBrandProductUrl.ts:820:        productId:
+> lib\resolveNaverBrandProductUrl.ts:821:          inputProdu
+ctId,
+  lib\resolveNaverBrandProductUrl.ts:822:
+  lib\resolveNaverBrandProductUrl.ts:823:        brandName:
+  lib\resolveNaverBrandProductUrl.ts:824:          learned.br
+andName ||
+  lib\resolveNaverBrandProductUrl.ts:825:          initialBra
+ndCandidate ||
+  lib\resolveNaverBrandProductUrl.ts:826:          brandName,
+  lib\resolveNaverBrandProductUrl.ts:827:
+  lib\resolveNaverBrandProductUrl.ts:828:        brandSite:
+  lib\resolveNaverBrandProductUrl.ts:829:          learned.br
+andSite,
+  lib\resolveNaverBrandProductUrl.ts:830:
+  lib\resolveNaverBrandProductUrl.ts:831:        canonicalUrl
+:
+> lib\resolveNaverBrandProductUrl.ts:832:          `${learned
+.brandSite}/products/${inputProductId}`,
+  lib\resolveNaverBrandProductUrl.ts:833:
+  lib\resolveNaverBrandProductUrl.ts:834:        triedQueries
+,
+  lib\resolveNaverBrandProductUrl.ts:835:      };
+  lib\resolveNaverBrandProductUrl.ts:836:    }
+  lib\resolveNaverBrandProductUrl.ts:837:  }
+  lib\resolveNaverBrandProductUrl.ts:838:
+  lib\resolveNaverBrandProductUrl.ts:839:  return {
+  lib\resolveNaverBrandProductUrl.ts:840:    success: false a
+s const,
+  lib\resolveNaverBrandProductUrl.ts:841:
+> lib\resolveNaverBrandProductUrl.ts:842:    productId:
+> lib\resolveNaverBrandProductUrl.ts:843:      inputProductId
+,
+  lib\resolveNaverBrandProductUrl.ts:844:
+  lib\resolveNaverBrandProductUrl.ts:845:    brandName:
+  lib\resolveNaverBrandProductUrl.ts:846:      brandName ||
+  lib\resolveNaverBrandProductUrl.ts:847:      initialBrandCa
+ndidate,
+  lib\resolveNaverBrandProductUrl.ts:848:
+  lib\resolveNaverBrandProductUrl.ts:849:    brandSite:
+  lib\resolveNaverBrandProductUrl.ts:850:      [...brandSites
+][0] ??
+  lib\resolveNaverBrandProductUrl.ts:851:      "",
+  lib\resolveNaverBrandProductUrl.ts:852:
+  lib\resolveNaverBrandProductUrl.ts:853:    canonicalUrl: ""
+,
+  lib\resolveNaverBrandProductUrl.ts:854:
+  lib\resolveNaverBrandProductUrl.ts:855:    triedQueries,
+  lib\resolveNaverBrandProductUrl.ts:856:
+  lib\resolveNaverBrandProductUrl.ts:857:    reason:
+> lib\resolveNaverBrandProductUrl.ts:858:      inputProductId
+  lib\resolveNaverBrandProductUrl.ts:859:        ? "brand.nav
+er.com 공식 상품 URL을 찾지 못했습니다."
+  lib\resolveNaverBrandProductUrl.ts:860:        : "중간 네이버 UR
+L에서 공식 상품번호와 brand.naver.com 상품 URL을 확인하지 못했습니다.",
+  lib\resolveNaverBrandProductUrl.ts:861:  };
+  lib\resolveNaverBrandProductUrl.ts:862:}
+  lib\resolveNaverBrandProductUrl.ts:863:
+  lib\resolveNaverBrandProductUrl.ts:864:
+  lib\resolveNaverBrandProductUrl.ts:865:
+  lib\resolveNaverBrandProductUrl.ts:866:
+
+

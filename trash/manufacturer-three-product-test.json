@@ -1,0 +1,37 @@
+[
+  {
+    "name": "P70 Pro Ultra",
+    "result": {
+      "success": false,
+      "reason": "제조사 공식몰 후보가 요청 모델과 일치하지 않습니다. [required=p70|pro|ultra, missing=p70, title=MOVA Z60 Ultra Roller 로봇청소기]",
+      "candidatesChecked": 1
+    }
+  },
+  {
+    "name": "S10 MaxV Ultra",
+    "result": {
+      "success": true,
+      "detail": {
+        "canonicalUrl": "https://kr.roborock.com/pages/roborock-s10-maxv-ultra",
+        "title": "Roborock S10 MaxV Ultra - 디테일을 넘어, 완벽 그 이상으로",
+        "brand": "",
+        "manufacturer": "",
+        "modelName": "",
+        "originalPrice": 0,
+        "finalPrice": 0,
+        "imageUrl": "https://kr.roborock.com/cdn/shop/files/roborock_logo_share_1200x1200.jpg?v=1758519853",
+        "sourceType": "manufacturer"
+      },
+      "discoveredUrl": "https://kr.roborock.com/pages/roborock-s10-maxv-ultra",
+      "candidatesChecked": 1
+    }
+  },
+  {
+    "name": "X60 Master",
+    "result": {
+      "success": false,
+      "reason": "제조사 공식몰 후보가 요청 모델과 일치하지 않습니다. [required=x60|master, missing=master, title=DREAME]",
+      "candidatesChecked": 1
+    }
+  }
+]

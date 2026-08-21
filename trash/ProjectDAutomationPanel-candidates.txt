@@ -1,0 +1,836 @@
+﻿
+  components\ProjectDAutomationPanel.tsx:126:}
+  components\ProjectDAutomationPanel.tsx:127:
+  components\ProjectDAutomationPanel.tsx:128:async function r
+eadJson(
+  components\ProjectDAutomationPanel.tsx:129:  response: Resp
+onse,
+  components\ProjectDAutomationPanel.tsx:130:) {
+  components\ProjectDAutomationPanel.tsx:131:  const text =
+  components\ProjectDAutomationPanel.tsx:132:    await respon
+se.text();
+  components\ProjectDAutomationPanel.tsx:133:
+  components\ProjectDAutomationPanel.tsx:134:  try {
+  components\ProjectDAutomationPanel.tsx:135:    return JSON.
+parse(text) as Record<
+  components\ProjectDAutomationPanel.tsx:136:      string,
+  components\ProjectDAutomationPanel.tsx:137:      unknown
+  components\ProjectDAutomationPanel.tsx:138:    >;
+  components\ProjectDAutomationPanel.tsx:139:  } catch {
+  components\ProjectDAutomationPanel.tsx:140:    throw new Er
+ror(
+> components\ProjectDAutomationPanel.tsx:141:      `JSON이 아닌 
+응답을 받았습니다. (${response.status}) ${text.slice(
+  components\ProjectDAutomationPanel.tsx:142:        0,
+  components\ProjectDAutomationPanel.tsx:143:        200,
+  components\ProjectDAutomationPanel.tsx:144:      )}`,
+  components\ProjectDAutomationPanel.tsx:145:    );
+  components\ProjectDAutomationPanel.tsx:146:  }
+  components\ProjectDAutomationPanel.tsx:147:}
+  components\ProjectDAutomationPanel.tsx:148:
+  components\ProjectDAutomationPanel.tsx:149:export default f
+unction ProjectDAutomationPanel() {
+  components\ProjectDAutomationPanel.tsx:150:  const [
+  components\ProjectDAutomationPanel.tsx:151:    category,
+  components\ProjectDAutomationPanel.tsx:152:    setCategory,
+  components\ProjectDAutomationPanel.tsx:153:  ] = useState(
+  components\ProjectDAutomationPanel.tsx:154:    "로봇청소기",
+  components\ProjectDAutomationPanel.tsx:155:  );
+  components\ProjectDAutomationPanel.tsx:156:
+  components\ProjectDAutomationPanel.tsx:157:  const [
+  components\ProjectDAutomationPanel.tsx:158:    minBudget,
+  components\ProjectDAutomationPanel.tsx:159:    setMinBudget
+,
+  components\ProjectDAutomationPanel.tsx:160:  ] = useState(
+  components\ProjectDAutomationPanel.tsx:161:    "500,000",
+  components\ProjectDAutomationPanel.tsx:162:  );
+  components\ProjectDAutomationPanel.tsx:163:
+  components\ProjectDAutomationPanel.tsx:164:  const [
+  components\ProjectDAutomationPanel.tsx:165:    maxBudget,
+  components\ProjectDAutomationPanel.tsx:166:    setMaxBudget
+,
+  components\ProjectDAutomationPanel.tsx:180:    setIsRunning
+,
+  components\ProjectDAutomationPanel.tsx:181:  ] = useState(f
+alse);
+  components\ProjectDAutomationPanel.tsx:182:
+  components\ProjectDAutomationPanel.tsx:183:  const [
+  components\ProjectDAutomationPanel.tsx:184:    finalMessage
+,
+  components\ProjectDAutomationPanel.tsx:185:    setFinalMess
+age,
+  components\ProjectDAutomationPanel.tsx:186:  ] = useState("
+");
+  components\ProjectDAutomationPanel.tsx:187:
+  components\ProjectDAutomationPanel.tsx:188:  function updat
+eStep(
+  components\ProjectDAutomationPanel.tsx:189:    key: string,
+  components\ProjectDAutomationPanel.tsx:190:    status: Step
+Status,
+  components\ProjectDAutomationPanel.tsx:191:    message = ""
+,
+  components\ProjectDAutomationPanel.tsx:192:  ) {
+  components\ProjectDAutomationPanel.tsx:193:    setSteps(
+  components\ProjectDAutomationPanel.tsx:194:      (current) 
+=>
+> components\ProjectDAutomationPanel.tsx:195:        current.
+map(
+  components\ProjectDAutomationPanel.tsx:196:          (step)
+ =>
+  components\ProjectDAutomationPanel.tsx:197:            step
+.key === key
+  components\ProjectDAutomationPanel.tsx:198:              ? 
+{
+  components\ProjectDAutomationPanel.tsx:199:                
+  ...step,
+  components\ProjectDAutomationPanel.tsx:200:                
+  status,
+  components\ProjectDAutomationPanel.tsx:201:                
+  message,
+  components\ProjectDAutomationPanel.tsx:202:                
+}
+  components\ProjectDAutomationPanel.tsx:203:              : 
+step,
+  components\ProjectDAutomationPanel.tsx:204:        ),
+  components\ProjectDAutomationPanel.tsx:205:    );
+  components\ProjectDAutomationPanel.tsx:206:  }
+  components\ProjectDAutomationPanel.tsx:207:
+  components\ProjectDAutomationPanel.tsx:208:  async function
+ run() {
+  components\ProjectDAutomationPanel.tsx:209:    const normal
+izedCategory =
+  components\ProjectDAutomationPanel.tsx:210:      category.t
+rim();
+  components\ProjectDAutomationPanel.tsx:211:
+  components\ProjectDAutomationPanel.tsx:212:    const min =
+  components\ProjectDAutomationPanel.tsx:213:      parsePrice
+(
+  components\ProjectDAutomationPanel.tsx:214:        minBudge
+t,
+  components\ProjectDAutomationPanel.tsx:215:      );
+  components\ProjectDAutomationPanel.tsx:216:
+  components\ProjectDAutomationPanel.tsx:217:    const max =
+  components\ProjectDAutomationPanel.tsx:218:      parsePrice
+(
+  components\ProjectDAutomationPanel.tsx:219:        maxBudge
+t,
+  components\ProjectDAutomationPanel.tsx:220:      );
+  components\ProjectDAutomationPanel.tsx:228:
+  components\ProjectDAutomationPanel.tsx:229:    if (
+  components\ProjectDAutomationPanel.tsx:230:      min > 0 &&
+  components\ProjectDAutomationPanel.tsx:231:      max > 0 &&
+  components\ProjectDAutomationPanel.tsx:232:      min > max
+  components\ProjectDAutomationPanel.tsx:233:    ) {
+  components\ProjectDAutomationPanel.tsx:234:      alert(
+  components\ProjectDAutomationPanel.tsx:235:        "최소 예산은 
+최대 예산보다 작아야 합니다.",
+  components\ProjectDAutomationPanel.tsx:236:      );
+  components\ProjectDAutomationPanel.tsx:237:      return;
+  components\ProjectDAutomationPanel.tsx:238:    }
+  components\ProjectDAutomationPanel.tsx:239:
+  components\ProjectDAutomationPanel.tsx:240:    setIsRunning
+(true);
+  components\ProjectDAutomationPanel.tsx:241:
+  components\ProjectDAutomationPanel.tsx:242:    setSteps(
+> components\ProjectDAutomationPanel.tsx:243:      INITIAL_ST
+EPS.map(
+  components\ProjectDAutomationPanel.tsx:244:        (step) =
+> ({
+  components\ProjectDAutomationPanel.tsx:245:          ...ste
+p,
+  components\ProjectDAutomationPanel.tsx:246:        }),
+  components\ProjectDAutomationPanel.tsx:247:      ),
+  components\ProjectDAutomationPanel.tsx:248:    );
+  components\ProjectDAutomationPanel.tsx:249:
+  components\ProjectDAutomationPanel.tsx:250:    setFinalMess
+age("");
+  components\ProjectDAutomationPanel.tsx:251:
+  components\ProjectDAutomationPanel.tsx:252:    try {
+  components\ProjectDAutomationPanel.tsx:253:      /*
+  components\ProjectDAutomationPanel.tsx:254:        1단계
+  components\ProjectDAutomationPanel.tsx:255:        Project 
+D 시장검색 엔진으로
+  components\ProjectDAutomationPanel.tsx:256:        네이버 후보를 
+자동 수집한다.
+  components\ProjectDAutomationPanel.tsx:257:      */
+  components\ProjectDAutomationPanel.tsx:258:      updateStep
+(
+  components\ProjectDAutomationPanel.tsx:259:        "market"
+,
+  components\ProjectDAutomationPanel.tsx:260:        "working
+",
+  components\ProjectDAutomationPanel.tsx:261:        `"${norm
+alizedCategory}" 시장 후보를 자동 검색하는 중...`,
+  components\ProjectDAutomationPanel.tsx:262:      );
+  components\ProjectDAutomationPanel.tsx:263:
+  components\ProjectDAutomationPanel.tsx:264:      const mark
+etResponse =
+  components\ProjectDAutomationPanel.tsx:265:        await fe
+tch(
+> components\ProjectDAutomationPanel.tsx:266:          `/api/
+market-candidates?category=${encodeURIComponent(
+  components\ProjectDAutomationPanel.tsx:267:            norm
+alizedCategory,
+  components\ProjectDAutomationPanel.tsx:268:          )}`,
+  components\ProjectDAutomationPanel.tsx:269:          {
+  components\ProjectDAutomationPanel.tsx:270:            cach
+e: "no-store",
+  components\ProjectDAutomationPanel.tsx:271:          },
+  components\ProjectDAutomationPanel.tsx:272:        );
+  components\ProjectDAutomationPanel.tsx:273:
+  components\ProjectDAutomationPanel.tsx:274:      const mark
+etResult =
+  components\ProjectDAutomationPanel.tsx:275:        await re
+adJson(
+  components\ProjectDAutomationPanel.tsx:276:          market
+Response,
+  components\ProjectDAutomationPanel.tsx:277:        );
+  components\ProjectDAutomationPanel.tsx:278:
+  components\ProjectDAutomationPanel.tsx:279:      if (
+  components\ProjectDAutomationPanel.tsx:280:        !marketR
+esponse.ok ||
+  components\ProjectDAutomationPanel.tsx:281:        marketRe
+sult.success !== true
+  components\ProjectDAutomationPanel.tsx:282:      ) {
+  components\ProjectDAutomationPanel.tsx:283:        throw ne
+w Error(
+  components\ProjectDAutomationPanel.tsx:284:          cleanT
+ext(
+  components\ProjectDAutomationPanel.tsx:285:            mark
+etResult.message,
+  components\ProjectDAutomationPanel.tsx:286:          ) ||
+  components\ProjectDAutomationPanel.tsx:287:            "시장 
+후보 검색에 실패했습니다.",
+  components\ProjectDAutomationPanel.tsx:288:        );
+  components\ProjectDAutomationPanel.tsx:289:      }
+  components\ProjectDAutomationPanel.tsx:290:
+> components\ProjectDAutomationPanel.tsx:291:      const mark
+etCandidates =
+  components\ProjectDAutomationPanel.tsx:292:        Array.is
+Array(
+> components\ProjectDAutomationPanel.tsx:293:          market
+Result.candidates,
+  components\ProjectDAutomationPanel.tsx:294:        )
+  components\ProjectDAutomationPanel.tsx:295:          ? (
+> components\ProjectDAutomationPanel.tsx:296:              ma
+rketResult.candidates as MarketCandidate[]
+  components\ProjectDAutomationPanel.tsx:297:            )
+  components\ProjectDAutomationPanel.tsx:298:          : [];
+  components\ProjectDAutomationPanel.tsx:299:
+  components\ProjectDAutomationPanel.tsx:300:      if (
+> components\ProjectDAutomationPanel.tsx:301:        marketCa
+ndidates.length === 0
+  components\ProjectDAutomationPanel.tsx:302:      ) {
+  components\ProjectDAutomationPanel.tsx:303:        throw ne
+w Error(
+  components\ProjectDAutomationPanel.tsx:304:          "시장 후보
+를 찾지 못했습니다.",
+  components\ProjectDAutomationPanel.tsx:305:        );
+  components\ProjectDAutomationPanel.tsx:306:      }
+  components\ProjectDAutomationPanel.tsx:307:
+  components\ProjectDAutomationPanel.tsx:308:      updateStep
+(
+  components\ProjectDAutomationPanel.tsx:309:        "market"
+,
+  components\ProjectDAutomationPanel.tsx:310:        "done",
+> components\ProjectDAutomationPanel.tsx:311:        `${marke
+tCandidates.length}개 시장 후보 수집 완료`,
+  components\ProjectDAutomationPanel.tsx:312:      );
+  components\ProjectDAutomationPanel.tsx:313:
+  components\ProjectDAutomationPanel.tsx:314:      /*
+  components\ProjectDAutomationPanel.tsx:315:        naver-ca
+pture는 이제 사용자에게
+  components\ProjectDAutomationPanel.tsx:316:        보이지 않는 내
+부 임시 저장소로만 사용한다.
+  components\ProjectDAutomationPanel.tsx:317:      */
+> components\ProjectDAutomationPanel.tsx:318:      const capt
+ureProducts =
+> components\ProjectDAutomationPanel.tsx:319:        marketCa
+ndidates.map(
+  components\ProjectDAutomationPanel.tsx:320:          (candi
+date) => ({
+  components\ProjectDAutomationPanel.tsx:321:            name
+:
+  components\ProjectDAutomationPanel.tsx:322:              cl
+eanText(
+  components\ProjectDAutomationPanel.tsx:323:                
+candidate.productName,
+  components\ProjectDAutomationPanel.tsx:324:              ),
+  components\ProjectDAutomationPanel.tsx:325:
+  components\ProjectDAutomationPanel.tsx:326:            text
+: "",
+  components\ProjectDAutomationPanel.tsx:327:
+  components\ProjectDAutomationPanel.tsx:328:            url:
+  components\ProjectDAutomationPanel.tsx:329:              cl
+eanText(
+  components\ProjectDAutomationPanel.tsx:330:                
+candidate.sourceUrl,
+  components\ProjectDAutomationPanel.tsx:331:              ),
+  components\ProjectDAutomationPanel.tsx:332:
+  components\ProjectDAutomationPanel.tsx:333:            imag
+eUrl:
+  components\ProjectDAutomationPanel.tsx:334:              cl
+eanText(
+  components\ProjectDAutomationPanel.tsx:335:                
+candidate.imageUrl,
+  components\ProjectDAutomationPanel.tsx:336:              ),
+  components\ProjectDAutomationPanel.tsx:337:
+  components\ProjectDAutomationPanel.tsx:338:            pric
+e:
+  components\ProjectDAutomationPanel.tsx:339:              Nu
+mber(
+  components\ProjectDAutomationPanel.tsx:340:                
+candidate.price ??
+  components\ProjectDAutomationPanel.tsx:341:                
+  0,
+  components\ProjectDAutomationPanel.tsx:342:              ),
+  components\ProjectDAutomationPanel.tsx:343:
+  components\ProjectDAutomationPanel.tsx:344:            revi
+ewCount:
+  components\ProjectDAutomationPanel.tsx:365:              "C
+ontent-Type":
+  components\ProjectDAutomationPanel.tsx:366:                
+"application/json",
+  components\ProjectDAutomationPanel.tsx:367:            },
+  components\ProjectDAutomationPanel.tsx:368:
+  components\ProjectDAutomationPanel.tsx:369:            body
+: JSON.stringify({
+  components\ProjectDAutomationPanel.tsx:370:              ca
+tegory:
+  components\ProjectDAutomationPanel.tsx:371:                
+normalizedCategory,
+  components\ProjectDAutomationPanel.tsx:372:
+  components\ProjectDAutomationPanel.tsx:373:              mi
+nBudget:
+  components\ProjectDAutomationPanel.tsx:374:                
+min,
+  components\ProjectDAutomationPanel.tsx:375:
+  components\ProjectDAutomationPanel.tsx:376:              ma
+xBudget:
+  components\ProjectDAutomationPanel.tsx:377:                
+max,
+  components\ProjectDAutomationPanel.tsx:378:
+  components\ProjectDAutomationPanel.tsx:379:              pr
+oducts:
+> components\ProjectDAutomationPanel.tsx:380:                
+captureProducts,
+  components\ProjectDAutomationPanel.tsx:381:            }),
+  components\ProjectDAutomationPanel.tsx:382:          },
+  components\ProjectDAutomationPanel.tsx:383:        );
+  components\ProjectDAutomationPanel.tsx:384:
+  components\ProjectDAutomationPanel.tsx:385:      const capt
+ureResult =
+  components\ProjectDAutomationPanel.tsx:386:        await re
+adJson(
+  components\ProjectDAutomationPanel.tsx:387:          captur
+eResponse,
+  components\ProjectDAutomationPanel.tsx:388:        );
+  components\ProjectDAutomationPanel.tsx:389:
+  components\ProjectDAutomationPanel.tsx:390:      if (
+  components\ProjectDAutomationPanel.tsx:391:        !capture
+Response.ok ||
+  components\ProjectDAutomationPanel.tsx:392:        captureR
+esult.success !== true
+  components\ProjectDAutomationPanel.tsx:393:      ) {
+  components\ProjectDAutomationPanel.tsx:394:        throw ne
+w Error(
+  components\ProjectDAutomationPanel.tsx:395:          cleanT
+ext(
+  components\ProjectDAutomationPanel.tsx:396:            capt
+ureResult.message,
+  components\ProjectDAutomationPanel.tsx:397:          ) ||
+  components\ProjectDAutomationPanel.tsx:398:            "후보 
+임시 저장에 실패했습니다.",
+  components\ProjectDAutomationPanel.tsx:399:        );
+  components\ProjectDAutomationPanel.tsx:400:      }
+  components\ProjectDAutomationPanel.tsx:401:
+  components\ProjectDAutomationPanel.tsx:402:      const capt
+ureId =
+  components\ProjectDAutomationPanel.tsx:403:        cleanTex
+t(
+  components\ProjectDAutomationPanel.tsx:404:          captur
+eResult.id,
+  components\ProjectDAutomationPanel.tsx:405:        );
+  components\ProjectDAutomationPanel.tsx:412:
+  components\ProjectDAutomationPanel.tsx:413:      /*
+  components\ProjectDAutomationPanel.tsx:414:        2단계
+  components\ProjectDAutomationPanel.tsx:415:        최대 15개 후
+보를
+  components\ProjectDAutomationPanel.tsx:416:        공식 URL +
+ Bright Data로 상세 검증해
+  components\ProjectDAutomationPanel.tsx:417:        최종 5개를 확
+보한다.
+  components\ProjectDAutomationPanel.tsx:418:      */
+  components\ProjectDAutomationPanel.tsx:419:      updateStep
+(
+  components\ProjectDAutomationPanel.tsx:420:        "enrich"
+,
+  components\ProjectDAutomationPanel.tsx:421:        "working
+",
+  components\ProjectDAutomationPanel.tsx:422:        "최대 15개 
+후보의 실제 판매가·리뷰·중복·공식 상품 URL을 검증하는 중...",
+  components\ProjectDAutomationPanel.tsx:423:      );
+  components\ProjectDAutomationPanel.tsx:424:
+  components\ProjectDAutomationPanel.tsx:425:      const enri
+chedResponse =
+  components\ProjectDAutomationPanel.tsx:426:        await fe
+tch(
+> components\ProjectDAutomationPanel.tsx:427:          `/api/
+market-candidates-enriched?captureId=${encodeURIComponent(
+  components\ProjectDAutomationPanel.tsx:428:            capt
+ureId,
+  components\ProjectDAutomationPanel.tsx:429:          )}`,
+  components\ProjectDAutomationPanel.tsx:430:          {
+  components\ProjectDAutomationPanel.tsx:431:            cach
+e: "no-store",
+  components\ProjectDAutomationPanel.tsx:432:          },
+  components\ProjectDAutomationPanel.tsx:433:        );
+  components\ProjectDAutomationPanel.tsx:434:
+  components\ProjectDAutomationPanel.tsx:435:      const enri
+ched =
+  components\ProjectDAutomationPanel.tsx:436:        await re
+adJson(
+  components\ProjectDAutomationPanel.tsx:437:          enrich
+edResponse,
+  components\ProjectDAutomationPanel.tsx:438:        );
+  components\ProjectDAutomationPanel.tsx:439:
+  components\ProjectDAutomationPanel.tsx:440:      if (
+  components\ProjectDAutomationPanel.tsx:441:        !enriche
+dResponse.ok ||
+  components\ProjectDAutomationPanel.tsx:442:        enriched
+.success !== true
+  components\ProjectDAutomationPanel.tsx:443:      ) {
+  components\ProjectDAutomationPanel.tsx:444:        throw ne
+w Error(
+  components\ProjectDAutomationPanel.tsx:445:          cleanT
+ext(
+  components\ProjectDAutomationPanel.tsx:446:            enri
+ched.message,
+  components\ProjectDAutomationPanel.tsx:447:          ) ||
+  components\ProjectDAutomationPanel.tsx:448:            "최종 
+후보 검증에 실패했습니다.",
+  components\ProjectDAutomationPanel.tsx:449:        );
+  components\ProjectDAutomationPanel.tsx:450:      }
+  components\ProjectDAutomationPanel.tsx:451:
+> components\ProjectDAutomationPanel.tsx:452:      const fina
+lCandidates =
+  components\ProjectDAutomationPanel.tsx:453:        Array.is
+Array(
+> components\ProjectDAutomationPanel.tsx:454:          enrich
+ed.finalCandidates,
+  components\ProjectDAutomationPanel.tsx:455:        )
+  components\ProjectDAutomationPanel.tsx:456:          ? (
+> components\ProjectDAutomationPanel.tsx:457:              en
+riched.finalCandidates as FinalCandidate[]
+  components\ProjectDAutomationPanel.tsx:458:            )
+  components\ProjectDAutomationPanel.tsx:459:          : [];
+  components\ProjectDAutomationPanel.tsx:460:
+  components\ProjectDAutomationPanel.tsx:461:      if (
+  components\ProjectDAutomationPanel.tsx:462:        enriched
+.targetReached !==
+  components\ProjectDAutomationPanel.tsx:463:          true |
+|
+> components\ProjectDAutomationPanel.tsx:464:        finalCan
+didates.length < 5
+  components\ProjectDAutomationPanel.tsx:465:      ) {
+  components\ProjectDAutomationPanel.tsx:466:        throw ne
+w Error(
+> components\ProjectDAutomationPanel.tsx:467:          `유효 후보
+가 5개에 도달하지 못했습니다. 현재 ${finalCandidates.length}개입니다.`,
+  components\ProjectDAutomationPanel.tsx:468:        );
+  components\ProjectDAutomationPanel.tsx:469:      }
+  components\ProjectDAutomationPanel.tsx:470:
+  components\ProjectDAutomationPanel.tsx:471:      updateStep
+(
+  components\ProjectDAutomationPanel.tsx:472:        "enrich"
+,
+  components\ProjectDAutomationPanel.tsx:473:        "done",
+> components\ProjectDAutomationPanel.tsx:474:        `${final
+Candidates.length}개 최종 후보 확보 · Bright Data ${Number(
+  components\ProjectDAutomationPanel.tsx:475:          enrich
+ed.brightDataCalls ??
+  components\ProjectDAutomationPanel.tsx:476:            0,
+  components\ProjectDAutomationPanel.tsx:477:        )}회`,
+  components\ProjectDAutomationPanel.tsx:478:      );
+  components\ProjectDAutomationPanel.tsx:479:
+  components\ProjectDAutomationPanel.tsx:480:      /*
+  components\ProjectDAutomationPanel.tsx:481:        3단계
+  components\ProjectDAutomationPanel.tsx:482:        최종 5개를 p
+roducts에 등록/갱신.
+  components\ProjectDAutomationPanel.tsx:483:      */
+  components\ProjectDAutomationPanel.tsx:484:      updateStep
+(
+  components\ProjectDAutomationPanel.tsx:485:        "import"
+,
+  components\ProjectDAutomationPanel.tsx:486:        "working
+",
+  components\ProjectDAutomationPanel.tsx:487:        "최종 후보를 
+제품 DB에 등록하는 중...",
+  components\ProjectDAutomationPanel.tsx:488:      );
+  components\ProjectDAutomationPanel.tsx:489:
+  components\ProjectDAutomationPanel.tsx:490:      const impo
+rtResponse =
+  components\ProjectDAutomationPanel.tsx:491:        await fe
+tch(
+> components\ProjectDAutomationPanel.tsx:492:          "/api/
+import-market-candidates",
+  components\ProjectDAutomationPanel.tsx:493:          {
+  components\ProjectDAutomationPanel.tsx:494:            meth
+od: "POST",
+  components\ProjectDAutomationPanel.tsx:495:
+  components\ProjectDAutomationPanel.tsx:496:            head
+ers: {
+  components\ProjectDAutomationPanel.tsx:497:              "C
+ontent-Type":
+  components\ProjectDAutomationPanel.tsx:498:                
+"application/json",
+  components\ProjectDAutomationPanel.tsx:499:            },
+  components\ProjectDAutomationPanel.tsx:500:
+  components\ProjectDAutomationPanel.tsx:501:            body
+: JSON.stringify({
+  components\ProjectDAutomationPanel.tsx:502:              ca
+tegory:
+  components\ProjectDAutomationPanel.tsx:503:                
+normalizedCategory,
+  components\ProjectDAutomationPanel.tsx:504:
+> components\ProjectDAutomationPanel.tsx:505:              ca
+ndidates:
+> components\ProjectDAutomationPanel.tsx:506:                
+finalCandidates,
+  components\ProjectDAutomationPanel.tsx:507:            }),
+  components\ProjectDAutomationPanel.tsx:508:          },
+  components\ProjectDAutomationPanel.tsx:509:        );
+  components\ProjectDAutomationPanel.tsx:510:
+  components\ProjectDAutomationPanel.tsx:511:      const impo
+rtResult =
+  components\ProjectDAutomationPanel.tsx:512:        await re
+adJson(
+  components\ProjectDAutomationPanel.tsx:513:          import
+Response,
+  components\ProjectDAutomationPanel.tsx:514:        );
+  components\ProjectDAutomationPanel.tsx:515:
+  components\ProjectDAutomationPanel.tsx:516:      if (
+  components\ProjectDAutomationPanel.tsx:517:        !importR
+esponse.ok ||
+  components\ProjectDAutomationPanel.tsx:518:        importRe
+sult.success !==
+  components\ProjectDAutomationPanel.tsx:519:          true
+  components\ProjectDAutomationPanel.tsx:520:      ) {
+  components\ProjectDAutomationPanel.tsx:521:        throw ne
+w Error(
+  components\ProjectDAutomationPanel.tsx:522:          cleanT
+ext(
+  components\ProjectDAutomationPanel.tsx:523:            impo
+rtResult.message,
+  components\ProjectDAutomationPanel.tsx:524:          ) ||
+  components\ProjectDAutomationPanel.tsx:525:            "제품 
+DB 등록에 실패했습니다.",
+  components\ProjectDAutomationPanel.tsx:526:        );
+  components\ProjectDAutomationPanel.tsx:527:      }
+  components\ProjectDAutomationPanel.tsx:528:
+  components\ProjectDAutomationPanel.tsx:529:      updateStep
+(
+  components\ProjectDAutomationPanel.tsx:530:        "import"
+,
+  components\ProjectDAutomationPanel.tsx:531:        "done",
+  components\ProjectDAutomationPanel.tsx:597:        "reviews
+",
+  components\ProjectDAutomationPanel.tsx:598:        "working
+",
+  components\ProjectDAutomationPanel.tsx:599:        "제품 5개의 
+리뷰를 순서대로 AI 분석 중...",
+  components\ProjectDAutomationPanel.tsx:600:      );
+  components\ProjectDAutomationPanel.tsx:601:
+  components\ProjectDAutomationPanel.tsx:602:      const anal
+yzedProducts:
+  components\ProjectDAutomationPanel.tsx:603:        Array<{
+  components\ProjectDAutomationPanel.tsx:604:          produc
+tId: string;
+  components\ProjectDAutomationPanel.tsx:605:          produc
+tName: string;
+  components\ProjectDAutomationPanel.tsx:606:          analys
+is: unknown;
+  components\ProjectDAutomationPanel.tsx:607:        }> = [];
+  components\ProjectDAutomationPanel.tsx:608:
+  components\ProjectDAutomationPanel.tsx:609:      for (
+  components\ProjectDAutomationPanel.tsx:610:        let inde
+x = 0;
+  components\ProjectDAutomationPanel.tsx:611:        index <
+> components\ProjectDAutomationPanel.tsx:612:        finalCan
+didates.length;
+  components\ProjectDAutomationPanel.tsx:613:        index++
+  components\ProjectDAutomationPanel.tsx:614:      ) {
+  components\ProjectDAutomationPanel.tsx:615:        const ca
+ndidate =
+> components\ProjectDAutomationPanel.tsx:616:          finalC
+andidates[index];
+  components\ProjectDAutomationPanel.tsx:617:
+  components\ProjectDAutomationPanel.tsx:618:        const de
+tail =
+  components\ProjectDAutomationPanel.tsx:619:          candid
+ate.detail ?? {};
+  components\ProjectDAutomationPanel.tsx:620:
+  components\ProjectDAutomationPanel.tsx:621:        const pr
+oductId =
+  components\ProjectDAutomationPanel.tsx:622:          cleanT
+ext(
+  components\ProjectDAutomationPanel.tsx:623:            deta
+il.productId,
+  components\ProjectDAutomationPanel.tsx:624:          );
+  components\ProjectDAutomationPanel.tsx:625:
+  components\ProjectDAutomationPanel.tsx:626:        const pr
+oductName =
+  components\ProjectDAutomationPanel.tsx:627:          cleanT
+ext(
+  components\ProjectDAutomationPanel.tsx:628:            deta
+il.productName,
+  components\ProjectDAutomationPanel.tsx:629:          );
+  components\ProjectDAutomationPanel.tsx:630:
+  components\ProjectDAutomationPanel.tsx:631:        const re
+viewObjects =
+  components\ProjectDAutomationPanel.tsx:632:          Array.
+isArray(
+  components\ProjectDAutomationPanel.tsx:633:            deta
+il.reviews,
+  components\ProjectDAutomationPanel.tsx:634:          )
+  components\ProjectDAutomationPanel.tsx:635:            ? de
+tail.reviews
+  components\ProjectDAutomationPanel.tsx:636:            : []
+;
+  components\ProjectDAutomationPanel.tsx:637:
+  components\ProjectDAutomationPanel.tsx:638:        const re
+views =
+  components\ProjectDAutomationPanel.tsx:639:          review
+Objects
+> components\ProjectDAutomationPanel.tsx:640:            .map
+(
+  components\ProjectDAutomationPanel.tsx:641:              (r
+eview) =>
+  components\ProjectDAutomationPanel.tsx:642:                
+cleanText(
+  components\ProjectDAutomationPanel.tsx:643:                
+  review.text,
+  components\ProjectDAutomationPanel.tsx:644:                
+),
+  components\ProjectDAutomationPanel.tsx:645:            )
+> components\ProjectDAutomationPanel.tsx:646:            .fil
+ter(Boolean);
+  components\ProjectDAutomationPanel.tsx:647:
+  components\ProjectDAutomationPanel.tsx:648:        const lo
+wScore =
+> components\ProjectDAutomationPanel.tsx:649:          review
+Objects.filter(
+  components\ProjectDAutomationPanel.tsx:650:            (rev
+iew) => {
+  components\ProjectDAutomationPanel.tsx:651:              co
+nst rating =
+  components\ProjectDAutomationPanel.tsx:652:                
+Number(
+  components\ProjectDAutomationPanel.tsx:653:                
+  review.rating ??
+  components\ProjectDAutomationPanel.tsx:654:                
+    0,
+  components\ProjectDAutomationPanel.tsx:655:                
+);
+  components\ProjectDAutomationPanel.tsx:656:
+  components\ProjectDAutomationPanel.tsx:657:              re
+turn (
+  components\ProjectDAutomationPanel.tsx:658:                
+rating > 0 &&
+  components\ProjectDAutomationPanel.tsx:659:                
+rating <= 3
+  components\ProjectDAutomationPanel.tsx:660:              );
+  components\ProjectDAutomationPanel.tsx:661:            },
+  components\ProjectDAutomationPanel.tsx:662:          ).leng
+th;
+  components\ProjectDAutomationPanel.tsx:663:
+  components\ProjectDAutomationPanel.tsx:664:        updateSt
+ep(
+  components\ProjectDAutomationPanel.tsx:665:          "revie
+ws",
+  components\ProjectDAutomationPanel.tsx:666:          "worki
+ng",
+> components\ProjectDAutomationPanel.tsx:667:          `${ind
+ex + 1}/${finalCandidates.length} · ${productName}`,
+  components\ProjectDAutomationPanel.tsx:668:        );
+  components\ProjectDAutomationPanel.tsx:669:
+  components\ProjectDAutomationPanel.tsx:670:        const an
+alyzeResponse =
+  components\ProjectDAutomationPanel.tsx:671:          await 
+fetch(
+  components\ProjectDAutomationPanel.tsx:672:            "/ap
+i/analyze-reviews",
+  components\ProjectDAutomationPanel.tsx:673:            {
+  components\ProjectDAutomationPanel.tsx:674:              me
+thod: "POST",
+  components\ProjectDAutomationPanel.tsx:675:
+  components\ProjectDAutomationPanel.tsx:676:              he
+aders: {
+  components\ProjectDAutomationPanel.tsx:677:                
+"Content-Type":
+  components\ProjectDAutomationPanel.tsx:678:                
+  "application/json",
+  components\ProjectDAutomationPanel.tsx:679:              },
+  components\ProjectDAutomationPanel.tsx:680:
+  components\ProjectDAutomationPanel.tsx:681:              bo
+dy: JSON.stringify({
+  components\ProjectDAutomationPanel.tsx:682:                
+productName,
+  components\ProjectDAutomationPanel.tsx:683:
+  components\ProjectDAutomationPanel.tsx:684:                
+category:
+  components\ProjectDAutomationPanel.tsx:685:                
+  normalizedCategory,
+  components\ProjectDAutomationPanel.tsx:686:
+  components\ProjectDAutomationPanel.tsx:687:                
+reviews,
+  components\ProjectDAutomationPanel.tsx:688:
+  components\ProjectDAutomationPanel.tsx:689:                
+collectionStats: {
+  components\ProjectDAutomationPanel.tsx:690:                
+  total:
+  components\ProjectDAutomationPanel.tsx:691:                
+    reviews.length,
+  components\ProjectDAutomationPanel.tsx:692:
+  components\ProjectDAutomationPanel.tsx:905:
+  components\ProjectDAutomationPanel.tsx:906:      setFinalMe
+ssage(
+  components\ProjectDAutomationPanel.tsx:907:        `완료 · ${
+normalizedCategory} 최종 후보 5개와 추천 데이터 준비가 모두 끝났습니다.`,
+  components\ProjectDAutomationPanel.tsx:908:      );
+  components\ProjectDAutomationPanel.tsx:909:    } catch (err
+or) {
+  components\ProjectDAutomationPanel.tsx:910:      const mess
+age =
+  components\ProjectDAutomationPanel.tsx:911:        error in
+stanceof Error
+  components\ProjectDAutomationPanel.tsx:912:          ? erro
+r.message
+  components\ProjectDAutomationPanel.tsx:913:          : "자동 
+실행 중 오류가 발생했습니다.";
+  components\ProjectDAutomationPanel.tsx:914:
+  components\ProjectDAutomationPanel.tsx:915:      setSteps(
+  components\ProjectDAutomationPanel.tsx:916:        (current
+) => {
+  components\ProjectDAutomationPanel.tsx:917:          let ch
+anged =
+  components\ProjectDAutomationPanel.tsx:918:            fals
+e;
+  components\ProjectDAutomationPanel.tsx:919:
+> components\ProjectDAutomationPanel.tsx:920:          return
+ current.map(
+  components\ProjectDAutomationPanel.tsx:921:            (ste
+p) => {
+  components\ProjectDAutomationPanel.tsx:922:              if
+ (
+  components\ProjectDAutomationPanel.tsx:923:                
+!changed &&
+  components\ProjectDAutomationPanel.tsx:924:                
+step.status ===
+  components\ProjectDAutomationPanel.tsx:925:                
+  "working"
+  components\ProjectDAutomationPanel.tsx:926:              ) 
+{
+  components\ProjectDAutomationPanel.tsx:927:                
+changed =
+  components\ProjectDAutomationPanel.tsx:928:                
+  true;
+  components\ProjectDAutomationPanel.tsx:929:
+  components\ProjectDAutomationPanel.tsx:930:                
+return {
+  components\ProjectDAutomationPanel.tsx:931:                
+  ...step,
+  components\ProjectDAutomationPanel.tsx:932:
+  components\ProjectDAutomationPanel.tsx:933:                
+  status:
+  components\ProjectDAutomationPanel.tsx:934:                
+    "error",
+  components\ProjectDAutomationPanel.tsx:935:
+  components\ProjectDAutomationPanel.tsx:936:                
+  message,
+  components\ProjectDAutomationPanel.tsx:937:                
+};
+  components\ProjectDAutomationPanel.tsx:938:              }
+  components\ProjectDAutomationPanel.tsx:939:
+  components\ProjectDAutomationPanel.tsx:940:              re
+turn step;
+  components\ProjectDAutomationPanel.tsx:941:            },
+  components\ProjectDAutomationPanel.tsx:942:          );
+  components\ProjectDAutomationPanel.tsx:943:        },
+  components\ProjectDAutomationPanel.tsx:944:      );
+  components\ProjectDAutomationPanel.tsx:945:
+  components\ProjectDAutomationPanel.tsx:1064:               
+ ),
+  components\ProjectDAutomationPanel.tsx:1065:              )
+  components\ProjectDAutomationPanel.tsx:1066:            }
+  components\ProjectDAutomationPanel.tsx:1067:            pla
+ceholder="1,500,000"
+  components\ProjectDAutomationPanel.tsx:1068:          />
+  components\ProjectDAutomationPanel.tsx:1069:        </div>
+  components\ProjectDAutomationPanel.tsx:1070:      </div>
+  components\ProjectDAutomationPanel.tsx:1071:
+  components\ProjectDAutomationPanel.tsx:1072:      <div
+  components\ProjectDAutomationPanel.tsx:1073:        style={
+{
+  components\ProjectDAutomationPanel.tsx:1074:          margi
+nTop: 20,
+  components\ProjectDAutomationPanel.tsx:1075:          displ
+ay: "grid",
+  components\ProjectDAutomationPanel.tsx:1076:          gap: 
+10,
+  components\ProjectDAutomationPanel.tsx:1077:        }}
+  components\ProjectDAutomationPanel.tsx:1078:      >
+> components\ProjectDAutomationPanel.tsx:1079:        {steps.
+map(
+  components\ProjectDAutomationPanel.tsx:1080:          (step
+) => (
+  components\ProjectDAutomationPanel.tsx:1081:            <di
+v
+  components\ProjectDAutomationPanel.tsx:1082:              k
+ey={step.key}
+  components\ProjectDAutomationPanel.tsx:1083:              s
+tyle={{
+  components\ProjectDAutomationPanel.tsx:1084:               
+ display:
+  components\ProjectDAutomationPanel.tsx:1085:               
+   "flex",
+  components\ProjectDAutomationPanel.tsx:1086:               
+ alignItems:
+  components\ProjectDAutomationPanel.tsx:1087:               
+   "flex-start",
+  components\ProjectDAutomationPanel.tsx:1088:               
+ gap: 10,
+  components\ProjectDAutomationPanel.tsx:1089:               
+ padding:
+  components\ProjectDAutomationPanel.tsx:1090:               
+   "12px 14px",
+  components\ProjectDAutomationPanel.tsx:1091:               
+ borderRadius:
+  components\ProjectDAutomationPanel.tsx:1092:               
+   10,
+  components\ProjectDAutomationPanel.tsx:1093:               
+ background:
+  components\ProjectDAutomationPanel.tsx:1094:               
+   step.status ===
+  components\ProjectDAutomationPanel.tsx:1095:               
+   "done"
+  components\ProjectDAutomationPanel.tsx:1096:               
+     ? "#ECFDF3"
+  components\ProjectDAutomationPanel.tsx:1097:               
+     : step.status ===
+  components\ProjectDAutomationPanel.tsx:1098:               
+         "error"
+  components\ProjectDAutomationPanel.tsx:1099:               
+       ? "#FEF3F2"
+  components\ProjectDAutomationPanel.tsx:1100:               
+       : step.status ===
+  components\ProjectDAutomationPanel.tsx:1101:               
+           "working"
+  components\ProjectDAutomationPanel.tsx:1102:               
+         ? "#EFF8FF"
+  components\ProjectDAutomationPanel.tsx:1103:               
+         : "#ffffff",
+  components\ProjectDAutomationPanel.tsx:1104:               
+ border:
+
+

@@ -1,0 +1,385 @@
+﻿{
+    "success":  true,
+    "category":  "ë¡ë´ì²­ìê¸°",
+    "budget":  {
+                   "minBudget":  500000,
+                   "maxBudget":  1500000
+               },
+    "targetCount":  5,
+    "marketCandidateCount":  8,
+    "resolverAttempts":  8,
+    "brightDataCalls":  0,
+    "finalCandidateCount":  5,
+    "targetReached":  true,
+    "finalCandidates":  [
+                            {
+                                "position":  1,
+                                "canonicalSource":  {
+                                                        "productId":  "59760912197",
+                                                        "brandName":  "",
+                                                        "brandSite":  "",
+                                                        "url":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59760912197\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0\u0026t=mszqcnvg\u0026h=2f674e0982743fd264ba0daab9c2362371b076c8\u0026frm=NVSCPRO"
+                                                    },
+                                "reviewSource":  {
+                                                     "productName":  "Ã«ÂªÂ¨Ã«Â°Â Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° P70 Pro Ultra RLP54HE AIÃ¬ÂÂ¼Ã¬ÂÂ Ã¬ÂÂÃ«ÂÂÃ¬ÂÂ¸Ã¬Â²Â Ã­ÂÂÃ¬ÂÂ´Ã­ÂÂ¸, Ã«ÂÂ¨Ã­ÂÂ",
+                                                     "seller":  "Ã­ÂÂÃ«Â§Â¤Ã¬Â²Â 10",
+                                                     "price":  549000,
+                                                     "reviewCount":  3503,
+                                                     "rating":  4.95,
+                                                     "url":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59760912197\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0\u0026t=mszqcnvg\u0026h=2f674e0982743fd264ba0daab9c2362371b076c8\u0026frm=NVSCPRO",
+                                                     "resolvedUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59760912197\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0\u0026t=mszqcnvg\u0026h=2f674e0982743fd264ba0daab9c2362371b076c8\u0026frm=NVSCPRO",
+                                                     "sourceType":  "naver-aggregate",
+                                                     "isIndividualSeller":  false,
+                                                     "matchScore":  0,
+                                                     "reviewTextSource":  "canonical-fallback",
+                                                     "status":  "fallback-canonical"
+                                                 },
+                                "purchaseSource":  {
+                                                       "productName":  "Ã«ÂªÂ¨Ã«Â°Â Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° P70 Pro Ultra RLP54HE AIÃ¬ÂÂ¼Ã¬ÂÂ Ã¬ÂÂÃ«ÂÂÃ¬ÂÂ¸Ã¬Â²Â Ã­ÂÂÃ¬ÂÂ´Ã­ÂÂ¸, Ã«ÂÂ¨Ã­ÂÂ",
+                                                       "seller":  "Ã­ÂÂÃ«Â§Â¤Ã¬Â²Â 10",
+                                                       "price":  549000,
+                                                       "reviewCount":  3503,
+                                                       "rating":  4.95,
+                                                       "url":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59760912197\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0\u0026t=mszqcnvg\u0026h=2f674e0982743fd264ba0daab9c2362371b076c8\u0026frm=NVSCPRO",
+                                                       "resolvedUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59760912197\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0\u0026t=mszqcnvg\u0026h=2f674e0982743fd264ba0daab9c2362371b076c8\u0026frm=NVSCPRO",
+                                                       "sourceType":  "naver-aggregate",
+                                                       "isIndividualSeller":  false,
+                                                       "matchScore":  0,
+                                                       "status":  "fallback-market"
+                                                   },
+                                "market":  {
+                                               "productName":  "Ã«ÂªÂ¨Ã«Â°Â Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° P70 Pro Ultra RLP54HE AIÃ¬ÂÂ¼Ã¬ÂÂ Ã¬ÂÂÃ«ÂÂÃ¬ÂÂ¸Ã¬Â²Â Ã­ÂÂÃ¬ÂÂ´Ã­ÂÂ¸, Ã«ÂÂ¨Ã­ÂÂ",
+                                               "seller":  "Ã­ÂÂÃ«Â§Â¤Ã¬Â²Â 10",
+                                               "listedPrice":  549000,
+                                               "reviewCount":  3503,
+                                               "rating":  4.95,
+                                               "imageUrl":  "https://shopping-phinf.pstatic.net/main_5976091/59760912197.20260422124547.jpg?type=f300",
+                                               "sourceUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59760912197\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0\u0026t=mszqcnvg\u0026h=2f674e0982743fd264ba0daab9c2362371b076c8\u0026frm=NVSCPRO"
+                                           },
+                                "resolution":  {
+                                                   "productId":  "59760912197",
+                                                   "brandName":  "",
+                                                   "brandSite":  "",
+                                                   "canonicalUrl":  ""
+                                               },
+                                "detail":  {
+                                               "productId":  "59760912197",
+                                               "productName":  "Ã«ÂªÂ¨Ã«Â°Â Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° P70 Pro Ultra RLP54HE AIÃ¬ÂÂ¼Ã¬ÂÂ Ã¬ÂÂÃ«ÂÂÃ¬ÂÂ¸Ã¬Â²Â Ã­ÂÂÃ¬ÂÂ´Ã­ÂÂ¸, Ã«ÂÂ¨Ã­ÂÂ",
+                                               "brand":  "",
+                                               "manufacturer":  "",
+                                               "modelName":  "",
+                                               "originalPrice":  549000,
+                                               "finalPrice":  549000,
+                                               "discountRate":  0,
+                                               "reviewCount":  3503,
+                                               "rating":  4.95,
+                                               "sellerName":  "Ã­ÂÂÃ«Â§Â¤Ã¬Â²Â 10",
+                                               "categoryName":  "",
+                                               "imageUrl":  "https://shopping-phinf.pstatic.net/main_5976091/59760912197.20260422124547.jpg?type=f300",
+                                               "reviewSamples":  0,
+                                               "reviews":  [
+
+                                                           ],
+                                               "sourceUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59760912197\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0\u0026t=mszqcnvg\u0026h=2f674e0982743fd264ba0daab9c2362371b076c8\u0026frm=NVSCPRO",
+                                               "reviewSourceUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59760912197\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0\u0026t=mszqcnvg\u0026h=2f674e0982743fd264ba0daab9c2362371b076c8\u0026frm=NVSCPRO",
+                                               "detailStatus":  "partial-market"
+                                           }
+                            },
+                            {
+                                "position":  2,
+                                "canonicalSource":  {
+                                                        "productId":  "59215055197",
+                                                        "brandName":  "",
+                                                        "brandSite":  "",
+                                                        "url":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59215055197\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0\u0026t=mszqcnvg\u0026h=4001e91334e9f0dff0d90056cefa8e3369720f25\u0026frm=NVSCPRO"
+                                                    },
+                                "reviewSource":  {
+                                                     "productName":  "Ã«ÂÂÃ«Â¦Â¬Ã«Â¯Â¸ Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° X60 Ultra X60ULTRA Ã¬ÂÂ¬Ã¬ÂÂ¸Ã¬ÂÂ Ã«Â¬Â¼Ã­ÂÂµÃ­ÂÂ, Ã­ÂÂÃ¬ÂÂ´Ã­ÂÂ¸",
+                                                     "seller":  "Ã­ÂÂÃ«Â§Â¤Ã¬Â²Â 18",
+                                                     "price":  990000,
+                                                     "reviewCount":  2600,
+                                                     "rating":  4.88,
+                                                     "url":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59215055197\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0\u0026t=mszqcnvg\u0026h=4001e91334e9f0dff0d90056cefa8e3369720f25\u0026frm=NVSCPRO",
+                                                     "resolvedUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59215055197\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0\u0026t=mszqcnvg\u0026h=4001e91334e9f0dff0d90056cefa8e3369720f25\u0026frm=NVSCPRO",
+                                                     "sourceType":  "naver-aggregate",
+                                                     "isIndividualSeller":  false,
+                                                     "matchScore":  0,
+                                                     "reviewTextSource":  "canonical-fallback",
+                                                     "status":  "fallback-canonical"
+                                                 },
+                                "purchaseSource":  {
+                                                       "productName":  "Ã«ÂÂÃ«Â¦Â¬Ã«Â¯Â¸ Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° X60 Ultra X60ULTRA Ã¬ÂÂ¬Ã¬ÂÂ¸Ã¬ÂÂ Ã«Â¬Â¼Ã­ÂÂµÃ­ÂÂ, Ã­ÂÂÃ¬ÂÂ´Ã­ÂÂ¸",
+                                                       "seller":  "Ã­ÂÂÃ«Â§Â¤Ã¬Â²Â 18",
+                                                       "price":  990000,
+                                                       "reviewCount":  2600,
+                                                       "rating":  4.88,
+                                                       "url":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59215055197\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0\u0026t=mszqcnvg\u0026h=4001e91334e9f0dff0d90056cefa8e3369720f25\u0026frm=NVSCPRO",
+                                                       "resolvedUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59215055197\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0\u0026t=mszqcnvg\u0026h=4001e91334e9f0dff0d90056cefa8e3369720f25\u0026frm=NVSCPRO",
+                                                       "sourceType":  "naver-aggregate",
+                                                       "isIndividualSeller":  false,
+                                                       "matchScore":  0,
+                                                       "status":  "fallback-market"
+                                                   },
+                                "market":  {
+                                               "productName":  "Ã«ÂÂÃ«Â¦Â¬Ã«Â¯Â¸ Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° X60 Ultra X60ULTRA Ã¬ÂÂ¬Ã¬ÂÂ¸Ã¬ÂÂ Ã«Â¬Â¼Ã­ÂÂµÃ­ÂÂ, Ã­ÂÂÃ¬ÂÂ´Ã­ÂÂ¸",
+                                               "seller":  "Ã­ÂÂÃ«Â§Â¤Ã¬Â²Â 18",
+                                               "listedPrice":  990000,
+                                               "reviewCount":  2600,
+                                               "rating":  4.88,
+                                               "imageUrl":  "https://shopping-phinf.pstatic.net/main_5921505/59215055197.20260311095819.jpg?type=f300",
+                                               "sourceUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59215055197\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0\u0026t=mszqcnvg\u0026h=4001e91334e9f0dff0d90056cefa8e3369720f25\u0026frm=NVSCPRO"
+                                           },
+                                "resolution":  {
+                                                   "productId":  "59215055197",
+                                                   "brandName":  "",
+                                                   "brandSite":  "",
+                                                   "canonicalUrl":  ""
+                                               },
+                                "detail":  {
+                                               "productId":  "59215055197",
+                                               "productName":  "Ã«ÂÂÃ«Â¦Â¬Ã«Â¯Â¸ Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° X60 Ultra X60ULTRA Ã¬ÂÂ¬Ã¬ÂÂ¸Ã¬ÂÂ Ã«Â¬Â¼Ã­ÂÂµÃ­ÂÂ, Ã­ÂÂÃ¬ÂÂ´Ã­ÂÂ¸",
+                                               "brand":  "",
+                                               "manufacturer":  "",
+                                               "modelName":  "",
+                                               "originalPrice":  990000,
+                                               "finalPrice":  990000,
+                                               "discountRate":  0,
+                                               "reviewCount":  2600,
+                                               "rating":  4.88,
+                                               "sellerName":  "Ã­ÂÂÃ«Â§Â¤Ã¬Â²Â 18",
+                                               "categoryName":  "",
+                                               "imageUrl":  "https://shopping-phinf.pstatic.net/main_5921505/59215055197.20260311095819.jpg?type=f300",
+                                               "reviewSamples":  0,
+                                               "reviews":  [
+
+                                                           ],
+                                               "sourceUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59215055197\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0\u0026t=mszqcnvg\u0026h=4001e91334e9f0dff0d90056cefa8e3369720f25\u0026frm=NVSCPRO",
+                                               "reviewSourceUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59215055197\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0\u0026t=mszqcnvg\u0026h=4001e91334e9f0dff0d90056cefa8e3369720f25\u0026frm=NVSCPRO",
+                                               "detailStatus":  "partial-market"
+                                           }
+                            },
+                            {
+                                "position":  3,
+                                "canonicalSource":  {
+                                                        "productId":  "59204433943",
+                                                        "brandName":  "",
+                                                        "brandSite":  "",
+                                                        "url":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59204433943\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0\u0026t=mszqcje6\u0026h=393afaa5077ba76a1c10bf134ae6fc6fb242a1bc\u0026frm=NVSCDIG"
+                                                    },
+                                "reviewSource":  {
+                                                     "productName":  "Ã«ÂÂÃ«Â¦Â¬Ã«Â¯Â¸ Ã¬ÂÂ¬Ã¬ÂÂ¸Ã¬ÂÂ Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° X60 Master Ã¬ÂÂ¤Ã­ÂÂ Ã¬Â§ÂÃ«Â°Â°Ã¬ÂÂÃ­ÂÂ, Ã­ÂÂÃ¬ÂÂ´Ã­ÂÂ¸",
+                                                     "seller":  "Ã­ÂÂÃ«Â§Â¤Ã¬Â²Â 23",
+                                                     "price":  1090000,
+                                                     "reviewCount":  1135,
+                                                     "rating":  4.82,
+                                                     "url":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59204433943\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0\u0026t=mszqcje6\u0026h=393afaa5077ba76a1c10bf134ae6fc6fb242a1bc\u0026frm=NVSCDIG",
+                                                     "resolvedUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59204433943\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0\u0026t=mszqcje6\u0026h=393afaa5077ba76a1c10bf134ae6fc6fb242a1bc\u0026frm=NVSCDIG",
+                                                     "sourceType":  "naver-aggregate",
+                                                     "isIndividualSeller":  false,
+                                                     "matchScore":  0,
+                                                     "reviewTextSource":  "canonical-fallback",
+                                                     "status":  "fallback-canonical"
+                                                 },
+                                "purchaseSource":  {
+                                                       "productName":  "Ã«ÂÂÃ«Â¦Â¬Ã«Â¯Â¸ Ã¬ÂÂ¬Ã¬ÂÂ¸Ã¬ÂÂ Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° X60 Master Ã¬ÂÂ¤Ã­ÂÂ Ã¬Â§ÂÃ«Â°Â°Ã¬ÂÂÃ­ÂÂ, Ã­ÂÂÃ¬ÂÂ´Ã­ÂÂ¸",
+                                                       "seller":  "Ã­ÂÂÃ«Â§Â¤Ã¬Â²Â 23",
+                                                       "price":  1090000,
+                                                       "reviewCount":  1135,
+                                                       "rating":  4.82,
+                                                       "url":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59204433943\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0\u0026t=mszqcje6\u0026h=393afaa5077ba76a1c10bf134ae6fc6fb242a1bc\u0026frm=NVSCDIG",
+                                                       "resolvedUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59204433943\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0\u0026t=mszqcje6\u0026h=393afaa5077ba76a1c10bf134ae6fc6fb242a1bc\u0026frm=NVSCDIG",
+                                                       "sourceType":  "naver-aggregate",
+                                                       "isIndividualSeller":  false,
+                                                       "matchScore":  0,
+                                                       "status":  "fallback-market"
+                                                   },
+                                "market":  {
+                                               "productName":  "Ã«ÂÂÃ«Â¦Â¬Ã«Â¯Â¸ Ã¬ÂÂ¬Ã¬ÂÂ¸Ã¬ÂÂ Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° X60 Master Ã¬ÂÂ¤Ã­ÂÂ Ã¬Â§ÂÃ«Â°Â°Ã¬ÂÂÃ­ÂÂ, Ã­ÂÂÃ¬ÂÂ´Ã­ÂÂ¸",
+                                               "seller":  "Ã­ÂÂÃ«Â§Â¤Ã¬Â²Â 23",
+                                               "listedPrice":  1090000,
+                                               "reviewCount":  1135,
+                                               "rating":  4.82,
+                                               "imageUrl":  "https://shopping-phinf.pstatic.net/main_5920443/59204433943.20260310171023.jpg?type=f300",
+                                               "sourceUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59204433943\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0\u0026t=mszqcje6\u0026h=393afaa5077ba76a1c10bf134ae6fc6fb242a1bc\u0026frm=NVSCDIG"
+                                           },
+                                "resolution":  {
+                                                   "productId":  "59204433943",
+                                                   "brandName":  "",
+                                                   "brandSite":  "",
+                                                   "canonicalUrl":  ""
+                                               },
+                                "detail":  {
+                                               "productId":  "59204433943",
+                                               "productName":  "Ã«ÂÂÃ«Â¦Â¬Ã«Â¯Â¸ Ã¬ÂÂ¬Ã¬ÂÂ¸Ã¬ÂÂ Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° X60 Master Ã¬ÂÂ¤Ã­ÂÂ Ã¬Â§ÂÃ«Â°Â°Ã¬ÂÂÃ­ÂÂ, Ã­ÂÂÃ¬ÂÂ´Ã­ÂÂ¸",
+                                               "brand":  "",
+                                               "manufacturer":  "",
+                                               "modelName":  "",
+                                               "originalPrice":  1090000,
+                                               "finalPrice":  1090000,
+                                               "discountRate":  0,
+                                               "reviewCount":  1135,
+                                               "rating":  4.82,
+                                               "sellerName":  "Ã­ÂÂÃ«Â§Â¤Ã¬Â²Â 23",
+                                               "categoryName":  "",
+                                               "imageUrl":  "https://shopping-phinf.pstatic.net/main_5920443/59204433943.20260310171023.jpg?type=f300",
+                                               "reviewSamples":  0,
+                                               "reviews":  [
+
+                                                           ],
+                                               "sourceUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59204433943\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0\u0026t=mszqcje6\u0026h=393afaa5077ba76a1c10bf134ae6fc6fb242a1bc\u0026frm=NVSCDIG",
+                                               "reviewSourceUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59204433943\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0\u0026t=mszqcje6\u0026h=393afaa5077ba76a1c10bf134ae6fc6fb242a1bc\u0026frm=NVSCDIG",
+                                               "detailStatus":  "partial-market"
+                                           }
+                            },
+                            {
+                                "position":  4,
+                                "canonicalSource":  {
+                                                        "productId":  "90381860933",
+                                                        "brandName":  "",
+                                                        "brandSite":  "",
+                                                        "url":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=90381860933\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0\u0026t=mszqcjej\u0026h=7c4080bd480c4d091abc30d8ef86835978dfaeb8\u0026frm=NVSCSPE"
+                                                    },
+                                "reviewSource":  {
+                                                     "productName":  "Ã¬ÂÂÃ«Â¸ÂÃ«Â¦Â¬Ã«Â´Â TS450 Ã¬ÂÂ°Ã«Â¦Â¬Ã¬ÂÂ¤Ã­ÂÂ Ã¬ÂÂ¬Ã«Â¦Â¼ Ã«Â¬Â¼ÃªÂ±Â¸Ã« Â Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° 26Ã«Â\u0085Â NEW",
+                                                     "seller":  "Ã¬ÂÂÃ«Â¸ÂÃ«Â¦Â¬Ã«Â´Â ÃªÂ³ÂµÃ¬ÂÂÃ¬ÂÂ¼Ã­ÂÂÃ«ÂªÂ°",
+                                                     "price":  448000,
+                                                     "reviewCount":  2055,
+                                                     "rating":  4.8,
+                                                     "url":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=90381860933\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0\u0026t=mszqcjej\u0026h=7c4080bd480c4d091abc30d8ef86835978dfaeb8\u0026frm=NVSCSPE",
+                                                     "resolvedUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=90381860933\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0\u0026t=mszqcjej\u0026h=7c4080bd480c4d091abc30d8ef86835978dfaeb8\u0026frm=NVSCSPE",
+                                                     "sourceType":  "naver-aggregate",
+                                                     "isIndividualSeller":  false,
+                                                     "matchScore":  0,
+                                                     "reviewTextSource":  "canonical-fallback",
+                                                     "status":  "fallback-canonical"
+                                                 },
+                                "purchaseSource":  {
+                                                       "productName":  "Ã¬ÂÂÃ«Â¸ÂÃ«Â¦Â¬Ã«Â´Â TS450 Ã¬ÂÂ°Ã«Â¦Â¬Ã¬ÂÂ¤Ã­ÂÂ Ã¬ÂÂ¬Ã«Â¦Â¼ Ã«Â¬Â¼ÃªÂ±Â¸Ã« Â Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° 26Ã«Â\u0085Â NEW",
+                                                       "seller":  "Ã¬ÂÂÃ«Â¸ÂÃ«Â¦Â¬Ã«Â´Â ÃªÂ³ÂµÃ¬ÂÂÃ¬ÂÂ¼Ã­ÂÂÃ«ÂªÂ°",
+                                                       "price":  448000,
+                                                       "reviewCount":  2055,
+                                                       "rating":  4.8,
+                                                       "url":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=90381860933\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0\u0026t=mszqcjej\u0026h=7c4080bd480c4d091abc30d8ef86835978dfaeb8\u0026frm=NVSCSPE",
+                                                       "resolvedUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=90381860933\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0\u0026t=mszqcjej\u0026h=7c4080bd480c4d091abc30d8ef86835978dfaeb8\u0026frm=NVSCSPE",
+                                                       "sourceType":  "naver-aggregate",
+                                                       "isIndividualSeller":  false,
+                                                       "matchScore":  0,
+                                                       "status":  "fallback-market"
+                                                   },
+                                "market":  {
+                                               "productName":  "Ã¬ÂÂÃ«Â¸ÂÃ«Â¦Â¬Ã«Â´Â TS450 Ã¬ÂÂ°Ã«Â¦Â¬Ã¬ÂÂ¤Ã­ÂÂ Ã¬ÂÂ¬Ã«Â¦Â¼ Ã«Â¬Â¼ÃªÂ±Â¸Ã« Â Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° 26Ã«Â\u0085Â NEW",
+                                               "seller":  "Ã¬ÂÂÃ«Â¸ÂÃ«Â¦Â¬Ã«Â´Â ÃªÂ³ÂµÃ¬ÂÂÃ¬ÂÂ¼Ã­ÂÂÃ«ÂªÂ°",
+                                               "listedPrice":  448000,
+                                               "reviewCount":  2055,
+                                               "rating":  4.8,
+                                               "imageUrl":  "https://shopping-phinf.pstatic.net/main_9038186/90381860933.13.jpg?type=f300",
+                                               "sourceUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=90381860933\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0\u0026t=mszqcjej\u0026h=7c4080bd480c4d091abc30d8ef86835978dfaeb8\u0026frm=NVSCSPE"
+                                           },
+                                "resolution":  {
+                                                   "productId":  "90381860933",
+                                                   "brandName":  "",
+                                                   "brandSite":  "",
+                                                   "canonicalUrl":  ""
+                                               },
+                                "detail":  {
+                                               "productId":  "90381860933",
+                                               "productName":  "Ã¬ÂÂÃ«Â¸ÂÃ«Â¦Â¬Ã«Â´Â TS450 Ã¬ÂÂ°Ã«Â¦Â¬Ã¬ÂÂ¤Ã­ÂÂ Ã¬ÂÂ¬Ã«Â¦Â¼ Ã«Â¬Â¼ÃªÂ±Â¸Ã« Â Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° 26Ã«Â\u0085Â NEW",
+                                               "brand":  "",
+                                               "manufacturer":  "",
+                                               "modelName":  "",
+                                               "originalPrice":  448000,
+                                               "finalPrice":  448000,
+                                               "discountRate":  0,
+                                               "reviewCount":  2055,
+                                               "rating":  4.8,
+                                               "sellerName":  "Ã¬ÂÂÃ«Â¸ÂÃ«Â¦Â¬Ã«Â´Â ÃªÂ³ÂµÃ¬ÂÂÃ¬ÂÂ¼Ã­ÂÂÃ«ÂªÂ°",
+                                               "categoryName":  "",
+                                               "imageUrl":  "https://shopping-phinf.pstatic.net/main_9038186/90381860933.13.jpg?type=f300",
+                                               "reviewSamples":  0,
+                                               "reviews":  [
+
+                                                           ],
+                                               "sourceUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=90381860933\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0\u0026t=mszqcjej\u0026h=7c4080bd480c4d091abc30d8ef86835978dfaeb8\u0026frm=NVSCSPE",
+                                               "reviewSourceUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=90381860933\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0\u0026t=mszqcjej\u0026h=7c4080bd480c4d091abc30d8ef86835978dfaeb8\u0026frm=NVSCSPE",
+                                               "detailStatus":  "partial-market"
+                                           }
+                            },
+                            {
+                                "position":  5,
+                                "canonicalSource":  {
+                                                        "productId":  "59077746157",
+                                                        "brandName":  "",
+                                                        "brandSite":  "",
+                                                        "url":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59077746157\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0\u0026t=mszqcnvf\u0026h=6c0cfafca0d7c2e80770a3e3d5f5cbcdb57ad6b1\u0026frm=NVSCPRO"
+                                                    },
+                                "reviewSource":  {
+                                                     "productName":  "Ã«Â¡ÂÃ«Â³Â´Ã«ÂÂ½ Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° S10 MaxV Ultra RRE0VES+EWFD55HRR Ã¬ÂÂÃ«ÂÂ Ã«Â¬Â¼Ã­ÂÂµÃ­ÂÂ, Ã­ÂÂÃ¬ÂÂ´Ã­ÂÂ¸",
+                                                     "seller":  "Ã­ÂÂÃ«Â§Â¤Ã¬Â²Â 43",
+                                                     "price":  1590000,
+                                                     "reviewCount":  7946,
+                                                     "rating":  4.85,
+                                                     "url":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59077746157\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0\u0026t=mszqcnvf\u0026h=6c0cfafca0d7c2e80770a3e3d5f5cbcdb57ad6b1\u0026frm=NVSCPRO",
+                                                     "resolvedUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59077746157\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0\u0026t=mszqcnvf\u0026h=6c0cfafca0d7c2e80770a3e3d5f5cbcdb57ad6b1\u0026frm=NVSCPRO",
+                                                     "sourceType":  "naver-aggregate",
+                                                     "isIndividualSeller":  false,
+                                                     "matchScore":  0,
+                                                     "reviewTextSource":  "canonical-fallback",
+                                                     "status":  "fallback-canonical"
+                                                 },
+                                "purchaseSource":  {
+                                                       "productName":  "Ã«Â¡ÂÃ«Â³Â´Ã«ÂÂ½ Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° S10 MaxV Ultra RRE0VES+EWFD55HRR Ã¬ÂÂÃ«ÂÂ Ã«Â¬Â¼Ã­ÂÂµÃ­ÂÂ, Ã­ÂÂÃ¬ÂÂ´Ã­ÂÂ¸",
+                                                       "seller":  "Ã­ÂÂÃ«Â§Â¤Ã¬Â²Â 43",
+                                                       "price":  1590000,
+                                                       "reviewCount":  7946,
+                                                       "rating":  4.85,
+                                                       "url":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59077746157\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0\u0026t=mszqcnvf\u0026h=6c0cfafca0d7c2e80770a3e3d5f5cbcdb57ad6b1\u0026frm=NVSCPRO",
+                                                       "resolvedUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59077746157\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0\u0026t=mszqcnvf\u0026h=6c0cfafca0d7c2e80770a3e3d5f5cbcdb57ad6b1\u0026frm=NVSCPRO",
+                                                       "sourceType":  "naver-aggregate",
+                                                       "isIndividualSeller":  false,
+                                                       "matchScore":  0,
+                                                       "status":  "fallback-market"
+                                                   },
+                                "market":  {
+                                               "productName":  "Ã«Â¡ÂÃ«Â³Â´Ã«ÂÂ½ Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° S10 MaxV Ultra RRE0VES+EWFD55HRR Ã¬ÂÂÃ«ÂÂ Ã«Â¬Â¼Ã­ÂÂµÃ­ÂÂ, Ã­ÂÂÃ¬ÂÂ´Ã­ÂÂ¸",
+                                               "seller":  "Ã­ÂÂÃ«Â§Â¤Ã¬Â²Â 43",
+                                               "listedPrice":  1590000,
+                                               "reviewCount":  7946,
+                                               "rating":  4.85,
+                                               "imageUrl":  "https://shopping-phinf.pstatic.net/main_5907774/59077746157.20260227155822.jpg?type=f300",
+                                               "sourceUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59077746157\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0\u0026t=mszqcnvf\u0026h=6c0cfafca0d7c2e80770a3e3d5f5cbcdb57ad6b1\u0026frm=NVSCPRO"
+                                           },
+                                "resolution":  {
+                                                   "productId":  "59077746157",
+                                                   "brandName":  "",
+                                                   "brandSite":  "",
+                                                   "canonicalUrl":  ""
+                                               },
+                                "detail":  {
+                                               "productId":  "59077746157",
+                                               "productName":  "Ã«Â¡ÂÃ«Â³Â´Ã«ÂÂ½ Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° S10 MaxV Ultra RRE0VES+EWFD55HRR Ã¬ÂÂÃ«ÂÂ Ã«Â¬Â¼Ã­ÂÂµÃ­ÂÂ, Ã­ÂÂÃ¬ÂÂ´Ã­ÂÂ¸",
+                                               "brand":  "",
+                                               "manufacturer":  "",
+                                               "modelName":  "",
+                                               "originalPrice":  1590000,
+                                               "finalPrice":  1590000,
+                                               "discountRate":  0,
+                                               "reviewCount":  7946,
+                                               "rating":  4.85,
+                                               "sellerName":  "Ã­ÂÂÃ«Â§Â¤Ã¬Â²Â 43",
+                                               "categoryName":  "",
+                                               "imageUrl":  "https://shopping-phinf.pstatic.net/main_5907774/59077746157.20260227155822.jpg?type=f300",
+                                               "reviewSamples":  0,
+                                               "reviews":  [
+
+                                                           ],
+                                               "sourceUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59077746157\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0\u0026t=mszqcnvf\u0026h=6c0cfafca0d7c2e80770a3e3d5f5cbcdb57ad6b1\u0026frm=NVSCPRO",
+                                               "reviewSourceUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59077746157\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0\u0026t=mszqcnvf\u0026h=6c0cfafca0d7c2e80770a3e3d5f5cbcdb57ad6b1\u0026frm=NVSCPRO",
+                                               "detailStatus":  "partial-market"
+                                           }
+                            }
+                        ],
+    "failureCount":  0,
+    "failures":  [
+
+                 ]
+}

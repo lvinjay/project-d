@@ -1,0 +1,491 @@
+﻿
+> lib\brightDataProduct.ts:1:const DATASET_ID =
+  lib\brightDataProduct.ts:2:  "gd_m9qqjxxr1hab7okefj";
+  lib\brightDataProduct.ts:3:
+> lib\brightDataProduct.ts:4:type BrightDataProductInformatio
+n = {
+  lib\brightDataProduct.ts:5:  type?: string;
+  lib\brightDataProduct.ts:6:  value?: string;
+  lib\brightDataProduct.ts:7:};
+  lib\brightDataProduct.ts:8:
+> lib\brightDataProduct.ts:9:type BrightDataReview = {
+  lib\brightDataProduct.ts:10:  rating?: number;
+  lib\brightDataProduct.ts:11:  rating_date?: string;
+  lib\brightDataProduct.ts:12:  review?: string;
+  lib\brightDataProduct.ts:13:  helpful_count?: number | null
+;
+  lib\brightDataProduct.ts:14:};
+  lib\brightDataProduct.ts:15:
+> lib\brightDataProduct.ts:16:type BrightDataRawProduct = {
+  lib\brightDataProduct.ts:17:  url?: string;
+  lib\brightDataProduct.ts:18:  product_id?: string;
+> lib\brightDataProduct.ts:19:  title?: string;
+  lib\brightDataProduct.ts:20:  original_price?: string | num
+ber;
+  lib\brightDataProduct.ts:21:  final_price?: string | number
+;
+  lib\brightDataProduct.ts:22:  discount_rate?: number;
+  lib\brightDataProduct.ts:23:  currency?: string;
+  lib\brightDataProduct.ts:24:
+  lib\brightDataProduct.ts:25:  images?: {
+  lib\brightDataProduct.ts:26:    link?: string;
+  lib\brightDataProduct.ts:27:  }[];
+  lib\brightDataProduct.ts:28:
+  lib\brightDataProduct.ts:29:  total_reviews?: number;
+  lib\brightDataProduct.ts:30:  average_rating?: number | nul
+l;
+  lib\brightDataProduct.ts:31:
+  lib\brightDataProduct.ts:32:  sold_out?: boolean;
+  lib\brightDataProduct.ts:33:
+  lib\brightDataProduct.ts:34:  sellers?: {
+  lib\brightDataProduct.ts:35:    seller_name?: string;
+  lib\brightDataProduct.ts:36:    final_price?: number;
+  lib\brightDataProduct.ts:37:    seller_link?: string;
+  lib\brightDataProduct.ts:38:  }[];
+  lib\brightDataProduct.ts:39:
+> lib\brightDataProduct.ts:40:  product_information?: BrightD
+ataProductInformation[];
+  lib\brightDataProduct.ts:41:
+> lib\brightDataProduct.ts:42:  top_reviews?: BrightDataRevie
+w[];
+  lib\brightDataProduct.ts:43:
+  lib\brightDataProduct.ts:44:  category_name?: string;
+  lib\brightDataProduct.ts:45:};
+  lib\brightDataProduct.ts:46:
+  lib\brightDataProduct.ts:47:export type NormalizedNaverProd
+uct = {
+  lib\brightDataProduct.ts:48:  url: string;
+  lib\brightDataProduct.ts:49:  productId: string;
+  lib\brightDataProduct.ts:50:
+> lib\brightDataProduct.ts:51:  title: string;
+  lib\brightDataProduct.ts:52:
+  lib\brightDataProduct.ts:53:  originalPrice: number;
+> lib\brightDataProduct.ts:54:  finalPrice: number;
+  lib\brightDataProduct.ts:55:  discountRate: number;
+  lib\brightDataProduct.ts:56:
+  lib\brightDataProduct.ts:57:  currency: string;
+  lib\brightDataProduct.ts:58:
+> lib\brightDataProduct.ts:59:  imageUrl: string;
+  lib\brightDataProduct.ts:60:
+  lib\brightDataProduct.ts:61:  totalReviews: number;
+  lib\brightDataProduct.ts:62:  averageRating: number | null;
+  lib\brightDataProduct.ts:63:
+  lib\brightDataProduct.ts:64:  soldOut: boolean;
+  lib\brightDataProduct.ts:65:
+  lib\brightDataProduct.ts:66:  sellerName: string;
+  lib\brightDataProduct.ts:67:
+  lib\brightDataProduct.ts:68:  sellers: {
+  lib\brightDataProduct.ts:69:    sellerName: string;
+> lib\brightDataProduct.ts:70:    finalPrice: number;
+  lib\brightDataProduct.ts:71:    sellerLink: string;
+  lib\brightDataProduct.ts:72:  }[];
+  lib\brightDataProduct.ts:73:
+  lib\brightDataProduct.ts:74:  purchaseSeller: string;
+  lib\brightDataProduct.ts:75:  purchasePrice: number;
+  lib\brightDataProduct.ts:76:  purchaseUrl: string;
+  lib\brightDataProduct.ts:77:
+> lib\brightDataProduct.ts:78:  brand: string;
+> lib\brightDataProduct.ts:79:  manufacturer: string;
+> lib\brightDataProduct.ts:80:  modelName: string;
+  lib\brightDataProduct.ts:81:
+  lib\brightDataProduct.ts:82:  categoryName: string;
+  lib\brightDataProduct.ts:83:
+  lib\brightDataProduct.ts:84:  topReviews: {
+  lib\brightDataProduct.ts:85:    rating: number;
+  lib\brightDataProduct.ts:86:    date: string;
+  lib\brightDataProduct.ts:87:    text: string;
+  lib\brightDataProduct.ts:88:    helpfulCount: number;
+  lib\brightDataProduct.ts:89:  }[];
+  lib\brightDataProduct.ts:90:};
+  lib\brightDataProduct.ts:91:
+  lib\brightDataProduct.ts:92:function numberValue(
+  lib\brightDataProduct.ts:93:  value: unknown,
+  lib\brightDataProduct.ts:94:) {
+  lib\brightDataProduct.ts:95:  const parsed =
+  lib\brightDataProduct.ts:106:    ? parsed
+  lib\brightDataProduct.ts:107:    : 0;
+  lib\brightDataProduct.ts:108:}
+  lib\brightDataProduct.ts:109:
+  lib\brightDataProduct.ts:110:function getProductInfo(
+  lib\brightDataProduct.ts:111:  items:
+> lib\brightDataProduct.ts:112:    | BrightDataProductInforma
+tion[]
+  lib\brightDataProduct.ts:113:    | undefined,
+  lib\brightDataProduct.ts:114:  key: string,
+  lib\brightDataProduct.ts:115:) {
+  lib\brightDataProduct.ts:116:  if (!Array.isArray(items)) {
+  lib\brightDataProduct.ts:117:    return "";
+  lib\brightDataProduct.ts:118:  }
+  lib\brightDataProduct.ts:119:
+  lib\brightDataProduct.ts:120:  return (
+  lib\brightDataProduct.ts:121:    items.find(
+  lib\brightDataProduct.ts:122:      (item) =>
+  lib\brightDataProduct.ts:123:        item.type?.trim() ===
+  lib\brightDataProduct.ts:124:        key,
+  lib\brightDataProduct.ts:125:    )?.value?.trim() ?? ""
+  lib\brightDataProduct.ts:126:  );
+  lib\brightDataProduct.ts:127:}
+  lib\brightDataProduct.ts:130:  return new Promise(
+  lib\brightDataProduct.ts:131:    (resolve) =>
+  lib\brightDataProduct.ts:132:      setTimeout(resolve, ms),
+  lib\brightDataProduct.ts:133:  );
+  lib\brightDataProduct.ts:134:}
+  lib\brightDataProduct.ts:135:
+> lib\brightDataProduct.ts:136:export async function collectN
+averProduct(
+  lib\brightDataProduct.ts:137:  productUrl: string,
+  lib\brightDataProduct.ts:138:): Promise<NormalizedNaverProd
+uct> {
+  lib\brightDataProduct.ts:139:  const apiKey =
+> lib\brightDataProduct.ts:140:    process.env.BRIGHTDATA_API
+_KEY;
+  lib\brightDataProduct.ts:141:
+  lib\brightDataProduct.ts:142:  if (!apiKey) {
+  lib\brightDataProduct.ts:143:    throw new Error(
+> lib\brightDataProduct.ts:144:      "BRIGHTDATA_API_KEY가 설정되
+지 않았습니다.",
+  lib\brightDataProduct.ts:145:    );
+  lib\brightDataProduct.ts:146:  }
+  lib\brightDataProduct.ts:147:
+  lib\brightDataProduct.ts:148:  const normalizedUrl =
+  lib\brightDataProduct.ts:149:    productUrl.trim();
+  lib\brightDataProduct.ts:150:
+  lib\brightDataProduct.ts:151:  if (!normalizedUrl) {
+  lib\brightDataProduct.ts:152:    throw new Error(
+  lib\brightDataProduct.ts:153:      "상품 URL이 없습니다.",
+  lib\brightDataProduct.ts:154:    );
+  lib\brightDataProduct.ts:155:  }
+  lib\brightDataProduct.ts:156:
+  lib\brightDataProduct.ts:157:  const triggerUrl =
+  lib\brightDataProduct.ts:158:    new URL(
+> lib\brightDataProduct.ts:159:      "https://api.brightdata.
+com/datasets/v3/trigger",
+  lib\brightDataProduct.ts:160:    );
+  lib\brightDataProduct.ts:161:
+  lib\brightDataProduct.ts:162:  triggerUrl.searchParams.set(
+> lib\brightDataProduct.ts:163:    "dataset_id",
+> lib\brightDataProduct.ts:164:    DATASET_ID,
+  lib\brightDataProduct.ts:165:  );
+  lib\brightDataProduct.ts:166:
+  lib\brightDataProduct.ts:167:  triggerUrl.searchParams.set(
+  lib\brightDataProduct.ts:168:    "include_errors",
+  lib\brightDataProduct.ts:169:    "true",
+  lib\brightDataProduct.ts:170:  );
+  lib\brightDataProduct.ts:171:
+> lib\brightDataProduct.ts:172:  const triggerResponse =
+  lib\brightDataProduct.ts:173:    await fetch(
+  lib\brightDataProduct.ts:174:      triggerUrl.toString(),
+  lib\brightDataProduct.ts:175:      {
+  lib\brightDataProduct.ts:176:        method: "POST",
+  lib\brightDataProduct.ts:177:        headers: {
+  lib\brightDataProduct.ts:178:          Authorization:
+  lib\brightDataProduct.ts:179:            `Bearer ${apiKey}`
+,
+  lib\brightDataProduct.ts:180:          "Content-Type":
+  lib\brightDataProduct.ts:181:            "application/json"
+,
+  lib\brightDataProduct.ts:182:        },
+  lib\brightDataProduct.ts:183:        body: JSON.stringify([
+  lib\brightDataProduct.ts:184:          {
+  lib\brightDataProduct.ts:185:            url: normalizedUrl
+,
+  lib\brightDataProduct.ts:186:          },
+  lib\brightDataProduct.ts:187:        ]),
+  lib\brightDataProduct.ts:188:        cache: "no-store",
+  lib\brightDataProduct.ts:189:      },
+  lib\brightDataProduct.ts:190:    );
+  lib\brightDataProduct.ts:191:
+  lib\brightDataProduct.ts:192:  const triggerText =
+> lib\brightDataProduct.ts:193:    await triggerResponse.text
+();
+  lib\brightDataProduct.ts:194:
+> lib\brightDataProduct.ts:195:  if (!triggerResponse.ok) {
+  lib\brightDataProduct.ts:196:    throw new Error(
+> lib\brightDataProduct.ts:197:      `Bright Data 실행 실패 (${tr
+iggerResponse.status}): ${triggerText}`,
+  lib\brightDataProduct.ts:198:    );
+  lib\brightDataProduct.ts:199:  }
+  lib\brightDataProduct.ts:200:
+  lib\brightDataProduct.ts:201:  const trigger =
+  lib\brightDataProduct.ts:202:    JSON.parse(
+  lib\brightDataProduct.ts:203:      triggerText,
+  lib\brightDataProduct.ts:204:    ) as {
+> lib\brightDataProduct.ts:205:      snapshot_id?: string;
+  lib\brightDataProduct.ts:206:    };
+  lib\brightDataProduct.ts:207:
+> lib\brightDataProduct.ts:208:  const snapshotId =
+> lib\brightDataProduct.ts:209:    trigger.snapshot_id;
+  lib\brightDataProduct.ts:210:
+> lib\brightDataProduct.ts:211:  if (!snapshotId) {
+  lib\brightDataProduct.ts:212:    throw new Error(
+> lib\brightDataProduct.ts:213:      "Bright Data snapshot_id
+를 받지 못했습니다.",
+  lib\brightDataProduct.ts:214:    );
+  lib\brightDataProduct.ts:215:  }
+  lib\brightDataProduct.ts:216:
+  lib\brightDataProduct.ts:217:  /*
+  lib\brightDataProduct.ts:218:    상품 1개 상세수집은
+  lib\brightDataProduct.ts:219:    최대 약 3분까지 기다린다.
+  lib\brightDataProduct.ts:220:  */
+  lib\brightDataProduct.ts:221:  for (
+  lib\brightDataProduct.ts:222:    let attempt = 1;
+  lib\brightDataProduct.ts:223:    attempt <= 36;
+  lib\brightDataProduct.ts:224:    attempt++
+  lib\brightDataProduct.ts:225:  ) {
+> lib\brightDataProduct.ts:226:    const progressResponse =
+  lib\brightDataProduct.ts:227:      await fetch(
+> lib\brightDataProduct.ts:228:        `https://api.brightdat
+a.com/datasets/v3/progress/${snapshotId}`,
+  lib\brightDataProduct.ts:229:        {
+  lib\brightDataProduct.ts:230:          headers: {
+  lib\brightDataProduct.ts:231:            Authorization:
+  lib\brightDataProduct.ts:232:              `Bearer ${apiKey
+}`,
+  lib\brightDataProduct.ts:233:          },
+  lib\brightDataProduct.ts:234:          cache: "no-store",
+  lib\brightDataProduct.ts:235:        },
+  lib\brightDataProduct.ts:236:      );
+  lib\brightDataProduct.ts:237:
+> lib\brightDataProduct.ts:238:    if (!progressResponse.ok) 
+{
+  lib\brightDataProduct.ts:239:      throw new Error(
+> lib\brightDataProduct.ts:240:        `Bright Data 진행상태 확인 실
+패 (${progressResponse.status})`,
+  lib\brightDataProduct.ts:241:      );
+  lib\brightDataProduct.ts:242:    }
+  lib\brightDataProduct.ts:243:
+  lib\brightDataProduct.ts:244:    const progress =
+> lib\brightDataProduct.ts:245:      (await progressResponse.
+json()) as {
+  lib\brightDataProduct.ts:246:        status?: string;
+  lib\brightDataProduct.ts:247:        records?: number;
+  lib\brightDataProduct.ts:248:        errors?: number;
+  lib\brightDataProduct.ts:249:      };
+  lib\brightDataProduct.ts:250:
+  lib\brightDataProduct.ts:251:    if (
+  lib\brightDataProduct.ts:252:      progress.status ===
+  lib\brightDataProduct.ts:253:      "ready"
+  lib\brightDataProduct.ts:254:    ) {
+> lib\brightDataProduct.ts:255:      const resultResponse =
+  lib\brightDataProduct.ts:256:        await fetch(
+> lib\brightDataProduct.ts:257:          `https://api.brightd
+ata.com/datasets/v3/snapshot/${snapshotId}?format=json`,
+  lib\brightDataProduct.ts:258:          {
+  lib\brightDataProduct.ts:259:            headers: {
+  lib\brightDataProduct.ts:260:              Authorization:
+  lib\brightDataProduct.ts:261:                `Bearer ${apiK
+ey}`,
+  lib\brightDataProduct.ts:262:            },
+  lib\brightDataProduct.ts:263:            cache: "no-store",
+  lib\brightDataProduct.ts:264:          },
+  lib\brightDataProduct.ts:265:        );
+  lib\brightDataProduct.ts:266:
+> lib\brightDataProduct.ts:267:      if (!resultResponse.ok) 
+{
+  lib\brightDataProduct.ts:268:        throw new Error(
+> lib\brightDataProduct.ts:269:          `Bright Data 결과 다운로드
+ 실패 (${resultResponse.status})`,
+  lib\brightDataProduct.ts:270:        );
+  lib\brightDataProduct.ts:271:      }
+  lib\brightDataProduct.ts:272:
+  lib\brightDataProduct.ts:273:      const result =
+> lib\brightDataProduct.ts:274:        (await resultResponse.
+json()) as
+> lib\brightDataProduct.ts:275:          BrightDataRawProduct
+[];
+  lib\brightDataProduct.ts:276:
+  lib\brightDataProduct.ts:277:      const raw =
+  lib\brightDataProduct.ts:278:        Array.isArray(result)
+  lib\brightDataProduct.ts:279:          ? result[0]
+  lib\brightDataProduct.ts:280:          : undefined;
+  lib\brightDataProduct.ts:281:
+  lib\brightDataProduct.ts:282:      if (!raw) {
+  lib\brightDataProduct.ts:283:        throw new Error(
+> lib\brightDataProduct.ts:284:          "Bright Data가 상품 정보를
+ 반환하지 않았습니다.",
+  lib\brightDataProduct.ts:285:        );
+  lib\brightDataProduct.ts:286:      }
+  lib\brightDataProduct.ts:287:
+  lib\brightDataProduct.ts:288:      const originalPrice =
+  lib\brightDataProduct.ts:289:        numberValue(
+  lib\brightDataProduct.ts:290:          raw.original_price,
+  lib\brightDataProduct.ts:291:        );
+  lib\brightDataProduct.ts:292:
+> lib\brightDataProduct.ts:293:      const finalPrice =
+  lib\brightDataProduct.ts:294:        numberValue(
+  lib\brightDataProduct.ts:295:          raw.final_price,
+  lib\brightDataProduct.ts:296:        );
+  lib\brightDataProduct.ts:297:
+  lib\brightDataProduct.ts:298:      /*
+  lib\brightDataProduct.ts:299:        판매처 정보는 버리지 않고 보존한다.
+  lib\brightDataProduct.ts:300:
+  lib\brightDataProduct.ts:301:        purchase*는 현재 단계에서는
+  lib\brightDataProduct.ts:302:        가격 > 0 + 판매 링크가 있는 판매처
+ 중
+  lib\brightDataProduct.ts:303:        최저가를 선택한다.
+  lib\brightDataProduct.ts:304:
+  lib\brightDataProduct.ts:305:        다음 단계에서 동일 모델/동일 구성 검증
+을
+  lib\brightDataProduct.ts:306:        추가해 옵션 낚시 가격을 걸러낸다.
+  lib\brightDataProduct.ts:307:      */
+  lib\brightDataProduct.ts:308:      const sellers =
+  lib\brightDataProduct.ts:309:        Array.isArray(raw.sell
+ers)
+  lib\brightDataProduct.ts:310:          ? raw.sellers
+  lib\brightDataProduct.ts:311:              .map((seller) =>
+ ({
+  lib\brightDataProduct.ts:312:                sellerName:
+  lib\brightDataProduct.ts:313:                  seller.selle
+r_name?.trim() ??
+  lib\brightDataProduct.ts:314:                  "",
+> lib\brightDataProduct.ts:315:                finalPrice:
+  lib\brightDataProduct.ts:316:                  numberValue(
+  lib\brightDataProduct.ts:317:                    seller.fin
+al_price,
+  lib\brightDataProduct.ts:318:                  ),
+  lib\brightDataProduct.ts:319:                sellerLink:
+  lib\brightDataProduct.ts:320:                  seller.selle
+r_link?.trim() ??
+  lib\brightDataProduct.ts:321:                  "",
+  lib\brightDataProduct.ts:322:              }))
+  lib\brightDataProduct.ts:323:              .filter(
+  lib\brightDataProduct.ts:324:                (seller) =>
+> lib\brightDataProduct.ts:325:                  seller.final
+Price > 0 &&
+  lib\brightDataProduct.ts:326:                  Boolean(
+  lib\brightDataProduct.ts:327:                    seller.sel
+lerLink,
+  lib\brightDataProduct.ts:328:                  ),
+  lib\brightDataProduct.ts:329:              )
+  lib\brightDataProduct.ts:330:              .sort(
+  lib\brightDataProduct.ts:331:                (a, b) =>
+> lib\brightDataProduct.ts:332:                  a.finalPrice
+ -
+> lib\brightDataProduct.ts:333:                  b.finalPrice
+,
+  lib\brightDataProduct.ts:334:              )
+  lib\brightDataProduct.ts:335:          : [];
+  lib\brightDataProduct.ts:336:
+  lib\brightDataProduct.ts:337:      const cheapestSeller =
+  lib\brightDataProduct.ts:338:        sellers[0];
+  lib\brightDataProduct.ts:339:
+  lib\brightDataProduct.ts:340:      return {
+  lib\brightDataProduct.ts:341:        url:
+  lib\brightDataProduct.ts:342:          raw.url ??
+  lib\brightDataProduct.ts:343:          normalizedUrl,
+  lib\brightDataProduct.ts:344:
+  lib\brightDataProduct.ts:345:        productId:
+  lib\brightDataProduct.ts:346:          raw.product_id ??
+  lib\brightDataProduct.ts:347:          "",
+  lib\brightDataProduct.ts:348:
+> lib\brightDataProduct.ts:349:        title:
+> lib\brightDataProduct.ts:350:          raw.title ??
+  lib\brightDataProduct.ts:351:          "",
+  lib\brightDataProduct.ts:352:
+  lib\brightDataProduct.ts:353:        /*
+  lib\brightDataProduct.ts:354:          사용자에게 보여줄 기본 가격은
+> lib\brightDataProduct.ts:355:          반드시 finalPrice를 사용한다
+.
+  lib\brightDataProduct.ts:356:        */
+  lib\brightDataProduct.ts:357:        originalPrice,
+  lib\brightDataProduct.ts:358:
+> lib\brightDataProduct.ts:359:        finalPrice,
+  lib\brightDataProduct.ts:360:
+  lib\brightDataProduct.ts:361:        discountRate:
+  lib\brightDataProduct.ts:362:          Number(
+  lib\brightDataProduct.ts:363:            raw.discount_rate 
+??
+  lib\brightDataProduct.ts:364:              0,
+  lib\brightDataProduct.ts:365:          ),
+  lib\brightDataProduct.ts:366:
+  lib\brightDataProduct.ts:367:        currency:
+  lib\brightDataProduct.ts:368:          raw.currency ??
+  lib\brightDataProduct.ts:369:          "KRW",
+  lib\brightDataProduct.ts:370:
+> lib\brightDataProduct.ts:371:        imageUrl:
+  lib\brightDataProduct.ts:372:          raw.images?.[0]
+  lib\brightDataProduct.ts:373:            ?.link ??
+  lib\brightDataProduct.ts:374:          "",
+  lib\brightDataProduct.ts:375:
+  lib\brightDataProduct.ts:376:        totalReviews:
+  lib\brightDataProduct.ts:377:          Number(
+  lib\brightDataProduct.ts:378:            raw.total_reviews 
+??
+  lib\brightDataProduct.ts:379:              0,
+  lib\brightDataProduct.ts:380:          ),
+  lib\brightDataProduct.ts:381:
+  lib\brightDataProduct.ts:382:        averageRating:
+  lib\brightDataProduct.ts:383:          typeof raw.average_r
+ating ===
+  lib\brightDataProduct.ts:384:          "number"
+  lib\brightDataProduct.ts:385:            ? raw.average_rati
+ng
+  lib\brightDataProduct.ts:386:            : null,
+  lib\brightDataProduct.ts:403:          cheapestSeller
+  lib\brightDataProduct.ts:404:            ?.sellerName ??
+  lib\brightDataProduct.ts:405:          "",
+  lib\brightDataProduct.ts:406:
+  lib\brightDataProduct.ts:407:        purchasePrice:
+  lib\brightDataProduct.ts:408:          cheapestSeller
+> lib\brightDataProduct.ts:409:            ?.finalPrice ??
+  lib\brightDataProduct.ts:410:          0,
+  lib\brightDataProduct.ts:411:
+  lib\brightDataProduct.ts:412:        purchaseUrl:
+  lib\brightDataProduct.ts:413:          cheapestSeller
+  lib\brightDataProduct.ts:414:            ?.sellerLink ??
+  lib\brightDataProduct.ts:415:          "",
+  lib\brightDataProduct.ts:416:
+> lib\brightDataProduct.ts:417:        manufacturer:
+  lib\brightDataProduct.ts:418:          getProductInfo(
+  lib\brightDataProduct.ts:419:            raw.product_inform
+ation,
+  lib\brightDataProduct.ts:420:            "제조사",
+  lib\brightDataProduct.ts:421:          ),
+  lib\brightDataProduct.ts:422:
+> lib\brightDataProduct.ts:423:        brand:
+  lib\brightDataProduct.ts:424:          getProductInfo(
+  lib\brightDataProduct.ts:425:            raw.product_inform
+ation,
+  lib\brightDataProduct.ts:426:            "브랜드",
+  lib\brightDataProduct.ts:427:          ),
+  lib\brightDataProduct.ts:428:
+> lib\brightDataProduct.ts:429:        modelName:
+  lib\brightDataProduct.ts:430:          getProductInfo(
+  lib\brightDataProduct.ts:431:            raw.product_inform
+ation,
+  lib\brightDataProduct.ts:432:            "모델명",
+  lib\brightDataProduct.ts:433:          ),
+  lib\brightDataProduct.ts:434:
+  lib\brightDataProduct.ts:435:        categoryName:
+  lib\brightDataProduct.ts:436:          raw.category_name ??
+  lib\brightDataProduct.ts:437:          "",
+  lib\brightDataProduct.ts:438:
+  lib\brightDataProduct.ts:439:        topReviews:
+  lib\brightDataProduct.ts:440:          Array.isArray(
+  lib\brightDataProduct.ts:441:            raw.top_reviews,
+  lib\brightDataProduct.ts:442:          )
+  lib\brightDataProduct.ts:443:            ? raw.top_reviews
+  lib\brightDataProduct.ts:444:                .slice(0, 20)
+  lib\brightDataProduct.ts:471:
+  lib\brightDataProduct.ts:472:    if (
+  lib\brightDataProduct.ts:473:      progress.status ===
+  lib\brightDataProduct.ts:474:      "failed"
+  lib\brightDataProduct.ts:475:    ) {
+  lib\brightDataProduct.ts:476:      throw new Error(
+> lib\brightDataProduct.ts:477:        `Bright Data 상품 수집 실패 
+(records=${progress.records ?? 0}, errors=${progress.errors ?
+? 0})`,
+  lib\brightDataProduct.ts:478:      );
+  lib\brightDataProduct.ts:479:    }
+  lib\brightDataProduct.ts:480:
+  lib\brightDataProduct.ts:481:    await sleep(5000);
+  lib\brightDataProduct.ts:482:  }
+  lib\brightDataProduct.ts:483:
+  lib\brightDataProduct.ts:484:  throw new Error(
+> lib\brightDataProduct.ts:485:    "Bright Data 상품 수집이 제한 시간 
+안에 완료되지 않았습니다.",
+  lib\brightDataProduct.ts:486:  );
+  lib\brightDataProduct.ts:487:}
+  lib\brightDataProduct.ts:488:
+
+

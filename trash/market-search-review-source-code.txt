@@ -1,0 +1,1893 @@
+﻿
+############################################################
+PATTERN: searchProductOffers
+MATCHES: 1
+############################################################
+
+===== LINE 836 =====
+  806: 
+  807:       uniqueProducts.push(
+  808:         product,
+  809:       );
+  810: 
+  811:       if (
+  812:         uniqueProducts.length >=
+  813:         15
+  814:       ) {
+  815:         break;
+  816:       }
+  817:     }
+  818:   }
+  819: 
+  820:   return uniqueProducts;
+  821: }
+  822: 
+  823: /*
+  824:   특정 모델의 네이버 판매처들을 다시 검색한다.
+  825: 
+  826:   역할:
+  827:   - reviewSource: 동일 모델/구성 후보 중 리뷰 수가 가장 많은 결과
+  828:   - purchaseSource: 동일 모델/구성 후보 중 최저가
+  829:     (동가이면 리뷰 수가 많은 결과 우선)
+  830: 
+  831:   주의:
+  832:   이 함수는 '판매처 후보 선택'까지만 담당한다.
+  833:   실제 리뷰 상세수집 가능 여부와 구매링크 최종 검증은
+  834:   이후 단계에서 별도로 확인한다.
+  835: */
+  836: export async function searchProductOffers(
+  837:   productName: string,
+  838: ): Promise<ProductOfferSearchResult> {
+  839:   const normalizedName =
+  840:     productName.trim();
+  841: 
+  842:   if (!normalizedName) {
+  843:     return {
+  844:       offers: [],
+  845:       reviewSource: null,
+  846:       purchaseSource: null,
+  847:     };
+  848:   }
+  849: 
+  850:   const apiKey =
+  851:     process.env.SERPAPI_API_KEY;
+  852: 
+  853:   if (!apiKey) {
+  854:     throw new Error(
+  855:       "SERPAPI_API_KEY가 설정되지 않았습니다.",
+  856:     );
+  857:   }
+  858: 
+  859:   const modelTokens =
+  860:     getModelTokens(
+  861:       normalizedName,
+  862:     );
+  863: 
+  864:   /*
+  865:     너무 긴 원본 상품명 대신
+  866:     브랜드/모델 핵심을 우선 검색한다.
+  867:     모델 토큰이 없으면 원본 제목을 사용한다.
+  868:   */
+  869:   const firstToken =
+  870:     normalizedMatchText(
+  871:       normalizedName,
+  872:     )
+  873:       .split(" ")
+  874:       .filter(Boolean)[0] ??
+  875:     "";
+  876: 
+  877:   const compactQuery =
+  878:     [
+  879:       firstToken,
+  880:       ...modelTokens,
+  881:     ]
+
+############################################################
+PATTERN: reviewSource
+MATCHES: 5
+############################################################
+
+===== LINE 31 =====
+    1: export type MarketSearchResult = {
+    2:   name: string;
+    3:   brand: string;
+    4:   price: number;
+    5:   image: string;
+    6:   url: string;
+    7:   reviewCount: number;
+    8:   rating: number;
+    9: };
+   10: 
+   11: export type ProductOffer = MarketSearchResult & {
+   12:   matchScore: number;
+   13: 
+   14:   /*
+   15:     네이버 광고(ader) 링크처럼 실제 판매처로
+   16:     307 redirect 되는 경우 최종 목적지를 저장한다.
+   17:   */
+   18:   resolvedUrl: string;
+   19: 
+   20:   sourceType:
+   21:     | "naver-store"
+   22:     | "external-store"
+   23:     | "naver-aggregate"
+   24:     | "unknown";
+   25: 
+   26:   isIndividualSeller: boolean;
+   27: };
+   28: 
+   29: export type ProductOfferSearchResult = {
+   30:   offers: ProductOffer[];
+   31:   reviewSource: ProductOffer | null;
+   32:   purchaseSource: ProductOffer | null;
+   33: };
+   34: 
+   35: type SerpApiShoppingResult = {
+   36:   position?: number;
+   37:   title?: string;
+   38:   price?: number | string;
+   39:   rating?: number | string;
+   40:   reviews?: number | string;
+   41:   stores?: string;
+   42:   link?: string;
+   43:   thumbnail?: string;
+   44: };
+   45: 
+   46: type SerpApiResponse = {
+   47:   error?: string;
+   48:   shopping_results?: SerpApiShoppingResult[];
+   49: };
+   50: 
+   51: function normalizeText(
+   52:   value: unknown,
+   53: ) {
+   54:   return typeof value === "string"
+   55:     ? value
+   56:         .replace(/\s+/g, " ")
+   57:         .trim()
+   58:     : "";
+   59: }
+   60: 
+   61: function normalizeNumber(
+   62:   value: unknown,
+   63: ) {
+   64:   if (
+   65:     typeof value === "number" &&
+   66:     Number.isFinite(value)
+   67:   ) {
+   68:     return value;
+   69:   }
+   70: 
+   71:   if (typeof value !== "string") {
+   72:     return 0;
+   73:   }
+   74: 
+   75:   const parsed =
+   76:     Number(
+
+===== LINE 827 =====
+  797:         createDuplicateKey(
+  798:           product,
+  799:         );
+  800: 
+  801:       if (seen.has(key)) {
+  802:         continue;
+  803:       }
+  804: 
+  805:       seen.add(key);
+  806: 
+  807:       uniqueProducts.push(
+  808:         product,
+  809:       );
+  810: 
+  811:       if (
+  812:         uniqueProducts.length >=
+  813:         15
+  814:       ) {
+  815:         break;
+  816:       }
+  817:     }
+  818:   }
+  819: 
+  820:   return uniqueProducts;
+  821: }
+  822: 
+  823: /*
+  824:   특정 모델의 네이버 판매처들을 다시 검색한다.
+  825: 
+  826:   역할:
+  827:   - reviewSource: 동일 모델/구성 후보 중 리뷰 수가 가장 많은 결과
+  828:   - purchaseSource: 동일 모델/구성 후보 중 최저가
+  829:     (동가이면 리뷰 수가 많은 결과 우선)
+  830: 
+  831:   주의:
+  832:   이 함수는 '판매처 후보 선택'까지만 담당한다.
+  833:   실제 리뷰 상세수집 가능 여부와 구매링크 최종 검증은
+  834:   이후 단계에서 별도로 확인한다.
+  835: */
+  836: export async function searchProductOffers(
+  837:   productName: string,
+  838: ): Promise<ProductOfferSearchResult> {
+  839:   const normalizedName =
+  840:     productName.trim();
+  841: 
+  842:   if (!normalizedName) {
+  843:     return {
+  844:       offers: [],
+  845:       reviewSource: null,
+  846:       purchaseSource: null,
+  847:     };
+  848:   }
+  849: 
+  850:   const apiKey =
+  851:     process.env.SERPAPI_API_KEY;
+  852: 
+  853:   if (!apiKey) {
+  854:     throw new Error(
+  855:       "SERPAPI_API_KEY가 설정되지 않았습니다.",
+  856:     );
+  857:   }
+  858: 
+  859:   const modelTokens =
+  860:     getModelTokens(
+  861:       normalizedName,
+  862:     );
+  863: 
+  864:   /*
+  865:     너무 긴 원본 상품명 대신
+  866:     브랜드/모델 핵심을 우선 검색한다.
+  867:     모델 토큰이 없으면 원본 제목을 사용한다.
+  868:   */
+  869:   const firstToken =
+  870:     normalizedMatchText(
+  871:       normalizedName,
+  872:     )
+
+===== LINE 845 =====
+  815:         break;
+  816:       }
+  817:     }
+  818:   }
+  819: 
+  820:   return uniqueProducts;
+  821: }
+  822: 
+  823: /*
+  824:   특정 모델의 네이버 판매처들을 다시 검색한다.
+  825: 
+  826:   역할:
+  827:   - reviewSource: 동일 모델/구성 후보 중 리뷰 수가 가장 많은 결과
+  828:   - purchaseSource: 동일 모델/구성 후보 중 최저가
+  829:     (동가이면 리뷰 수가 많은 결과 우선)
+  830: 
+  831:   주의:
+  832:   이 함수는 '판매처 후보 선택'까지만 담당한다.
+  833:   실제 리뷰 상세수집 가능 여부와 구매링크 최종 검증은
+  834:   이후 단계에서 별도로 확인한다.
+  835: */
+  836: export async function searchProductOffers(
+  837:   productName: string,
+  838: ): Promise<ProductOfferSearchResult> {
+  839:   const normalizedName =
+  840:     productName.trim();
+  841: 
+  842:   if (!normalizedName) {
+  843:     return {
+  844:       offers: [],
+  845:       reviewSource: null,
+  846:       purchaseSource: null,
+  847:     };
+  848:   }
+  849: 
+  850:   const apiKey =
+  851:     process.env.SERPAPI_API_KEY;
+  852: 
+  853:   if (!apiKey) {
+  854:     throw new Error(
+  855:       "SERPAPI_API_KEY가 설정되지 않았습니다.",
+  856:     );
+  857:   }
+  858: 
+  859:   const modelTokens =
+  860:     getModelTokens(
+  861:       normalizedName,
+  862:     );
+  863: 
+  864:   /*
+  865:     너무 긴 원본 상품명 대신
+  866:     브랜드/모델 핵심을 우선 검색한다.
+  867:     모델 토큰이 없으면 원본 제목을 사용한다.
+  868:   */
+  869:   const firstToken =
+  870:     normalizedMatchText(
+  871:       normalizedName,
+  872:     )
+  873:       .split(" ")
+  874:       .filter(Boolean)[0] ??
+  875:     "";
+  876: 
+  877:   const compactQuery =
+  878:     [
+  879:       firstToken,
+  880:       ...modelTokens,
+  881:     ]
+  882:       .filter(Boolean)
+  883:       .join(" ")
+  884:       .trim();
+  885: 
+  886:   const queries =
+  887:     [
+  888:       compactQuery,
+  889:       normalizedName,
+  890:     ]
+
+===== LINE 1106 =====
+ 1076:         );
+ 1077:       }
+ 1078: 
+ 1079:       if (
+ 1080:         b.reviewCount !==
+ 1081:         a.reviewCount
+ 1082:       ) {
+ 1083:         return (
+ 1084:           b.reviewCount -
+ 1085:           a.reviewCount
+ 1086:         );
+ 1087:       }
+ 1088: 
+ 1089:       return (
+ 1090:         a.price -
+ 1091:         b.price
+ 1092:       );
+ 1093:     },
+ 1094:   );
+ 1095: 
+ 1096:   /*
+ 1097:     리뷰 소스는:
+ 1098:     1. 실제 개별 판매처명이어야 하고
+ 1099:     2. 실제 URL이 네이버 SmartStore/Brand로 확인되어
+ 1100:        현재 Bright Data Naver 수집기로 리뷰 본문을
+ 1101:        가져올 수 있는 후보만 사용한다.
+ 1102: 
+ 1103:     "판매처 18" 같은 네이버 가격비교 묶음상품의
+ 1104:     리뷰 수는 개별 판매처 리뷰 수로 취급하지 않는다.
+ 1105:   */
+ 1106:   const reviewSource =
+ 1107:     [...offers]
+ 1108:       .filter(
+ 1109:         (offer) =>
+ 1110:           offer.reviewCount > 0 &&
+ 1111:           offer.isIndividualSeller &&
+ 1112:           offer.sourceType ===
+ 1113:             "naver-store",
+ 1114:       )
+ 1115:       .sort(
+ 1116:         (a, b) => {
+ 1117:           if (
+ 1118:             b.reviewCount !==
+ 1119:             a.reviewCount
+ 1120:           ) {
+ 1121:             return (
+ 1122:               b.reviewCount -
+ 1123:               a.reviewCount
+ 1124:             );
+ 1125:           }
+ 1126: 
+ 1127:           if (
+ 1128:             b.rating !==
+ 1129:             a.rating
+ 1130:           ) {
+ 1131:             return (
+ 1132:               b.rating -
+ 1133:               a.rating
+ 1134:             );
+ 1135:           }
+ 1136: 
+ 1137:           return (
+ 1138:             b.matchScore -
+ 1139:             a.matchScore
+ 1140:           );
+ 1141:         },
+ 1142:       )[0] ??
+ 1143:     null;
+ 1144: 
+ 1145:   /*
+ 1146:     구매 소스는 실제 개별 판매처 중 최저가.
+ 1147:     같은 가격이면 리뷰 수가 많은 판매처를 우선한다.
+ 1148: 
+ 1149:     외부 쇼핑몰도 구매처로 사용할 수 있으므로
+ 1150:     sourceType이 external-store여도 허용한다.
+ 1151:   */
+
+===== LINE 1196 =====
+ 1166:           if (
+ 1167:             a.price !==
+ 1168:             b.price
+ 1169:           ) {
+ 1170:             return (
+ 1171:               a.price -
+ 1172:               b.price
+ 1173:             );
+ 1174:           }
+ 1175: 
+ 1176:           if (
+ 1177:             b.reviewCount !==
+ 1178:             a.reviewCount
+ 1179:           ) {
+ 1180:             return (
+ 1181:               b.reviewCount -
+ 1182:               a.reviewCount
+ 1183:             );
+ 1184:           }
+ 1185: 
+ 1186:           return (
+ 1187:             b.matchScore -
+ 1188:             a.matchScore
+ 1189:           );
+ 1190:         },
+ 1191:       )[0] ??
+ 1192:     null;
+ 1193: 
+ 1194:   return {
+ 1195:     offers,
+ 1196:     reviewSource,
+ 1197:     purchaseSource,
+ 1198:   };
+ 1199: }
+ 1200: 
+
+############################################################
+PATTERN: sourceType
+MATCHES: 11
+############################################################
+
+===== LINE 20 =====
+    1: export type MarketSearchResult = {
+    2:   name: string;
+    3:   brand: string;
+    4:   price: number;
+    5:   image: string;
+    6:   url: string;
+    7:   reviewCount: number;
+    8:   rating: number;
+    9: };
+   10: 
+   11: export type ProductOffer = MarketSearchResult & {
+   12:   matchScore: number;
+   13: 
+   14:   /*
+   15:     네이버 광고(ader) 링크처럼 실제 판매처로
+   16:     307 redirect 되는 경우 최종 목적지를 저장한다.
+   17:   */
+   18:   resolvedUrl: string;
+   19: 
+   20:   sourceType:
+   21:     | "naver-store"
+   22:     | "external-store"
+   23:     | "naver-aggregate"
+   24:     | "unknown";
+   25: 
+   26:   isIndividualSeller: boolean;
+   27: };
+   28: 
+   29: export type ProductOfferSearchResult = {
+   30:   offers: ProductOffer[];
+   31:   reviewSource: ProductOffer | null;
+   32:   purchaseSource: ProductOffer | null;
+   33: };
+   34: 
+   35: type SerpApiShoppingResult = {
+   36:   position?: number;
+   37:   title?: string;
+   38:   price?: number | string;
+   39:   rating?: number | string;
+   40:   reviews?: number | string;
+   41:   stores?: string;
+   42:   link?: string;
+   43:   thumbnail?: string;
+   44: };
+   45: 
+   46: type SerpApiResponse = {
+   47:   error?: string;
+   48:   shopping_results?: SerpApiShoppingResult[];
+   49: };
+   50: 
+   51: function normalizeText(
+   52:   value: unknown,
+   53: ) {
+   54:   return typeof value === "string"
+   55:     ? value
+   56:         .replace(/\s+/g, " ")
+   57:         .trim()
+   58:     : "";
+   59: }
+   60: 
+   61: function normalizeNumber(
+   62:   value: unknown,
+   63: ) {
+   64:   if (
+   65:     typeof value === "number" &&
+
+===== LINE 500 =====
+  470: function extractOfferProductId(
+  471:   value: string,
+  472: ) {
+  473:   try {
+  474:     const url =
+  475:       new URL(value);
+  476: 
+  477:     const nvMid =
+  478:       url.searchParams
+  479:         .get("nv_mid")
+  480:         ?.trim();
+  481: 
+  482:     if (
+  483:       nvMid &&
+  484:       /^\d+$/.test(nvMid)
+  485:     ) {
+  486:       return nvMid;
+  487:     }
+  488:   } catch {
+  489:     // 정규식 fallback 사용
+  490:   }
+  491: 
+  492:   return (
+  493:     value.match(
+  494:       /[?&]nv_mid=(\d+)/i,
+  495:     )?.[1] ??
+  496:     ""
+  497:   );
+  498: }
+  499: 
+  500: function getOfferSourceType(
+  501:   seller: string,
+  502:   originalUrl: string,
+  503:   resolvedUrl: string,
+  504: ): ProductOffer["sourceType"] {
+  505:   const sellerText =
+  506:     seller.trim();
+  507: 
+  508:   const target =
+  509:     (resolvedUrl || originalUrl)
+  510:       .trim()
+  511:       .toLowerCase();
+  512: 
+  513:   if (
+  514:     /^판매처\s*\d+$/i.test(
+  515:       sellerText,
+  516:     )
+  517:   ) {
+  518:     return "naver-aggregate";
+  519:   }
+  520: 
+  521:   if (
+  522:     target.includes(
+  523:       "brand.naver.com",
+  524:     ) ||
+  525:     target.includes(
+  526:       "smartstore.naver.com",
+  527:     )
+  528:   ) {
+  529:     return "naver-store";
+  530:   }
+  531: 
+  532:   if (
+  533:     target.includes(
+  534:       "cr3.shopping.naver.com",
+  535:     )
+  536:   ) {
+  537:     return "naver-aggregate";
+  538:   }
+  539: 
+  540:   if (
+  541:     /^https?:\/\//i.test(
+  542:       target,
+  543:     )
+  544:   ) {
+  545:     return "external-store";
+
+===== LINE 504 =====
+  474:     const url =
+  475:       new URL(value);
+  476: 
+  477:     const nvMid =
+  478:       url.searchParams
+  479:         .get("nv_mid")
+  480:         ?.trim();
+  481: 
+  482:     if (
+  483:       nvMid &&
+  484:       /^\d+$/.test(nvMid)
+  485:     ) {
+  486:       return nvMid;
+  487:     }
+  488:   } catch {
+  489:     // 정규식 fallback 사용
+  490:   }
+  491: 
+  492:   return (
+  493:     value.match(
+  494:       /[?&]nv_mid=(\d+)/i,
+  495:     )?.[1] ??
+  496:     ""
+  497:   );
+  498: }
+  499: 
+  500: function getOfferSourceType(
+  501:   seller: string,
+  502:   originalUrl: string,
+  503:   resolvedUrl: string,
+  504: ): ProductOffer["sourceType"] {
+  505:   const sellerText =
+  506:     seller.trim();
+  507: 
+  508:   const target =
+  509:     (resolvedUrl || originalUrl)
+  510:       .trim()
+  511:       .toLowerCase();
+  512: 
+  513:   if (
+  514:     /^판매처\s*\d+$/i.test(
+  515:       sellerText,
+  516:     )
+  517:   ) {
+  518:     return "naver-aggregate";
+  519:   }
+  520: 
+  521:   if (
+  522:     target.includes(
+  523:       "brand.naver.com",
+  524:     ) ||
+  525:     target.includes(
+  526:       "smartstore.naver.com",
+  527:     )
+  528:   ) {
+  529:     return "naver-store";
+  530:   }
+  531: 
+  532:   if (
+  533:     target.includes(
+  534:       "cr3.shopping.naver.com",
+  535:     )
+  536:   ) {
+  537:     return "naver-aggregate";
+  538:   }
+  539: 
+  540:   if (
+  541:     /^https?:\/\//i.test(
+  542:       target,
+  543:     )
+  544:   ) {
+  545:     return "external-store";
+  546:   }
+  547: 
+  548:   return "unknown";
+  549: }
+
+===== LINE 967 =====
+  937:         isBadOfferTitle(name)
+  938:       ) {
+  939:         continue;
+  940:       }
+  941: 
+  942:       const matchScore =
+  943:         offerMatchScore(
+  944:           normalizedName,
+  945:           name,
+  946:         );
+  947: 
+  948:       /*
+  949:         모델 핵심 토큰 대부분이 맞는 후보만 사용한다.
+  950:         50점 미만은 다른 모델일 가능성이 높아 제외한다.
+  951:       */
+  952:       if (matchScore < 50) {
+  953:         continue;
+  954:       }
+  955: 
+  956:       const seller =
+  957:         normalizeText(
+  958:           item.stores,
+  959:         ) ||
+  960:         "판매처 미확인";
+  961: 
+  962:       const resolvedUrl =
+  963:         await resolveAderUrl(
+  964:           url,
+  965:         );
+  966: 
+  967:       const sourceType =
+  968:         getOfferSourceType(
+  969:           seller,
+  970:           url,
+  971:           resolvedUrl,
+  972:         );
+  973: 
+  974:       const offer:
+  975:         ProductOffer = {
+  976:           name,
+  977: 
+  978:           brand:
+  979:             seller,
+  980: 
+  981:           price,
+  982: 
+  983:           image:
+  984:             normalizeText(
+  985:               item.thumbnail,
+  986:             ),
+  987: 
+  988:           url,
+  989: 
+  990:           reviewCount:
+  991:             Math.round(
+  992:               normalizeNumber(
+  993:                 item.reviews,
+  994:               ),
+  995:             ),
+  996: 
+  997:           rating:
+  998:             normalizeNumber(
+  999:               item.rating,
+ 1000:             ),
+ 1001: 
+ 1002:           matchScore,
+ 1003: 
+ 1004:           resolvedUrl,
+ 1005: 
+ 1006:           sourceType,
+ 1007: 
+ 1008:           isIndividualSeller:
+ 1009:             isIndividualSellerName(
+ 1010:               seller,
+ 1011:             ) &&
+ 1012:             sourceType !==
+
+===== LINE 968 =====
+  938:       ) {
+  939:         continue;
+  940:       }
+  941: 
+  942:       const matchScore =
+  943:         offerMatchScore(
+  944:           normalizedName,
+  945:           name,
+  946:         );
+  947: 
+  948:       /*
+  949:         모델 핵심 토큰 대부분이 맞는 후보만 사용한다.
+  950:         50점 미만은 다른 모델일 가능성이 높아 제외한다.
+  951:       */
+  952:       if (matchScore < 50) {
+  953:         continue;
+  954:       }
+  955: 
+  956:       const seller =
+  957:         normalizeText(
+  958:           item.stores,
+  959:         ) ||
+  960:         "판매처 미확인";
+  961: 
+  962:       const resolvedUrl =
+  963:         await resolveAderUrl(
+  964:           url,
+  965:         );
+  966: 
+  967:       const sourceType =
+  968:         getOfferSourceType(
+  969:           seller,
+  970:           url,
+  971:           resolvedUrl,
+  972:         );
+  973: 
+  974:       const offer:
+  975:         ProductOffer = {
+  976:           name,
+  977: 
+  978:           brand:
+  979:             seller,
+  980: 
+  981:           price,
+  982: 
+  983:           image:
+  984:             normalizeText(
+  985:               item.thumbnail,
+  986:             ),
+  987: 
+  988:           url,
+  989: 
+  990:           reviewCount:
+  991:             Math.round(
+  992:               normalizeNumber(
+  993:                 item.reviews,
+  994:               ),
+  995:             ),
+  996: 
+  997:           rating:
+  998:             normalizeNumber(
+  999:               item.rating,
+ 1000:             ),
+ 1001: 
+ 1002:           matchScore,
+ 1003: 
+ 1004:           resolvedUrl,
+ 1005: 
+ 1006:           sourceType,
+ 1007: 
+ 1008:           isIndividualSeller:
+ 1009:             isIndividualSellerName(
+ 1010:               seller,
+ 1011:             ) &&
+ 1012:             sourceType !==
+ 1013:               "naver-aggregate",
+
+===== LINE 1006 =====
+  976:           name,
+  977: 
+  978:           brand:
+  979:             seller,
+  980: 
+  981:           price,
+  982: 
+  983:           image:
+  984:             normalizeText(
+  985:               item.thumbnail,
+  986:             ),
+  987: 
+  988:           url,
+  989: 
+  990:           reviewCount:
+  991:             Math.round(
+  992:               normalizeNumber(
+  993:                 item.reviews,
+  994:               ),
+  995:             ),
+  996: 
+  997:           rating:
+  998:             normalizeNumber(
+  999:               item.rating,
+ 1000:             ),
+ 1001: 
+ 1002:           matchScore,
+ 1003: 
+ 1004:           resolvedUrl,
+ 1005: 
+ 1006:           sourceType,
+ 1007: 
+ 1008:           isIndividualSeller:
+ 1009:             isIndividualSellerName(
+ 1010:               seller,
+ 1011:             ) &&
+ 1012:             sourceType !==
+ 1013:               "naver-aggregate",
+ 1014:         };
+ 1015: 
+ 1016:       const offerProductId =
+ 1017:         extractOfferProductId(
+ 1018:           offer.url,
+ 1019:         );
+ 1020: 
+ 1021:       /*
+ 1022:         같은 네이버 상품이 검색어만 달라져
+ 1023:         query/t/h 추적값 때문에 여러 번 들어오는 것을 막는다.
+ 1024: 
+ 1025:         nv_mid가 있으면 그것을 가장 강한 중복키로 사용하고,
+ 1026:         nv_mid가 없는 광고/기타 링크만
+ 1027:         상품명 + 판매처 + 가격 조합으로 fallback 한다.
+ 1028:       */
+ 1029:       const fallbackKey =
+ 1030:         [
+ 1031:           "fallback",
+ 1032:           compactToken(
+ 1033:             offer.name,
+ 1034:           ),
+ 1035:           compactToken(
+ 1036:             offer.brand,
+ 1037:           ),
+ 1038:           offer.price,
+ 1039:         ].join("|");
+ 1040: 
+ 1041:       const primaryKey =
+ 1042:         offerProductId
+ 1043:           ? `nv_mid:${offerProductId}`
+ 1044:           : fallbackKey;
+ 1045: 
+ 1046:       /*
+ 1047:         같은 상품이 한 검색에서는 cr3(nv_mid 포함),
+ 1048:         다른 검색에서는 ader(광고 URL)로 노출될 수 있다.
+ 1049: 
+ 1050:         따라서 nv_mid가 있는 상품도
+ 1051:         상품명 + 판매처 + 가격 fallback key를 함께 등록해
+
+===== LINE 1012 =====
+  982: 
+  983:           image:
+  984:             normalizeText(
+  985:               item.thumbnail,
+  986:             ),
+  987: 
+  988:           url,
+  989: 
+  990:           reviewCount:
+  991:             Math.round(
+  992:               normalizeNumber(
+  993:                 item.reviews,
+  994:               ),
+  995:             ),
+  996: 
+  997:           rating:
+  998:             normalizeNumber(
+  999:               item.rating,
+ 1000:             ),
+ 1001: 
+ 1002:           matchScore,
+ 1003: 
+ 1004:           resolvedUrl,
+ 1005: 
+ 1006:           sourceType,
+ 1007: 
+ 1008:           isIndividualSeller:
+ 1009:             isIndividualSellerName(
+ 1010:               seller,
+ 1011:             ) &&
+ 1012:             sourceType !==
+ 1013:               "naver-aggregate",
+ 1014:         };
+ 1015: 
+ 1016:       const offerProductId =
+ 1017:         extractOfferProductId(
+ 1018:           offer.url,
+ 1019:         );
+ 1020: 
+ 1021:       /*
+ 1022:         같은 네이버 상품이 검색어만 달라져
+ 1023:         query/t/h 추적값 때문에 여러 번 들어오는 것을 막는다.
+ 1024: 
+ 1025:         nv_mid가 있으면 그것을 가장 강한 중복키로 사용하고,
+ 1026:         nv_mid가 없는 광고/기타 링크만
+ 1027:         상품명 + 판매처 + 가격 조합으로 fallback 한다.
+ 1028:       */
+ 1029:       const fallbackKey =
+ 1030:         [
+ 1031:           "fallback",
+ 1032:           compactToken(
+ 1033:             offer.name,
+ 1034:           ),
+ 1035:           compactToken(
+ 1036:             offer.brand,
+ 1037:           ),
+ 1038:           offer.price,
+ 1039:         ].join("|");
+ 1040: 
+ 1041:       const primaryKey =
+ 1042:         offerProductId
+ 1043:           ? `nv_mid:${offerProductId}`
+ 1044:           : fallbackKey;
+ 1045: 
+ 1046:       /*
+ 1047:         같은 상품이 한 검색에서는 cr3(nv_mid 포함),
+ 1048:         다른 검색에서는 ader(광고 URL)로 노출될 수 있다.
+ 1049: 
+ 1050:         따라서 nv_mid가 있는 상품도
+ 1051:         상품명 + 판매처 + 가격 fallback key를 함께 등록해
+ 1052:         cr3/ader 중복을 서로 잡아낸다.
+ 1053:       */
+ 1054:       if (
+ 1055:         seen.has(primaryKey) ||
+ 1056:         seen.has(fallbackKey)
+ 1057:       ) {
+
+===== LINE 1112 =====
+ 1082:       ) {
+ 1083:         return (
+ 1084:           b.reviewCount -
+ 1085:           a.reviewCount
+ 1086:         );
+ 1087:       }
+ 1088: 
+ 1089:       return (
+ 1090:         a.price -
+ 1091:         b.price
+ 1092:       );
+ 1093:     },
+ 1094:   );
+ 1095: 
+ 1096:   /*
+ 1097:     리뷰 소스는:
+ 1098:     1. 실제 개별 판매처명이어야 하고
+ 1099:     2. 실제 URL이 네이버 SmartStore/Brand로 확인되어
+ 1100:        현재 Bright Data Naver 수집기로 리뷰 본문을
+ 1101:        가져올 수 있는 후보만 사용한다.
+ 1102: 
+ 1103:     "판매처 18" 같은 네이버 가격비교 묶음상품의
+ 1104:     리뷰 수는 개별 판매처 리뷰 수로 취급하지 않는다.
+ 1105:   */
+ 1106:   const reviewSource =
+ 1107:     [...offers]
+ 1108:       .filter(
+ 1109:         (offer) =>
+ 1110:           offer.reviewCount > 0 &&
+ 1111:           offer.isIndividualSeller &&
+ 1112:           offer.sourceType ===
+ 1113:             "naver-store",
+ 1114:       )
+ 1115:       .sort(
+ 1116:         (a, b) => {
+ 1117:           if (
+ 1118:             b.reviewCount !==
+ 1119:             a.reviewCount
+ 1120:           ) {
+ 1121:             return (
+ 1122:               b.reviewCount -
+ 1123:               a.reviewCount
+ 1124:             );
+ 1125:           }
+ 1126: 
+ 1127:           if (
+ 1128:             b.rating !==
+ 1129:             a.rating
+ 1130:           ) {
+ 1131:             return (
+ 1132:               b.rating -
+ 1133:               a.rating
+ 1134:             );
+ 1135:           }
+ 1136: 
+ 1137:           return (
+ 1138:             b.matchScore -
+ 1139:             a.matchScore
+ 1140:           );
+ 1141:         },
+ 1142:       )[0] ??
+ 1143:     null;
+ 1144: 
+ 1145:   /*
+ 1146:     구매 소스는 실제 개별 판매처 중 최저가.
+ 1147:     같은 가격이면 리뷰 수가 많은 판매처를 우선한다.
+ 1148: 
+ 1149:     외부 쇼핑몰도 구매처로 사용할 수 있으므로
+ 1150:     sourceType이 external-store여도 허용한다.
+ 1151:   */
+ 1152:   const purchaseSource =
+ 1153:     [...offers]
+ 1154:       .filter(
+ 1155:         (offer) =>
+ 1156:           offer.isIndividualSeller &&
+ 1157:           (
+
+===== LINE 1150 =====
+ 1120:           ) {
+ 1121:             return (
+ 1122:               b.reviewCount -
+ 1123:               a.reviewCount
+ 1124:             );
+ 1125:           }
+ 1126: 
+ 1127:           if (
+ 1128:             b.rating !==
+ 1129:             a.rating
+ 1130:           ) {
+ 1131:             return (
+ 1132:               b.rating -
+ 1133:               a.rating
+ 1134:             );
+ 1135:           }
+ 1136: 
+ 1137:           return (
+ 1138:             b.matchScore -
+ 1139:             a.matchScore
+ 1140:           );
+ 1141:         },
+ 1142:       )[0] ??
+ 1143:     null;
+ 1144: 
+ 1145:   /*
+ 1146:     구매 소스는 실제 개별 판매처 중 최저가.
+ 1147:     같은 가격이면 리뷰 수가 많은 판매처를 우선한다.
+ 1148: 
+ 1149:     외부 쇼핑몰도 구매처로 사용할 수 있으므로
+ 1150:     sourceType이 external-store여도 허용한다.
+ 1151:   */
+ 1152:   const purchaseSource =
+ 1153:     [...offers]
+ 1154:       .filter(
+ 1155:         (offer) =>
+ 1156:           offer.isIndividualSeller &&
+ 1157:           (
+ 1158:             offer.sourceType ===
+ 1159:               "naver-store" ||
+ 1160:             offer.sourceType ===
+ 1161:               "external-store"
+ 1162:           ),
+ 1163:       )
+ 1164:       .sort(
+ 1165:         (a, b) => {
+ 1166:           if (
+ 1167:             a.price !==
+ 1168:             b.price
+ 1169:           ) {
+ 1170:             return (
+ 1171:               a.price -
+ 1172:               b.price
+ 1173:             );
+ 1174:           }
+ 1175: 
+ 1176:           if (
+ 1177:             b.reviewCount !==
+ 1178:             a.reviewCount
+ 1179:           ) {
+ 1180:             return (
+ 1181:               b.reviewCount -
+ 1182:               a.reviewCount
+ 1183:             );
+ 1184:           }
+ 1185: 
+ 1186:           return (
+ 1187:             b.matchScore -
+ 1188:             a.matchScore
+ 1189:           );
+ 1190:         },
+ 1191:       )[0] ??
+ 1192:     null;
+ 1193: 
+ 1194:   return {
+ 1195:     offers,
+
+===== LINE 1158 =====
+ 1128:             b.rating !==
+ 1129:             a.rating
+ 1130:           ) {
+ 1131:             return (
+ 1132:               b.rating -
+ 1133:               a.rating
+ 1134:             );
+ 1135:           }
+ 1136: 
+ 1137:           return (
+ 1138:             b.matchScore -
+ 1139:             a.matchScore
+ 1140:           );
+ 1141:         },
+ 1142:       )[0] ??
+ 1143:     null;
+ 1144: 
+ 1145:   /*
+ 1146:     구매 소스는 실제 개별 판매처 중 최저가.
+ 1147:     같은 가격이면 리뷰 수가 많은 판매처를 우선한다.
+ 1148: 
+ 1149:     외부 쇼핑몰도 구매처로 사용할 수 있으므로
+ 1150:     sourceType이 external-store여도 허용한다.
+ 1151:   */
+ 1152:   const purchaseSource =
+ 1153:     [...offers]
+ 1154:       .filter(
+ 1155:         (offer) =>
+ 1156:           offer.isIndividualSeller &&
+ 1157:           (
+ 1158:             offer.sourceType ===
+ 1159:               "naver-store" ||
+ 1160:             offer.sourceType ===
+ 1161:               "external-store"
+ 1162:           ),
+ 1163:       )
+ 1164:       .sort(
+ 1165:         (a, b) => {
+ 1166:           if (
+ 1167:             a.price !==
+ 1168:             b.price
+ 1169:           ) {
+ 1170:             return (
+ 1171:               a.price -
+ 1172:               b.price
+ 1173:             );
+ 1174:           }
+ 1175: 
+ 1176:           if (
+ 1177:             b.reviewCount !==
+ 1178:             a.reviewCount
+ 1179:           ) {
+ 1180:             return (
+ 1181:               b.reviewCount -
+ 1182:               a.reviewCount
+ 1183:             );
+ 1184:           }
+ 1185: 
+ 1186:           return (
+ 1187:             b.matchScore -
+ 1188:             a.matchScore
+ 1189:           );
+ 1190:         },
+ 1191:       )[0] ??
+ 1192:     null;
+ 1193: 
+ 1194:   return {
+ 1195:     offers,
+ 1196:     reviewSource,
+ 1197:     purchaseSource,
+ 1198:   };
+ 1199: }
+ 1200: 
+
+===== LINE 1160 =====
+ 1130:           ) {
+ 1131:             return (
+ 1132:               b.rating -
+ 1133:               a.rating
+ 1134:             );
+ 1135:           }
+ 1136: 
+ 1137:           return (
+ 1138:             b.matchScore -
+ 1139:             a.matchScore
+ 1140:           );
+ 1141:         },
+ 1142:       )[0] ??
+ 1143:     null;
+ 1144: 
+ 1145:   /*
+ 1146:     구매 소스는 실제 개별 판매처 중 최저가.
+ 1147:     같은 가격이면 리뷰 수가 많은 판매처를 우선한다.
+ 1148: 
+ 1149:     외부 쇼핑몰도 구매처로 사용할 수 있으므로
+ 1150:     sourceType이 external-store여도 허용한다.
+ 1151:   */
+ 1152:   const purchaseSource =
+ 1153:     [...offers]
+ 1154:       .filter(
+ 1155:         (offer) =>
+ 1156:           offer.isIndividualSeller &&
+ 1157:           (
+ 1158:             offer.sourceType ===
+ 1159:               "naver-store" ||
+ 1160:             offer.sourceType ===
+ 1161:               "external-store"
+ 1162:           ),
+ 1163:       )
+ 1164:       .sort(
+ 1165:         (a, b) => {
+ 1166:           if (
+ 1167:             a.price !==
+ 1168:             b.price
+ 1169:           ) {
+ 1170:             return (
+ 1171:               a.price -
+ 1172:               b.price
+ 1173:             );
+ 1174:           }
+ 1175: 
+ 1176:           if (
+ 1177:             b.reviewCount !==
+ 1178:             a.reviewCount
+ 1179:           ) {
+ 1180:             return (
+ 1181:               b.reviewCount -
+ 1182:               a.reviewCount
+ 1183:             );
+ 1184:           }
+ 1185: 
+ 1186:           return (
+ 1187:             b.matchScore -
+ 1188:             a.matchScore
+ 1189:           );
+ 1190:         },
+ 1191:       )[0] ??
+ 1192:     null;
+ 1193: 
+ 1194:   return {
+ 1195:     offers,
+ 1196:     reviewSource,
+ 1197:     purchaseSource,
+ 1198:   };
+ 1199: }
+ 1200: 
+
+############################################################
+PATTERN: naver-store
+MATCHES: 4
+############################################################
+
+===== LINE 21 =====
+    1: export type MarketSearchResult = {
+    2:   name: string;
+    3:   brand: string;
+    4:   price: number;
+    5:   image: string;
+    6:   url: string;
+    7:   reviewCount: number;
+    8:   rating: number;
+    9: };
+   10: 
+   11: export type ProductOffer = MarketSearchResult & {
+   12:   matchScore: number;
+   13: 
+   14:   /*
+   15:     네이버 광고(ader) 링크처럼 실제 판매처로
+   16:     307 redirect 되는 경우 최종 목적지를 저장한다.
+   17:   */
+   18:   resolvedUrl: string;
+   19: 
+   20:   sourceType:
+   21:     | "naver-store"
+   22:     | "external-store"
+   23:     | "naver-aggregate"
+   24:     | "unknown";
+   25: 
+   26:   isIndividualSeller: boolean;
+   27: };
+   28: 
+   29: export type ProductOfferSearchResult = {
+   30:   offers: ProductOffer[];
+   31:   reviewSource: ProductOffer | null;
+   32:   purchaseSource: ProductOffer | null;
+   33: };
+   34: 
+   35: type SerpApiShoppingResult = {
+   36:   position?: number;
+   37:   title?: string;
+   38:   price?: number | string;
+   39:   rating?: number | string;
+   40:   reviews?: number | string;
+   41:   stores?: string;
+   42:   link?: string;
+   43:   thumbnail?: string;
+   44: };
+   45: 
+   46: type SerpApiResponse = {
+   47:   error?: string;
+   48:   shopping_results?: SerpApiShoppingResult[];
+   49: };
+   50: 
+   51: function normalizeText(
+   52:   value: unknown,
+   53: ) {
+   54:   return typeof value === "string"
+   55:     ? value
+   56:         .replace(/\s+/g, " ")
+   57:         .trim()
+   58:     : "";
+   59: }
+   60: 
+   61: function normalizeNumber(
+   62:   value: unknown,
+   63: ) {
+   64:   if (
+   65:     typeof value === "number" &&
+   66:     Number.isFinite(value)
+
+===== LINE 529 =====
+  499: 
+  500: function getOfferSourceType(
+  501:   seller: string,
+  502:   originalUrl: string,
+  503:   resolvedUrl: string,
+  504: ): ProductOffer["sourceType"] {
+  505:   const sellerText =
+  506:     seller.trim();
+  507: 
+  508:   const target =
+  509:     (resolvedUrl || originalUrl)
+  510:       .trim()
+  511:       .toLowerCase();
+  512: 
+  513:   if (
+  514:     /^판매처\s*\d+$/i.test(
+  515:       sellerText,
+  516:     )
+  517:   ) {
+  518:     return "naver-aggregate";
+  519:   }
+  520: 
+  521:   if (
+  522:     target.includes(
+  523:       "brand.naver.com",
+  524:     ) ||
+  525:     target.includes(
+  526:       "smartstore.naver.com",
+  527:     )
+  528:   ) {
+  529:     return "naver-store";
+  530:   }
+  531: 
+  532:   if (
+  533:     target.includes(
+  534:       "cr3.shopping.naver.com",
+  535:     )
+  536:   ) {
+  537:     return "naver-aggregate";
+  538:   }
+  539: 
+  540:   if (
+  541:     /^https?:\/\//i.test(
+  542:       target,
+  543:     )
+  544:   ) {
+  545:     return "external-store";
+  546:   }
+  547: 
+  548:   return "unknown";
+  549: }
+  550: 
+  551: async function resolveAderUrl(
+  552:   value: string,
+  553: ) {
+  554:   if (
+  555:     !value.includes(
+  556:       "ader.naver.com",
+  557:     )
+  558:   ) {
+  559:     return value;
+  560:   }
+  561: 
+  562:   try {
+  563:     const response =
+  564:       await fetch(
+  565:         value,
+  566:         {
+  567:           redirect: "manual",
+  568:           headers: {
+  569:             "User-Agent":
+  570:               "Mozilla/5.0",
+  571:           },
+  572:           cache: "no-store",
+  573:         },
+  574:       );
+
+===== LINE 1113 =====
+ 1083:         return (
+ 1084:           b.reviewCount -
+ 1085:           a.reviewCount
+ 1086:         );
+ 1087:       }
+ 1088: 
+ 1089:       return (
+ 1090:         a.price -
+ 1091:         b.price
+ 1092:       );
+ 1093:     },
+ 1094:   );
+ 1095: 
+ 1096:   /*
+ 1097:     리뷰 소스는:
+ 1098:     1. 실제 개별 판매처명이어야 하고
+ 1099:     2. 실제 URL이 네이버 SmartStore/Brand로 확인되어
+ 1100:        현재 Bright Data Naver 수집기로 리뷰 본문을
+ 1101:        가져올 수 있는 후보만 사용한다.
+ 1102: 
+ 1103:     "판매처 18" 같은 네이버 가격비교 묶음상품의
+ 1104:     리뷰 수는 개별 판매처 리뷰 수로 취급하지 않는다.
+ 1105:   */
+ 1106:   const reviewSource =
+ 1107:     [...offers]
+ 1108:       .filter(
+ 1109:         (offer) =>
+ 1110:           offer.reviewCount > 0 &&
+ 1111:           offer.isIndividualSeller &&
+ 1112:           offer.sourceType ===
+ 1113:             "naver-store",
+ 1114:       )
+ 1115:       .sort(
+ 1116:         (a, b) => {
+ 1117:           if (
+ 1118:             b.reviewCount !==
+ 1119:             a.reviewCount
+ 1120:           ) {
+ 1121:             return (
+ 1122:               b.reviewCount -
+ 1123:               a.reviewCount
+ 1124:             );
+ 1125:           }
+ 1126: 
+ 1127:           if (
+ 1128:             b.rating !==
+ 1129:             a.rating
+ 1130:           ) {
+ 1131:             return (
+ 1132:               b.rating -
+ 1133:               a.rating
+ 1134:             );
+ 1135:           }
+ 1136: 
+ 1137:           return (
+ 1138:             b.matchScore -
+ 1139:             a.matchScore
+ 1140:           );
+ 1141:         },
+ 1142:       )[0] ??
+ 1143:     null;
+ 1144: 
+ 1145:   /*
+ 1146:     구매 소스는 실제 개별 판매처 중 최저가.
+ 1147:     같은 가격이면 리뷰 수가 많은 판매처를 우선한다.
+ 1148: 
+ 1149:     외부 쇼핑몰도 구매처로 사용할 수 있으므로
+ 1150:     sourceType이 external-store여도 허용한다.
+ 1151:   */
+ 1152:   const purchaseSource =
+ 1153:     [...offers]
+ 1154:       .filter(
+ 1155:         (offer) =>
+ 1156:           offer.isIndividualSeller &&
+ 1157:           (
+ 1158:             offer.sourceType ===
+
+===== LINE 1159 =====
+ 1129:             a.rating
+ 1130:           ) {
+ 1131:             return (
+ 1132:               b.rating -
+ 1133:               a.rating
+ 1134:             );
+ 1135:           }
+ 1136: 
+ 1137:           return (
+ 1138:             b.matchScore -
+ 1139:             a.matchScore
+ 1140:           );
+ 1141:         },
+ 1142:       )[0] ??
+ 1143:     null;
+ 1144: 
+ 1145:   /*
+ 1146:     구매 소스는 실제 개별 판매처 중 최저가.
+ 1147:     같은 가격이면 리뷰 수가 많은 판매처를 우선한다.
+ 1148: 
+ 1149:     외부 쇼핑몰도 구매처로 사용할 수 있으므로
+ 1150:     sourceType이 external-store여도 허용한다.
+ 1151:   */
+ 1152:   const purchaseSource =
+ 1153:     [...offers]
+ 1154:       .filter(
+ 1155:         (offer) =>
+ 1156:           offer.isIndividualSeller &&
+ 1157:           (
+ 1158:             offer.sourceType ===
+ 1159:               "naver-store" ||
+ 1160:             offer.sourceType ===
+ 1161:               "external-store"
+ 1162:           ),
+ 1163:       )
+ 1164:       .sort(
+ 1165:         (a, b) => {
+ 1166:           if (
+ 1167:             a.price !==
+ 1168:             b.price
+ 1169:           ) {
+ 1170:             return (
+ 1171:               a.price -
+ 1172:               b.price
+ 1173:             );
+ 1174:           }
+ 1175: 
+ 1176:           if (
+ 1177:             b.reviewCount !==
+ 1178:             a.reviewCount
+ 1179:           ) {
+ 1180:             return (
+ 1181:               b.reviewCount -
+ 1182:               a.reviewCount
+ 1183:             );
+ 1184:           }
+ 1185: 
+ 1186:           return (
+ 1187:             b.matchScore -
+ 1188:             a.matchScore
+ 1189:           );
+ 1190:         },
+ 1191:       )[0] ??
+ 1192:     null;
+ 1193: 
+ 1194:   return {
+ 1195:     offers,
+ 1196:     reviewSource,
+ 1197:     purchaseSource,
+ 1198:   };
+ 1199: }
+ 1200: 
+
+############################################################
+PATTERN: naver-aggregate
+MATCHES: 4
+############################################################
+
+===== LINE 23 =====
+    1: export type MarketSearchResult = {
+    2:   name: string;
+    3:   brand: string;
+    4:   price: number;
+    5:   image: string;
+    6:   url: string;
+    7:   reviewCount: number;
+    8:   rating: number;
+    9: };
+   10: 
+   11: export type ProductOffer = MarketSearchResult & {
+   12:   matchScore: number;
+   13: 
+   14:   /*
+   15:     네이버 광고(ader) 링크처럼 실제 판매처로
+   16:     307 redirect 되는 경우 최종 목적지를 저장한다.
+   17:   */
+   18:   resolvedUrl: string;
+   19: 
+   20:   sourceType:
+   21:     | "naver-store"
+   22:     | "external-store"
+   23:     | "naver-aggregate"
+   24:     | "unknown";
+   25: 
+   26:   isIndividualSeller: boolean;
+   27: };
+   28: 
+   29: export type ProductOfferSearchResult = {
+   30:   offers: ProductOffer[];
+   31:   reviewSource: ProductOffer | null;
+   32:   purchaseSource: ProductOffer | null;
+   33: };
+   34: 
+   35: type SerpApiShoppingResult = {
+   36:   position?: number;
+   37:   title?: string;
+   38:   price?: number | string;
+   39:   rating?: number | string;
+   40:   reviews?: number | string;
+   41:   stores?: string;
+   42:   link?: string;
+   43:   thumbnail?: string;
+   44: };
+   45: 
+   46: type SerpApiResponse = {
+   47:   error?: string;
+   48:   shopping_results?: SerpApiShoppingResult[];
+   49: };
+   50: 
+   51: function normalizeText(
+   52:   value: unknown,
+   53: ) {
+   54:   return typeof value === "string"
+   55:     ? value
+   56:         .replace(/\s+/g, " ")
+   57:         .trim()
+   58:     : "";
+   59: }
+   60: 
+   61: function normalizeNumber(
+   62:   value: unknown,
+   63: ) {
+   64:   if (
+   65:     typeof value === "number" &&
+   66:     Number.isFinite(value)
+   67:   ) {
+   68:     return value;
+
+===== LINE 518 =====
+  488:   } catch {
+  489:     // 정규식 fallback 사용
+  490:   }
+  491: 
+  492:   return (
+  493:     value.match(
+  494:       /[?&]nv_mid=(\d+)/i,
+  495:     )?.[1] ??
+  496:     ""
+  497:   );
+  498: }
+  499: 
+  500: function getOfferSourceType(
+  501:   seller: string,
+  502:   originalUrl: string,
+  503:   resolvedUrl: string,
+  504: ): ProductOffer["sourceType"] {
+  505:   const sellerText =
+  506:     seller.trim();
+  507: 
+  508:   const target =
+  509:     (resolvedUrl || originalUrl)
+  510:       .trim()
+  511:       .toLowerCase();
+  512: 
+  513:   if (
+  514:     /^판매처\s*\d+$/i.test(
+  515:       sellerText,
+  516:     )
+  517:   ) {
+  518:     return "naver-aggregate";
+  519:   }
+  520: 
+  521:   if (
+  522:     target.includes(
+  523:       "brand.naver.com",
+  524:     ) ||
+  525:     target.includes(
+  526:       "smartstore.naver.com",
+  527:     )
+  528:   ) {
+  529:     return "naver-store";
+  530:   }
+  531: 
+  532:   if (
+  533:     target.includes(
+  534:       "cr3.shopping.naver.com",
+  535:     )
+  536:   ) {
+  537:     return "naver-aggregate";
+  538:   }
+  539: 
+  540:   if (
+  541:     /^https?:\/\//i.test(
+  542:       target,
+  543:     )
+  544:   ) {
+  545:     return "external-store";
+  546:   }
+  547: 
+  548:   return "unknown";
+  549: }
+  550: 
+  551: async function resolveAderUrl(
+  552:   value: string,
+  553: ) {
+  554:   if (
+  555:     !value.includes(
+  556:       "ader.naver.com",
+  557:     )
+  558:   ) {
+  559:     return value;
+  560:   }
+  561: 
+  562:   try {
+  563:     const response =
+
+===== LINE 537 =====
+  507: 
+  508:   const target =
+  509:     (resolvedUrl || originalUrl)
+  510:       .trim()
+  511:       .toLowerCase();
+  512: 
+  513:   if (
+  514:     /^판매처\s*\d+$/i.test(
+  515:       sellerText,
+  516:     )
+  517:   ) {
+  518:     return "naver-aggregate";
+  519:   }
+  520: 
+  521:   if (
+  522:     target.includes(
+  523:       "brand.naver.com",
+  524:     ) ||
+  525:     target.includes(
+  526:       "smartstore.naver.com",
+  527:     )
+  528:   ) {
+  529:     return "naver-store";
+  530:   }
+  531: 
+  532:   if (
+  533:     target.includes(
+  534:       "cr3.shopping.naver.com",
+  535:     )
+  536:   ) {
+  537:     return "naver-aggregate";
+  538:   }
+  539: 
+  540:   if (
+  541:     /^https?:\/\//i.test(
+  542:       target,
+  543:     )
+  544:   ) {
+  545:     return "external-store";
+  546:   }
+  547: 
+  548:   return "unknown";
+  549: }
+  550: 
+  551: async function resolveAderUrl(
+  552:   value: string,
+  553: ) {
+  554:   if (
+  555:     !value.includes(
+  556:       "ader.naver.com",
+  557:     )
+  558:   ) {
+  559:     return value;
+  560:   }
+  561: 
+  562:   try {
+  563:     const response =
+  564:       await fetch(
+  565:         value,
+  566:         {
+  567:           redirect: "manual",
+  568:           headers: {
+  569:             "User-Agent":
+  570:               "Mozilla/5.0",
+  571:           },
+  572:           cache: "no-store",
+  573:         },
+  574:       );
+  575: 
+  576:     const location =
+  577:       response.headers
+  578:         .get("location")
+  579:         ?.trim();
+  580: 
+  581:     return (
+  582:       location ||
+
+===== LINE 1013 =====
+  983:           image:
+  984:             normalizeText(
+  985:               item.thumbnail,
+  986:             ),
+  987: 
+  988:           url,
+  989: 
+  990:           reviewCount:
+  991:             Math.round(
+  992:               normalizeNumber(
+  993:                 item.reviews,
+  994:               ),
+  995:             ),
+  996: 
+  997:           rating:
+  998:             normalizeNumber(
+  999:               item.rating,
+ 1000:             ),
+ 1001: 
+ 1002:           matchScore,
+ 1003: 
+ 1004:           resolvedUrl,
+ 1005: 
+ 1006:           sourceType,
+ 1007: 
+ 1008:           isIndividualSeller:
+ 1009:             isIndividualSellerName(
+ 1010:               seller,
+ 1011:             ) &&
+ 1012:             sourceType !==
+ 1013:               "naver-aggregate",
+ 1014:         };
+ 1015: 
+ 1016:       const offerProductId =
+ 1017:         extractOfferProductId(
+ 1018:           offer.url,
+ 1019:         );
+ 1020: 
+ 1021:       /*
+ 1022:         같은 네이버 상품이 검색어만 달라져
+ 1023:         query/t/h 추적값 때문에 여러 번 들어오는 것을 막는다.
+ 1024: 
+ 1025:         nv_mid가 있으면 그것을 가장 강한 중복키로 사용하고,
+ 1026:         nv_mid가 없는 광고/기타 링크만
+ 1027:         상품명 + 판매처 + 가격 조합으로 fallback 한다.
+ 1028:       */
+ 1029:       const fallbackKey =
+ 1030:         [
+ 1031:           "fallback",
+ 1032:           compactToken(
+ 1033:             offer.name,
+ 1034:           ),
+ 1035:           compactToken(
+ 1036:             offer.brand,
+ 1037:           ),
+ 1038:           offer.price,
+ 1039:         ].join("|");
+ 1040: 
+ 1041:       const primaryKey =
+ 1042:         offerProductId
+ 1043:           ? `nv_mid:${offerProductId}`
+ 1044:           : fallbackKey;
+ 1045: 
+ 1046:       /*
+ 1047:         같은 상품이 한 검색에서는 cr3(nv_mid 포함),
+ 1048:         다른 검색에서는 ader(광고 URL)로 노출될 수 있다.
+ 1049: 
+ 1050:         따라서 nv_mid가 있는 상품도
+ 1051:         상품명 + 판매처 + 가격 fallback key를 함께 등록해
+ 1052:         cr3/ader 중복을 서로 잡아낸다.
+ 1053:       */
+ 1054:       if (
+ 1055:         seen.has(primaryKey) ||
+ 1056:         seen.has(fallbackKey)
+ 1057:       ) {
+ 1058:         continue;

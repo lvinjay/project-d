@@ -1,0 +1,14 @@
+{
+  "success": false,
+  "productId": "",
+  "brandName": "드리미",
+  "brandSite": "",
+  "canonicalUrl": "",
+  "triedQueries": [
+    "드리미 로봇청소기 X60 Ultra X60ULTRA 올인원 물통형 화이트 brand.naver.com",
+    "site:brand.naver.com 드리미 X60 Ultra",
+    "드리미 X60 Ultra X60ULTRA 공식",
+    "[google-broad] \"드리미 X60 Ultra X60ULTRA\" \"brand.naver.com\""
+  ],
+  "reason": "중간 네이버 URL에서 공식 상품번호와 brand.naver.com 상품 URL을 확인하지 못했습니다."
+}

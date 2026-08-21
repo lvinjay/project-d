@@ -1,0 +1,191 @@
+﻿===== ROUTE =====
+
+        partialCandidateCount:
+          partialCandidates.length,
+
+        targetReached:
+          finalCandidates.length >=
+          TARGET_COUNT,
+
+        failureCount:
+          failures.length,
+      },
+    );
+
+    if (
+      failures.length >
+      0
+    ) {
+      console.log(
+        "Market candidates enriched failures:",
+        failures,
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+
+      category,
+
+      budget: {
+        minBudget,
+        maxBudget,
+      },
+
+      targetCount:
+        TARGET_COUNT,
+
+      marketCandidateCount:
+        marketCandidates.length,
+
+      resolverAttempts,
+
+      brightDataCalls,
+
+      finalCandidateCount:
+        finalCandidates.length,
+
+      partialCandidateCount:
+        partialCandidates.length,
+
+      targetReached:
+        finalCandidates.length >=
+        TARGET_COUNT,
+
+      finalCandidates,
+
+      partialCandidates,
+
+      failureCount:
+        failures.length,
+
+      failures,
+    });
+  } catch (error) {
+    console.error(
+      "Market candidates enriched error:",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        success: false,
+
+        message:
+          error instanceof Error
+            ? error.message
+            : "?꾨낫?곹뭹 ?곸꽭寃利?以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.",
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+}
+
+
+
+
+
+
+
+
+
+===== AUTOMATION PANEL =====
+      }
+
+      const returnedCandidates =
+        Array.isArray(
+          enriched.finalCandidates,
+        )
+          ? (
+              enriched.finalCandidates as FinalCandidate[]
+            )
+          : [];
+
+      /*
+        API가 실수로 partial 후보를 finalCandidates에 포함하더라도
+        이후 DB 등록 / 리뷰 AI 분석 단계로 넘어가지 않도록
+        클라이언트에서도 full 후보만 한 번 더 확인한다.
+      */
+      const finalCandidates =
+        returnedCandidates.filter(
+          (candidate) =>
+            candidate.detail
+              ?.detailStatus ===
+            "full",
+        );
+
+      if (
+        enriched.targetReached !==
+          true ||
+        finalCandidates.length < 5
+      ) {
+        const partialCount =
+          Number(
+            enriched.partialCandidateCount ??
+              0,
+          ) || 0;
+
+        throw new Error(
+          `full 유효 후보가 5개에 도달하지 못했습니다. 현재 ${finalCandidates.length}개` +
+            (partialCount > 0
+              ? ` · partial 예비 후보 ${partialCount}개`
+              : "") +
+            "입니다.",
+        );
+      }
+
+      updateStep(
+        "enrich",
+        "done",
+        `${finalCandidates.length}개 최종 후보 확보 · Bright Data ${Number(
+          enriched.brightDataCalls ??
+            0,
+        )}회`,
+      );
+
+      /*
+        3단계
+        최종 5개를 products에 등록/갱신.
+      */
+      updateStep(
+        "import",
+        "working",
+        "최종 후보를 제품 DB에 등록하는 중...",
+      );
+
+      const importResponse =
+        await fetch(
+          "/api/import-market-candidates",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+
+              candidates:
+                finalCandidates,
+            }),
+          },
+        );
+
+      const importResult =
+        await readJson(
+          importResponse,
+        );
+
+      if (
+        !importResponse.ok ||
+        importResult.success !==
+          true
+      ) {
+        throw new Error(
+
+===== TYPESCRIPT =====

@@ -1,0 +1,1533 @@
+﻿
+############################################################
+FILE: .\app\api\market-candidates-enriched\route.ts
+############################################################
+
+============================================================
+PATTERN: NaverProductDetail
+MATCHES: 6
+============================================================
+
+LINE: 73
+
+  무한 호출 방지를 위해 최대 30개까지만 검사.
+*/
+const MAX_CANDIDATE_COUNT = 30;
+
+/*
+  같은 제품의 상세정보를 24시간 안에 이미 수집했다면
+  Bright Data를 다시 호출하지 않고 DB 캐시를 사용한다.
+*/
+const DETAIL_CACHE_TTL_MS =
+  24 *
+  60 *
+  60 *
+  1000;
+
+type NaverProductDetail =
+  Awaited<
+    ReturnType<
+      typeof collectNaverProduct
+    >
+  >;
+
+type CapturedProduct = {
+  name: string;
+  text: string;
+  seller: string;
+  url: string;
+  imageUrl: string;
+  price: number;
+  reviewCount: number;
+  rating: number;
+};
+
+type CaptureResponse = {
+  success: boolean;
+  message?: string;
+  category?: string;
+  minBudget?: number;
+  maxBudget?: number;
+  products?: CapturedProduct[];
+};
+
+type FailureItem = {
+  position: number;
+  marketProduct: string;
+  stage:
+    | "resolve"
+    | "brightdata"
+    | "validation"
+    | "budget"
+    | "duplicate";
+
+LINE: 562
+    }
+  }
+
+  return result;
+}
+/*
+  네이버쇼핑 브라우저 캡처에서 이미
+  실제 SmartStore / Brand 상품 URL이 들어온 경우
+  resolver를 사용할 필요가 없다.
+
+  추적 파라미터는 제거하고
+  실제 상품 URL만 Bright Data에 전달한다.
+*/
+async function getCachedProductDetail(
+  productId: string,
+): Promise<NaverProductDetail | null> {
+  const originProductNo =
+    Number(productId);
+
+  if (
+    !Number.isSafeInteger(
+      originProductNo,
+    )
+  ) {
+    return null;
+  }
+
+  const {
+    data,
+    error,
+  } =
+    await supabaseAdmin
+      .from("products")
+      .select(
+        "product_detail_analysis",
+      )
+      .eq(
+        "origin_product_no",
+        originProductNo,
+      )
+      .limit(1)
+      .maybeSingle();
+
+  if (error) {
+    console.warn(
+      "Product detail cache lookup warning:",
+      error,
+    );
+
+    return null;
+  }
+
+LINE: 758
+      ),
+
+    topReviews:
+      reviews as {
+        rating: number;
+        date: string;
+        text: string;
+        helpfulCount: number;
+      }[],
+
+    url:
+      String(
+        detail.sourceUrl ??
+          "",
+      ),
+  } as NaverProductDetail;
+}
+
+function getNaverProductUrlInfo(
+  value: string,
+) {
+  try {
+    const url =
+      new URL(value);
+
+    const match =
+      url.pathname.match(
+        /\/products\/(\d+)/i,
+      );
+
+    if (!match?.[1]) {
+      return null;
+    }
+
+    if (
+      url.hostname ===
+      "brand.naver.com"
+    ) {
+      return {
+        type:
+          "brand" as const,
+
+        productId:
+          match[1],
+
+        canonicalUrl:
+          `${url.origin}${url.pathname}`,
+      };
+    }
+
+    if (
+
+LINE: 1769
+          failure: {
+            position,
+
+            marketProduct:
+              market.name,
+
+            stage:
+              "duplicate",
+
+            reason,
+          },
+        };
+      }
+
+      let detail:
+        NaverProductDetail | null =
+        null;
+
+      let usedCache =
+        false;
+
+      if (
+        canonicalSourceType ===
+          "manufacturer" &&
+        manufacturerDetail?.success
+      ) {
+        const manufacturer =
+          manufacturerDetail.detail;
+
+        detail = {
+          url:
+            manufacturer.canonicalUrl,
+
+          productId: "",
+
+          title:
+            manufacturer.title,
+
+          originalPrice:
+            manufacturer.originalPrice,
+
+          finalPrice:
+            manufacturer.finalPrice,
+
+          discountRate: 0,
+
+          currency:
+            "KRW",
+
+          imageUrl:
+            manufacturer.imageUrl,
+
+LINE: 2161
+              detail.productId,
+            )
+          : "";
+
+      /*
+        실제 리뷰 본문은 reviewSource에서 가져오는 것을 원칙으로 한다.
+
+        단, reviewSource의 실제 네이버 상품번호가 canonicalSource와
+        같다면 같은 상품 페이지이므로 Bright Data를 한 번 더 호출하지 않고
+        이미 수집한 detail.topReviews를 그대로 재사용한다.
+
+        상품번호가 다를 때만 reviewSource.resolvedUrl을 Bright Data로
+        추가 수집한다. 실패하면 자동으로 canonical 리뷰로 fallback 한다.
+      */
+      let reviewDetail:
+        NaverProductDetail =
+        detail;
+
+      let reviewTextSource:
+        | "selected-source"
+        | "canonical-reuse"
+        | "canonical-fallback" =
+        "canonical-fallback";
+
+      let reviewSourceUrl =
+        detail.url;
+
+      let extraReviewBrightDataCalls =
+        0;
+
+      if (
+        selectedReviewSource?.resolvedUrl &&
+        selectedReviewSource.sourceType ===
+          "naver-store"
+      ) {
+        const selectedReviewProductId =
+          extractMarketProductId(
+            selectedReviewSource.resolvedUrl,
+          );
+
+        if (
+          selectedReviewProductId &&
+          selectedReviewProductId ===
+            finalProductId
+        ) {
+          reviewDetail =
+            detail;
+
+          reviewSourceUrl =
+            selectedReviewSource.resolvedUrl;
+
+
+LINE: 2206
+          reviewDetail =
+            detail;
+
+          reviewSourceUrl =
+            selectedReviewSource.resolvedUrl;
+
+          reviewTextSource =
+            "canonical-reuse";
+
+          console.log(
+            `[ENRICH ${position}] 리뷰소스 canonical 재사용`,
+            selectedReviewProductId,
+          );
+        } else {
+          let collectedReviewDetail:
+            NaverProductDetail | null =
+            null;
+
+          if (
+            selectedReviewProductId
+          ) {
+            collectedReviewDetail =
+              await getCachedProductDetail(
+                selectedReviewProductId,
+              );
+          }
+
+          if (
+            collectedReviewDetail
+          ) {
+            reviewDetail =
+              collectedReviewDetail;
+
+            reviewSourceUrl =
+              selectedReviewSource.resolvedUrl;
+
+            reviewTextSource =
+              "selected-source";
+
+            console.log(
+              `[ENRICH ${position}] 리뷰소스 DB 캐시 사용`,
+              selectedReviewProductId,
+            );
+          } else {
+            try {
+              console.log(
+                `[ENRICH ${position}] 리뷰소스 Bright Data 시작`,
+                selectedReviewSource.resolvedUrl,
+              );
+
+              const collected =
+
+============================================================
+PATTERN: getCachedProductDetail
+MATCHES: 3
+============================================================
+
+LINE: 560
+        product,
+      );
+    }
+  }
+
+  return result;
+}
+/*
+  네이버쇼핑 브라우저 캡처에서 이미
+  실제 SmartStore / Brand 상품 URL이 들어온 경우
+  resolver를 사용할 필요가 없다.
+
+  추적 파라미터는 제거하고
+  실제 상품 URL만 Bright Data에 전달한다.
+*/
+async function getCachedProductDetail(
+  productId: string,
+): Promise<NaverProductDetail | null> {
+  const originProductNo =
+    Number(productId);
+
+  if (
+    !Number.isSafeInteger(
+      originProductNo,
+    )
+  ) {
+    return null;
+  }
+
+  const {
+    data,
+    error,
+  } =
+    await supabaseAdmin
+      .from("products")
+      .select(
+        "product_detail_analysis",
+      )
+      .eq(
+        "origin_product_no",
+        originProductNo,
+      )
+      .limit(1)
+      .maybeSingle();
+
+  if (error) {
+    console.warn(
+      "Product detail cache lookup warning:",
+      error,
+    );
+
+
+LINE: 1845
+          modelName:
+            manufacturer.modelName,
+
+          categoryName:
+            category,
+
+          topReviews: [],
+        };
+
+        console.log(
+          `[ENRICH ${position}] Manufacturer 상세 사용`,
+          detail.title,
+        );
+      } else {
+        detail =
+          await getCachedProductDetail(
+            resolvedProductId,
+          );
+
+        usedCache =
+          Boolean(detail);
+
+        if (detail) {
+          console.log(
+            `[ENRICH ${position}] DB 상세 캐시 사용`,
+            resolvedProductId,
+          );
+        }
+      }
+
+      const brightDataStartedAt =
+        Date.now();
+
+      if (
+        !detail &&
+        canonicalSourceType ===
+          "naver-brand"
+      ) {
+        console.log(
+          `[ENRICH ${position}] Bright Data 시작`,
+          resolvedUrl,
+        );
+
+        try {
+          detail =
+            await collectNaverProduct(
+              resolvedUrl,
+            );
+        } catch (error) {
+        const reason =
+          error instanceof Error
+
+LINE: 2213
+            "canonical-reuse";
+
+          console.log(
+            `[ENRICH ${position}] 리뷰소스 canonical 재사용`,
+            selectedReviewProductId,
+          );
+        } else {
+          let collectedReviewDetail:
+            NaverProductDetail | null =
+            null;
+
+          if (
+            selectedReviewProductId
+          ) {
+            collectedReviewDetail =
+              await getCachedProductDetail(
+                selectedReviewProductId,
+              );
+          }
+
+          if (
+            collectedReviewDetail
+          ) {
+            reviewDetail =
+              collectedReviewDetail;
+
+            reviewSourceUrl =
+              selectedReviewSource.resolvedUrl;
+
+            reviewTextSource =
+              "selected-source";
+
+            console.log(
+              `[ENRICH ${position}] 리뷰소스 DB 캐시 사용`,
+              selectedReviewProductId,
+            );
+          } else {
+            try {
+              console.log(
+                `[ENRICH ${position}] 리뷰소스 Bright Data 시작`,
+                selectedReviewSource.resolvedUrl,
+              );
+
+              const collected =
+                await collectNaverProduct(
+                  selectedReviewSource.resolvedUrl,
+                );
+
+              if (
+                collected.topReviews.length >=
+                5
+
+============================================================
+PATTERN: saveProductDetail
+MATCHES: 0
+============================================================
+
+============================================================
+PATTERN: topReviews
+MATCHES: 11
+============================================================
+
+LINE: 745
+          "",
+      ),
+
+    categoryName:
+      String(
+        detail.categoryName ??
+          "",
+      ),
+
+    imageUrl:
+      String(
+        detail.imageUrl ??
+          "",
+      ),
+
+    topReviews:
+      reviews as {
+        rating: number;
+        date: string;
+        text: string;
+        helpfulCount: number;
+      }[],
+
+    url:
+      String(
+        detail.sourceUrl ??
+          "",
+      ),
+  } as NaverProductDetail;
+}
+
+function getNaverProductUrlInfo(
+  value: string,
+) {
+  try {
+    const url =
+      new URL(value);
+
+    const match =
+      url.pathname.match(
+        /\/products\/(\d+)/i,
+      );
+
+    if (!match?.[1]) {
+      return null;
+    }
+
+    if (
+      url.hostname ===
+      "brand.naver.com"
+    ) {
+
+LINE: 1836
+
+          purchaseUrl: "",
+
+          brand:
+            manufacturer.brand,
+
+          manufacturer:
+            manufacturer.manufacturer,
+
+          modelName:
+            manufacturer.modelName,
+
+          categoryName:
+            category,
+
+          topReviews: [],
+        };
+
+        console.log(
+          `[ENRICH ${position}] Manufacturer 상세 사용`,
+          detail.title,
+        );
+      } else {
+        detail =
+          await getCachedProductDetail(
+            resolvedProductId,
+          );
+
+        usedCache =
+          Boolean(detail);
+
+        if (detail) {
+          console.log(
+            `[ENRICH ${position}] DB 상세 캐시 사용`,
+            resolvedProductId,
+          );
+        }
+      }
+
+      const brightDataStartedAt =
+        Date.now();
+
+      if (
+        !detail &&
+        canonicalSourceType ===
+          "naver-brand"
+      ) {
+        console.log(
+          `[ENRICH ${position}] Bright Data 시작`,
+          resolvedUrl,
+        );
+
+LINE: 2106
+          )}원`,
+        );
+      }
+
+      /*
+        같은 모델의 네이버 판매처를 다시 검색해
+        역할을 분리한다.
+
+        canonicalSource:
+          공식 Brand 상품 URL
+          → 제품 식별 / 스펙 / 대표 이미지용
+
+        reviewSource:
+          동일 모델/구성 후보 중 리뷰 수가 가장 많은 판매처
+          → 현재는 "어느 판매처 리뷰를 써야 하는지"만 선택한다.
+          → 실제 리뷰 텍스트는 아직 detail.topReviews를 유지한다.
+
+        purchaseSource:
+          동일 모델/구성 후보 중 최저가 판매처
+          → 최종 구매 버튼용 후보.
+      */
+      let offerSearch:
+        Awaited<
+          ReturnType<
+            typeof searchProductOffers
+          >
+        > | null =
+        null;
+
+      try {
+        offerSearch =
+          await searchProductOffers(
+            canonicalSourceType ===
+              "manufacturer"
+              ? market.name
+              : detail.title ||
+                  market.name,
+          );
+      } catch (error) {
+        console.warn(
+          `[ENRICH ${position}] 판매처 재검색 warning`,
+          error,
+        );
+      }
+
+      const selectedReviewSource =
+        offerSearch?.reviewSource;
+
+      const selectedPurchaseSource =
+        offerSearch?.purchaseSource;
+
+
+LINE: 2155
+        offerSearch?.purchaseSource;
+
+      const finalProductId =
+        canonicalSourceType ===
+          "naver-brand"
+          ? String(
+              detail.productId,
+            )
+          : "";
+
+      /*
+        실제 리뷰 본문은 reviewSource에서 가져오는 것을 원칙으로 한다.
+
+        단, reviewSource의 실제 네이버 상품번호가 canonicalSource와
+        같다면 같은 상품 페이지이므로 Bright Data를 한 번 더 호출하지 않고
+        이미 수집한 detail.topReviews를 그대로 재사용한다.
+
+        상품번호가 다를 때만 reviewSource.resolvedUrl을 Bright Data로
+        추가 수집한다. 실패하면 자동으로 canonical 리뷰로 fallback 한다.
+      */
+      let reviewDetail:
+        NaverProductDetail =
+        detail;
+
+      let reviewTextSource:
+        | "selected-source"
+        | "canonical-reuse"
+        | "canonical-fallback" =
+        "canonical-fallback";
+
+      let reviewSourceUrl =
+        detail.url;
+
+      let extraReviewBrightDataCalls =
+        0;
+
+      if (
+        selectedReviewSource?.resolvedUrl &&
+        selectedReviewSource.sourceType ===
+          "naver-store"
+      ) {
+        const selectedReviewProductId =
+          extractMarketProductId(
+            selectedReviewSource.resolvedUrl,
+          );
+
+        if (
+          selectedReviewProductId &&
+          selectedReviewProductId ===
+            finalProductId
+        ) {
+
+LINE: 2247
+              selectedReviewProductId,
+            );
+          } else {
+            try {
+              console.log(
+                `[ENRICH ${position}] 리뷰소스 Bright Data 시작`,
+                selectedReviewSource.resolvedUrl,
+              );
+
+              const collected =
+                await collectNaverProduct(
+                  selectedReviewSource.resolvedUrl,
+                );
+
+              if (
+                collected.topReviews.length >=
+                5
+              ) {
+                reviewDetail =
+                  collected;
+
+                reviewSourceUrl =
+                  selectedReviewSource.resolvedUrl;
+
+                reviewTextSource =
+                  "selected-source";
+
+                extraReviewBrightDataCalls =
+                  1;
+
+                console.log(
+                  `[ENRICH ${position}] 리뷰소스 Bright Data 완료`,
+                  collected.topReviews.length,
+                );
+              } else {
+                console.warn(
+                  `[ENRICH ${position}] 리뷰소스 샘플 부족 → canonical fallback`,
+                  collected.topReviews.length,
+                );
+              }
+            } catch (error) {
+              console.warn(
+                `[ENRICH ${position}] 리뷰소스 Bright Data 실패 → canonical fallback`,
+                error,
+              );
+            }
+          }
+        }
+      }
+
+      /*
+
+LINE: 2264
+              ) {
+                reviewDetail =
+                  collected;
+
+                reviewSourceUrl =
+                  selectedReviewSource.resolvedUrl;
+
+                reviewTextSource =
+                  "selected-source";
+
+                extraReviewBrightDataCalls =
+                  1;
+
+                console.log(
+                  `[ENRICH ${position}] 리뷰소스 Bright Data 완료`,
+                  collected.topReviews.length,
+                );
+              } else {
+                console.warn(
+                  `[ENRICH ${position}] 리뷰소스 샘플 부족 → canonical fallback`,
+                  collected.topReviews.length,
+                );
+              }
+            } catch (error) {
+              console.warn(
+                `[ENRICH ${position}] 리뷰소스 Bright Data 실패 → canonical fallback`,
+                error,
+              );
+            }
+          }
+        }
+      }
+
+      /*
+        canonicalSource의 리뷰 수가 아니라 최종 reviewSource에서
+        확보한 실제 리뷰 샘플을 기준으로 검증한다.
+
+        Manufacturer fallback은 공식몰 상세에 리뷰가 없을 수 있으므로
+        reviewSource 검색/수집이 끝나기 전에 탈락시키면 안 된다.
+      */
+      if (
+        reviewDetail.topReviews.length <
+        5
+      ) {
+        const reason =
+          `분석 가능한 리뷰가 부족합니다. (${reviewDetail.topReviews.length}개)`;
+
+        console.log(
+          `[ENRICH ${position}] 탈락(validation)`,
+          reason,
+        );
+
+LINE: 2269
+                  selectedReviewSource.resolvedUrl;
+
+                reviewTextSource =
+                  "selected-source";
+
+                extraReviewBrightDataCalls =
+                  1;
+
+                console.log(
+                  `[ENRICH ${position}] 리뷰소스 Bright Data 완료`,
+                  collected.topReviews.length,
+                );
+              } else {
+                console.warn(
+                  `[ENRICH ${position}] 리뷰소스 샘플 부족 → canonical fallback`,
+                  collected.topReviews.length,
+                );
+              }
+            } catch (error) {
+              console.warn(
+                `[ENRICH ${position}] 리뷰소스 Bright Data 실패 → canonical fallback`,
+                error,
+              );
+            }
+          }
+        }
+      }
+
+      /*
+        canonicalSource의 리뷰 수가 아니라 최종 reviewSource에서
+        확보한 실제 리뷰 샘플을 기준으로 검증한다.
+
+        Manufacturer fallback은 공식몰 상세에 리뷰가 없을 수 있으므로
+        reviewSource 검색/수집이 끝나기 전에 탈락시키면 안 된다.
+      */
+      if (
+        reviewDetail.topReviews.length <
+        5
+      ) {
+        const reason =
+          `분석 가능한 리뷰가 부족합니다. (${reviewDetail.topReviews.length}개)`;
+
+        console.log(
+          `[ENRICH ${position}] 탈락(validation)`,
+          reason,
+        );
+
+        return {
+          success: false,
+
+          resolverAttempts:
+
+LINE: 2290
+                error,
+              );
+            }
+          }
+        }
+      }
+
+      /*
+        canonicalSource의 리뷰 수가 아니라 최종 reviewSource에서
+        확보한 실제 리뷰 샘플을 기준으로 검증한다.
+
+        Manufacturer fallback은 공식몰 상세에 리뷰가 없을 수 있으므로
+        reviewSource 검색/수집이 끝나기 전에 탈락시키면 안 된다.
+      */
+      if (
+        reviewDetail.topReviews.length <
+        5
+      ) {
+        const reason =
+          `분석 가능한 리뷰가 부족합니다. (${reviewDetail.topReviews.length}개)`;
+
+        console.log(
+          `[ENRICH ${position}] 탈락(validation)`,
+          reason,
+        );
+
+        return {
+          success: false,
+
+          resolverAttempts:
+            candidateResolverAttempts,
+
+          brightDataCalls:
+            (
+              canonicalSourceType ===
+                "naver-brand"
+                ? (
+                    usedCache
+                      ? 0
+                      : 1
+                  )
+                : 0
+            ) +
+            extraReviewBrightDataCalls,
+
+          failure: {
+            position,
+
+            marketProduct:
+              market.name,
+
+
+LINE: 2294
+        }
+      }
+
+      /*
+        canonicalSource의 리뷰 수가 아니라 최종 reviewSource에서
+        확보한 실제 리뷰 샘플을 기준으로 검증한다.
+
+        Manufacturer fallback은 공식몰 상세에 리뷰가 없을 수 있으므로
+        reviewSource 검색/수집이 끝나기 전에 탈락시키면 안 된다.
+      */
+      if (
+        reviewDetail.topReviews.length <
+        5
+      ) {
+        const reason =
+          `분석 가능한 리뷰가 부족합니다. (${reviewDetail.topReviews.length}개)`;
+
+        console.log(
+          `[ENRICH ${position}] 탈락(validation)`,
+          reason,
+        );
+
+        return {
+          success: false,
+
+          resolverAttempts:
+            candidateResolverAttempts,
+
+          brightDataCalls:
+            (
+              canonicalSourceType ===
+                "naver-brand"
+                ? (
+                    usedCache
+                      ? 0
+                      : 1
+                  )
+                : 0
+            ) +
+            extraReviewBrightDataCalls,
+
+          failure: {
+            position,
+
+            marketProduct:
+              market.name,
+
+            stage:
+              "validation",
+
+            reason,
+
+LINE: 2629
+              reviewDetail.totalReviews,
+
+            rating:
+              reviewDetail.averageRating,
+
+            sellerName:
+              detail.sellerName,
+
+            categoryName:
+              detail.categoryName,
+
+            imageUrl:
+              detail.imageUrl,
+
+            reviewSamples:
+              reviewDetail.topReviews.length,
+
+            reviews:
+              reviewDetail.topReviews,
+
+            sourceUrl:
+              detail.url,
+
+            reviewSourceUrl,
+
+            detailStatus:
+              "full",
+          },
+        },
+      };
+    }
+
+    /*
+      3개씩 병렬 처리.
+
+      한 묶음이 끝날 때마다 결과를 반영하고,
+      최종 5개가 확보되면 다음 묶음은 시작하지 않는다.
+    */
+    for (
+      let start = 0;
+      start <
+      marketCandidates.length;
+      start +=
+        BATCH_SIZE
+    ) {
+      if (
+        finalCandidates.length >=
+        TARGET_COUNT
+      ) {
+        break;
+      }
+
+LINE: 2632
+              reviewDetail.averageRating,
+
+            sellerName:
+              detail.sellerName,
+
+            categoryName:
+              detail.categoryName,
+
+            imageUrl:
+              detail.imageUrl,
+
+            reviewSamples:
+              reviewDetail.topReviews.length,
+
+            reviews:
+              reviewDetail.topReviews,
+
+            sourceUrl:
+              detail.url,
+
+            reviewSourceUrl,
+
+            detailStatus:
+              "full",
+          },
+        },
+      };
+    }
+
+    /*
+      3개씩 병렬 처리.
+
+      한 묶음이 끝날 때마다 결과를 반영하고,
+      최종 5개가 확보되면 다음 묶음은 시작하지 않는다.
+    */
+    for (
+      let start = 0;
+      start <
+      marketCandidates.length;
+      start +=
+        BATCH_SIZE
+    ) {
+      if (
+        finalCandidates.length >=
+        TARGET_COUNT
+      ) {
+        break;
+      }
+
+      const batch =
+        marketCandidates.slice(
+
+============================================================
+PATTERN: product_detail
+MATCHES: 5
+============================================================
+
+LINE: 581
+  if (
+    !Number.isSafeInteger(
+      originProductNo,
+    )
+  ) {
+    return null;
+  }
+
+  const {
+    data,
+    error,
+  } =
+    await supabaseAdmin
+      .from("products")
+      .select(
+        "product_detail_analysis",
+      )
+      .eq(
+        "origin_product_no",
+        originProductNo,
+      )
+      .limit(1)
+      .maybeSingle();
+
+  if (error) {
+    console.warn(
+      "Product detail cache lookup warning:",
+      error,
+    );
+
+    return null;
+  }
+
+  if (
+    !data?.product_detail_analysis ||
+    typeof data.product_detail_analysis !==
+      "object" ||
+    Array.isArray(
+      data.product_detail_analysis,
+    )
+  ) {
+    return null;
+  }
+
+  const detail =
+    data.product_detail_analysis as Record<
+      string,
+      unknown
+    >;
+
+  const collectedAt =
+
+LINE: 600
+        originProductNo,
+      )
+      .limit(1)
+      .maybeSingle();
+
+  if (error) {
+    console.warn(
+      "Product detail cache lookup warning:",
+      error,
+    );
+
+    return null;
+  }
+
+  if (
+    !data?.product_detail_analysis ||
+    typeof data.product_detail_analysis !==
+      "object" ||
+    Array.isArray(
+      data.product_detail_analysis,
+    )
+  ) {
+    return null;
+  }
+
+  const detail =
+    data.product_detail_analysis as Record<
+      string,
+      unknown
+    >;
+
+  const collectedAt =
+    typeof detail.collectedAt ===
+      "string"
+      ? Date.parse(
+          detail.collectedAt,
+        )
+      : NaN;
+
+  if (
+    !Number.isFinite(
+      collectedAt,
+    ) ||
+    Date.now() -
+      collectedAt >
+      DETAIL_CACHE_TTL_MS
+  ) {
+    return null;
+  }
+
+  const price =
+
+LINE: 601
+      )
+      .limit(1)
+      .maybeSingle();
+
+  if (error) {
+    console.warn(
+      "Product detail cache lookup warning:",
+      error,
+    );
+
+    return null;
+  }
+
+  if (
+    !data?.product_detail_analysis ||
+    typeof data.product_detail_analysis !==
+      "object" ||
+    Array.isArray(
+      data.product_detail_analysis,
+    )
+  ) {
+    return null;
+  }
+
+  const detail =
+    data.product_detail_analysis as Record<
+      string,
+      unknown
+    >;
+
+  const collectedAt =
+    typeof detail.collectedAt ===
+      "string"
+      ? Date.parse(
+          detail.collectedAt,
+        )
+      : NaN;
+
+  if (
+    !Number.isFinite(
+      collectedAt,
+    ) ||
+    Date.now() -
+      collectedAt >
+      DETAIL_CACHE_TTL_MS
+  ) {
+    return null;
+  }
+
+  const price =
+    detail.price &&
+
+LINE: 604
+
+  if (error) {
+    console.warn(
+      "Product detail cache lookup warning:",
+      error,
+    );
+
+    return null;
+  }
+
+  if (
+    !data?.product_detail_analysis ||
+    typeof data.product_detail_analysis !==
+      "object" ||
+    Array.isArray(
+      data.product_detail_analysis,
+    )
+  ) {
+    return null;
+  }
+
+  const detail =
+    data.product_detail_analysis as Record<
+      string,
+      unknown
+    >;
+
+  const collectedAt =
+    typeof detail.collectedAt ===
+      "string"
+      ? Date.parse(
+          detail.collectedAt,
+        )
+      : NaN;
+
+  if (
+    !Number.isFinite(
+      collectedAt,
+    ) ||
+    Date.now() -
+      collectedAt >
+      DETAIL_CACHE_TTL_MS
+  ) {
+    return null;
+  }
+
+  const price =
+    detail.price &&
+    typeof detail.price ===
+      "object" &&
+    !Array.isArray(
+
+LINE: 611
+    return null;
+  }
+
+  if (
+    !data?.product_detail_analysis ||
+    typeof data.product_detail_analysis !==
+      "object" ||
+    Array.isArray(
+      data.product_detail_analysis,
+    )
+  ) {
+    return null;
+  }
+
+  const detail =
+    data.product_detail_analysis as Record<
+      string,
+      unknown
+    >;
+
+  const collectedAt =
+    typeof detail.collectedAt ===
+      "string"
+      ? Date.parse(
+          detail.collectedAt,
+        )
+      : NaN;
+
+  if (
+    !Number.isFinite(
+      collectedAt,
+    ) ||
+    Date.now() -
+      collectedAt >
+      DETAIL_CACHE_TTL_MS
+  ) {
+    return null;
+  }
+
+  const price =
+    detail.price &&
+    typeof detail.price ===
+      "object" &&
+    !Array.isArray(
+      detail.price,
+    )
+      ? (
+          detail.price as Record<
+            string,
+            unknown
+          >
+
+============================================================
+PATTERN: product_details
+MATCHES: 0
+============================================================
+
+############################################################
+FILE: .\lib\brightDataProduct.ts
+############################################################
+
+============================================================
+PATTERN: NaverProductDetail
+MATCHES: 0
+============================================================
+
+============================================================
+PATTERN: getCachedProductDetail
+MATCHES: 0
+============================================================
+
+============================================================
+PATTERN: saveProductDetail
+MATCHES: 0
+============================================================
+
+============================================================
+PATTERN: topReviews
+MATCHES: 2
+============================================================
+
+LINE: 84
+    sellerName: string;
+    finalPrice: number;
+    sellerLink: string;
+  }[];
+
+  purchaseSeller: string;
+  purchasePrice: number;
+  purchaseUrl: string;
+
+  brand: string;
+  manufacturer: string;
+  modelName: string;
+
+  categoryName: string;
+
+  topReviews: {
+    rating: number;
+    date: string;
+    text: string;
+    helpfulCount: number;
+  }[];
+};
+
+function numberValue(
+  value: unknown,
+) {
+  const parsed =
+    Number(
+      String(
+        value ?? "",
+      ).replace(
+        /[^\d.]/g,
+        "",
+      ),
+    );
+
+  return Number.isFinite(parsed)
+    ? parsed
+    : 0;
+}
+
+function getProductInfo(
+  items:
+    | BrightDataProductInformation[]
+    | undefined,
+  key: string,
+) {
+  if (!Array.isArray(items)) {
+    return "";
+  }
+
+
+LINE: 439
+          getProductInfo(
+            raw.product_information,
+            "브랜드",
+          ),
+
+        modelName:
+          getProductInfo(
+            raw.product_information,
+            "모델명",
+          ),
+
+        categoryName:
+          raw.category_name ??
+          "",
+
+        topReviews:
+          Array.isArray(
+            raw.top_reviews,
+          )
+            ? raw.top_reviews
+                .slice(0, 20)
+                .map(
+                  (review) => ({
+                    rating:
+                      Number(
+                        review.rating ??
+                          0,
+                      ),
+
+                    date:
+                      review.rating_date ??
+                      "",
+
+                    text:
+                      review.review ??
+                      "",
+
+                    helpfulCount:
+                      Number(
+                        review.helpful_count ??
+                          0,
+                      ),
+                  }),
+                )
+            : [],
+      };
+    }
+
+    if (
+      progress.status ===
+      "failed"
+
+============================================================
+PATTERN: product_detail
+MATCHES: 0
+============================================================
+
+============================================================
+PATTERN: product_details
+MATCHES: 0
+============================================================
+
+############################################################
+FILE: .\lib\supabaseAdmin.ts
+############################################################
+
+============================================================
+PATTERN: NaverProductDetail
+MATCHES: 0
+============================================================
+
+============================================================
+PATTERN: getCachedProductDetail
+MATCHES: 0
+============================================================
+
+============================================================
+PATTERN: saveProductDetail
+MATCHES: 0
+============================================================
+
+============================================================
+PATTERN: topReviews
+MATCHES: 0
+============================================================
+
+============================================================
+PATTERN: product_detail
+MATCHES: 0
+============================================================
+
+============================================================
+PATTERN: product_details
+MATCHES: 0
+============================================================

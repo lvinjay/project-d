@@ -1,0 +1,866 @@
+﻿"use client";
+
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
+type Candidate = {
+  name: string;
+  text: string;
+  url: string;
+  imageUrl: string;
+  price: number;
+  reviewCount: number;
+  rating: number;
+};
+
+type Props = {
+  captureId: string;
+  category: string;
+  finalists: Candidate[];
+};
+
+type StepStatus =
+  | "idle"
+  | "working"
+  | "done"
+  | "error";
+
+type Step = {
+  key: string;
+  label: string;
+  status: StepStatus;
+  message: string;
+};
+
+const INITIAL_STEPS: Step[] = [
+  {
+    key: "enrich",
+    label: "1. 최종 후보 5개 검증",
+    status: "idle",
+    message: "",
+  },
+  {
+    key: "import",
+    label: "2. 제품 DB 등록",
+    status: "idle",
+    message: "",
+  },
+  {
+    key: "criteria-first",
+    label: "3. 1차 구매기준 생성",
+    status: "idle",
+    message: "",
+  },
+  {
+    key: "reviews",
+    label: "4. 리뷰 AI 분석",
+    status: "idle",
+    message: "",
+  },
+  {
+    key: "save-reviews",
+    label: "5. 리뷰 분석 DB 저장",
+    status: "idle",
+    message: "",
+  },
+  {
+    key: "criteria-final",
+    label: "6. 구매기준 최종 보정",
+    status: "idle",
+    message: "",
+  },
+  {
+    key: "scores",
+    label: "7. 제품별 비교 점수 생성",
+    status: "idle",
+    message: "",
+  },
+];
+
+function cleanText(
+  value: unknown,
+) {
+  return typeof value === "string"
+    ? value.trim()
+    : "";
+}
+
+async function readJson(
+  response: Response,
+) {
+  const text =
+    await response.text();
+
+  try {
+    return JSON.parse(text) as Record<
+      string,
+      unknown
+    >;
+  } catch {
+    throw new Error(
+      `JSON이 아닌 응답입니다. (${response.status}) ${text.slice(
+        0,
+        200,
+      )}`,
+    );
+  }
+}
+
+export default function NaverCaptureAutomation({
+  captureId,
+  category,
+  finalists,
+}: Props) {
+  const startedRef =
+    useRef(false);
+
+  const [
+    steps,
+    setSteps,
+  ] = useState<Step[]>(
+    INITIAL_STEPS,
+  );
+
+  const [
+    finalMessage,
+    setFinalMessage,
+  ] = useState("");
+
+  function updateStep(
+    key: string,
+    status: StepStatus,
+    message = "",
+  ) {
+    setSteps(
+      (current) =>
+        current.map(
+          (step) =>
+            step.key === key
+              ? {
+                  ...step,
+                  status,
+                  message,
+                }
+              : step,
+        ),
+    );
+  }
+
+  useEffect(() => {
+    if (
+      startedRef.current ||
+      !captureId ||
+      !category ||
+      finalists.length === 0
+    ) {
+      return;
+    }
+
+    startedRef.current =
+      true;
+
+    async function run() {
+      try {
+        updateStep(
+          "enrich",
+          "working",
+          "공식 상품 URL·실제 판매가·리뷰·중복을 검증하는 중...",
+        );
+
+        const enrichedResponse =
+          await fetch(
+            `/api/market-candidates-enriched?captureId=${encodeURIComponent(
+              captureId,
+            )}`,
+            {
+              cache: "no-store",
+            },
+          );
+
+        const enriched =
+          await readJson(
+            enrichedResponse,
+          );
+
+        if (
+          !enrichedResponse.ok ||
+          enriched.success !== true
+        ) {
+          throw new Error(
+            cleanText(
+              enriched.message,
+            ) ||
+              "최종 후보 검증에 실패했습니다.",
+          );
+        }
+
+        const finalCandidates =
+          Array.isArray(
+            enriched.finalCandidates,
+          )
+            ? enriched.finalCandidates
+            : [];
+
+        if (
+          enriched.targetReached !==
+            true ||
+          finalCandidates.length < 5
+        ) {
+          throw new Error(
+            `유효 후보가 5개에 도달하지 못했습니다. 현재 ${finalCandidates.length}개입니다.`,
+          );
+        }
+
+        updateStep(
+          "enrich",
+          "done",
+          `${finalCandidates.length}개 최종 후보 확보`,
+        );
+
+        updateStep(
+          "import",
+          "working",
+          "최종 후보를 DB에 등록하는 중...",
+        );
+
+        const importResponse =
+          await fetch(
+            "/api/import-market-candidates",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+              body: JSON.stringify({
+                category,
+                candidates:
+                  finalCandidates,
+              }),
+            },
+          );
+
+        const importResult =
+          await readJson(
+            importResponse,
+          );
+
+        if (
+          !importResponse.ok ||
+          importResult.success !==
+            true
+        ) {
+          throw new Error(
+            cleanText(
+              importResult.message,
+            ) ||
+              "제품 DB 등록에 실패했습니다.",
+          );
+        }
+
+        const importedResults =
+          Array.isArray(
+            importResult.results,
+          )
+            ? importResult.results
+            : [];
+
+        const importedProductIds =
+          [
+            ...new Set(
+              importedResults
+                .map(
+                  (item) => {
+                    if (
+                      !item ||
+                      typeof item !==
+                        "object" ||
+                      Array.isArray(
+                        item,
+                      )
+                    ) {
+                      return "";
+                    }
+
+                    const row =
+                      item as Record<
+                        string,
+                        unknown
+                      >;
+
+                    if (
+                      row.success !==
+                      true ||
+                      !row.product ||
+                      typeof row.product !==
+                        "object" ||
+                      Array.isArray(
+                        row.product,
+                      )
+                    ) {
+                      return "";
+                    }
+
+                    return cleanText(
+                      (
+                        row.product as Record<
+                          string,
+                          unknown
+                        >
+                      ).id,
+                    );
+                  },
+                )
+                .filter(Boolean),
+            ),
+          ];
+
+        if (
+          importedProductIds.length !==
+          finalCandidates.length
+        ) {
+          throw new Error(
+            `최종 후보 ${finalCandidates.length}개 중 DB 제품 ID는 ${importedProductIds.length}개만 확인됐습니다.`,
+          );
+        }
+
+        updateStep(
+          "import",
+          "done",
+          `${importedProductIds.length}개 등록/갱신 완료`,
+        );
+
+        updateStep(
+          "criteria-first",
+          "working",
+          "리뷰 분석용 1차 구매기준을 생성하는 중...",
+        );
+
+        const firstCriteriaResponse =
+          await fetch(
+            "/api/generate-category-criteria",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+              body: JSON.stringify({
+                category,
+              }),
+            },
+          );
+
+        const firstCriteriaResult =
+          await readJson(
+            firstCriteriaResponse,
+          );
+
+        if (
+          !firstCriteriaResponse.ok ||
+          firstCriteriaResult.success !==
+            true
+        ) {
+          throw new Error(
+            cleanText(
+              firstCriteriaResult.message,
+            ) ||
+              "1차 구매기준 생성에 실패했습니다.",
+          );
+        }
+
+        updateStep(
+          "criteria-first",
+          "done",
+          "1차 구매기준 생성 완료",
+        );
+
+        updateStep(
+          "reviews",
+          "working",
+          "제품별 리뷰 AI 분석 중...",
+        );
+
+        const analyzedProducts: Array<{
+          productId: string;
+          productName: string;
+          analysis: unknown;
+          reviews: string[];
+          collectionStats: {
+            total: number;
+            ranking: number;
+            latest: number;
+            lowScore: number;
+          };
+        }> = [];
+
+        for (
+          let index = 0;
+          index <
+          finalCandidates.length;
+          index++
+        ) {
+          const candidate =
+            finalCandidates[
+              index
+            ] as Record<
+              string,
+              unknown
+            >;
+
+          const detail =
+            (
+              candidate.detail &&
+              typeof candidate.detail ===
+                "object"
+                ? candidate.detail
+                : {}
+            ) as Record<
+              string,
+              unknown
+            >;
+
+          const productId =
+            cleanText(
+              detail.productId,
+            );
+
+          const productName =
+            cleanText(
+              detail.productName,
+            );
+
+          const reviewObjects =
+            Array.isArray(
+              detail.reviews,
+            )
+              ? detail.reviews
+              : [];
+
+          const reviews =
+            reviewObjects
+              .map(
+                (review) =>
+                  cleanText(
+                    (
+                      review as Record<
+                        string,
+                        unknown
+                      >
+                    ).text,
+                  ),
+              )
+              .filter(Boolean);
+
+          const lowScore =
+            reviewObjects.filter(
+              (review) => {
+                const rating =
+                  Number(
+                    (
+                      review as Record<
+                        string,
+                        unknown
+                      >
+                    ).rating ??
+                      0,
+                  );
+
+                return (
+                  rating > 0 &&
+                  rating <= 3
+                );
+              },
+            ).length;
+
+          updateStep(
+            "reviews",
+            "working",
+            `${index + 1}/${finalCandidates.length} · ${productName}`,
+          );
+
+          const analyzeResponse =
+            await fetch(
+              "/api/analyze-reviews",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type":
+                    "application/json",
+                },
+                body: JSON.stringify({
+                  productName,
+                  category,
+                  reviews,
+                  collectionStats: {
+                    total:
+                      reviews.length,
+                    ranking: 0,
+                    latest:
+                      reviews.length,
+                    lowScore,
+                  },
+                }),
+              },
+            );
+
+          const analyzeResult =
+            await readJson(
+              analyzeResponse,
+            );
+
+          if (
+            !analyzeResponse.ok ||
+            analyzeResult.success !==
+              true
+          ) {
+            throw new Error(
+              `${productName}: ${
+                cleanText(
+                  analyzeResult.message,
+                ) ||
+                "리뷰 AI 분석 실패"
+              }`,
+            );
+          }
+
+          analyzedProducts.push({
+            productId,
+            productName,
+            analysis:
+              analyzeResult.analysis,
+            reviews,
+            collectionStats: {
+              total:
+                reviews.length,
+              ranking: 0,
+              latest:
+                reviews.length,
+              lowScore,
+            },
+          });
+        }
+
+        updateStep(
+          "reviews",
+          "done",
+          `${analyzedProducts.length}개 리뷰 AI 분석 완료`,
+        );
+
+        updateStep(
+          "save-reviews",
+          "working",
+          "리뷰 분석 결과를 DB에 저장하는 중...",
+        );
+
+        const saveResponse =
+          await fetch(
+            "/api/save-review-analysis-batch",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+              body: JSON.stringify({
+                category,
+                products:
+                  analyzedProducts,
+              }),
+            },
+          );
+
+        const saveResult =
+          await readJson(
+            saveResponse,
+          );
+
+        if (
+          !saveResponse.ok ||
+          saveResult.success !==
+            true
+        ) {
+          throw new Error(
+            cleanText(
+              saveResult.message,
+            ) ||
+              "리뷰 분석 DB 저장에 실패했습니다.",
+          );
+        }
+
+        updateStep(
+          "save-reviews",
+          "done",
+          `${Number(
+            saveResult.successCount ??
+              0,
+          )}개 저장 완료`,
+        );
+
+        updateStep(
+          "criteria-final",
+          "working",
+          "리뷰 근거까지 반영해 구매기준을 최종 보정하는 중...",
+        );
+
+        const finalCriteriaResponse =
+          await fetch(
+            "/api/generate-category-criteria",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+              body: JSON.stringify({
+                category,
+              }),
+            },
+          );
+
+        const finalCriteriaResult =
+          await readJson(
+            finalCriteriaResponse,
+          );
+
+        if (
+          !finalCriteriaResponse.ok ||
+          finalCriteriaResult.success !==
+            true
+        ) {
+          throw new Error(
+            cleanText(
+              finalCriteriaResult.message,
+            ) ||
+              "최종 구매기준 생성에 실패했습니다.",
+          );
+        }
+
+        updateStep(
+          "criteria-final",
+          "done",
+          "최종 구매기준 보정 완료",
+        );
+
+        updateStep(
+          "scores",
+          "working",
+          "제품별 최종 비교 점수를 생성하는 중...",
+        );
+
+        const scoreResponse =
+          await fetch(
+            "/api/generate-product-scores",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+              body: JSON.stringify({
+                category,
+                productIds:
+                  importedProductIds,
+              }),
+            },
+          );
+
+        const scoreResult =
+          await readJson(
+            scoreResponse,
+          );
+
+        if (
+          !scoreResponse.ok ||
+          scoreResult.success !==
+            true
+        ) {
+          throw new Error(
+            cleanText(
+              scoreResult.message,
+            ) ||
+              "제품별 점수 생성에 실패했습니다.",
+          );
+        }
+
+        updateStep(
+          "scores",
+          "done",
+          `${Number(
+            scoreResult.productCount ??
+              5,
+          )}개 제품 비교 점수 생성 완료`,
+        );
+
+        setFinalMessage(
+          "완료 · 후보 수집 이후 추천 준비가 모두 끝났습니다.",
+        );
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "자동 처리 중 오류가 발생했습니다.";
+
+        setSteps(
+          (current) => {
+            let changed =
+              false;
+
+            return current.map(
+              (step) => {
+                if (
+                  !changed &&
+                  step.status ===
+                    "working"
+                ) {
+                  changed =
+                    true;
+
+                  return {
+                    ...step,
+                    status:
+                      "error",
+                    message,
+                  };
+                }
+
+                return step;
+              },
+            );
+          },
+        );
+
+        setFinalMessage(
+          `중단됨 · ${message}`,
+        );
+      }
+    }
+
+    void run();
+  }, [
+    captureId,
+    category,
+    finalists,
+  ]);
+
+  return (
+    <section
+      style={{
+        marginTop: 30,
+        padding: 22,
+        borderRadius: 16,
+        border:
+          "1px solid #c7d7fe",
+        background:
+          "#f8faff",
+      }}
+    >
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 800,
+          letterSpacing:
+            "0.08em",
+          color: "#3538cd",
+          marginBottom: 8,
+        }}
+      >
+        PROJECT D AUTOMATION
+      </div>
+
+      <h2
+        style={{
+          margin: 0,
+          fontSize: 20,
+        }}
+      >
+        후보 수집 이후 자동 진행
+      </h2>
+
+      <div
+        style={{
+          marginTop: 16,
+          display: "grid",
+          gap: 8,
+        }}
+      >
+        {steps.map(
+          (step) => (
+            <div
+              key={step.key}
+              style={{
+                padding:
+                  "10px 12px",
+                borderRadius:
+                  10,
+                border:
+                  "1px solid #e4e7ec",
+                background:
+                  step.status ===
+                  "done"
+                    ? "#ecfdf3"
+                    : step.status ===
+                        "error"
+                      ? "#fef3f2"
+                      : step.status ===
+                          "working"
+                        ? "#eff8ff"
+                        : "#fff",
+              }}
+            >
+              <strong>
+                {step.status ===
+                "done"
+                  ? "✓ "
+                  : step.status ===
+                      "working"
+                    ? "… "
+                    : step.status ===
+                        "error"
+                      ? "! "
+                      : "○ "}
+                {step.label}
+              </strong>
+
+              {step.message ? (
+                <div
+                  style={{
+                    marginTop: 4,
+                    color:
+                      "#667085",
+                    fontSize: 13,
+                  }}
+                >
+                  {step.message}
+                </div>
+              ) : null}
+            </div>
+          ),
+        )}
+      </div>
+
+      {finalMessage ? (
+        <div
+          style={{
+            marginTop: 14,
+            padding: 12,
+            borderRadius: 10,
+            fontWeight: 700,
+            background:
+              finalMessage.startsWith(
+                "완료",
+              )
+                ? "#ecfdf3"
+                : "#fef3f2",
+          }}
+        >
+          {finalMessage}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+

@@ -1,0 +1,477 @@
+﻿
+  app\api\market-candidates-enriched\route.ts:17:export const
+ runtime =
+  app\api\market-candidates-enriched\route.ts:18:  "nodejs";
+  app\api\market-candidates-enriched\route.ts:19:
+  app\api\market-candidates-enriched\route.ts:20:export const
+ dynamic =
+  app\api\market-candidates-enriched\route.ts:21:  "force-dyn
+amic";
+  app\api\market-candidates-enriched\route.ts:22:
+  app\api\market-candidates-enriched\route.ts:23:const TARGET
+_COUNT = 5;
+  app\api\market-candidates-enriched\route.ts:24:
+  app\api\market-candidates-enriched\route.ts:25:/*
+  app\api\market-candidates-enriched\route.ts:26:  한 번에 Brigh
+t Data를 너무 많이 호출하지 않는다.
+  app\api\market-candidates-enriched\route.ts:27:  3개씩 병렬 처리하
+고,
+  app\api\market-candidates-enriched\route.ts:28:  최종 5개가 확보되
+면 다음 묶음은 호출하지 않는다.
+  app\api\market-candidates-enriched\route.ts:29:*/
+  app\api\market-candidates-enriched\route.ts:30:const BATCH_
+SIZE = 3;
+  app\api\market-candidates-enriched\route.ts:31:
+  app\api\market-candidates-enriched\route.ts:32:/*
+  app\api\market-candidates-enriched\route.ts:33:  최초 15개에서 5
+개가 안 나오면
+  app\api\market-candidates-enriched\route.ts:34:  캡처된 다음 후보까
+지 자동 보충한다.
+  app\api\market-candidates-enriched\route.ts:35:
+  app\api\market-candidates-enriched\route.ts:36:  무한 호출 방지를 
+위해 최대 30개까지만 검사.
+  app\api\market-candidates-enriched\route.ts:37:*/
+  app\api\market-candidates-enriched\route.ts:38:const MAX_CA
+NDIDATE_COUNT = 30;
+  app\api\market-candidates-enriched\route.ts:39:
+  app\api\market-candidates-enriched\route.ts:40:/*
+  app\api\market-candidates-enriched\route.ts:41:  같은 제품의 상세정
+보를 24시간 안에 이미 수집했다면
+  app\api\market-candidates-enriched\route.ts:42:  Bright Dat
+a를 다시 호출하지 않고 DB 캐시를 사용한다.
+  app\api\market-candidates-enriched\route.ts:43:*/
+  app\api\market-candidates-enriched\route.ts:44:const DETAIL
+_CACHE_TTL_MS =
+  app\api\market-candidates-enriched\route.ts:45:  24 *
+  app\api\market-candidates-enriched\route.ts:46:  60 *
+  app\api\market-candidates-enriched\route.ts:47:  60 *
+  app\api\market-candidates-enriched\route.ts:48:  1000;
+  app\api\market-candidates-enriched\route.ts:49:
+  app\api\market-candidates-enriched\route.ts:50:type NaverPr
+oductDetail =
+  app\api\market-candidates-enriched\route.ts:51:  Awaited<
+  app\api\market-candidates-enriched\route.ts:52:    ReturnTy
+pe<
+  app\api\market-candidates-enriched\route.ts:53:      typeof
+ collectNaverProduct
+  app\api\market-candidates-enriched\route.ts:54:    >
+  app\api\market-candidates-enriched\route.ts:55:  >;
+  app\api\market-candidates-enriched\route.ts:56:
+> app\api\market-candidates-enriched\route.ts:57:type Capture
+dProduct = {
+  app\api\market-candidates-enriched\route.ts:58:  name: stri
+ng;
+  app\api\market-candidates-enriched\route.ts:59:  text: stri
+ng;
+  app\api\market-candidates-enriched\route.ts:60:  url: strin
+g;
+  app\api\market-candidates-enriched\route.ts:61:  imageUrl: 
+string;
+  app\api\market-candidates-enriched\route.ts:62:  price: num
+ber;
+  app\api\market-candidates-enriched\route.ts:63:  reviewCoun
+t: number;
+  app\api\market-candidates-enriched\route.ts:64:  rating: nu
+mber;
+  app\api\market-candidates-enriched\route.ts:65:};
+  app\api\market-candidates-enriched\route.ts:66:
+  app\api\market-candidates-enriched\route.ts:67:type Capture
+Response = {
+  app\api\market-candidates-enriched\route.ts:68:  success: b
+oolean;
+  app\api\market-candidates-enriched\route.ts:69:  message?: 
+string;
+  app\api\market-candidates-enriched\route.ts:70:  category?:
+ string;
+  app\api\market-candidates-enriched\route.ts:71:  minBudget?
+: number;
+  app\api\market-candidates-enriched\route.ts:72:  maxBudget?
+: number;
+  app\api\market-candidates-enriched\route.ts:73:  products?:
+ CapturedProduct[];
+  app\api\market-candidates-enriched\route.ts:74:};
+  app\api\market-candidates-enriched\route.ts:75:
+  app\api\market-candidates-enriched\route.ts:76:type Failure
+Item = {
+  app\api\market-candidates-enriched\route.ts:77:  position: 
+number;
+  app\api\market-candidates-enriched\route.ts:78:  marketProd
+uct: string;
+  app\api\market-candidates-enriched\route.ts:79:  stage:
+  app\api\market-candidates-enriched\route.ts:80:    | "resol
+ve"
+  app\api\market-candidates-enriched\route.ts:81:    | "brigh
+tdata"
+  app\api\market-candidates-enriched\route.ts:82:    | "valid
+ation"
+  app\api\market-candidates-enriched\route.ts:83:    | "budge
+t"
+  app\api\market-candidates-enriched\route.ts:84:    | "dupli
+cate";
+  app\api\market-candidates-enriched\route.ts:85:  reason: st
+ring;
+  app\api\market-candidates-enriched\route.ts:86:};
+  app\api\market-candidates-enriched\route.ts:87:
+  app\api\market-candidates-enriched\route.ts:88:type FinalCa
+ndidate = {
+  app\api\market-candidates-enriched\route.ts:89:  position: 
+number;
+  app\api\market-candidates-enriched\route.ts:90:
+  app\api\market-candidates-enriched\route.ts:91:  market: {
+  app\api\market-candidates-enriched\route.ts:92:    productN
+ame: string;
+  app\api\market-candidates-enriched\route.ts:93:    listedPr
+ice: number;
+  app\api\market-candidates-enriched\route.ts:94:    reviewCo
+unt: number;
+  app\api\market-candidates-enriched\route.ts:95:    rating: 
+number;
+  app\api\market-candidates-enriched\route.ts:96:    imageUrl
+: string;
+  app\api\market-candidates-enriched\route.ts:97:    sourceUr
+l: string;
+  app\api\market-candidates-enriched\route.ts:98:  };
+  app\api\market-candidates-enriched\route.ts:99:
+  app\api\market-candidates-enriched\route.ts:100:  resolutio
+n: {
+  app\api\market-candidates-enriched\route.ts:101:    product
+Id: string;
+  app\api\market-candidates-enriched\route.ts:102:    brandNa
+me: string;
+  app\api\market-candidates-enriched\route.ts:103:    brandSi
+te: string;
+  app\api\market-candidates-enriched\route.ts:104:    canonic
+alUrl: string;
+  app\api\market-candidates-enriched\route.ts:105:  };
+  app\api\market-candidates-enriched\route.ts:106:
+  app\api\market-candidates-enriched\route.ts:107:  detail: {
+  app\api\market-candidates-enriched\route.ts:108:    product
+Id: string;
+  app\api\market-candidates-enriched\route.ts:109:    product
+Name: string;
+  app\api\market-candidates-enriched\route.ts:110:    brand: 
+string;
+  app\api\market-candidates-enriched\route.ts:111:    manufac
+turer: string;
+  app\api\market-candidates-enriched\route.ts:112:    modelNa
+me: string;
+  app\api\market-candidates-enriched\route.ts:113:
+  app\api\market-candidates-enriched\route.ts:114:    origina
+lPrice: number;
+  app\api\market-candidates-enriched\route.ts:115:    finalPr
+ice: number;
+  app\api\market-candidates-enriched\route.ts:116:    discoun
+tRate: number;
+  app\api\market-candidates-enriched\route.ts:117:
+  app\api\market-candidates-enriched\route.ts:118:    reviewC
+ount: number;
+  app\api\market-candidates-enriched\route.ts:119:    rating:
+ number | null;
+  app\api\market-candidates-enriched\route.ts:120:
+  app\api\market-candidates-enriched\route.ts:121:    sellerN
+ame: string;
+  app\api\market-candidates-enriched\route.ts:122:    categor
+yName: string;
+  app\api\market-candidates-enriched\route.ts:123:
+  app\api\market-candidates-enriched\route.ts:124:    imageUr
+l: string;
+  app\api\market-candidates-enriched\route.ts:125:
+  app\api\market-candidates-enriched\route.ts:126:    reviewS
+amples: number;
+  app\api\market-candidates-enriched\route.ts:127:
+  app\api\market-candidates-enriched\route.ts:128:    reviews
+: {
+  app\api\market-candidates-enriched\route.ts:129:      ratin
+g: number;
+  app\api\market-candidates-enriched\route.ts:130:      date:
+ string;
+  app\api\market-candidates-enriched\route.ts:131:      text:
+ string;
+  app\api\market-candidates-enriched\route.ts:132:      helpf
+ulCount: number;
+  app\api\market-candidates-enriched\route.ts:133:    }[];
+  app\api\market-candidates-enriched\route.ts:134:
+  app\api\market-candidates-enriched\route.ts:135:    sourceU
+rl: string;
+  app\api\market-candidates-enriched\route.ts:136:  };
+  app\api\market-candidates-enriched\route.ts:137:};
+  app\api\market-candidates-enriched\route.ts:177:  }
+  app\api\market-candidates-enriched\route.ts:178:
+  app\api\market-candidates-enriched\route.ts:179:  if (
+  app\api\market-candidates-enriched\route.ts:180:    maxBudg
+et > 0 &&
+  app\api\market-candidates-enriched\route.ts:181:    price >
+ maxBudget
+  app\api\market-candidates-enriched\route.ts:182:  ) {
+  app\api\market-candidates-enriched\route.ts:183:    return 
+false;
+  app\api\market-candidates-enriched\route.ts:184:  }
+  app\api\market-candidates-enriched\route.ts:185:
+  app\api\market-candidates-enriched\route.ts:186:  return tr
+ue;
+  app\api\market-candidates-enriched\route.ts:187:}
+  app\api\market-candidates-enriched\route.ts:188:
+  app\api\market-candidates-enriched\route.ts:189:function cl
+eanName(
+  app\api\market-candidates-enriched\route.ts:190:  value: st
+ring,
+  app\api\market-candidates-enriched\route.ts:191:) {
+  app\api\market-candidates-enriched\route.ts:192:  return va
+lue
+  app\api\market-candidates-enriched\route.ts:193:    .toLowe
+rCase()
+  app\api\market-candidates-enriched\route.ts:194:    .replac
+e(
+  app\api\market-candidates-enriched\route.ts:195:      /\[[^
+\]]*\]/g,
+  app\api\market-candidates-enriched\route.ts:196:      " ",
+  app\api\market-candidates-enriched\route.ts:197:    )
+  app\api\market-candidates-enriched\route.ts:198:    .replac
+e(
+  app\api\market-candidates-enriched\route.ts:199:      /\([^
+)]*\)/g,
+  app\api\market-candidates-enriched\route.ts:200:      " ",
+  app\api\market-candidates-enriched\route.ts:201:    )
+  app\api\market-candidates-enriched\route.ts:202:    .replac
+e(
+  app\api\market-candidates-enriched\route.ts:203:      /\b(화
+이트|블랙|실버|그레이|베이지|단품|정품|공식|무료배송)\b/g,
+  app\api\market-candidates-enriched\route.ts:204:      " ",
+  app\api\market-candidates-enriched\route.ts:205:    )
+  app\api\market-candidates-enriched\route.ts:206:    .replac
+e(
+  app\api\market-candidates-enriched\route.ts:207:      /[^a-
+z0-9가-힣]+/g,
+  app\api\market-candidates-enriched\route.ts:208:      " ",
+  app\api\market-candidates-enriched\route.ts:209:    )
+  app\api\market-candidates-enriched\route.ts:210:    .replac
+e(
+  app\api\market-candidates-enriched\route.ts:211:      /\s+/
+g,
+  app\api\market-candidates-enriched\route.ts:212:      " ",
+  app\api\market-candidates-enriched\route.ts:213:    )
+  app\api\market-candidates-enriched\route.ts:214:    .trim()
+;
+  app\api\market-candidates-enriched\route.ts:215:}
+  app\api\market-candidates-enriched\route.ts:216:
+> app\api\market-candidates-enriched\route.ts:217:function na
+meSimilarity(
+  app\api\market-candidates-enriched\route.ts:218:  a: string
+,
+  app\api\market-candidates-enriched\route.ts:219:  b: string
+,
+  app\api\market-candidates-enriched\route.ts:220:) {
+  app\api\market-candidates-enriched\route.ts:221:  const ign
+ored =
+  app\api\market-candidates-enriched\route.ts:222:    new Set
+([
+  app\api\market-candidates-enriched\route.ts:223:      "로봇청소
+기",
+  app\api\market-candidates-enriched\route.ts:224:      "청소기"
+,
+  app\api\market-candidates-enriched\route.ts:225:      "로봇",
+  app\api\market-candidates-enriched\route.ts:226:      "자동",
+  app\api\market-candidates-enriched\route.ts:227:      "공식",
+  app\api\market-candidates-enriched\route.ts:228:    ]);
+  app\api\market-candidates-enriched\route.ts:229:
+  app\api\market-candidates-enriched\route.ts:230:  const toT
+okens = (
+  app\api\market-candidates-enriched\route.ts:231:    value: 
+string,
+  app\api\market-candidates-enriched\route.ts:232:  ) =>
+  app\api\market-candidates-enriched\route.ts:233:    new Set
+(
+  app\api\market-candidates-enriched\route.ts:234:      clean
+Name(value)
+  app\api\market-candidates-enriched\route.ts:235:        .sp
+lit(" ")
+  app\api\market-candidates-enriched\route.ts:236:        .fi
+lter(
+  app\api\market-candidates-enriched\route.ts:237:          (
+token) =>
+  app\api\market-candidates-enriched\route.ts:238:           
+ token.length >= 2 &&
+  app\api\market-candidates-enriched\route.ts:239:           
+ !ignored.has(token),
+  app\api\market-candidates-enriched\route.ts:240:        ),
+  app\api\market-candidates-enriched\route.ts:241:    );
+  app\api\market-candidates-enriched\route.ts:242:
+  app\api\market-candidates-enriched\route.ts:243:  const aTo
+kens =
+  app\api\market-candidates-enriched\route.ts:244:    toToken
+s(a);
+  app\api\market-candidates-enriched\route.ts:245:
+  app\api\market-candidates-enriched\route.ts:246:  const bTo
+kens =
+  app\api\market-candidates-enriched\route.ts:247:    toToken
+s(b);
+  app\api\market-candidates-enriched\route.ts:248:
+  app\api\market-candidates-enriched\route.ts:249:  if (
+  app\api\market-candidates-enriched\route.ts:250:    aTokens
+.size === 0 ||
+  app\api\market-candidates-enriched\route.ts:251:    bTokens
+.size === 0
+  app\api\market-candidates-enriched\route.ts:252:  ) {
+  app\api\market-candidates-enriched\route.ts:253:    return 
+0;
+  app\api\market-candidates-enriched\route.ts:254:  }
+  app\api\market-candidates-enriched\route.ts:255:
+  app\api\market-candidates-enriched\route.ts:256:  let commo
+n = 0;
+  app\api\market-candidates-enriched\route.ts:257:
+  app\api\market-candidates-enriched\route.ts:258:  for (
+  app\api\market-candidates-enriched\route.ts:259:    const t
+oken of aTokens
+  app\api\market-candidates-enriched\route.ts:260:  ) {
+  app\api\market-candidates-enriched\route.ts:261:    if (
+  app\api\market-candidates-enriched\route.ts:262:      bToke
+ns.has(token)
+  app\api\market-candidates-enriched\route.ts:263:    ) {
+  app\api\market-candidates-enriched\route.ts:264:      commo
+n++;
+  app\api\market-candidates-enriched\route.ts:265:    }
+  app\api\market-candidates-enriched\route.ts:266:  }
+  app\api\market-candidates-enriched\route.ts:267:
+  app\api\market-candidates-enriched\route.ts:268:  return (
+  app\api\market-candidates-enriched\route.ts:269:    common 
+/
+  app\api\market-candidates-enriched\route.ts:270:    Math.mi
+n(
+  app\api\market-candidates-enriched\route.ts:271:      aToke
+ns.size,
+  app\api\market-candidates-enriched\route.ts:272:      bToke
+ns.size,
+  app\api\market-candidates-enriched\route.ts:273:    )
+  app\api\market-candidates-enriched\route.ts:274:  );
+  app\api\market-candidates-enriched\route.ts:275:}
+  app\api\market-candidates-enriched\route.ts:276:
+> app\api\market-candidates-enriched\route.ts:277:function re
+moveMarketDuplicates(
+  app\api\market-candidates-enriched\route.ts:278:  products:
+  app\api\market-candidates-enriched\route.ts:279:    Capture
+dProduct[],
+  app\api\market-candidates-enriched\route.ts:280:) {
+  app\api\market-candidates-enriched\route.ts:281:  const res
+ult:
+  app\api\market-candidates-enriched\route.ts:282:    Capture
+dProduct[] = [];
+  app\api\market-candidates-enriched\route.ts:283:
+  app\api\market-candidates-enriched\route.ts:284:  const sor
+ted =
+  app\api\market-candidates-enriched\route.ts:285:    [...pro
+ducts].sort(
+  app\api\market-candidates-enriched\route.ts:286:      (a, b
+) =>
+  app\api\market-candidates-enriched\route.ts:287:        b.r
+eviewCount -
+  app\api\market-candidates-enriched\route.ts:288:        a.r
+eviewCount,
+  app\api\market-candidates-enriched\route.ts:289:    );
+  app\api\market-candidates-enriched\route.ts:290:
+  app\api\market-candidates-enriched\route.ts:291:  for (
+  app\api\market-candidates-enriched\route.ts:292:    const p
+roduct of sorted
+  app\api\market-candidates-enriched\route.ts:293:  ) {
+  app\api\market-candidates-enriched\route.ts:294:    const d
+uplicate =
+  app\api\market-candidates-enriched\route.ts:295:      resul
+t.some(
+  app\api\market-candidates-enriched\route.ts:296:        (ex
+isting) =>
+  app\api\market-candidates-enriched\route.ts:297:          n
+ameSimilarity(
+  app\api\market-candidates-enriched\route.ts:298:           
+ product.name,
+  app\api\market-candidates-enriched\route.ts:299:           
+ existing.name,
+  app\api\market-candidates-enriched\route.ts:300:          )
+ >= 0.78,
+  app\api\market-candidates-enriched\route.ts:301:      );
+  app\api\market-candidates-enriched\route.ts:302:
+  app\api\market-candidates-enriched\route.ts:303:    if (!du
+plicate) {
+  app\api\market-candidates-enriched\route.ts:304:      resul
+t.push(
+  app\api\market-candidates-enriched\route.ts:305:        pro
+duct,
+  app\api\market-candidates-enriched\route.ts:306:      );
+  app\api\market-candidates-enriched\route.ts:307:    }
+  app\api\market-candidates-enriched\route.ts:308:  }
+  app\api\market-candidates-enriched\route.ts:309:
+  app\api\market-candidates-enriched\route.ts:310:  return re
+sult;
+  app\api\market-candidates-enriched\route.ts:311:}
+  app\api\market-candidates-enriched\route.ts:312:
+  app\api\market-candidates-enriched\route.ts:313:/*
+  app\api\market-candidates-enriched\route.ts:314:  네이버쇼핑 브라우
+저 캡처에서 이미
+  app\api\market-candidates-enriched\route.ts:315:  실제 SmartS
+tore / Brand 상품 URL이 들어온 경우
+  app\api\market-candidates-enriched\route.ts:316:  resolver를
+ 사용할 필요가 없다.
+  app\api\market-candidates-enriched\route.ts:317:
+  app\api\market-candidates-enriched\route.ts:318:  추적 파라미터는 
+제거하고
+  app\api\market-candidates-enriched\route.ts:319:  실제 상품 URL
+만 Bright Data에 전달한다.
+  app\api\market-candidates-enriched\route.ts:320:*/
+  app\api\market-candidates-enriched\route.ts:321:async funct
+ion getCachedProductDetail(
+  app\api\market-candidates-enriched\route.ts:322:  productId
+: string,
+  app\api\market-candidates-enriched\route.ts:323:): Promise<
+NaverProductDetail | null> {
+  app\api\market-candidates-enriched\route.ts:324:  const ori
+ginProductNo =
+  app\api\market-candidates-enriched\route.ts:325:    Number(
+productId);
+  app\api\market-candidates-enriched\route.ts:326:
+  app\api\market-candidates-enriched\route.ts:327:  if (
+  app\api\market-candidates-enriched\route.ts:328:    !Number
+.isSafeInteger(
+  app\api\market-candidates-enriched\route.ts:329:      origi
+nProductNo,
+  app\api\market-candidates-enriched\route.ts:330:    )
+  app\api\market-candidates-enriched\route.ts:331:  ) {
+  app\api\market-candidates-enriched\route.ts:332:    return 
+null;
+  app\api\market-candidates-enriched\route.ts:333:  }
+  app\api\market-candidates-enriched\route.ts:334:
+  app\api\market-candidates-enriched\route.ts:335:  const {
+  app\api\market-candidates-enriched\route.ts:336:    data,
+  app\api\market-candidates-enriched\route.ts:337:    error,
+  app\api\market-candidates-enriched\route.ts:338:  } =
+  app\api\market-candidates-enriched\route.ts:339:    await s
+upabaseAdmin
+  app\api\market-candidates-enriched\route.ts:340:      .from
+("products")
+  app\api\market-candidates-enriched\route.ts:341:      .sele
+ct(
+  app\api\market-candidates-enriched\route.ts:342:        "pr
+oduct_detail_analysis",
+  app\api\market-candidates-enriched\route.ts:343:      )
+  app\api\market-candidates-enriched\route.ts:344:      .eq(
+  app\api\market-candidates-enriched\route.ts:345:        "or
+igin_product_no",
+  app\api\market-candidates-enriched\route.ts:346:        ori
+ginProductNo,
+  app\api\market-candidates-enriched\route.ts:347:      )
+  app\api\market-candidates-enriched\route.ts:348:      .limi
+t(1)
+  app\api\market-candidates-enriched\route.ts:349:      .mayb
+eSingle();
+  app\api\market-candidates-enriched\route.ts:350:
+  app\api\market-candidates-enriched\route.ts:351:  if (error
+) {
+  app\api\market-candidates-enriched\route.ts:352:    console
+.warn(
+  app\api\market-candidates-enriched\route.ts:353:      "Prod
+uct detail cache lookup warning:",
+  app\api\market-candidates-enriched\route.ts:354:      error
+,
+  app\api\market-candidates-enriched\route.ts:355:    );
+  app\api\market-candidates-enriched\route.ts:356:
+  app\api\market-candidates-enriched\route.ts:357:    return 
+null;
+
+

@@ -1,0 +1,183 @@
+﻿===== validateProductMatch 호출부 =====
+          },
+        };
+      }
+
+      const matchValidation =
+        validateProductMatch(
+          market.name,
+          detail.title,
+          detail.modelName,
+        );
+
+      const usable =
+        Boolean(
+          detail.title,
+        ) &&
+        detail.finalPrice >
+          0 &&
+        matchValidation.matched &&
+        (
+          canonicalSourceType ===
+            "manufacturer" ||
+          Boolean(
+            detail.productId,
+          )
+        );
+
+      if (!usable) {
+        const reason =
+          "?곸꽭?섏쭛? ?꾨즺?먯?留??꾩닔 ?곹뭹?뺣낫媛 ?놁뒿?덈떎.";
+
+        console.log(
+          `[ENRICH ${position}] ?덈씫(validation)`,
+          reason,
+        );
+
+        return {
+          success: false,
+
+          resolverAttempts:
+            candidateResolverAttempts,
+
+          brightDataCalls:
+            usedCache
+              ? 0
+              : 1,
+
+          failure: {
+            position,
+
+            marketProduct:
+              market.name,
+
+            stage:
+              "validation",
+
+            reason,
+          },
+        };
+      }
+
+      /*
+        ?ㅼ젣 ?먮ℓ媛 湲곗? ?덉궛 寃利?
+
+        ?쒖옣紐⑸줉 媛寃⑸????덉궛 諛뽰씠?덈뜕 ?곹뭹?
+        "?꾨낫 ??遺議????ъ슜?섎뒗 洹쇱젒 fallback"?대?濡?        ?ㅼ젣 ?먮ℓ媛媛 ?덉궛 諛뽰씠?대룄 怨꾩냽 吏꾪뻾?쒕떎.
+
+        諛섎?濡??쒖옣紐⑸줉?먯꽌???덉궛 ?덉씠?덈뒗??        ?곸꽭 ?ㅼ젣 ?먮ℓ媛媛 ?덉궛 諛뽰쑝濡?諛붾?寃쎌슦?먮뒗
+        媛寃??뺣낫媛 ?щ씪吏?寃껋씠誘濡?湲곗〈泥섎읆 ?덈씫?쒗궓??
+      */
+      const marketBudgetFallback =
+        !isWithinBudget(
+          market.price,
+          minBudget,
+          maxBudget,
+        );
+
+===== validateProductMatch 구현 =====
+const VARIANT_TOKENS = new Set([
+  "ultra",
+  "slim",
+  "master",
+  "pro",
+  "maxv",
+  "max",
+  "plus",
+  "mini",
+]);
+
+export function getProductModelTokens(
+  value: string,
+): string[] {
+  return String(value ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter(
+      (token) =>
+        token.length >= 2 &&
+        /[a-z]/.test(token) &&
+        /\d/.test(token),
+    );
+}
+
+export function getProductVariantTokens(
+  value: string,
+): string[] {
+  return String(value ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter((token) =>
+      VARIANT_TOKENS.has(token),
+    );
+}
+
+export function validateProductMatch(
+  marketName: string,
+  detailTitle: string,
+  detailModelName = "",
+) {
+  const marketModelTokens =
+    getProductModelTokens(
+      marketName,
+    );
+
+  const detailText =
+    [
+      detailTitle,
+      detailModelName,
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+  const detailModelTokens =
+    getProductModelTokens(
+      detailText,
+    );
+
+  const modelMatched =
+    marketModelTokens.length === 0 ||
+    marketModelTokens.some(
+      (token) =>
+        detailModelTokens.includes(
+          token,
+        ),
+    );
+
+  const marketVariantTokens =
+    getProductVariantTokens(
+      marketName,
+    );
+
+  const detailVariantTokens =
+    getProductVariantTokens(
+      detailText,
+    );
+
+  const variantMatched =
+    marketVariantTokens.length === 0 ||
+    detailVariantTokens.length === 0 ||
+    marketVariantTokens.every(
+      (token) =>
+        detailVariantTokens.includes(
+          token,
+        ),
+    );
+
+  return {
+    modelMatched,
+    variantMatched,
+    matched:
+      modelMatched &&
+      variantMatched,
+
+    marketModelTokens,
+    detailModelTokens,
+    marketVariantTokens,
+    detailVariantTokens,
+  };
+}

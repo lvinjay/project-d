@@ -1,0 +1,628 @@
+{
+  "success": true,
+  "category": "로봇청소기",
+  "expectedCount": 5,
+  "analyzedCount": 5,
+  "products": [
+    {
+      "productId": "10775617216",
+      "productName": "에브리봇 AI 올인원 로봇청소기 Q9 프리미엄",
+      "brand": "에브리봇",
+      "finalPrice": 649000,
+      "reviewSampleCount": 20,
+      "analysis": {
+        "productName": "에브리봇 AI 올인원 로봇청소기 Q9 프리미엄",
+        "reviewCount": 20,
+        "summary": "올인원 도크의 자동 걸레세척·건조와 앱/지도 기능 편의성에 대한 만족도가 높습니다. 반면 장애물 회피 능력과 맵 안정성(예약 해제, 문턱·화장실 앞 버벅임), 자동세척 오류(오수 넘침), 소음 스파이크(먼지통 비움·머리카락 컷팅) 등이 지적됩니다. 물걸레 성능은 일상 관리에는 충분하나 두 패드 사이 미청소 구간과 ‘뽀득’ 수준의 깊은 청소는 아쉽다는 의견이 있습니다.",
+        "positivePoints": [
+          {
+            "topic": "올인원 도크 편의(자동 걸레세척·건조/자동 비움)",
+            "summary": "걸레를 자동으로 세척·건조하고, 먼지통 자동 비움 등으로 관리 부담이 크게 줄었다는 평가가 다수입니다.",
+            "evidenceCount": 7
+          },
+          {
+            "topic": "지도 생성과 앱/금지구역 설정",
+            "summary": "맵핑이 잘 되고 금지구역·예약 등 앱 기능이 유용하다는 반응이 많습니다.",
+            "evidenceCount": 6
+          },
+          {
+            "topic": "머리카락 컷팅 기능",
+            "summary": "긴 머리카락 얽힘을 줄여주는 컷팅 기능이 실사용에 도움이 된다는 의견이 있습니다.",
+            "evidenceCount": 4
+          },
+          {
+            "topic": "일상 청소 부담 경감",
+            "summary": "정해진 시간에 자동으로 돌려 바닥 상태가 꾸준히 유지되어 청소 스트레스가 줄었다는 평이 있습니다.",
+            "evidenceCount": 4
+          }
+        ],
+        "negativePoints": [
+          {
+            "topic": "장애물 회피·맵 안정성 아쉬움",
+            "summary": "물체 인식 미흡, 문턱/욕실 앞 버벅임, 맵 변경으로 예약이 해제되는 사례 등이 보고됩니다.",
+            "evidenceCount": 4
+          },
+          {
+            "topic": "자동세척 관련 오류/오수 넘침",
+            "summary": "스테이션에서 오수 넘침 또는 오수 흡입 오류로 교환·조치가 필요했던 사례가 있습니다.",
+            "evidenceCount": 2
+          },
+          {
+            "topic": "소음 스파이크",
+            "summary": "일반 주행 소음은 무난하나 먼지통 비움·머리카락 컷팅 시 소음이 크다는 의견이 있습니다.",
+            "evidenceCount": 2
+          },
+          {
+            "topic": "물걸레 디테일 한계",
+            "summary": "두 장의 걸레 사이가 잘 안 닦이거나 전반적으로 ‘쓱 훑는’ 느낌이라 깊은 청소는 부족하다는 지적이 있습니다.",
+            "evidenceCount": 2
+          },
+          {
+            "topic": "세정제 사용 제약/비용",
+            "summary": "전용 세정제 사용 여부·위치가 혼란스럽거나 세정제 비용이 부담된다는 의견이 있습니다.",
+            "evidenceCount": 3
+          }
+        ],
+        "cautions": [
+          "바닥에 장애물이 많거나 문턱·욕실 앞 등에서는 버벅임이 있을 수 있어 금지구역 설정이 필요합니다.",
+          "먼지통 비움·머리카락 컷팅 시 소음이 큽니다.",
+          "스테이션 자동세척 중 오수 넘침·오류 사례가 있어 초기 설치·패킹 점검 및 AS 대비가 필요합니다.",
+          "본체 폭이 커서 좁은 틈(침대와 벽 사이 등)에는 진입이 어려울 수 있습니다.",
+          "물걸레 성능은 일상 관리용에 적합하며 깊은 수작업 수준을 기대하면 아쉬울 수 있습니다.",
+          "세정제 사용 방식(전용/정수통 투입 등)과 비용을 확인하세요."
+        ],
+        "bestFor": [
+          "바닥이 비교적 깔끔하고 하드바닥 위주인 집에서 일상 청소를 자동화하고 싶은 사용자",
+          "걸레 빨기·건조 등 유지관리를 최소화하고 싶은 사용자",
+          "지도 기반 구역 청소·금지구역 설정 등 앱 활용을 원하는 사용자"
+        ],
+        "notFor": [
+          "완벽한 깊은 물걸레 청소나 강력한 장애물 회피를 기대하는 사용자",
+          "문턱·욕실 앞 등 난관이 많고 집에 물건이 많이 깔린 환경",
+          "자주 큰 소음(먼지통 비움/머리카락 컷팅)에 민감한 사용자",
+          "좁은 틈새 청소 비중이 큰 주거 환경"
+        ],
+        "confidenceScore": 70,
+        "reviewQuality": {
+          "highInformationReviews": 13,
+          "lowInformationReviews": 5,
+          "promotionalStyleReviews": 2
+        },
+        "criterionEvidence": {
+          "maintenance_automation_level": {
+            "reviewEvidenceCount": 8,
+            "summary": "자동 걸레세척·건조, 스테이션 복귀 및 먼지통 자동 비움 등의 편의가 다수 언급되었으며, 일부는 오수 넘침/세척 오류도 보고됨."
+          },
+          "mopping_mechanism_type": {
+            "reviewEvidenceCount": 0,
+            "summary": "물걸레가 두 장이라는 언급은 있으나 회전형/롤러형 등 구동 방식이 명확히 표기된 리뷰는 없음."
+          },
+          "obstacle_avoidance_and_navigation": {
+            "reviewEvidenceCount": 10,
+            "summary": "맵핑·금지구역 설정·지도 기반 청소는 유용하다는 평이 많은 반면, 물체 인식 미흡·문턱/욕실 앞 버벅임·맵 변경으로 예약 해제 등의 불만도 존재."
+          },
+          "mopping_specialization_level": {
+            "reviewEvidenceCount": 11,
+            "summary": "흡입+물걸레 동시 운용, 자동 걸레 관리 등 물걸레 관련 사용기가 풍부하나, 두 패드 사이 미청소와 깊은 청소 한계 지적도 있음."
+          },
+          "market_validation_review_volume": {
+            "reviewEvidenceCount": 20,
+            "summary": "리뷰 수는 20개로 보통 수준이며, 반복 사례가 있으나 대규모 시장 검증으로 보기는 어려움."
+          }
+        },
+        "criterionScores": {
+          "maintenance_automation_level": 82,
+          "mopping_mechanism_type": null,
+          "obstacle_avoidance_and_navigation": 68,
+          "mopping_specialization_level": 75,
+          "market_validation_review_volume": 55
+        },
+        "criterionReasons": {
+          "maintenance_automation_level": "여러 리뷰가 자동 세척·건조/자동 비움 편의를 구체적으로 언급하며 전반적 만족도가 높음. 다만 오수 넘침·세척 오류와 소음 스파이크가 일부 존재해 감점.",
+          "mopping_mechanism_type": "리뷰에 회전형/롤러형 등 구동 방식이 명시되지 않아 판단 불가.",
+          "obstacle_avoidance_and_navigation": "맵핑 및 금지구역 등 내비게이션 기능은 유용하나 장애물 인식 미흡, 문턱/욕실 앞 버벅임, 맵 변경 이슈가 반복 보고됨.",
+          "mopping_specialization_level": "물걸레 기능 사용 빈도와 편의가 높게 평가되지만, 제품명에 ‘물걸레 로봇청소기’ 명시는 없고 디테일 청소 성능에 대한 아쉬움도 있어 중상 수준 점수.",
+          "market_validation_review_volume": "리뷰가 20개로 검증 규모가 크지 않아 중간 이하 점수."
+        },
+        "collectionStats": {
+          "total": 20,
+          "ranking": 0,
+          "latest": 20,
+          "lowScore": 3
+        }
+      }
+    },
+    {
+      "productId": "13280227814",
+      "productName": "모바 P70 Pro Ultra 물걸레 로봇청소기 RGB 센서 온수세척 고온건조 물걸레 확장",
+      "brand": "모바",
+      "finalPrice": 599000,
+      "reviewSampleCount": 20,
+      "analysis": {
+        "productName": "모바 P70 Pro Ultra 물걸레 로봇청소기 RGB 센서 온수세척 고온건조 물걸레 확장",
+        "reviewCount": 20,
+        "summary": "자동 먼지 비움, 온수 세척, 고온 건조까지 수행하는 올인원 스테이션과 강한 물걸레 성능, 안정적인 맵핑·장애물 회피가 반복적으로 호평을 받았습니다. 청소 중 기본 소음은 조용한 편이라는 의견이 다수였으나, 자동 먼지 비움/일부 부스트 상황의 순간 소음, 스테이션 부피, 앱 번역/UX 아쉬움, 드물게 의자 다리 등 좁은 공간에서 버벅임이 지적되었습니다.",
+        "positivePoints": [
+          {
+            "topic": "올인원 스테이션 편의성(자동 먼지 비움·온수세척·고온건조)",
+            "summary": "청소 후 자동으로 먼지 비우고 물걸레를 세척·건조해 냄새와 관리 부담이 크게 줄었다는 평가가 다수입니다.",
+            "evidenceCount": 12
+          },
+          {
+            "topic": "물걸레 청소 성능",
+            "summary": "바닥 얼룩 제거와 구석 밀착이 좋고 청소 후 바닥이 보송보송하다는 후기가 반복됩니다.",
+            "evidenceCount": 13
+          },
+          {
+            "topic": "장애물 회피·맵핑 성능",
+            "summary": "전선·슬리퍼·장난감 등 장애물을 잘 피하고 맵핑이 빠르고 정확해 갇히는 일이 적다는 평가가 많습니다.",
+            "evidenceCount": 14
+          },
+          {
+            "topic": "흡입력",
+            "summary": "머리카락·부스러기 등 생활 먼지를 강하게 빨아들이며 카펫 감지 등 상황 대응도 준수하다는 의견입니다.",
+            "evidenceCount": 8
+          },
+          {
+            "topic": "조용한 기본 주행 소음",
+            "summary": "일반 주행 시 소음이 비교적 낮아 방해가 적다는 후기가 있습니다.",
+            "evidenceCount": 4
+          }
+        ],
+        "negativePoints": [
+          {
+            "topic": "스테이션 부피",
+            "summary": "올인원 스테이션 크기가 커서 설치 공간 확보가 필요하다는 지적이 있습니다.",
+            "evidenceCount": 2
+          },
+          {
+            "topic": "순간 소음(자동 먼지 비움/부스트)",
+            "summary": "자동 먼지 비움 시 또는 큰 입자 부스트 동작 때 순간적인 소음이 크다는 의견이 있습니다.",
+            "evidenceCount": 2
+          },
+          {
+            "topic": "앱 번역/사용성",
+            "summary": "앱 번역이 어색하거나 일부 아이콘/버튼 UX가 불편하다는 피드백이 있습니다.",
+            "evidenceCount": 2
+          },
+          {
+            "topic": "좁은 공간에서의 버벅임",
+            "summary": "의자 다리 등 협소 공간에서 가끔 맴돌거나 머뭇거림이 발생했다는 사례가 있습니다.",
+            "evidenceCount": 2
+          },
+          {
+            "topic": "자동 먼지 비움 완성도",
+            "summary": "필터 부근 큰 먼지가 완전히 비워지지 않는다는 지적이 일부 있습니다.",
+            "evidenceCount": 1
+          }
+        ],
+        "cautions": [
+          "올인원 스테이션 부피가 있어 거실 등 설치 공간을 미리 확보하는 것이 좋습니다.",
+          "자동 먼지 비움/부스트 동작 시 순간 소음이 있어 야간 운전은 스케줄 조절이 필요할 수 있습니다.",
+          "오수통은 2~3일 간격으로 비우고 세척하지 않으면 냄새가 날 수 있습니다.",
+          "앱 번역/아이콘 중심 UI가 어색할 수 있어 초기에 학습이 필요할 수 있습니다.",
+          "좁은 공간·의자 다리 주변에서는 드물게 버벅임이 있어 케이블·잡동사니 정리 시 효율이 좋아집니다.",
+          "자동 먼지 비움이 완벽하지 않을 수 있어 가끔 필터/먼지통 수동 점검이 필요할 수 있습니다.",
+          "카메라 기능은 끌 수 있으나, 프라이버시가 매우 민감한 사용자라면 사용 전 설정을 확인하세요."
+        ],
+        "bestFor": [
+          "물걸레질 포함 바닥 관리를 자동화해 관리 부담을 줄이고 싶은 맞벌이·1인 가구",
+          "반려동물 털·생활 먼지가 많아 매일 청소가 필요한 가정",
+          "맵핑·장애물 회피 성능이 좋은 모델을 선호하는 사용자",
+          "물걸레 냄새 없이 세척·건조까지 자동화된 도크를 원하는 사용자"
+        ],
+        "notFor": [
+          "올인원 스테이션 설치 공간이 매우 협소한 환경",
+          "야간에도 절대적인 저소음을 원하는 사용자(자동 비움 등 순간 소음 민감)",
+          "자동 먼지 비움이 100% 완벽하길 기대하는 사용자(가끔 수동 보조 필요 가능)"
+        ],
+        "confidenceScore": 86,
+        "reviewQuality": {
+          "highInformationReviews": 16,
+          "lowInformationReviews": 3,
+          "promotionalStyleReviews": 1
+        },
+        "criterionEvidence": {
+          "maintenance_automation_level": {
+            "reviewEvidenceCount": 12,
+            "summary": "다수의 리뷰가 자동 먼지 비움, 물걸레 온수 세척, 고온 건조 등 올인원 도크 기능을 구체적으로 언급하며 냄새 억제와 관리 편의성 향상을 확인. 일부는 자동 비움 소음/완성도 언급."
+          },
+          "mopping_mechanism_type": {
+            "reviewEvidenceCount": 2,
+            "summary": "물걸레 패드가 벽면·모서리에서 바깥으로 ‘확장/스윙’되어 닦는 메커니즘을 명시적으로 언급(모서리 커버리지 강화)."
+          },
+          "obstacle_avoidance_and_navigation": {
+            "reviewEvidenceCount": 14,
+            "summary": "빠르고 정확한 맵핑, 전선·슬리퍼·장난감 회피, 방 자동 추가 등 내비게이션 강점이 반복 언급. 드물게 좁은 공간에서 버벅임 사례 존재."
+          },
+          "mopping_specialization_level": {
+            "reviewEvidenceCount": 13,
+            "summary": "여러 리뷰가 물걸레 성능(얼룩 제거, 모서리 밀착, 보송한 마감)을 강조해 물걸레 특화 체감을 확인."
+          },
+          "market_validation_review_volume": {
+            "reviewEvidenceCount": 20,
+            "summary": "제공된 실제 사용자 리뷰 20개로 초기 검증과 정보 접근성은 보통 수준."
+          }
+        },
+        "criterionScores": {
+          "maintenance_automation_level": 90,
+          "mopping_mechanism_type": 78,
+          "obstacle_avoidance_and_navigation": 89,
+          "mopping_specialization_level": 90,
+          "market_validation_review_volume": 65
+        },
+        "criterionReasons": {
+          "maintenance_automation_level": "자동 먼지 비움·온수 세척·고온 건조 등 올인원 도크 편의성에 대한 강한 호평이 반복되며, 냄새 억제와 관리 시간 절감 효과가 뚜렷함. 다만 자동 비움 소음·완성도 관련 소수 지적이 있어 만점은 아님.",
+          "mopping_mechanism_type": "메커니즘을 직접 언급한 리뷰(패드 확장/스윙)가 소수지만 존재하고 효과에 대한 만족이 높음. 회전/롤러 등 방식 표기는 제한적이므로 중상 점수.",
+          "obstacle_avoidance_and_navigation": "맵핑 속도·정확도와 장애물 회피가 다수 리뷰에서 긍정적으로 검증됨. 협소 공간에서의 간헐적 버벅임이 있어 아주 높은 점수는 보류.",
+          "mopping_specialization_level": "리뷰 전반에서 물걸레 성능 만족(얼룩 제거, 모서리 밀착, 뽀송한 마감)이 반복 확인되어 물걸레 특화 체감이 높음.",
+          "market_validation_review_volume": "실사용 리뷰가 20개로 품질 있는 근거가 충분하지만, 대규모 사용자 풀이라 보기엔 제한적이어서 중간 수준 점수."
+        },
+        "collectionStats": {
+          "total": 20,
+          "ranking": 0,
+          "latest": 20,
+          "lowScore": 0
+        }
+      }
+    },
+    {
+      "productId": "11905202334",
+      "productName": "[슈퍼적립] 로보락 S8 Pro Plus 로봇청소기",
+      "brand": "로보락",
+      "finalPrice": 549000,
+      "reviewSampleCount": 20,
+      "analysis": {
+        "productName": "[슈퍼적립] 로보락 S8 Pro Plus 로봇청소기",
+        "reviewCount": 20,
+        "summary": "흡입력과 전체 청소 성능, 맵핑·장애물 회피, 자동 먼지 비움 도크 편의성이 반복적으로 호평받았습니다. 다만 천 재질 발매트 등 연성 장애물 대응은 아쉽고, 소음이나 기계음 관련 불만이 일부 존재하며 드물게 앱/지도 문제 사례가 있었습니다.",
+        "positivePoints": [
+          {
+            "topic": "강한 흡입·청소 성능",
+            "summary": "먼지·머리카락 수거력이 좋고 구석·침대/소파 아래까지 깔끔하게 청소한다는 후기가 다수입니다.",
+            "evidenceCount": 12
+          },
+          {
+            "topic": "자동 먼지 비움 도크",
+            "summary": "청소 후 자동으로 먼지를 비워 관리가 편하고 미세먼지 노출이 줄어든다는 평가가 많습니다.",
+            "evidenceCount": 6
+          },
+          {
+            "topic": "맵핑·장애물 회피 성능",
+            "summary": "빠르고 정확한 지도 생성과 방/구역 단위 청소, 부딪히지 않고 피하는 주행이 좋다는 후기가 많습니다.",
+            "evidenceCount": 11
+          },
+          {
+            "topic": "앱 사용성·원격 제어",
+            "summary": "앱이 직관적이고 구역/금지구역 설정, 원격 제어가 편하다는 의견이 있습니다.",
+            "evidenceCount": 4
+          },
+          {
+            "topic": "반려동물 털 대응",
+            "summary": "머리카락·반려동물 털 수거가 잘 되어 청소 스트레스가 크게 줄었다는 후기가 있습니다.",
+            "evidenceCount": 3
+          }
+        ],
+        "negativePoints": [
+          {
+            "topic": "소음·이상음",
+            "summary": "청소 중 소음이 크거나 ‘드륵드륵’/긁히는 등 기계음이 난다는 불만이 있습니다.",
+            "evidenceCount": 3
+          },
+          {
+            "topic": "발매트 등 연성 장애물 처리 한계",
+            "summary": "천 재질 발매트·욕실 매트 등은 잘 피하지 못하거나 엉킬 수 있어 치워두는 게 낫다는 의견이 있습니다.",
+            "evidenceCount": 2
+          }
+        ],
+        "cautions": [
+          "천 재질 발매트·러그·욕실 매트는 치워두는 것이 안전합니다.",
+          "소음에 민감하다면 도크 비움/청소 중 기계음 가능성을 고려하세요.",
+          "드물게 앱 지도 로딩/맵핑 문제 사례가 있습니다.",
+          "리뷰에 물걸레 자동 세척·건조(올인원 도크) 언급은 없어, 해당 기능을 기대한다면 사양을 별도 확인하세요."
+        ],
+        "bestFor": [
+          "자동 먼지 비움 등 관리 편의성을 중시하는 사용자",
+          "반려동물 털과 머리카락이 많은 가정",
+          "방·구역 단위 설정과 원격 제어 등 앱 기반 관리가 필요한 사용자",
+          "바닥이 비교적 정리되어 있어 주행 효율을 뽑아낼 수 있는 집"
+        ],
+        "notFor": [
+          "발매트·러그가 많거나 문턱이 높은 환경",
+          "물걸레 패드 자동 세척·건조 도크까지 원하는 사용자",
+          "앱 안정성 이슈에 매우 민감한 사용자"
+        ],
+        "confidenceScore": 78,
+        "reviewQuality": {
+          "highInformationReviews": 12,
+          "lowInformationReviews": 3,
+          "promotionalStyleReviews": 2
+        },
+        "criterionEvidence": {
+          "maintenance_automation_level": {
+            "reviewEvidenceCount": 0,
+            "summary": "자동 먼지 비움 언급은 다수였지만, 물걸레 자동 세척·건조(온수세척/고온건조 등) 기능에 대한 직접 언급은 없었습니다."
+          },
+          "mopping_mechanism_type": {
+            "reviewEvidenceCount": 0,
+            "summary": "회전형/롤러형 등 물걸레 구동 방식에 대한 직접 언급이 없습니다."
+          },
+          "obstacle_avoidance_and_navigation": {
+            "reviewEvidenceCount": 12,
+            "summary": "맵핑이 빠르고 정확하며, 장애물에 부딪히지 않고 피해 간다는 긍정 후기가 다수입니다. 다만 매트류 처리나 드문 앱 지도 문제 사례가 있습니다."
+          },
+          "mopping_specialization_level": {
+            "reviewEvidenceCount": 0,
+            "summary": "제품명이 ‘물걸레 로봇청소기’로 명시되었다는 언급이 없습니다."
+          },
+          "market_validation_review_volume": {
+            "reviewEvidenceCount": 20,
+            "summary": "제공된 실제 리뷰 20개로, 정보 접근성은 보통 수준입니다."
+          }
+        },
+        "criterionScores": {
+          "maintenance_automation_level": null,
+          "mopping_mechanism_type": null,
+          "obstacle_avoidance_and_navigation": 82,
+          "mopping_specialization_level": null,
+          "market_validation_review_volume": 60
+        },
+        "criterionReasons": {
+          "maintenance_automation_level": "리뷰에서 물걸레 자동 세척/건조 도크 기능에 대한 직접 증언이 없어 점수를 산정하지 않았습니다.",
+          "mopping_mechanism_type": "회전/롤러 등 물걸레 방식이 명시된 리뷰가 전무하여 점수를 산정하지 않았습니다.",
+          "obstacle_avoidance_and_navigation": "맵핑·회피 성능에 대한 긍정이 반복되며(여러 리뷰) 일부 매트·앱 이슈가 있어 아주 높지는 않게 82점으로 평가했습니다.",
+          "mopping_specialization_level": "‘물걸레 특화’ 표기에 대한 언급이 없어 점수 산정이 불가합니다.",
+          "market_validation_review_volume": "리뷰 수가 20개로 많지도 적지도 않은 중간 수준이라 60점으로 평가했습니다."
+        },
+        "collectionStats": {
+          "total": 20,
+          "ranking": 0,
+          "latest": 20,
+          "lowScore": 1
+        }
+      }
+    },
+    {
+      "productId": "12177851468",
+      "productName": "에코백스 T50 물걸레로봇청소기 AI 올인원 로청 슬림 회전형 에코벡스",
+      "brand": "에코백스",
+      "finalPrice": 649000,
+      "reviewSampleCount": 20,
+      "analysis": {
+        "productName": "에코백스 T50 물걸레로봇청소기 AI 올인원 로청 슬림 회전형 에코벡스",
+        "reviewCount": 20,
+        "summary": "다수의 리뷰에서 흡입력과 물걸레 성능, 맵핑/구역지정 기능에 대한 만족도가 높습니다. 자동 걸레 세척 덕에 청결 유지가 편하다는 반응이 있으나, 일부 단차/문턱 인식 한계와 세척·건조 소음, 수건 재질 매트 취급 이슈가 언급됩니다.",
+        "positivePoints": [
+          {
+            "topic": "강한 흡입력과 전체 청소 성능",
+            "summary": "흡입력이 강하고 집안을 꼼꼼히 청소한다는 평가가 반복됩니다.",
+            "evidenceCount": 5
+          },
+          {
+            "topic": "물걸레 성능과 카펫 구분",
+            "summary": "물걸레 청소 품질이 좋고 카펫에서는 자동으로 물걸레질을 멈추거나 구분해 동작합니다.",
+            "evidenceCount": 5
+          },
+          {
+            "topic": "맵핑/구역 지정과 회피 주행",
+            "summary": "지도 기반 구역 지정이 편리하고 장애물 회피 주행이 준수하다는 평가가 있습니다.",
+            "evidenceCount": 3
+          },
+          {
+            "topic": "자동 걸레 세척으로 관리 편의",
+            "summary": "청소 중 걸레를 자주 자동 세척해 청결을 유지해줘 관리가 수월합니다.",
+            "evidenceCount": 2
+          },
+          {
+            "topic": "스케줄·자동화로 생활 편의 향상",
+            "summary": "정해진 시간에 자동 청소를 돌리며 생활이 편해졌다는 반응이 다수입니다.",
+            "evidenceCount": 3
+          }
+        ],
+        "negativePoints": [
+          {
+            "topic": "단차/문턱 인식 한계",
+            "summary": "일부 단차를 인식하지 못하거나 문턱이 높으면 사용이 어렵다는 의견이 있습니다.",
+            "evidenceCount": 2
+          },
+          {
+            "topic": "걸레 세척·건조 소음",
+            "summary": "도크에서 걸레 세척/건조 시 소음이 큰 편이라는 의견이 있습니다.",
+            "evidenceCount": 1
+          },
+          {
+            "topic": "바닥에 붙은 얇은 장애물 인식 한계",
+            "summary": "바닥에 밀착된 얇은 물체는 인식이 어려울 수 있다는 피드백이 있습니다.",
+            "evidenceCount": 1
+          },
+          {
+            "topic": "수건/타월 재질 매트 취급 주의",
+            "summary": "수건 재질 매트는 말려 올라가거나 걸릴 수 있어 치워두는 것이 낫습니다.",
+            "evidenceCount": 1
+          }
+        ],
+        "cautions": [
+          "문턱·단차가 많은 집에서는 일부 구간을 인식하지 못할 수 있어 출입금지구역 설정이 필요할 수 있습니다.",
+          "도크에서 걸레 세척/건조 시 소음이 드라이기 수준으로 느껴질 수 있습니다.",
+          "수건·타월 재질의 매트는 청소 전에 치워두는 것이 안전합니다.",
+          "카펫에서 물걸레를 하지 않도록 구역/카펫 설정을 점검하세요."
+        ],
+        "bestFor": [
+          "하드바닥 위주 가정에서 물걸레 청소를 자주 활용하려는 사용자",
+          "반려동물 털 관리가 필요한 가정",
+          "지도 기반 구역 청소와 스케줄 자동화를 원하는 사용자",
+          "중형 평형(예: 30평대)에서 한 번에 청소를 끝내고 싶은 사용자"
+        ],
+        "notFor": [
+          "문턱이나 단차가 많은 주거 환경",
+          "도크 동작(세척·건조) 소음에 민감한 사용자",
+          "수건/파일형 러그·매트를 상시 깔아두는 집"
+        ],
+        "confidenceScore": 68,
+        "reviewQuality": {
+          "highInformationReviews": 12,
+          "lowInformationReviews": 8,
+          "promotionalStyleReviews": 0
+        },
+        "criterionEvidence": {
+          "maintenance_automation_level": {
+            "reviewEvidenceCount": 2,
+            "summary": "도크에서 걸레를 자동 세척·건조해 청결을 유지한다는 언급과 세척 소음 묘사가 있습니다."
+          },
+          "mopping_mechanism_type": {
+            "reviewEvidenceCount": 0,
+            "summary": "회전/롤러 등 물걸레 구동 방식에 대한 직접 언급은 없습니다."
+          },
+          "obstacle_avoidance_and_navigation": {
+            "reviewEvidenceCount": 4,
+            "summary": "맵핑과 구역 지정 기능이 유용하고 장애물 회피가 준수하다는 의견이 있는 반면, 단차·바닥 밀착물 인식 한계가 지적됩니다."
+          },
+          "mopping_specialization_level": {
+            "reviewEvidenceCount": 8,
+            "summary": "물걸레 청소 만족, 카펫 구분·회피 및 일상적인 물걸레 사용 관련 언급이 반복됩니다."
+          },
+          "market_validation_review_volume": {
+            "reviewEvidenceCount": 20,
+            "summary": "총 20개의 리뷰가 있으며, 수량은 보통 수준입니다."
+          }
+        },
+        "criterionScores": {
+          "maintenance_automation_level": 80,
+          "mopping_mechanism_type": null,
+          "obstacle_avoidance_and_navigation": 78,
+          "mopping_specialization_level": 88,
+          "market_validation_review_volume": 60
+        },
+        "criterionReasons": {
+          "maintenance_automation_level": "자동 걸레 세척·건조 언급이 있고 전반적으로 긍정적이나, 세척/건조 소음 지적이 있어 80점으로 평가했습니다.",
+          "mopping_mechanism_type": "리뷰에서 회전형/롤러형 등 구동 방식이 명확히 확인되지 않아 점수를 부여하지 않았습니다.",
+          "obstacle_avoidance_and_navigation": "맵핑·구역지정·회피 성능에 대한 긍정이 다수이나, 단차 및 바닥 밀착물 인식 한계가 지적되어 감점했습니다.",
+          "mopping_specialization_level": "물걸레 성능과 카펫 구분/회피에 대한 만족이 반복되어 높은 점수이나, 매트 취급 주의가 있어 약간 감점했습니다.",
+          "market_validation_review_volume": "리뷰가 20개로 시장 검증 규모가 보통이라 중간대 점수를 부여했습니다."
+        },
+        "collectionStats": {
+          "total": 20,
+          "ranking": 0,
+          "latest": 20,
+          "lowScore": 1
+        }
+      }
+    },
+    {
+      "productId": "12926470457",
+      "productName": "모바 S70 Ultra Roller 물걸레 로봇청소기 RGB AI 센서 온수 자동세척",
+      "brand": "모바",
+      "finalPrice": 799000,
+      "reviewSampleCount": 20,
+      "analysis": {
+        "productName": "모바 S70 Ultra Roller 물걸레 로봇청소기 RGB AI 센서 온수 자동세척",
+        "reviewCount": 20,
+        "summary": "롤러형 물걸레와 우수한 회피·내비게이션이 반복 확인되었고, 자동 세척/건조 및 온수 세척 등 관리 자동화로 냄새와 관리 부담이 줄었다는 평가가 많습니다. 다만 직배수형은 아니라 오수통 비우기·간헐적 건조 등 수동 관리가 일부 필요하다는 언급이 있어 완전 무관리는 기대하기 어렵습니다.",
+        "positivePoints": [
+          {
+            "topic": "우수한 장애물 회피·내비게이션",
+            "summary": "스테인레스 다리 회피, 카펫 인식·등반, 갇힘 탈출, 효율적 동선 등 주행/회피 성능이 좋다는 후기가 다수입니다.",
+            "evidenceCount": 9
+          },
+          {
+            "topic": "롤러형 물걸레 세정력",
+            "summary": "롤러 방식으로 바닥이 반질반질해지고 물걸레 청소가 매우 깔끔하다는 평가가 반복됩니다.",
+            "evidenceCount": 7
+          },
+          {
+            "topic": "관리 자동화(자동 세척·건조·온수/세제 투입)",
+            "summary": "도크에서 걸레 자동 세척·건조와 온수 세척(세정액 투입 포함) 등으로 냄새와 관리 시간이 줄었다는 후기가 있습니다.",
+            "evidenceCount": 7
+          },
+          {
+            "topic": "정숙성",
+            "summary": "소음이 생각보다 작아 생활 속 사용에 무리가 없다는 의견이 반복됩니다.",
+            "evidenceCount": 5
+          },
+          {
+            "topic": "앱/스마트 기능과 사용 편의",
+            "summary": "맵핑 빠름, 구역 설정·카펫 설정·원격 제어, 음성 명령·카메라 등 기능이 직관적이고 유용하다는 평가가 많습니다.",
+            "evidenceCount": 7
+          },
+          {
+            "topic": "흡입력 및 반려동물 털 수거",
+            "summary": "흡입력이 강하고 반려동물 털까지 잘 수거해 집안이 쾌적해졌다는 후기가 있습니다.",
+            "evidenceCount": 4
+          }
+        ],
+        "negativePoints": [
+          {
+            "topic": "완전 무관리 아님(수동 배수·건조 보완 필요)",
+            "summary": "직배수형이 아니라 오수통 비우기·헹굼이 필요하고, 장기 냄새 방지를 위해 롤러를 추가로 말린다는 사용기가 있습니다.",
+            "evidenceCount": 2
+          }
+        ],
+        "cautions": [
+          "직배수형이 아니라 주기적으로 오수통 비우기·세척이 필요합니다(장기 냄새 방지 위해 추가 건조를 하는 사례도 있음).",
+          "카펫/매트는 기본적으로 물걸레질을 회피할 수 있어 앱에서 설정 조정이 필요할 수 있습니다.",
+          "온수(100℃) 세척, ‘팔/브러시 확장’ 등 특정 기능의 동작은 사용 환경에 따라 가시성이 낮아 체감이 다를 수 있습니다."
+        ],
+        "bestFor": [
+          "하드바닥 위주 가정에서 물걸레 성능을 중시하는 사용자",
+          "장난감/가구 다리 등 장애물이 많은 환경에서 회피 성능을 원하는 사용자",
+          "반려동물 털 관리가 필요한 가정",
+          "정숙성과 앱·음성 등 스마트 편의성을 원하는 사용자",
+          "부모님 등 직관적 사용성을 선호하는 사용자"
+        ],
+        "notFor": [
+          "완전 무관리를 원해 직배수·자동 오수 배출까지 기대하는 사용자",
+          "카펫/매트 위에서도 별도 설정 없이 물걸레질을 상시 원하지 않는 사용자",
+          "온수 세척·브러시 확장 등 특정 기능의 시각적 확인을 중시하는 사용자"
+        ],
+        "confidenceScore": 76,
+        "reviewQuality": {
+          "highInformationReviews": 15,
+          "lowInformationReviews": 3,
+          "promotionalStyleReviews": 2
+        },
+        "criterionEvidence": {
+          "maintenance_automation_level": {
+            "reviewEvidenceCount": 7,
+            "summary": "도크의 자동 세척·건조, 온수 세척, 실시간 세척, 세정액 투입 등 관리 자동화 언급이 다수이며, 직배수 부재로 오수통 비움·헹굼 필요성도 일부 제기됨."
+          },
+          "mopping_mechanism_type": {
+            "reviewEvidenceCount": 7,
+            "summary": "여러 리뷰에서 ‘롤러형’임을 명시하고 롤러 방식의 청소력이 좋다고 평가."
+          },
+          "obstacle_avoidance_and_navigation": {
+            "reviewEvidenceCount": 9,
+            "summary": "스테인레스 다리 회피, 카펫 인식/등반, 탈출 능력, 효율적 맵핑·주행 등 회피·내비게이션 성능에 대한 직접 언급 다수."
+          },
+          "mopping_specialization_level": {
+            "reviewEvidenceCount": 15,
+            "summary": "물걸레 성능·운용(건식→습식 모드, 실시간 세척, 벽면 가장자리 청소 등)에 대한 구체 후기가 풍부해 물걸레 특화 성격이 강하게 드러남."
+          },
+          "market_validation_review_volume": {
+            "reviewEvidenceCount": 20,
+            "summary": "리뷰가 총 20개로 초기 사용자 경험은 충분히 확인되나 대규모 커뮤니티 검증까지는 아님."
+          }
+        },
+        "criterionScores": {
+          "maintenance_automation_level": 82,
+          "mopping_mechanism_type": 95,
+          "obstacle_avoidance_and_navigation": 90,
+          "mopping_specialization_level": 92,
+          "market_validation_review_volume": 55
+        },
+        "criterionReasons": {
+          "maintenance_automation_level": "자동 세척·건조·온수/세정액 등 관리 자동화가 반복 확인되었고 냄새 감소 효과도 언급됨. 다만 직배수 부재로 오수통 비움·헹굼, 간헐적 추가 건조 등 수동 관리가 일부 필요해 만점은 아님.",
+          "mopping_mechanism_type": "다수 리뷰가 ‘롤러형’임을 명시하고 성능 우수성을 강조해 방식이 명확하고 체감 효용이 큼.",
+          "obstacle_avoidance_and_navigation": "스텐 다리 회피, 카펫 인식/등반, 탈출 능력, AI 주행에 대한 만족 후기가 누적되어 전반적 신뢰도가 높음.",
+          "mopping_specialization_level": "물걸레 관련 기능·성과 언급이 매우 풍부해 물걸레 특화 제품으로의 체감이 강함.",
+          "market_validation_review_volume": "제공 리뷰가 20개로 정보는 있으나 대규모 검증으로 보기에는 수가 적어 중간 이하 점수."
+        },
+        "collectionStats": {
+          "total": 20,
+          "ranking": 0,
+          "latest": 20,
+          "lowScore": 0
+        }
+      }
+    }
+  ]
+}

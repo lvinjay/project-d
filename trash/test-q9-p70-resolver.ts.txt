@@ -1,0 +1,66 @@
+﻿import {
+  resolveNaverBrandProductUrl,
+} from "../lib/resolveNaverBrandProductUrl";
+
+const tests = [
+  {
+    name:
+      "에브리봇 로봇청소기 AI 올인원 Q9 인공지능 자동 화이트, 단품",
+
+    url:
+      "https://smartstore.naver.com/main/products/10775617216",
+  },
+
+  {
+    name:
+      "모바 P70 Pro Ultra 물걸레 로봇청소기 RGB 센서 온수세척 고온건조 물걸레 확장",
+
+    url:
+      "https://smartstore.naver.com/main/products/13280227814",
+  },
+];
+
+async function main() {
+  for (const item of tests) {
+    console.log("");
+    console.log("==============================");
+    console.log("상품:", item.name);
+
+    const started =
+      Date.now();
+
+    try {
+      const result =
+        await resolveNaverBrandProductUrl(
+          item.url,
+          item.name,
+        );
+
+      console.log(
+        "TIME:",
+        Math.round(
+          (Date.now() - started) /
+            1000,
+        ),
+        "초",
+      );
+
+      console.log(
+        JSON.stringify(
+          result,
+          null,
+          2,
+        ),
+      );
+    } catch (error) {
+      console.log(
+        "ERROR:",
+        error instanceof Error
+          ? error.message
+          : error,
+      );
+    }
+  }
+}
+
+main();

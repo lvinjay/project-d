@@ -1,13 +1,25 @@
-import OpenAI from "openai";
-import { createHash } from "node:crypto";
-import { NextResponse } from "next/server";
-import { supabase } from "../../../lib/supabase";
+﻿import OpenAI from "openai";
+import {
+  createHash,
+} from "node:crypto";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+import {
+  NextResponse,
+} from "next/server";
+
+import {
+  supabaseAdmin,
+} from "../../../lib/supabaseAdmin";
+
+export const runtime =
+  "nodejs";
+
+export const dynamic =
+  "force-dynamic";
 
 type RequestBody = {
   category?: unknown;
+  productIds?: unknown;
 };
 
 type Criterion = {
@@ -16,39 +28,84 @@ type Criterion = {
   shortDescription?: string;
   helpText?: string;
   sourceType?: string;
+  defaultWeight?: number;
 };
 
 type ProductRow = {
   id: string;
   product_name: string;
   source_url: string;
-  review_analysis: Record<string, unknown> | null;
-  product_detail_analysis: Record<string, unknown> | null;
-  criterion_scores: Record<string, unknown> | null;
+
+  review_analysis:
+    | Record<string, unknown>
+    | null;
+
+  product_detail_analysis:
+    | Record<string, unknown>
+    | null;
+
+  criterion_scores:
+    | Record<string, unknown>
+    | null;
 };
 
 type ScoreResult = {
   productId: string;
-  criterionScores: Record<string, number | null>;
-  criterionReasons: Record<string, string>;
+
+  criterionScores:
+    Record<
+      string,
+      number | null
+    >;
+
+  criterionReasons:
+    Record<
+      string,
+      string
+    >;
 };
 
-function normalizeText(value: unknown) {
-  return typeof value === "string" ? value.trim() : "";
+function normalizeText(
+  value: unknown,
+) {
+  return typeof value === "string"
+    ? value.trim()
+    : "";
 }
 
-function extractJson(text: string) {
-  const cleaned = text
-    .replace(/^```json\s*/i, "")
-    .replace(/^```\s*/i, "")
-    .replace(/\s*```$/i, "")
-    .trim();
+function extractJson(
+  text: string,
+) {
+  const cleaned =
+    text
+      .replace(
+        /^```json\s*/i,
+        "",
+      )
+      .replace(
+        /^```\s*/i,
+        "",
+      )
+      .replace(
+        /\s*```$/i,
+        "",
+      )
+      .trim();
 
-  return JSON.parse(cleaned) as Record<string, unknown>;
+  return JSON.parse(
+    cleaned,
+  ) as Record<
+    string,
+    unknown
+  >;
 }
 
-function normalizeScore(value: unknown): number | null {
-  if (value === null) return null;
+function normalizeScore(
+  value: unknown,
+): number | null {
+  if (value === null) {
+    return null;
+  }
 
   const numberValue =
     typeof value === "number"
@@ -57,9 +114,23 @@ function normalizeScore(value: unknown): number | null {
         ? Number(value)
         : NaN;
 
-  if (!Number.isFinite(numberValue)) return null;
+  if (
+    !Number.isFinite(
+      numberValue,
+    )
+  ) {
+    return null;
+  }
 
-  return Math.max(0, Math.min(100, Math.round(numberValue)));
+  return Math.max(
+    0,
+    Math.min(
+      100,
+      Math.round(
+        numberValue,
+      ),
+    ),
+  );
 }
 
 function normalizeResults(
@@ -67,415 +138,877 @@ function normalizeResults(
   productIds: Set<string>,
   criterionKeys: string[],
 ): ScoreResult[] {
-  if (!Array.isArray(value)) return [];
-
-  const keySet = new Set(criterionKeys);
+  if (!Array.isArray(value)) {
+    return [];
+  }
 
   return value
-    .map((item) => {
-      if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+    .map(
+      (item) => {
+        if (
+          !item ||
+          typeof item !==
+            "object" ||
+          Array.isArray(item)
+        ) {
+          return null;
+        }
 
-      const row = item as Record<string, unknown>;
-      const productId = normalizeText(row.productId);
+        const row =
+          item as Record<
+            string,
+            unknown
+          >;
 
-      if (!productId || !productIds.has(productId)) return null;
+        const productId =
+          normalizeText(
+            row.productId,
+          );
 
-      const rawScores =
-        row.criterionScores &&
-        typeof row.criterionScores === "object" &&
-        !Array.isArray(row.criterionScores)
-          ? (row.criterionScores as Record<string, unknown>)
-          : {};
+        if (
+          !productId ||
+          !productIds.has(
+            productId,
+          )
+        ) {
+          return null;
+        }
 
-      const rawReasons =
-        row.criterionReasons &&
-        typeof row.criterionReasons === "object" &&
-        !Array.isArray(row.criterionReasons)
-          ? (row.criterionReasons as Record<string, unknown>)
-          : {};
+        const rawScores =
+          row.criterionScores &&
+          typeof row
+            .criterionScores ===
+            "object" &&
+          !Array.isArray(
+            row.criterionScores,
+          )
+            ? (
+                row.criterionScores as Record<
+                  string,
+                  unknown
+                >
+              )
+            : {};
 
-      const criterionScores: Record<string, number | null> = {};
-      const criterionReasons: Record<string, string> = {};
+        const rawReasons =
+          row.criterionReasons &&
+          typeof row
+            .criterionReasons ===
+            "object" &&
+          !Array.isArray(
+            row.criterionReasons,
+          )
+            ? (
+                row.criterionReasons as Record<
+                  string,
+                  unknown
+                >
+              )
+            : {};
 
-      for (const key of criterionKeys) {
-        if (!keySet.has(key)) continue;
+        const criterionScores:
+          Record<
+            string,
+            number | null
+          > = {};
 
-        criterionScores[key] = normalizeScore(rawScores[key]);
+        const criterionReasons:
+          Record<
+            string,
+            string
+          > = {};
 
-        const reason = normalizeText(rawReasons[key]);
-        criterionReasons[key] =
-          reason || "현재 수집된 상세정보와 리뷰만으로는 충분한 평가 근거가 없습니다.";
-      }
+        for (
+          const key of
+          criterionKeys
+        ) {
+          criterionScores[key] =
+            normalizeScore(
+              rawScores[key],
+            );
 
-      return {
-        productId,
-        criterionScores,
-        criterionReasons,
-      };
-    })
-    .filter((item): item is ScoreResult => Boolean(item));
+          criterionReasons[key] =
+            normalizeText(
+              rawReasons[key],
+            ) ||
+            "현재 확보된 근거만으로는 명확한 점수 차이를 설명하기 어렵습니다.";
+        }
+
+        return {
+          productId,
+          criterionScores,
+          criterionReasons,
+        };
+      },
+    )
+    .filter(
+      (
+        item,
+      ): item is ScoreResult =>
+        Boolean(item),
+    );
 }
 
-
-function stableStringify(value: unknown): string {
-  if (value === null || typeof value !== "object") {
-    return JSON.stringify(value);
+function stableStringify(
+  value: unknown,
+): string {
+  if (
+    value === null ||
+    typeof value !==
+      "object"
+  ) {
+    return JSON.stringify(
+      value,
+    );
   }
 
-  if (Array.isArray(value)) {
-    return `[${value.map((item) => stableStringify(item)).join(",")}]`;
+  if (
+    Array.isArray(value)
+  ) {
+    return `[${value
+      .map(
+        (item) =>
+          stableStringify(
+            item,
+          ),
+      )
+      .join(",")}]`;
   }
 
-  const row = value as Record<string, unknown>;
-  const keys = Object.keys(row).sort();
+  const row =
+    value as Record<
+      string,
+      unknown
+    >;
+
+  const keys =
+    Object.keys(row)
+      .sort();
 
   return `{${keys
     .map(
       (key) =>
-        `${JSON.stringify(key)}:${stableStringify(row[key])}`,
+        `${JSON.stringify(
+          key,
+        )}:${stableStringify(
+          row[key],
+        )}`,
     )
     .join(",")}}`;
 }
 
-function createScoreFingerprint(value: unknown) {
-  return createHash("sha256")
-    .update(stableStringify(value))
-    .digest("hex");
+function createFingerprint(
+  value: unknown,
+) {
+  return createHash(
+    "sha256",
+  )
+    .update(
+      stableStringify(
+        value,
+      ),
+    )
+    .digest(
+      "hex",
+    );
 }
 
-function getReviewAnalysisForFingerprint(
-  value: Record<string, unknown> | null,
+function hasCompleteScores(
+  scores:
+    | Record<
+        string,
+        unknown
+      >
+    | null,
+  criterionKeys:
+    string[],
 ) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return null;
-  }
-
-  const {
-    criterionReasons: _criterionReasons,
-    criterion_reasons: _criterionReasonsSnake,
-    ...reviewOnlyFields
-  } = value;
-
-  return reviewOnlyFields;
-}
-
-function hasCompleteCriterionScores(
-  scores: Record<string, unknown> | null,
-  criterionKeys: string[],
-) {
-  if (!scores || typeof scores !== "object" || Array.isArray(scores)) {
+  if (
+    !scores ||
+    typeof scores !==
+      "object" ||
+    Array.isArray(scores)
+  ) {
     return false;
   }
 
-  return criterionKeys.every((key) => {
-    const value = scores[key];
+  return criterionKeys.every(
+    (key) => {
+      const value =
+        scores[key];
 
-    if (value === null) {
-      return true;
-    }
+      if (
+        value === null
+      ) {
+        return true;
+      }
 
-    const numberValue =
-      typeof value === "number"
-        ? value
-        : typeof value === "string"
-          ? Number(value)
-          : NaN;
+      const numberValue =
+        typeof value ===
+          "number"
+          ? value
+          : typeof value ===
+              "string"
+            ? Number(
+                value,
+              )
+            : NaN;
 
-    return (
-      Number.isFinite(numberValue) &&
-      numberValue >= 0 &&
-      numberValue <= 100
-    );
-  });
+      return (
+        Number.isFinite(
+          numberValue,
+        ) &&
+        numberValue >= 0 &&
+        numberValue <= 100
+      );
+    },
+  );
 }
 
-export async function POST(request: Request) {
+export async function POST(
+  request: Request,
+) {
   try {
-    const body = (await request.json()) as RequestBody;
-    const category = normalizeText(body.category);
+    const body =
+      (
+        await request.json()
+      ) as RequestBody;
+
+    const category =
+      normalizeText(
+        body.category,
+      );
+
+    const requestedProductIds =
+      Array.isArray(
+        body.productIds,
+      )
+        ? [
+            ...new Set(
+              body.productIds
+                .map(
+                  (value) =>
+                    normalizeText(
+                      value,
+                    ),
+                )
+                .filter(Boolean),
+            ),
+          ]
+        : [];
 
     if (!category) {
       return NextResponse.json(
-        { success: false, message: "카테고리가 필요합니다." },
-        { status: 400 },
+        {
+          success: false,
+          message:
+            "카테고리가 필요합니다.",
+        },
+        {
+          status: 400,
+        },
       );
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey =
+      process.env
+        .OPENAI_API_KEY;
 
     if (!apiKey) {
       return NextResponse.json(
-        { success: false, message: "OPENAI_API_KEY가 설정되지 않았습니다." },
-        { status: 500 },
+        {
+          success: false,
+          message:
+            "OPENAI_API_KEY가 설정되지 않았습니다.",
+        },
+        {
+          status: 500,
+        },
       );
     }
 
-    const { data: profile, error: profileError } = await supabase
-      .from("category_profiles")
-      .select("category, criteria, common_cautions, updated_at, score_generation_fingerprint, score_generated_at")
-      .eq("category", category)
-      .maybeSingle();
+    const {
+      data: profile,
+      error:
+        profileError,
+    } =
+      await supabaseAdmin
+        .from(
+          "category_profiles",
+        )
+        .select(
+          "category, criteria, common_cautions, score_generation_fingerprint, score_generated_at",
+        )
+        .eq(
+          "category",
+          category,
+        )
+        .maybeSingle();
 
-    if (profileError) throw profileError;
+    if (profileError) {
+      throw profileError;
+    }
 
     if (!profile) {
       return NextResponse.json(
         {
           success: false,
-          message: "먼저 이 카테고리의 AI 구매기준을 생성해 주세요.",
+          message:
+            "먼저 이 카테고리의 구매기준을 생성해 주세요.",
         },
-        { status: 404 },
-      );
-    }
-
-    const criteria = Array.isArray(profile.criteria)
-      ? (profile.criteria as Criterion[])
-          .map((criterion) => ({
-            key: normalizeText(criterion.key),
-            label: normalizeText(criterion.label),
-            shortDescription: normalizeText(criterion.shortDescription),
-            helpText: normalizeText(criterion.helpText),
-            sourceType: normalizeText(criterion.sourceType),
-          }))
-          .filter((criterion) => criterion.key && criterion.label)
-          .slice(0, 5)
-      : [];
-
-    if (criteria.length === 0) {
-      return NextResponse.json(
         {
-          success: false,
-          message: "제품 점수를 만들 구매기준이 없습니다.",
+          status: 404,
         },
-        { status: 400 },
       );
     }
 
-    const { data, error } = await supabase
-      .from("products")
-      .select(
-        "id, product_name, source_url, review_analysis, product_detail_analysis, criterion_scores",
+    const criteria =
+      Array.isArray(
+        profile.criteria,
       )
-      .eq("category", category)
-      .order("created_at", { ascending: true });
+        ? (
+            profile.criteria as Criterion[]
+          )
+            .map(
+              (
+                criterion,
+              ) => ({
+                key:
+                  normalizeText(
+                    criterion.key,
+                  ),
 
-    if (error) throw error;
+                label:
+                  normalizeText(
+                    criterion.label,
+                  ),
 
-    const products = (data ?? []) as ProductRow[];
+                shortDescription:
+                  normalizeText(
+                    criterion.shortDescription,
+                  ),
 
-    if (products.length < 2) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "제품별 비교 점수를 만들려면 같은 카테고리 제품이 최소 2개 필요합니다.",
-        },
-        { status: 400 },
-      );
-    }
+                helpText:
+                  normalizeText(
+                    criterion.helpText,
+                  ),
 
-    const criterionKeys = criteria.map((criterion) => criterion.key);
+                sourceType:
+                  normalizeText(
+                    criterion.sourceType,
+                  ),
 
-    const scoreFingerprint = createScoreFingerprint({
-      category,
-      criteria,
-      commonCautions: Array.isArray(profile.common_cautions)
-        ? profile.common_cautions
-        : [],
-      products: products.map((product) => ({
-        id: product.id,
-        productName: product.product_name,
-        sourceUrl: product.source_url,
-        reviewAnalysis: getReviewAnalysisForFingerprint(
-          product.review_analysis,
-        ),
-        productDetailAnalysis: product.product_detail_analysis,
-      })),
-    });
-
-    const cachedFingerprint =
-      normalizeText(profile.score_generation_fingerprint);
-
-    const allProductsHaveScores = products.every((product) =>
-      hasCompleteCriterionScores(
-        product.criterion_scores,
-        criterionKeys,
-      ),
-    );
+                defaultWeight:
+                  Number(
+                    criterion.defaultWeight ??
+                      5,
+                  ),
+              }),
+            )
+            .filter(
+              (
+                criterion,
+              ) =>
+                criterion.key &&
+                criterion.label,
+            )
+            .slice(
+              0,
+              5,
+            )
+        : [];
 
     if (
-      cachedFingerprint === scoreFingerprint &&
-      allProductsHaveScores
+      criteria.length !== 5
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            `구매기준이 정확히 5개여야 합니다. 현재 ${criteria.length}개입니다.`,
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    let productsQuery =
+      supabaseAdmin
+        .from(
+          "products",
+        )
+        .select(
+          "id, product_name, source_url, review_analysis, product_detail_analysis, criterion_scores",
+        )
+        .eq(
+          "category",
+          category,
+        );
+
+    if (
+      requestedProductIds.length >
+      0
+    ) {
+      productsQuery =
+        productsQuery.in(
+          "id",
+          requestedProductIds,
+        );
+    }
+
+    const {
+      data,
+      error,
+    } =
+      await productsQuery
+        .order(
+          "created_at",
+          {
+            ascending: true,
+          },
+        );
+
+    if (error) {
+      throw error;
+    }
+
+    const products =
+      (
+        data ?? []
+      ) as ProductRow[];
+
+    if (
+      requestedProductIds.length >
+        0 &&
+      products.length !==
+        requestedProductIds.length
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            `요청한 제품 ${requestedProductIds.length}개 중 ${products.length}개만 확인됐습니다.`,
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    if (
+      products.length < 2
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "제품 상대평가를 위해 최소 2개 제품이 필요합니다.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    const criterionKeys =
+      criteria.map(
+        (
+          criterion,
+        ) =>
+          criterion.key,
+      );
+
+    const fingerprint =
+      createFingerprint({
+        category,
+        criteria,
+
+        commonCautions:
+          Array.isArray(
+            profile.common_cautions,
+          )
+            ? profile.common_cautions
+            : [],
+
+        products:
+          products.map(
+            (
+              product,
+            ) => ({
+              id:
+                product.id,
+
+              productName:
+                product.product_name,
+
+              sourceUrl:
+                product.source_url,
+
+              reviewAnalysis:
+                product.review_analysis,
+
+              productDetailAnalysis:
+                product.product_detail_analysis,
+            }),
+          ),
+      });
+
+    const cachedFingerprint =
+      normalizeText(
+        profile
+          .score_generation_fingerprint,
+      );
+
+    const allHaveScores =
+      products.every(
+        (
+          product,
+        ) =>
+          hasCompleteScores(
+            product
+              .criterion_scores,
+            criterionKeys,
+          ),
+      );
+
+    if (
+      cachedFingerprint ===
+        fingerprint &&
+      allHaveScores
     ) {
       return NextResponse.json({
         success: true,
         cacheHit: true,
         category,
-        productCount: products.length,
-        criterionCount: criteria.length,
-        scoreGeneratedAt: profile.score_generated_at ?? null,
+        productCount:
+          products.length,
+        criterionCount:
+          criteria.length,
+        scoreGeneratedAt:
+          profile
+            .score_generated_at ??
+          null,
         message:
-          "리뷰·상세정보·구매기준 변경이 없어 기존 제품별 점수를 그대로 사용합니다.",
+          "제품 근거가 변경되지 않아 기존 AI 점수를 그대로 사용합니다.",
       });
     }
 
-    const evidenceProducts = products.map((product) => ({
-      productId: product.id,
-      productName: product.product_name,
-      sourceUrl: product.source_url,
-      productDetailAnalysis: product.product_detail_analysis,
-      reviewAnalysis: product.review_analysis,
-    }));
+    const evidenceProducts =
+      products.map(
+        (
+          product,
+        ) => ({
+          productId:
+            product.id,
 
-    const client = new OpenAI({ apiKey });
+          productName:
+            product.product_name,
+
+          sourceUrl:
+            product.source_url,
+
+          productDetailAnalysis:
+            product.product_detail_analysis,
+
+          reviewAnalysis:
+            product.review_analysis,
+        }),
+      );
+
+    const client =
+      new OpenAI({
+        apiKey,
+      });
 
     const prompt = `
-당신은 Project D의 제품 비교 평가 엔진입니다.
+당신은 Project D의 제품 상대평가 엔진입니다.
 
 카테고리:
 ${category}
 
-이 카테고리에서 이미 선정된 핵심 구매기준:
-${JSON.stringify(criteria, null, 2)}
+현재 카테고리의 핵심 구매기준:
+${JSON.stringify(
+  criteria,
+  null,
+  2,
+)}
 
-AI가 전체 비교제품을 함께 분석해 확인한 제품군 공통 한계:
-${JSON.stringify(Array.isArray(profile.common_cautions) ? profile.common_cautions : [], null, 2)}
+비교 대상 제품과 확보된 실제 근거:
+${JSON.stringify(
+  evidenceProducts,
+  null,
+  2,
+)}
 
-비교할 제품과 수집된 근거:
-${JSON.stringify(evidenceProducts, null, 2)}
+평가 목표:
 
-목표:
-같은 카테고리의 제품들을 서로 비교하여, 각 제품을 위 구매기준별로 0~100점으로 평가합니다.
-이 점수는 이후 사용자의 중요도와 맞춤 질문 답변을 반영해 최종 추천 순위를 계산하는 데 사용됩니다.
+같은 카테고리의 제품들을 서로 직접 비교하여
+각 제품을 각 구매기준별로 0~100점으로 평가하세요.
 
-평가 원칙:
-- 제품끼리 상대 비교가 가능하도록 같은 눈금으로 평가하세요.
-- 위 "제품군 공통 한계"는 여러 비교제품에 공통으로 존재하는 특성이므로 특정 제품만의 약점처럼 상대 감점하지 마세요.
-- 공통 한계가 모든 제품에 동일하게 적용된다면 그 사실 자체는 제품 간 점수 차이를 만드는 근거로 사용하지 마세요.
-- 같은 공통 한계라도 특정 제품이 다른 후보보다 명확히 더 심하거나 더 잘 해결했다는 근거가 있을 때만 그 차이를 점수에 반영하세요.
-- 특정 제품에서만 반복되는 고장, 누수, 설치 불편, 소음, A/S 문제 등 고유 약점은 해당 기준 점수에 상대적으로 반영하세요.
-- criterionReasons에서도 공통 한계와 제품 고유 약점을 혼동하지 말고, 점수 차이가 생긴 이유를 제품 간 차이 중심으로 설명하세요.
-- 90~100: 현재 비교 제품 중 매우 강한 수준
-- 75~89: 강점이 뚜렷한 수준
-- 60~74: 평균 이상 또는 무난한 수준
-- 40~59: 아쉬움이나 제약이 분명한 수준
-- 0~39: 이 기준에서 큰 약점이 있는 수준
-- 근거가 정말 부족해서 판단할 수 없으면 null을 사용하세요.
-- 상세페이지의 판매자 주장만 믿지 말고 실제 리뷰와 함께 판단하세요.
-- 정확한 수치가 제공되지 않았다면 수치를 만들어내지 마세요.
-- 가격/가성비 기준은 실제 가격 정보와 구성, 기능, 리뷰를 함께 보세요.
-- 소음, 냉방 체감, 배수, 내구성처럼 실사용 경험이 중요한 기준은 리뷰를 적극 반영하세요.
-- 한 제품의 점수를 먼저 정하고 다른 제품을 맞추지 말고, 모든 제품을 한 번에 비교해 일관된 상대 점수를 만드세요.
-- criterionReasons에는 왜 그 점수를 줬는지 1~2문장으로 구체적인 근거를 적으세요.
-- 반드시 아래 criteria key만 사용하세요.
-- JSON만 출력하세요.
+중요 원칙:
 
-출력 형식:
+1. 모든 제품을 같은 기준과 같은 척도로 평가하세요.
+2. productDetailAnalysis와 reviewAnalysis에 있는 근거만 사용하세요.
+3. 근거가 없는 사양이나 성능은 추측하지 마세요.
+4. 제품 상세페이지의 판매 문구보다 실제 리뷰 분석을 중요하게 보세요.
+5. 리뷰에서 반복적으로 확인된 장점과 단점은 점수에 적극 반영하세요.
+6. 한두 리뷰에서만 나타난 문제는 지나치게 크게 반영하지 마세요.
+7. 같은 문제가 여러 제품에 공통적으로 존재한다면 특정 제품만 과도하게 감점하지 마세요.
+8. 특정 제품에서 반복적으로 나타나는 고유한 오류·불편은 해당 기준 점수에 반영하세요.
+9. 현재 5개 제품 사이에서 실제 상대적 차이가 드러나도록 평가하세요.
+10. 점수 차이를 억지로 만들지는 마세요.
+11. 두 제품의 근거 수준과 실제 성능이 비슷하면 비슷한 점수를 줄 수 있습니다.
+12. 현재 확보된 근거만으로 판단할 수 없는 기준은 null을 사용하세요.
+13. 가격 자체는 구매기준에 포함되어 있지 않다면 점수에 임의 반영하지 마세요.
+14. 리뷰 수가 많은 것은 정보 신뢰성을 높이는 보조근거일 뿐, 제품 성능 자체와 동일시하지 마세요.
+15. criterionReasons는 왜 그 점수를 줬는지 제품 간 차이를 중심으로 1~2문장으로 설명하세요.
+16. 반드시 아래 5개의 실제 criteria key만 사용하세요.
+17. JSON만 출력하세요. 마크다운은 사용하지 마세요.
+
+점수 기준:
+
+90~100:
+현재 비교 제품 중 해당 기준에서 매우 강하고 반복적인 긍정 근거가 있음
+
+75~89:
+강점이 뚜렷하고 일부 단점은 있으나 전체적으로 우수함
+
+60~74:
+평균 이상이지만 뚜렷한 제약이나 혼재된 평가가 있음
+
+40~59:
+약점 또는 불확실성이 비교적 큼
+
+0~39:
+반복적인 심각한 문제나 뚜렷한 열위 근거가 있음
+
+근거 부족:
+null
+
+반드시 사용해야 하는 criteria key:
+
+${criterionKeys.join(
+  ", ",
+)}
+
+반환 형식:
+
 {
   "products": [
     {
-      "productId": "입력에 있는 실제 productId",
+      "productId": "입력으로 제공된 실제 UUID productId",
       "criterionScores": {
-        "criteria의 실제 key": 0
+        "${criterionKeys[0]}": 0,
+        "${criterionKeys[1]}": 0,
+        "${criterionKeys[2]}": 0,
+        "${criterionKeys[3]}": 0,
+        "${criterionKeys[4]}": 0
       },
       "criterionReasons": {
-        "criteria의 실제 key": "점수 근거"
+        "${criterionKeys[0]}": "점수 근거",
+        "${criterionKeys[1]}": "점수 근거",
+        "${criterionKeys[2]}": "점수 근거",
+        "${criterionKeys[3]}": "점수 근거",
+        "${criterionKeys[4]}": "점수 근거"
       }
     }
   ]
 }
+
+반드시 비교 대상 모든 제품을 반환하세요.
 `;
 
-    const response = await client.responses.create({
-      model: "gpt-5",
-      input: prompt,
-    });
+    const response =
+      await client.responses.create(
+        {
+          model:
+            "gpt-5",
+          input:
+            prompt,
+        },
+      );
 
-    const outputText = response.output_text?.trim();
+    const outputText =
+      response
+        .output_text
+        ?.trim();
 
     if (!outputText) {
-      throw new Error("AI가 제품별 기준 점수를 반환하지 않았습니다.");
+      throw new Error(
+        "AI가 제품별 점수를 반환하지 않았습니다.",
+      );
     }
 
-    const parsed = extractJson(outputText);
-    const productIds = new Set(products.map((product) => product.id));
+    const parsed =
+      extractJson(
+        outputText,
+      );
 
-    const scoreResults = normalizeResults(
-      parsed.products,
-      productIds,
-      criterionKeys,
-    );
+    const productIds =
+      new Set(
+        products.map(
+          (
+            product,
+          ) =>
+            product.id,
+        ),
+      );
 
-    if (scoreResults.length !== products.length) {
+    const scoreResults =
+      normalizeResults(
+        parsed.products,
+        productIds,
+        criterionKeys,
+      );
+
+    if (
+      scoreResults.length !==
+      products.length
+    ) {
       throw new Error(
         `AI 제품 평가 결과가 완전하지 않습니다. ${products.length}개 중 ${scoreResults.length}개만 반환되었습니다.`,
       );
     }
 
-    for (const product of products) {
-      const scoreResult = scoreResults.find(
-        (item) => item.productId === product.id,
-      );
+    for (
+      const product of
+      products
+    ) {
+      const scoreResult =
+        scoreResults.find(
+          (
+            item,
+          ) =>
+            item.productId ===
+            product.id,
+        );
 
-      if (!scoreResult) continue;
+      if (!scoreResult) {
+        continue;
+      }
 
       const existingReview =
         product.review_analysis &&
-        typeof product.review_analysis === "object" &&
-        !Array.isArray(product.review_analysis)
+        typeof product
+          .review_analysis ===
+          "object" &&
+        !Array.isArray(
+          product.review_analysis,
+        )
           ? product.review_analysis
           : {};
 
       const mergedReviewAnalysis = {
         ...existingReview,
-        criterionReasons: scoreResult.criterionReasons,
-        criterion_reasons: scoreResult.criterionReasons,
+
+        criterionReasons:
+          scoreResult
+            .criterionReasons,
+
+        criterion_reasons:
+          scoreResult
+            .criterionReasons,
       };
 
-      const { error: updateError } = await supabase
-        .from("products")
-        .update({
-          criterion_scores: scoreResult.criterionScores,
-          review_analysis: mergedReviewAnalysis,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", product.id);
+      const {
+        error:
+          updateError,
+      } =
+        await supabaseAdmin
+          .from(
+            "products",
+          )
+          .update({
+            criterion_scores:
+              scoreResult
+                .criterionScores,
 
-      if (updateError) throw updateError;
+            review_analysis:
+              mergedReviewAnalysis,
+
+            updated_at:
+              new Date()
+                .toISOString(),
+          })
+          .eq(
+            "id",
+            product.id,
+          );
+
+      if (updateError) {
+        throw updateError;
+      }
     }
 
-    const scoreGeneratedAt = new Date().toISOString();
+    const scoreGeneratedAt =
+      new Date()
+        .toISOString();
 
-    const { error: profileUpdateError } = await supabase
-      .from("category_profiles")
-      .update({
-        score_generation_fingerprint: scoreFingerprint,
-        score_generated_at: scoreGeneratedAt,
-      })
-      .eq("category", category);
+    const {
+      error:
+        profileUpdateError,
+    } =
+      await supabaseAdmin
+        .from(
+          "category_profiles",
+        )
+        .update({
+          score_generation_fingerprint:
+            fingerprint,
 
-    if (profileUpdateError) throw profileUpdateError;
+          score_generated_at:
+            scoreGeneratedAt,
+        })
+        .eq(
+          "category",
+          category,
+        );
+
+    if (
+      profileUpdateError
+    ) {
+      throw profileUpdateError;
+    }
 
     return NextResponse.json({
       success: true,
       cacheHit: false,
       category,
-      productCount: products.length,
-      criterionCount: criteria.length,
+
+      productCount:
+        products.length,
+
+      criterionCount:
+        criteria.length,
+
       scoreGeneratedAt,
-      message: `${products.length}개 제품을 현재 구매기준 ${criteria.length}개로 AI 평가해 제품별 점수와 근거를 저장했습니다.`,
+
+      scores:
+        scoreResults,
+
+      message:
+        `${products.length}개 제품을 구매기준 ${criteria.length}개로 상대평가해 점수와 근거를 저장했습니다.`,
     });
   } catch (error) {
-    console.error("Generate product scores API error:", error);
+    console.error(
+      "Generate product scores API error:",
+      error,
+    );
 
     return NextResponse.json(
       {
         success: false,
+
         message:
           error instanceof Error
             ? error.message
-            : "제품별 AI 기준 점수를 생성하지 못했습니다.",
+            : "제품별 AI 점수 생성 중 오류가 발생했습니다.",
       },
-      { status: 500 },
+      {
+        status: 500,
+      },
     );
   }
 }
+

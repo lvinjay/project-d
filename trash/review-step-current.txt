@@ -1,0 +1,11 @@
+﻿"use client";
+
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
+type Candidate = {
+  name: string;
+  text: string;

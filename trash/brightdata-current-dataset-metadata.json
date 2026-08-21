@@ -1,0 +1,593 @@
+{
+  "id": "gd_m9qqjxxr1hab7okefj",
+  "fields": {
+    "url": {
+      "type": "url",
+      "required": true,
+      "active": true,
+      "default_value": "undefined",
+      "description": "Product page URL on Naver",
+      "ai_description": "Product URLs from Naver Shopping platform.\nContains full HTTPS URLs pointing to Naver product detail pages, with no null values."
+    },
+    "product_id": {
+      "type": "text",
+      "active": true,
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Unique product identifier",
+      "ai_description": "Product identifier used as primary key in Naver Shopping catalog.\nContains unique alphanumeric or numeric string values with no empty values."
+    },
+    "title": {
+      "type": "text",
+      "active": true,
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Product title or name",
+      "ai_description": "Product title column containing item names in Korean and English.\nContains full product names with specifications, brand, and variant details, typically no empty values."
+    },
+    "original_price": {
+      "type": "text",
+      "active": true,
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Original price before discount",
+      "ai_description": "Original price of the product before any discounts.\nText representation of price values, typically in KRW (Korean Won), may contain null values."
+    },
+    "final_price": {
+      "type": "number",
+      "active": true,
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Final price after discount",
+      "ai_description": "Final price of the product after any applicable discount.\nNumeric value typically in KRW (Korean Won), with no decimal places, may contain null values."
+    },
+    "discount_rate": {
+      "type": "number",
+      "active": true,
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Discount percentage applied to the product",
+      "ai_description": "Discount percentage applied to the product's price.\nNumeric values ranging from 0 to 100, representing percentage off, may contain null values."
+    },
+    "currency": {
+      "type": "text",
+      "active": true,
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Currency code (e.g., USD, KRW)",
+      "ai_description": "The currency column stores the three-letter currency code.\nValues are standard ISO 4217 currency codes, with KRW being the predominant value for Naver Shopping listings.",
+      "quick_filter": true
+    },
+    "description": {
+      "type": "text",
+      "active": true,
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Short description or overview of the product",
+      "ai_description": "Product description text containing item details.\nContains marketing text in Korean and English describing product features, benefits, and specifications, with some null values present."
+    },
+    "images": {
+      "type": "array",
+      "active": true,
+      "normalize": {
+        "empty": "keep"
+      },
+      "items": {
+        "type": "object",
+        "normalize": null,
+        "fields": {
+          "link": {
+            "type": "url",
+            "active": true,
+            "draft_field": true,
+            "default_value": "null",
+            "description": "URL of the product image"
+          }
+        },
+        "default_value": "undefined"
+      },
+      "draft_field": true,
+      "default_value": "null",
+      "description": "List of product image URLs",
+      "ai_description": "Array of product image objects containing image URLs.\nEach element is an object with a 'link' field pointing to product image, hosted on Naver's CDN domain."
+    },
+    "tags": {
+      "type": "array",
+      "active": true,
+      "normalize": {
+        "empty": "keep"
+      },
+      "items": {
+        "type": "text",
+        "normalize": null,
+        "default_value": "undefined",
+        "description": "A single product tag/keyword"
+      },
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Tags or keywords related to the product",
+      "ai_description": "Product tags or keywords for categorization and search.\nArray of text strings representing relevant attributes and descriptors, may contain null values."
+    },
+    "breadcrumbs": {
+      "type": "array",
+      "active": true,
+      "normalize": {
+        "empty": "keep"
+      },
+      "items": {
+        "type": "text",
+        "normalize": null,
+        "default_value": "undefined",
+        "description": "A single category level in the breadcrumb hierarchy"
+      },
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Category path (e.g., Electronics > Phones > Smartphones)",
+      "ai_description": "Product category navigation path from root to leaf.\nArray of category names in hierarchical order, typically 2-5 levels deep, in Korean and/or English."
+    },
+    "in_stock": {
+      "type": "number",
+      "active": true,
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Number of items available in stock",
+      "ai_description": "Quantity of items currently in stock.\nNon-negative integer values representing available inventory, may contain null values."
+    },
+    "sold_out": {
+      "type": "boolean",
+      "active": true,
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Indicates if the product is sold out (true/false)",
+      "ai_description": "Boolean flag indicating sold-out status of the product.\nTrue when product is out of stock, false when available, may contain null values."
+    },
+    "delivery_fee_type": {
+      "type": "text",
+      "active": true,
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Type of delivery fee (e.g., free, conditional, paid)",
+      "ai_description": "Type of shipping fee model applied to the product.\nText values such as 'free', 'conditional', or 'paid', describing the shipping cost structure."
+    },
+    "free_shipping_minimum": {
+      "type": "number",
+      "active": true,
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Minimum order amount required for free shipping",
+      "ai_description": "Minimum order amount required to qualify for free shipping.\nNumeric value in local currency (KRW), null when free shipping is unconditional or unavailable."
+    },
+    "arrival_guarantee": {
+      "type": "boolean",
+      "active": true,
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Indicates if fast delivery (arrival guarantee) is available",
+      "ai_description": "Boolean flag indicating availability of Naver's arrival guarantee/fast delivery service.\nTrue when guaranteed fast delivery is offered, false otherwise, may contain null values."
+    },
+    "total_reviews": {
+      "type": "number",
+      "active": true,
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Total number of customer reviews",
+      "ai_description": "Total count of customer reviews received by the product.\nNon-negative integer values, may contain null values."
+    },
+    "average_rating": {
+      "type": "number",
+      "active": true,
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Average customer rating (e.g., 4.5)",
+      "ai_description": "Average customer rating score on a 0-5 scale.\nDecimal values with one decimal precision, representing aggregated customer satisfaction, may contain null values."
+    },
+    "variations": {
+      "type": "array",
+      "active": true,
+      "normalize": {
+        "empty": "keep"
+      },
+      "items": {
+        "type": "object",
+        "normalize": null,
+        "fields": {
+          "type": {
+            "type": "text",
+            "active": true,
+            "draft_field": true,
+            "default_value": "null",
+            "description": "Variation type (e.g., color, size)"
+          },
+          "value": {
+            "type": "array",
+            "active": true,
+            "normalize": {
+              "empty": "keep"
+            },
+            "items": {
+              "type": "text",
+              "normalize": null,
+              "default_value": "undefined",
+              "description": "A single available option value for this variation type"
+            },
+            "draft_field": true,
+            "default_value": "null",
+            "description": "List of possible values for the variation"
+          }
+        },
+        "default_value": "undefined"
+      },
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Product variations (e.g., different sizes or colors)",
+      "ai_description": "Product variations stored as type-value pairs.\nEach variation contains a type (Color, Size) and an array of possible values, may contain null values."
+    },
+    "sellers": {
+      "type": "array",
+      "active": true,
+      "normalize": {
+        "empty": "keep"
+      },
+      "items": {
+        "type": "object",
+        "normalize": null,
+        "fields": {
+          "seller_name": {
+            "type": "text",
+            "active": true,
+            "draft_field": true,
+            "default_value": "null",
+            "description": "Name of the seller",
+            "pii": true
+          },
+          "final_price": {
+            "type": "number",
+            "active": true,
+            "draft_field": true,
+            "default_value": "null",
+            "description": "Seller's final price for the product"
+          },
+          "currency": {
+            "type": "text",
+            "active": true,
+            "draft_field": true,
+            "default_value": "null",
+            "description": "Currency used by the seller (e.g., KRW)"
+          },
+          "seller_link": {
+            "type": "url",
+            "active": true,
+            "draft_field": true,
+            "default_value": "null",
+            "description": "Link to the seller's page on Naver"
+          }
+        },
+        "default_value": "undefined"
+      },
+      "draft_field": true,
+      "default_value": "null",
+      "description": "List of sellers offering the product",
+      "ai_description": "Array of seller offers for the same product across Naver Shopping marketplace.\nEach element contains seller name, final price, currency, and seller URL, representing competing offers."
+    },
+    "product_information": {
+      "type": "array",
+      "active": true,
+      "normalize": {
+        "empty": "keep"
+      },
+      "items": {
+        "type": "object",
+        "normalize": null,
+        "fields": {
+          "type": {
+            "type": "text",
+            "active": true,
+            "draft_field": true,
+            "default_value": "null",
+            "description": "Name of the product information attribute (e.g., 'Brand', 'Model', 'Origin', 'Material')"
+          },
+          "value": {
+            "type": "text",
+            "active": true,
+            "draft_field": true,
+            "default_value": "null",
+            "description": "Value of the product information attribute"
+          }
+        },
+        "default_value": "undefined"
+      },
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Detailed product information as type-value attribute pairs (specifications, brand, origin, etc.)",
+      "ai_description": "Product information stored as JSON array of name-value pairs.\nEach record contains product attributes like brand, model, origin, material, and specifications, with null values present."
+    },
+    "q&a": {
+      "type": "array",
+      "active": true,
+      "normalize": {
+        "empty": "keep"
+      },
+      "items": {
+        "type": "object",
+        "normalize": null,
+        "fields": {
+          "response_status": {
+            "type": "text",
+            "active": true,
+            "draft_field": true,
+            "default_value": "null",
+            "description": "Status of the response (e.g., 'Answered', 'Pending', 'Unanswered')"
+          },
+          "title": {
+            "type": "text",
+            "active": true,
+            "draft_field": true,
+            "default_value": "null",
+            "description": "Title/subject of the customer question"
+          },
+          "author": {
+            "type": "text",
+            "active": true,
+            "draft_field": true,
+            "default_value": "null",
+            "description": "Name/username of the customer who asked the question",
+            "pii": true
+          },
+          "question_date": {
+            "type": "date",
+            "active": true,
+            "draft_field": true,
+            "default_value": "null",
+            "description": "Date when the question was asked"
+          },
+          "answer": {
+            "type": "text",
+            "active": true,
+            "draft_field": true,
+            "default_value": "null",
+            "description": "Answer text provided by the seller or Naver support"
+          },
+          "answer_date": {
+            "type": "date",
+            "active": true,
+            "draft_field": true,
+            "default_value": "null",
+            "description": "Date when the answer was posted"
+          }
+        },
+        "default_value": "undefined"
+      },
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Customer questions and answers about the product",
+      "ai_description": "Array of question-answer pairs for the product on Naver.\nContains nested objects with question title, author, dates, response status, and answer text, may be null/empty when no Q&A exists."
+    },
+    "top_reviews": {
+      "type": "array",
+      "active": true,
+      "normalize": {
+        "empty": "keep"
+      },
+      "items": {
+        "type": "object",
+        "normalize": null,
+        "fields": {
+          "rating": {
+            "type": "number",
+            "active": true,
+            "draft_field": true,
+            "default_value": "null",
+            "description": "Rating value given by the reviewer (typically 1-5 scale)"
+          },
+          "rating_date": {
+            "type": "date",
+            "active": true,
+            "draft_field": true,
+            "default_value": "null",
+            "description": "Date when the review/rating was posted"
+          },
+          "product_type": {
+            "type": "array",
+            "active": true,
+            "normalize": {
+              "empty": "keep"
+            },
+            "items": {
+              "type": "object",
+              "normalize": null,
+              "fields": {
+                "type": {
+                  "type": "text",
+                  "active": true,
+                  "draft_field": true,
+                  "default_value": "null",
+                  "description": "Name of the product variant attribute purchased by the reviewer (e.g., 'Color', 'Size')"
+                },
+                "value": {
+                  "type": "text",
+                  "active": true,
+                  "draft_field": true,
+                  "default_value": "null",
+                  "description": "Value of the product variant attribute purchased by the reviewer (e.g., 'Red', 'Large')"
+                }
+              },
+              "default_value": "undefined"
+            },
+            "draft_field": true,
+            "default_value": "null",
+            "description": "Variant/option details of the product the reviewer purchased (e.g., the specific color and size combination)"
+          },
+          "reviewer_name": {
+            "type": "text",
+            "active": true,
+            "draft_field": true,
+            "default_value": "null",
+            "description": "Name/username of the reviewer",
+            "pii": true
+          },
+          "review": {
+            "type": "text",
+            "active": true,
+            "draft_field": true,
+            "default_value": "null",
+            "description": "Full text content of the customer review"
+          },
+          "images": {
+            "type": "array",
+            "active": true,
+            "normalize": {
+              "empty": "keep"
+            },
+            "items": {
+              "type": "url",
+              "normalize": null,
+              "default_value": "undefined",
+              "description": "URL of a single image uploaded by the reviewer"
+            },
+            "draft_field": true,
+            "default_value": "null",
+            "description": "URLs of images uploaded by the reviewer in their review"
+          },
+          "videos": {
+            "type": "array",
+            "active": true,
+            "normalize": {
+              "empty": "keep"
+            },
+            "items": {
+              "type": "url",
+              "normalize": null,
+              "default_value": "undefined",
+              "description": "URL of a single video uploaded by the reviewer"
+            },
+            "draft_field": true,
+            "default_value": "null",
+            "description": "URLs of videos uploaded by the reviewer in their review"
+          },
+          "helpful_count": {
+            "type": "number",
+            "active": true,
+            "draft_field": true,
+            "default_value": "null",
+            "description": "Number of users who marked this review as helpful"
+          }
+        },
+        "default_value": "undefined"
+      },
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Top customer reviews for the product, including rating, content, media attachments, and helpfulness votes",
+      "ai_description": "Array of top customer reviews on Naver Shopping.\nEach review contains rating, date, reviewer name, content, product variant info, image/video URLs, and helpful vote count."
+    },
+    "delivery_attribute_type": {
+      "type": "text",
+      "active": true,
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Delivery attribute type/method for the product (e.g., 'Standard', 'Express', 'NaverPay Quick Delivery')",
+      "ai_description": "Type of delivery attribute specifying shipping method category.\nText values representing Naver's delivery service classifications such as standard, express, or quick delivery options.",
+      "quick_filter": true
+    },
+    "category_name": {
+      "type": "text",
+      "active": true,
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Category Name to which the product belongs",
+      "ai_description": "Name of the product category on Naver Shopping.\nText value representing the leaf-level category name from Naver's product taxonomy.",
+      "quick_filter": true
+    },
+    "status_type": {
+      "type": "text",
+      "active": true,
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Product status type (e.g., active, inactive, sold_out)",
+      "ai_description": "Status classification of the product listing.\nText value indicating current state such as active, inactive, sold-out, or discontinued.",
+      "quick_filter": true
+    },
+    "base_fee": {
+      "type": "text",
+      "active": true,
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Base fee or starting delivery/service charge for the product",
+      "ai_description": "Base shipping or service fee charged for the product.\nText representation of the fee amount, may include currency unit, with null values when fee doesn't apply."
+    },
+    "smartstore_represent_name": {
+      "type": "text",
+      "active": true,
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Naver SmartStore representative/owner name",
+      "ai_description": "Representative owner name of the Naver SmartStore.\nContains personal/business names of store owners, marked as PII.",
+      "pii": true
+    },
+    "smartstore_representative_name": {
+      "type": "text",
+      "active": true,
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Naver SmartStore representative name (alternative naming/duplicate field)",
+      "ai_description": "Representative name associated with the Naver SmartStore.\nDuplicate or alternative naming of smartstore_represent_name field, contains personal/business names marked as PII.",
+      "pii": true
+    },
+    "channel_represent_name": {
+      "type": "text",
+      "active": true,
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Sales channel representative name",
+      "ai_description": "Representative name of the sales channel.\nContains personal/business names associated with channel representation, marked as PII.",
+      "pii": true
+    },
+    "channel_representative_name": {
+      "type": "text",
+      "active": true,
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Sales channel representative name (alternative naming/duplicate field)",
+      "ai_description": "Representative name of the sales channel.\nDuplicate or alternative naming of channel_represent_name field, contains personal/business names marked as PII.",
+      "pii": true
+    },
+    "sync_nv_mid": {
+      "type": "text",
+      "active": false,
+      "draft_field": true,
+      "default_value": "null",
+      "description": "Naver MID (Merchant ID) synchronization identifier (currently inactive field)",
+      "ai_description": "Synchronization identifier for Naver merchant ID (MID).\nText value representing Naver's merchant identifier used for system synchronization."
+    },
+    "ep_info": {
+      "type": "object",
+      "active": true,
+      "fields": {
+        "sync_nv_mid": {
+          "type": "number",
+          "active": true,
+          "draft_field": true,
+          "default_value": "null",
+          "description": "Naver MID (Merchant ID) for synchronization (numeric)"
+        },
+        "naver_shopping_registration": {
+          "type": "boolean",
+          "active": true,
+          "draft_field": true,
+          "default_value": "null",
+          "description": "Indicates whether the product is registered on Naver Shopping"
+        },
+        "naver_shopping_exposure": {
+          "type": "boolean",
+          "active": true,
+          "draft_field": true,
+          "default_value": "null",
+          "description": "Indicates whether the product is exposed/visible on Naver Shopping"
+        }
+      },
+      "draft_field": true,
+      "default_value": "null",
+      "description": "EP (Electronic Product) information for Naver Shopping integration including registration and exposure status",
+      "ai_description": "Object containing Naver Shopping EP integration metadata.\nIncludes 'sync_nv_mid' (merchant ID), 'naver_shopping_registration' (registration flag), and 'naver_shopping_exposure' (visibility flag), used for Naver Shopping platform integration."
+    }
+  }
+}

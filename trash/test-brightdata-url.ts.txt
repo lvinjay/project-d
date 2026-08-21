@@ -1,0 +1,48 @@
+﻿import { collectNaverProduct } from "../lib/brightDataProduct";
+
+async function run() {
+  const urls = [
+    "https://smartstore.naver.com/main/products/10775617216",
+    "https://brand.naver.com/everybot/products/10775617216",
+  ];
+
+  for (const url of urls) {
+    console.log("\n==============================");
+    console.log("TEST:", url);
+
+    const started = Date.now();
+
+    try {
+      const result = await collectNaverProduct(url);
+
+      console.log(
+        "TIME:",
+        Math.round((Date.now() - started) / 1000),
+        "초",
+      );
+
+      console.log(JSON.stringify({
+        url: result.url,
+        productId: result.productId,
+        title: result.title,
+        finalPrice: result.finalPrice,
+        imageUrl: result.imageUrl,
+        totalReviews: result.totalReviews,
+        averageRating: result.averageRating,
+        brand: result.brand,
+        manufacturer: result.manufacturer,
+        modelName: result.modelName,
+        categoryName: result.categoryName,
+      }, null, 2));
+    } catch (error) {
+      console.log(
+        "ERROR:",
+        error instanceof Error
+          ? error.message
+          : error,
+      );
+    }
+  }
+}
+
+run();

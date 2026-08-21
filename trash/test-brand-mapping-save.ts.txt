@@ -1,0 +1,58 @@
+﻿import {
+  saveBrandStoreMapping,
+} from "../lib/brandStoreMappings";
+
+import {
+  supabaseAdmin,
+} from "../lib/supabaseAdmin";
+
+async function main() {
+  console.log("직접 저장 테스트 시작");
+
+  await saveBrandStoreMapping(
+    ["에브리봇"],
+    "https://brand.naver.com/everybot",
+    {
+      source: "manual_test",
+      confidence: 100,
+    },
+  );
+
+  console.log("saveBrandStoreMapping 호출 완료");
+
+  const {
+    data,
+    error,
+  } =
+    await supabaseAdmin
+      .from("brand_store_mappings")
+      .select(
+        "brand_key, brand_name, brand_slug, brand_site, source, confidence",
+      );
+
+  if (error) {
+    console.log(
+      "DB 조회 오류:",
+      error,
+    );
+    return;
+  }
+
+  console.log(
+    "저장 결과:",
+    JSON.stringify(
+      data,
+      null,
+      2,
+    ),
+  );
+}
+
+main().catch(
+  (error) => {
+    console.error(
+      "TEST ERROR:",
+      error,
+    );
+  },
+);

@@ -1,0 +1,73 @@
+﻿import {
+  NextResponse,
+} from "next/server";
+
+import {
+  collectNaverProduct,
+} from "../../../lib/brightDataProduct";
+
+export const runtime =
+  "nodejs";
+
+export const dynamic =
+  "force-dynamic";
+
+export async function GET(
+  request: Request,
+) {
+  try {
+    const {
+      searchParams,
+    } = new URL(
+      request.url,
+    );
+
+    const url =
+      searchParams
+        .get("url")
+        ?.trim() ??
+      "";
+
+    if (!url) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "상품 URL이 필요합니다.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    const product =
+      await collectNaverProduct(
+        url,
+      );
+
+    return NextResponse.json({
+      success: true,
+      product,
+    });
+  } catch (error) {
+    console.error(
+      "Naver product detail error:",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        success: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : "상품 상세정보 수집에 실패했습니다.",
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+}
+

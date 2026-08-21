@@ -1,0 +1,1153 @@
+import {
+  findBrandStoreMapping,
+  saveBrandStoreMapping,
+} from "./brandStoreMappings";
+
+type SerpApiResult = {
+  ads_results?: {
+    site?: string;
+    title?: string;
+    sub_title?: string;
+    description?: string;
+  }[];
+
+  web_results?: {
+    title?: string;
+    link?: string;
+    snippet?: string;
+  }[];
+
+  shopping_results?: {
+    title?: string;
+    link?: string;
+    stores?: string;
+    price?: number | string;
+    rating?: number | string;
+    reviews?: number | string;
+  }[];
+};
+
+type SerpApiResponse = SerpApiResult & {
+  error?: string;
+};
+
+type GoogleSearchResponse = {
+  error?: string;
+  organic_results?: {
+    title?: string;
+    link?: string;
+  }[];
+};
+
+type CanonicalCandidate = {
+  productId: string;
+  brandSite: string;
+  canonicalUrl: string;
+  title: string;
+};
+
+function normalizeBrandSite(value: unknown) {
+  const text = String(value ?? "").trim();
+
+  const match = text.match(
+    /(?:https?:\/\/)?brand\.naver\.com\/([a-zA-Z0-9_-]+)/i,
+  );
+
+  if (!match) {
+    return "";
+  }
+
+  return "https://brand.naver.com/" + match[1];
+}
+
+function normalizeCanonicalProductUrl(
+  value: unknown,
+) {
+  const text = String(value ?? "").trim();
+
+  const match = text.match(
+    /https?:\/\/brand\.naver\.com\/([a-zA-Z0-9_-]+)\/products\/(\d+)/i,
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  const brandSite =
+    `https://brand.naver.com/${match[1]}`;
+
+  const productId = match[2];
+
+  return {
+    productId,
+    brandSite,
+    canonicalUrl:
+      `${brandSite}/products/${productId}`,
+  };
+}
+
+async function searchNaver(
+  query: string,
+): Promise<SerpApiResponse> {
+  const apiKey =
+    process.env.SERPAPI_API_KEY;
+
+  if (!apiKey) {
+    throw new Error(
+      "SERPAPI_API_KEY가 설정되지 않았습니다.",
+    );
+  }
+
+  const params =
+    new URLSearchParams({
+      engine: "naver",
+      query,
+      where: "nexearch",
+      output: "json",
+      api_key: apiKey,
+    });
+
+  const response =
+    await fetch(
+      "https://serpapi.com/search?" +
+        params.toString(),
+      {
+        cache: "no-store",
+      },
+    );
+
+  const data =
+    (await response.json()) as
+      SerpApiResponse;
+
+  if (!response.ok || data.error) {
+    throw new Error(
+      data.error ??
+        `SerpApi 검색 실패 (${response.status})`,
+    );
+  }
+
+  return data;
+}
+
+async function searchGoogle(
+  query: string,
+): Promise<GoogleSearchResponse> {
+  const apiKey =
+    process.env.SERPAPI_API_KEY;
+
+  if (!apiKey) {
+    throw new Error(
+      "SERPAPI_API_KEY가 설정되지 않았습니다.",
+    );
+  }
+
+  const params =
+    new URLSearchParams({
+      engine: "google",
+      q: query,
+      api_key: apiKey,
+      num: "10",
+    });
+
+  const response =
+    await fetch(
+      "https://serpapi.com/search?" +
+        params.toString(),
+      {
+        cache: "no-store",
+      },
+    );
+
+  const data =
+    (await response.json()) as
+      GoogleSearchResponse;
+
+  if (!response.ok || data.error) {
+    if (
+      typeof data.error === "string" &&
+      data.error
+        .toLowerCase()
+        .includes(
+          "hasn't returned any results",
+        )
+    ) {
+      return {
+        organic_results: [],
+      };
+    }
+
+    throw new Error(
+      data.error ??
+        `Google SerpApi 검색 실패 (${response.status})`,
+    );
+  }
+
+  return data;
+}
+
+function extractBrandSites(
+  data: SerpApiResult,
+) {
+  const sites = new Set<string>();
+
+  const add = (value: unknown) => {
+    const site =
+      normalizeBrandSite(value);
+
+    if (site) {
+      sites.add(site);
+    }
+  };
+
+  for (const ad of data.ads_results ?? []) {
+    add(ad.site);
+  }
+
+  for (
+    const result of
+    data.web_results ?? []
+  ) {
+    add(result.link);
+  }
+
+  for (
+    const result of
+    data.shopping_results ?? []
+  ) {
+    add(result.link);
+  }
+
+  const serialized =
+    JSON.stringify(data);
+
+  const matches =
+    serialized.match(
+      /brand\.naver\.com\/[a-zA-Z0-9_-]+/gi,
+    ) ?? [];
+
+  for (const match of matches) {
+    add(match);
+  }
+
+  return [...sites];
+}
+
+function extractGoogleBrandSites(
+  data: GoogleSearchResponse,
+) {
+  const sites = new Set<string>();
+
+  for (
+    const result of
+    data.organic_results ?? []
+  ) {
+    const site =
+      normalizeBrandSite(
+        result.link,
+      );
+
+    if (site) {
+      sites.add(site);
+    }
+  }
+
+  const serialized =
+    JSON.stringify(data);
+
+  const matches =
+    serialized.match(
+      /https?:\/\/brand\.naver\.com\/[a-zA-Z0-9_-]+/gi,
+    ) ?? [];
+
+  for (const match of matches) {
+    const site =
+      normalizeBrandSite(match);
+
+    if (site) {
+      sites.add(site);
+    }
+  }
+
+  return [...sites];
+}
+
+function extractCanonicalCandidates(
+  data: SerpApiResult,
+) {
+  const candidates =
+    new Map<
+      string,
+      CanonicalCandidate
+    >();
+
+  const add = (
+    value: unknown,
+    title = "",
+  ) => {
+    const normalized =
+      normalizeCanonicalProductUrl(
+        value,
+      );
+
+    if (!normalized) {
+      return;
+    }
+
+    if (
+      !candidates.has(
+        normalized.canonicalUrl,
+      )
+    ) {
+      candidates.set(
+        normalized.canonicalUrl,
+        {
+          ...normalized,
+          title,
+        },
+      );
+    }
+  };
+
+  for (
+    const result of
+    data.web_results ?? []
+  ) {
+    add(
+      result.link,
+      String(result.title ?? ""),
+    );
+  }
+
+  for (
+    const result of
+    data.shopping_results ?? []
+  ) {
+    add(
+      result.link,
+      String(result.title ?? ""),
+    );
+  }
+
+  const serialized =
+    JSON.stringify(data);
+
+  const matches =
+    serialized.match(
+      /https?:\/\/brand\.naver\.com\/[a-zA-Z0-9_-]+\/products\/\d+/gi,
+    ) ?? [];
+
+  for (const match of matches) {
+    add(match);
+  }
+
+  return [...candidates.values()];
+}
+
+function extractGoogleCanonicalCandidates(
+  data: GoogleSearchResponse,
+) {
+  const candidates =
+    new Map<
+      string,
+      CanonicalCandidate
+    >();
+
+  const add = (
+    value: unknown,
+    title = "",
+  ) => {
+    const normalized =
+      normalizeCanonicalProductUrl(
+        value,
+      );
+
+    if (!normalized) {
+      return;
+    }
+
+    if (
+      !candidates.has(
+        normalized.canonicalUrl,
+      )
+    ) {
+      candidates.set(
+        normalized.canonicalUrl,
+        {
+          ...normalized,
+          title,
+        },
+      );
+    }
+  };
+
+  for (
+    const result of
+    data.organic_results ?? []
+  ) {
+    add(
+      result.link,
+      String(result.title ?? ""),
+    );
+  }
+
+  const serialized =
+    JSON.stringify(data);
+
+  const matches =
+    serialized.match(
+      /https?:\/\/brand\.naver\.com\/[a-zA-Z0-9_-]+\/products\/\d+/gi,
+    ) ?? [];
+
+  for (const match of matches) {
+    add(match);
+  }
+
+  return [...candidates.values()];
+}
+
+function extractBrandName(
+  data: SerpApiResult,
+) {
+  for (
+    const result of
+    data.web_results ?? []
+  ) {
+    const combined =
+      [
+        result.title,
+        result.snippet,
+      ]
+        .filter(Boolean)
+        .join(" ");
+
+    const match =
+      combined.match(
+        /브랜드\s*[:：]\s*([가-힣A-Za-z0-9._+-]+)/,
+      );
+
+    if (match?.[1]) {
+      return match[1].trim();
+    }
+  }
+
+  return "";
+}
+
+function getProductId(
+  productUrl: string,
+) {
+  const match =
+    productUrl.match(
+      /\/(?:main\/)?products\/(\d+)/,
+    );
+
+  return match?.[1] ?? "";
+}
+
+function getNaverShoppingId(
+  productUrl: string,
+) {
+  try {
+    const url =
+      new URL(productUrl);
+
+    const nvMid =
+      url.searchParams
+        .get("nv_mid")
+        ?.trim();
+
+    if (
+      nvMid &&
+      /^\d+$/.test(nvMid)
+    ) {
+      return nvMid;
+    }
+  } catch {
+    // 정규식 fallback 사용
+  }
+
+  return (
+    productUrl.match(
+      /[?&]nv_mid=(\d+)/i,
+    )?.[1] ?? ""
+  );
+}
+
+function cleanProductName(
+  value: string,
+) {
+  return value
+    .replace(
+      /\[[^\]]*\]/g,
+      " ",
+    )
+    .replace(
+      /\([^)]*\)/g,
+      " ",
+    )
+    .replace(
+      /[,/|]+/g,
+      " ",
+    )
+    .replace(
+      /\s+/g,
+      " ",
+    )
+    .trim();
+}
+
+function getUsefulTokens(
+  productName: string,
+) {
+  const ignored =
+    new Set([
+      "로봇청소기",
+      "청소기",
+      "로봇",
+      "무선",
+      "가정용",
+      "자동",
+      "단품",
+      "화이트",
+      "블랙",
+      "공식",
+      "정품",
+      "신제품",
+      "인공지능",
+      "올인원",
+    ]);
+
+  return cleanProductName(
+    productName,
+  )
+    .split(" ")
+    .map(
+      (token) =>
+        token.trim(),
+    )
+    .filter(
+      (token) =>
+        token.length >= 2 &&
+        !ignored.has(token),
+    );
+}
+
+function getBrandCandidate(
+  productName: string,
+) {
+  const tokens =
+    cleanProductName(
+      productName,
+    ).split(" ");
+
+  return (
+    tokens.find(
+      (token) =>
+        token.length >= 2 &&
+        ![
+          "로봇청소기",
+          "청소기",
+          "로봇",
+        ].includes(token),
+    ) ?? ""
+  );
+}
+
+function candidateScore(
+  candidate: CanonicalCandidate,
+  productName: string,
+  expectedProductId: string,
+) {
+  if (
+    expectedProductId &&
+    candidate.productId ===
+      expectedProductId
+  ) {
+    return 1000;
+  }
+
+  const wantedTokens =
+    getUsefulTokens(
+      productName,
+    ).map(
+      (token) =>
+        token.toLowerCase(),
+    );
+
+  const title =
+    candidate.title
+      .toLowerCase();
+
+  let score = 0;
+
+  for (const token of wantedTokens) {
+    if (title.includes(token)) {
+      score += 10;
+    }
+  }
+
+  return score;
+}
+
+export async function resolveNaverBrandProductUrl(
+  productUrl: string,
+  productName: string,
+) {
+  const inputProductId =
+    getProductId(productUrl);
+
+  const naverShoppingId =
+    getNaverShoppingId(
+      productUrl,
+    );
+
+  const cleanedName =
+    cleanProductName(
+      productName,
+    );
+
+  const usefulTokens =
+    getUsefulTokens(
+      productName,
+    );
+
+  const initialBrandCandidate =
+    getBrandCandidate(
+      productName,
+    );
+
+  if (
+    inputProductId &&
+    initialBrandCandidate
+  ) {
+    const learned =
+      await findBrandStoreMapping([
+        initialBrandCandidate,
+      ]);
+
+    if (learned?.brandSite) {
+      return {
+        success: true as const,
+        productId:
+          inputProductId,
+        brandName:
+          learned.brandName ||
+          initialBrandCandidate,
+        brandSite:
+          learned.brandSite,
+        canonicalUrl:
+          `${learned.brandSite}/products/${inputProductId}`,
+        triedQueries:
+          [] as string[],
+      };
+    }
+  }
+
+  const modelTokens =
+    usefulTokens
+      .filter(
+        (token) =>
+          token !==
+          initialBrandCandidate,
+      )
+      .slice(0, 3);
+
+  const triedQueries:
+    string[] = [];
+
+  let brandName = "";
+
+  const canonicalCandidates:
+    CanonicalCandidate[] = [];
+
+  const brandSites =
+    new Set<string>();
+
+  const tryQuery =
+    async (query: string) => {
+      const normalized =
+        query
+          .replace(
+            /\s+/g,
+            " ",
+          )
+          .trim();
+
+      if (
+        !normalized ||
+        triedQueries.includes(
+          normalized,
+        )
+      ) {
+        return;
+      }
+
+      triedQueries.push(normalized);
+
+      const data =
+        await searchNaver(
+          normalized,
+        );
+
+      for (
+        const site of
+        extractBrandSites(data)
+      ) {
+        brandSites.add(site);
+      }
+
+      for (
+        const candidate of
+        extractCanonicalCandidates(
+          data,
+        )
+      ) {
+        if (
+          !canonicalCandidates.some(
+            (existing) =>
+              existing.canonicalUrl ===
+              candidate.canonicalUrl,
+          )
+        ) {
+          canonicalCandidates.push(
+            candidate,
+          );
+        }
+      }
+
+      if (!brandName) {
+        brandName =
+          extractBrandName(data);
+      }
+    };
+
+  if (inputProductId) {
+    await tryQuery(
+      `${inputProductId} ${cleanedName}`,
+    );
+  }
+
+  if (
+    !inputProductId &&
+    naverShoppingId
+  ) {
+    await tryQuery(
+      `${naverShoppingId} ${cleanedName}`,
+    );
+  }
+
+  await tryQuery(
+    `${cleanedName} brand.naver.com`,
+  );
+
+  if (initialBrandCandidate) {
+    const shortModel =
+      modelTokens
+        .slice(0, 2)
+        .join(" ");
+
+    await tryQuery(
+      `site:brand.naver.com ${initialBrandCandidate} ${shortModel}`,
+    );
+  }
+
+  const modelLike =
+    usefulTokens.filter(
+      (token) =>
+        /[a-zA-Z]/.test(token) ||
+        /\d/.test(token),
+    );
+
+  if (
+    initialBrandCandidate &&
+    modelLike.length > 0
+  ) {
+    await tryQuery(
+      `${initialBrandCandidate} ${modelLike
+        .slice(0, 3)
+        .join(" ")} 공식`,
+    );
+  }
+
+  const rankedCandidates =
+    [...canonicalCandidates]
+      .map(
+        (candidate) => ({
+          candidate,
+          score:
+            candidateScore(
+              candidate,
+              productName,
+              inputProductId,
+            ),
+        }),
+      )
+      .sort(
+        (a, b) =>
+          b.score - a.score,
+      );
+
+  const best =
+    rankedCandidates[0];
+
+  if (
+    best &&
+    (
+      inputProductId
+        ? best.candidate
+            .productId ===
+          inputProductId
+        : best.score > 0 ||
+          canonicalCandidates.length ===
+            1
+    )
+  ) {
+    const resolvedBrandName =
+      brandName ||
+      initialBrandCandidate;
+
+    try {
+      await saveBrandStoreMapping(
+        [
+          initialBrandCandidate,
+          brandName,
+          resolvedBrandName,
+        ],
+        best.candidate.brandSite,
+        {
+          source:
+            "serpapi_product_match",
+          confidence:
+            100,
+        },
+      );
+    } catch (error) {
+      console.warn(
+        "Brand mapping save warning:",
+        error,
+      );
+    }
+
+    return {
+      success: true as const,
+      productId:
+        best.candidate.productId,
+      brandName:
+        resolvedBrandName,
+      brandSite:
+        best.candidate.brandSite,
+      canonicalUrl:
+        best.candidate.canonicalUrl,
+      triedQueries,
+    };
+  }
+
+  if (
+    inputProductId &&
+    brandSites.size > 0
+  ) {
+    const brandSite =
+      [...brandSites][0];
+
+    const resolvedBrandName =
+      brandName ||
+      initialBrandCandidate;
+
+    try {
+      await saveBrandStoreMapping(
+        [
+          initialBrandCandidate,
+          brandName,
+          resolvedBrandName,
+        ],
+        brandSite,
+        {
+          source:
+            "serpapi_brand_site",
+          confidence:
+            95,
+        },
+      );
+    } catch (error) {
+      console.warn(
+        "Brand mapping save warning:",
+        error,
+      );
+    }
+
+    return {
+      success: true as const,
+      productId:
+        inputProductId,
+      brandName:
+        resolvedBrandName,
+      brandSite,
+      canonicalUrl:
+        `${brandSite}/products/${inputProductId}`,
+      triedQueries,
+    };
+  }
+
+  if (inputProductId) {
+    const learned =
+      await findBrandStoreMapping([
+        initialBrandCandidate,
+        brandName,
+      ]);
+
+    if (learned?.brandSite) {
+      return {
+        success: true as const,
+        productId:
+          inputProductId,
+        brandName:
+          learned.brandName ||
+          initialBrandCandidate ||
+          brandName,
+        brandSite:
+          learned.brandSite,
+        canonicalUrl:
+          `${learned.brandSite}/products/${inputProductId}`,
+        triedQueries,
+      };
+    }
+  }
+
+  let learnedForGoogle =
+    await findBrandStoreMapping([
+      initialBrandCandidate,
+      brandName,
+    ]);
+
+  let discoveredBrandSite = "";
+
+  if (
+    !learnedForGoogle?.brandSite &&
+    initialBrandCandidate
+  ) {
+    try {
+      const discoveryQuery =
+        `${initialBrandCandidate} 네이버 브랜드스토어`;
+
+      triedQueries.push(
+        `[google-brand] ${discoveryQuery}`,
+      );
+
+      const discoveryData =
+        await searchGoogle(
+          discoveryQuery,
+        );
+
+      const discoveredSites =
+        extractGoogleBrandSites(
+          discoveryData,
+        );
+
+      if (
+        discoveredSites.length === 1
+      ) {
+        discoveredBrandSite =
+          discoveredSites[0];
+
+        try {
+          await saveBrandStoreMapping(
+            [
+              initialBrandCandidate,
+              brandName,
+            ],
+            discoveredBrandSite,
+            {
+              source:
+                "google_brand_discovery",
+              confidence:
+                95,
+            },
+          );
+
+          learnedForGoogle =
+            await findBrandStoreMapping([
+              initialBrandCandidate,
+              brandName,
+            ]);
+        } catch (error) {
+          console.warn(
+            "Brand mapping save warning:",
+            error,
+          );
+        }
+      }
+    } catch (error) {
+      console.warn(
+        "Google brand discovery warning:",
+        error,
+      );
+    }
+  }
+
+  const googleBrandSite =
+    learnedForGoogle?.brandSite ||
+    discoveredBrandSite;
+
+  if (googleBrandSite) {
+    try {
+      const brandSlug =
+        googleBrandSite
+          .replace(
+            /^https?:\/\/brand\.naver\.com\//i,
+            "",
+          )
+          .replace(
+            /\/.*$/,
+            "",
+          )
+          .trim();
+
+      const googleModelTokens =
+        usefulTokens
+          .filter(
+            (token) =>
+              token !==
+                initialBrandCandidate &&
+              (
+                /[A-Za-z]/.test(
+                  token,
+                ) ||
+                /\d/.test(
+                  token,
+                )
+              ),
+          )
+          .slice(0, 3);
+
+      if (
+        brandSlug &&
+        googleModelTokens.length > 0
+      ) {
+        const googleQuery =
+          `site:brand.naver.com/${brandSlug} "${googleModelTokens.join(
+            " ",
+          )}"`;
+
+        triedQueries.push(
+          `[google] ${googleQuery}`,
+        );
+
+        const googleData =
+          await searchGoogle(
+            googleQuery,
+          );
+
+        const sameBrandCandidates =
+          extractGoogleCanonicalCandidates(
+            googleData,
+          ).filter(
+            (candidate) =>
+              candidate.brandSite ===
+              googleBrandSite,
+          );
+
+        const rankedGoogle =
+          sameBrandCandidates
+            .map(
+              (candidate) => ({
+                candidate,
+                score:
+                  candidateScore(
+                    candidate,
+                    productName,
+                    "",
+                  ),
+              }),
+            )
+            .sort(
+              (a, b) =>
+                b.score - a.score,
+            );
+
+        const bestGoogle =
+          rankedGoogle[0];
+
+        if (
+          bestGoogle &&
+          (
+            sameBrandCandidates.length ===
+              1 ||
+            bestGoogle.score > 0
+          )
+        ) {
+          try {
+            await saveBrandStoreMapping(
+              [
+                initialBrandCandidate,
+                brandName,
+                learnedForGoogle
+                  ?.brandName ?? "",
+              ],
+              bestGoogle.candidate
+                .brandSite,
+              {
+                source:
+                  "google_product_match",
+                confidence:
+                  sameBrandCandidates.length ===
+                  1
+                    ? 100
+                    : 95,
+              },
+            );
+          } catch (error) {
+            console.warn(
+              "Brand mapping save warning:",
+              error,
+            );
+          }
+
+          return {
+            success:
+              true as const,
+            productId:
+              bestGoogle.candidate
+                .productId,
+            brandName:
+              learnedForGoogle
+                ?.brandName ||
+              initialBrandCandidate ||
+              brandName,
+            brandSite:
+              bestGoogle.candidate
+                .brandSite,
+            canonicalUrl:
+              bestGoogle.candidate
+                .canonicalUrl,
+            triedQueries,
+          };
+        }
+      }
+    } catch (error) {
+      console.warn(
+        "Google brand product fallback warning:",
+        error,
+      );
+    }
+  }
+
+  return {
+    success: false as const,
+    productId:
+      inputProductId,
+    brandName:
+      brandName ||
+      initialBrandCandidate,
+    brandSite:
+      [...brandSites][0] ??
+      googleBrandSite ??
+      "",
+    canonicalUrl: "",
+    triedQueries,
+    reason:
+      inputProductId
+        ? "brand.naver.com 공식 상품 URL을 찾지 못했습니다."
+        : "중간 네이버 URL에서 공식 Brand 상품 URL을 확인하지 못했습니다.",
+  };
+}

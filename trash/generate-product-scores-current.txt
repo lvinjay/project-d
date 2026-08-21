@@ -1,0 +1,482 @@
+﻿import OpenAI from "openai";
+import { createHash } from "node:crypto";
+import { NextResponse } from "next/server";
+import { supabase } from "../../../lib/supabase";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+type RequestBody = {
+  category?: unknown;
+};
+
+type Criterion = {
+  key?: string;
+  label?: string;
+  shortDescription?: string;
+  helpText?: string;
+  sourceType?: string;
+};
+
+type ProductRow = {
+  id: string;
+  product_name: string;
+  source_url: string;
+  review_analysis: Record<string, unknown> | null;
+  product_detail_analysis: Record<string, unknown> | null;
+  criterion_scores: Record<string, unknown> | null;
+};
+
+type ScoreResult = {
+  productId: string;
+  criterionScores: Record<string, number | null>;
+  criterionReasons: Record<string, string>;
+};
+
+function normalizeText(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function extractJson(text: string) {
+  const cleaned = text
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+
+  return JSON.parse(cleaned) as Record<string, unknown>;
+}
+
+function normalizeScore(value: unknown): number | null {
+  if (value === null) return null;
+
+  const numberValue =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number(value)
+        : NaN;
+
+  if (!Number.isFinite(numberValue)) return null;
+
+  return Math.max(0, Math.min(100, Math.round(numberValue)));
+}
+
+function normalizeResults(
+  value: unknown,
+  productIds: Set<string>,
+  criterionKeys: string[],
+): ScoreResult[] {
+  if (!Array.isArray(value)) return [];
+
+  const keySet = new Set(criterionKeys);
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+
+      const row = item as Record<string, unknown>;
+      const productId = normalizeText(row.productId);
+
+      if (!productId || !productIds.has(productId)) return null;
+
+      const rawScores =
+        row.criterionScores &&
+        typeof row.criterionScores === "object" &&
+        !Array.isArray(row.criterionScores)
+          ? (row.criterionScores as Record<string, unknown>)
+          : {};
+
+      const rawReasons =
+        row.criterionReasons &&
+        typeof row.criterionReasons === "object" &&
+        !Array.isArray(row.criterionReasons)
+          ? (row.criterionReasons as Record<string, unknown>)
+          : {};
+
+      const criterionScores: Record<string, number | null> = {};
+      const criterionReasons: Record<string, string> = {};
+
+      for (const key of criterionKeys) {
+        if (!keySet.has(key)) continue;
+
+        criterionScores[key] = normalizeScore(rawScores[key]);
+
+        const reason = normalizeText(rawReasons[key]);
+        criterionReasons[key] =
+          reason || "?꾩옱 ?섏쭛???곸꽭?뺣낫? 由щ럭留뚯쑝濡쒕뒗 異⑸텇???됯? 洹쇨굅媛 ?놁뒿?덈떎.";
+      }
+
+      return {
+        productId,
+        criterionScores,
+        criterionReasons,
+      };
+    })
+    .filter((item): item is ScoreResult => Boolean(item));
+}
+
+
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== "object") {
+    return JSON.stringify(value);
+  }
+
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableStringify(item)).join(",")}]`;
+  }
+
+  const row = value as Record<string, unknown>;
+  const keys = Object.keys(row).sort();
+
+  return `{${keys
+    .map(
+      (key) =>
+        `${JSON.stringify(key)}:${stableStringify(row[key])}`,
+    )
+    .join(",")}}`;
+}
+
+function createScoreFingerprint(value: unknown) {
+  return createHash("sha256")
+    .update(stableStringify(value))
+    .digest("hex");
+}
+
+function getReviewAnalysisForFingerprint(
+  value: Record<string, unknown> | null,
+) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const {
+    criterionReasons: _criterionReasons,
+    criterion_reasons: _criterionReasonsSnake,
+    ...reviewOnlyFields
+  } = value;
+
+  return reviewOnlyFields;
+}
+
+function hasCompleteCriterionScores(
+  scores: Record<string, unknown> | null,
+  criterionKeys: string[],
+) {
+  if (!scores || typeof scores !== "object" || Array.isArray(scores)) {
+    return false;
+  }
+
+  return criterionKeys.every((key) => {
+    const value = scores[key];
+
+    if (value === null) {
+      return true;
+    }
+
+    const numberValue =
+      typeof value === "number"
+        ? value
+        : typeof value === "string"
+          ? Number(value)
+          : NaN;
+
+    return (
+      Number.isFinite(numberValue) &&
+      numberValue >= 0 &&
+      numberValue <= 100
+    );
+  });
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = (await request.json()) as RequestBody;
+    const category = normalizeText(body.category);
+
+    if (!category) {
+      return NextResponse.json(
+        { success: false, message: "移댄뀒怨좊━媛 ?꾩슂?⑸땲??" },
+        { status: 400 },
+      );
+    }
+
+    const apiKey = process.env.OPENAI_API_KEY;
+
+    if (!apiKey) {
+      return NextResponse.json(
+        { success: false, message: "OPENAI_API_KEY媛 ?ㅼ젙?섏? ?딆븯?듬땲??" },
+        { status: 500 },
+      );
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from("category_profiles")
+      .select("category, criteria, common_cautions, updated_at, score_generation_fingerprint, score_generated_at")
+      .eq("category", category)
+      .maybeSingle();
+
+    if (profileError) throw profileError;
+
+    if (!profile) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "癒쇱? ??移댄뀒怨좊━??AI 援щℓ湲곗????앹꽦??二쇱꽭??",
+        },
+        { status: 404 },
+      );
+    }
+
+    const criteria = Array.isArray(profile.criteria)
+      ? (profile.criteria as Criterion[])
+          .map((criterion) => ({
+            key: normalizeText(criterion.key),
+            label: normalizeText(criterion.label),
+            shortDescription: normalizeText(criterion.shortDescription),
+            helpText: normalizeText(criterion.helpText),
+            sourceType: normalizeText(criterion.sourceType),
+          }))
+          .filter((criterion) => criterion.key && criterion.label)
+          .slice(0, 5)
+      : [];
+
+    if (criteria.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "?쒗뭹 ?먯닔瑜?留뚮뱾 援щℓ湲곗????놁뒿?덈떎.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const { data, error } = await supabase
+      .from("products")
+      .select(
+        "id, product_name, source_url, review_analysis, product_detail_analysis, criterion_scores",
+      )
+      .eq("category", category)
+      .order("created_at", { ascending: true });
+
+    if (error) throw error;
+
+    const products = (data ?? []) as ProductRow[];
+
+    if (products.length < 2) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "?쒗뭹蹂?鍮꾧탳 ?먯닔瑜?留뚮뱾?ㅻ㈃ 媛숈? 移댄뀒怨좊━ ?쒗뭹??理쒖냼 2媛??꾩슂?⑸땲??",
+        },
+        { status: 400 },
+      );
+    }
+
+    const criterionKeys = criteria.map((criterion) => criterion.key);
+
+    const scoreFingerprint = createScoreFingerprint({
+      category,
+      criteria,
+      commonCautions: Array.isArray(profile.common_cautions)
+        ? profile.common_cautions
+        : [],
+      products: products.map((product) => ({
+        id: product.id,
+        productName: product.product_name,
+        sourceUrl: product.source_url,
+        reviewAnalysis: getReviewAnalysisForFingerprint(
+          product.review_analysis,
+        ),
+        productDetailAnalysis: product.product_detail_analysis,
+      })),
+    });
+
+    const cachedFingerprint =
+      normalizeText(profile.score_generation_fingerprint);
+
+    const allProductsHaveScores = products.every((product) =>
+      hasCompleteCriterionScores(
+        product.criterion_scores,
+        criterionKeys,
+      ),
+    );
+
+    if (
+      cachedFingerprint === scoreFingerprint &&
+      allProductsHaveScores
+    ) {
+      return NextResponse.json({
+        success: true,
+        cacheHit: true,
+        category,
+        productCount: products.length,
+        criterionCount: criteria.length,
+        scoreGeneratedAt: profile.score_generated_at ?? null,
+        message:
+          "由щ럭쨌?곸꽭?뺣낫쨌援щℓ湲곗? 蹂寃쎌씠 ?놁뼱 湲곗〈 ?쒗뭹蹂??먯닔瑜?洹몃?濡??ъ슜?⑸땲??",
+      });
+    }
+
+    const evidenceProducts = products.map((product) => ({
+      productId: product.id,
+      productName: product.product_name,
+      sourceUrl: product.source_url,
+      productDetailAnalysis: product.product_detail_analysis,
+      reviewAnalysis: product.review_analysis,
+    }));
+
+    const client = new OpenAI({ apiKey });
+
+    const prompt = `
+?뱀떊? Project D???쒗뭹 鍮꾧탳 ?됯? ?붿쭊?낅땲??
+
+移댄뀒怨좊━:
+${category}
+
+??移댄뀒怨좊━?먯꽌 ?대? ?좎젙???듭떖 援щℓ湲곗?:
+${JSON.stringify(criteria, null, 2)}
+
+AI媛 ?꾩껜 鍮꾧탳?쒗뭹???④퍡 遺꾩꽍???뺤씤???쒗뭹援?怨듯넻 ?쒓퀎:
+${JSON.stringify(Array.isArray(profile.common_cautions) ? profile.common_cautions : [], null, 2)}
+
+鍮꾧탳???쒗뭹怨??섏쭛??洹쇨굅:
+${JSON.stringify(evidenceProducts, null, 2)}
+
+紐⑺몴:
+媛숈? 移댄뀒怨좊━???쒗뭹?ㅼ쓣 ?쒕줈 鍮꾧탳?섏뿬, 媛??쒗뭹????援щℓ湲곗?蹂꾨줈 0~100?먯쑝濡??됯??⑸땲??
+???먯닔???댄썑 ?ъ슜?먯쓽 以묒슂?꾩? 留욎땄 吏덈Ц ?듬???諛섏쁺??理쒖쥌 異붿쿇 ?쒖쐞瑜?怨꾩궛?섎뒗 ???ъ슜?⑸땲??
+
+?됯? ?먯튃:
+- ?쒗뭹?쇰━ ?곷? 鍮꾧탳媛 媛?ν븯?꾨줉 媛숈? ?덇툑?쇰줈 ?됯??섏꽭??
+- ??"?쒗뭹援?怨듯넻 ?쒓퀎"???щ윭 鍮꾧탳?쒗뭹??怨듯넻?쇰줈 議댁옱?섎뒗 ?뱀꽦?대?濡??뱀젙 ?쒗뭹留뚯쓽 ?쎌젏泥섎읆 ?곷? 媛먯젏?섏? 留덉꽭??
+- 怨듯넻 ?쒓퀎媛 紐⑤뱺 ?쒗뭹???숈씪?섍쾶 ?곸슜?쒕떎硫?洹??ъ떎 ?먯껜???쒗뭹 媛??먯닔 李⑥씠瑜?留뚮뱶??洹쇨굅濡??ъ슜?섏? 留덉꽭??
+- 媛숈? 怨듯넻 ?쒓퀎?쇰룄 ?뱀젙 ?쒗뭹???ㅻⅨ ?꾨낫蹂대떎 紐낇솗?????ы븯嫄곕굹 ?????닿껐?덈떎??洹쇨굅媛 ?덉쓣 ?뚮쭔 洹?李⑥씠瑜??먯닔??諛섏쁺?섏꽭??
+- ?뱀젙 ?쒗뭹?먯꽌留?諛섎났?섎뒗 怨좎옣, ?꾩닔, ?ㅼ튂 遺덊렪, ?뚯쓬, A/S 臾몄젣 ??怨좎쑀 ?쎌젏? ?대떦 湲곗? ?먯닔???곷??곸쑝濡?諛섏쁺?섏꽭??
+- criterionReasons?먯꽌??怨듯넻 ?쒓퀎? ?쒗뭹 怨좎쑀 ?쎌젏???쇰룞?섏? 留먭퀬, ?먯닔 李⑥씠媛 ?앷릿 ?댁쑀瑜??쒗뭹 媛?李⑥씠 以묒떖?쇰줈 ?ㅻ챸?섏꽭??
+- 90~100: ?꾩옱 鍮꾧탳 ?쒗뭹 以?留ㅼ슦 媛뺥븳 ?섏?
+- 75~89: 媛뺤젏???쒕졆???섏?
+- 60~74: ?됯퇏 ?댁긽 ?먮뒗 臾대궃???섏?
+- 40~59: ?꾩돩??대굹 ?쒖빟??遺꾨챸???섏?
+- 0~39: ??湲곗??먯꽌 ???쎌젏???덈뒗 ?섏?
+- 洹쇨굅媛 ?뺣쭚 遺議깊빐???먮떒?????놁쑝硫?null???ъ슜?섏꽭??
+- ?곸꽭?섏씠吏???먮ℓ??二쇱옣留?誘우? 留먭퀬 ?ㅼ젣 由щ럭? ?④퍡 ?먮떒?섏꽭??
+- ?뺥솗???섏튂媛 ?쒓났?섏? ?딆븯?ㅻ㈃ ?섏튂瑜?留뚮뱾?대궡吏 留덉꽭??
+- 媛寃?媛?깅퉬 湲곗?? ?ㅼ젣 媛寃??뺣낫? 援ъ꽦, 湲곕뒫, 由щ럭瑜??④퍡 蹂댁꽭??
+- ?뚯쓬, ?됰갑 泥닿컧, 諛곗닔, ?닿뎄?깆쿂???ㅼ궗??寃쏀뿕??以묒슂??湲곗?? 由щ럭瑜??곴레 諛섏쁺?섏꽭??
+- ???쒗뭹???먯닔瑜?癒쇱? ?뺥븯怨??ㅻⅨ ?쒗뭹??留욎텛吏 留먭퀬, 紐⑤뱺 ?쒗뭹????踰덉뿉 鍮꾧탳???쇨????곷? ?먯닔瑜?留뚮뱶?몄슂.
+- criterionReasons?먮뒗 ??洹??먯닔瑜?以щ뒗吏 1~2臾몄옣?쇰줈 援ъ껜?곸씤 洹쇨굅瑜??곸쑝?몄슂.
+- 諛섎뱶???꾨옒 criteria key留??ъ슜?섏꽭??
+- JSON留?異쒕젰?섏꽭??
+
+異쒕젰 ?뺤떇:
+{
+  "products": [
+    {
+      "productId": "?낅젰???덈뒗 ?ㅼ젣 productId",
+      "criterionScores": {
+        "criteria???ㅼ젣 key": 0
+      },
+      "criterionReasons": {
+        "criteria???ㅼ젣 key": "?먯닔 洹쇨굅"
+      }
+    }
+  ]
+}
+`;
+
+    const response = await client.responses.create({
+      model: "gpt-5",
+      input: prompt,
+    });
+
+    const outputText = response.output_text?.trim();
+
+    if (!outputText) {
+      throw new Error("AI媛 ?쒗뭹蹂?湲곗? ?먯닔瑜?諛섑솚?섏? ?딆븯?듬땲??");
+    }
+
+    const parsed = extractJson(outputText);
+    const productIds = new Set(products.map((product) => product.id));
+
+    const scoreResults = normalizeResults(
+      parsed.products,
+      productIds,
+      criterionKeys,
+    );
+
+    if (scoreResults.length !== products.length) {
+      throw new Error(
+        `AI ?쒗뭹 ?됯? 寃곌낵媛 ?꾩쟾?섏? ?딆뒿?덈떎. ${products.length}媛?以?${scoreResults.length}媛쒕쭔 諛섑솚?섏뿀?듬땲??`,
+      );
+    }
+
+    for (const product of products) {
+      const scoreResult = scoreResults.find(
+        (item) => item.productId === product.id,
+      );
+
+      if (!scoreResult) continue;
+
+      const existingReview =
+        product.review_analysis &&
+        typeof product.review_analysis === "object" &&
+        !Array.isArray(product.review_analysis)
+          ? product.review_analysis
+          : {};
+
+      const mergedReviewAnalysis = {
+        ...existingReview,
+        criterionReasons: scoreResult.criterionReasons,
+        criterion_reasons: scoreResult.criterionReasons,
+      };
+
+      const { error: updateError } = await supabase
+        .from("products")
+        .update({
+          criterion_scores: scoreResult.criterionScores,
+          review_analysis: mergedReviewAnalysis,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", product.id);
+
+      if (updateError) throw updateError;
+    }
+
+    const scoreGeneratedAt = new Date().toISOString();
+
+    const { error: profileUpdateError } = await supabase
+      .from("category_profiles")
+      .update({
+        score_generation_fingerprint: scoreFingerprint,
+        score_generated_at: scoreGeneratedAt,
+      })
+      .eq("category", category);
+
+    if (profileUpdateError) throw profileUpdateError;
+
+    return NextResponse.json({
+      success: true,
+      cacheHit: false,
+      category,
+      productCount: products.length,
+      criterionCount: criteria.length,
+      scoreGeneratedAt,
+      message: `${products.length}媛??쒗뭹???꾩옱 援щℓ湲곗? ${criteria.length}媛쒕줈 AI ?됯????쒗뭹蹂??먯닔? 洹쇨굅瑜???ν뻽?듬땲??`,
+    });
+  } catch (error) {
+    console.error("Generate product scores API error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : "?쒗뭹蹂?AI 湲곗? ?먯닔瑜??앹꽦?섏? 紐삵뻽?듬땲??",
+      },
+      { status: 500 },
+    );
+  }
+}
+

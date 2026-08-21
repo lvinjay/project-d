@@ -1,0 +1,135 @@
+﻿import {
+  discoverManufacturerProductUrl,
+} from "./discoverManufacturerProductUrl";
+
+import {
+  parseManufacturerProductHtml,
+} from "./parseManufacturerProductHtml";
+
+import {
+  isUsableManufacturerProduct,
+  normalizeManufacturerProduct,
+  type NormalizedManufacturerProduct,
+} from "./normalizeManufacturerProduct";
+
+export type ManufacturerCollectionResult =
+  | {
+      success: true;
+
+      detail:
+        NormalizedManufacturerProduct;
+
+      discoveredUrl: string;
+
+      candidatesChecked: number;
+    }
+  | {
+      success: false;
+
+      reason: string;
+
+      candidatesChecked: number;
+    };
+
+export async function collectManufacturerProduct(
+  input: {
+    officialSite: string;
+
+    searchTerms: string[];
+  },
+): Promise<ManufacturerCollectionResult> {
+  const officialSite =
+    String(
+      input.officialSite ?? "",
+    ).trim();
+
+  const searchTerms =
+    Array.isArray(
+      input.searchTerms,
+    )
+      ? input.searchTerms
+          .map(
+            (value) =>
+              String(
+                value ?? "",
+              ).trim(),
+          )
+          .filter(Boolean)
+      : [];
+
+  if (
+    !officialSite ||
+    searchTerms.length === 0
+  ) {
+    return {
+      success: false,
+
+      reason:
+        "제조사 공식몰 주소 또는 상품 검색어가 없습니다.",
+
+      candidatesChecked: 0,
+    };
+  }
+
+  const discovered =
+    await discoverManufacturerProductUrl(
+      officialSite,
+      searchTerms,
+    );
+
+  if (
+    !discovered.success
+  ) {
+    return {
+      success: false,
+
+      reason:
+        discovered.reason,
+
+      candidatesChecked:
+        discovered.candidatesChecked,
+    };
+  }
+
+  const raw =
+    parseManufacturerProductHtml(
+      discovered.html,
+      discovered.url,
+    );
+
+  const detail =
+    normalizeManufacturerProduct(
+      raw,
+      discovered.url,
+    );
+
+  if (
+    !isUsableManufacturerProduct(
+      detail,
+    )
+  ) {
+    return {
+      success: false,
+
+      reason:
+        `제조사 공식몰 상세페이지는 찾았지만 필수 상품정보를 확보하지 못했습니다. ` +
+        `[url=${Boolean(detail.canonicalUrl)}, title=${Boolean(detail.title)}, ` +
+        `price=${detail.finalPrice}, model=${detail.modelName || "-"}]`,
+
+      candidatesChecked:
+        discovered.candidatesChecked,
+    };
+  }
+
+  return {
+    success: true,
+
+    detail,
+
+    discoveredUrl:
+      discovered.url,
+
+    candidatesChecked:
+      discovered.candidatesChecked,
+  };
+}

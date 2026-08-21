@@ -1,0 +1,17 @@
+﻿{
+    "minBudget":  500000,
+    "category":  "로봇청소기",
+    "maxBudget":  1500000,
+    "products":  [
+                     {
+                         "reviewCount":  2600,
+                         "url":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59215055197\u0026cat_id=50015541\u0026query=%EB%93%9C%EB%A6%AC%EB%AF%B8%20X60%20Ultra",
+                         "price":  990000,
+                         "name":  "드리미 로봇청소기 X60 Ultra X60ULTRA 올인원 물통형, 화이트",
+                         "seller":  "판매처 18",
+                         "rating":  4.88,
+                         "text":  "",
+                         "imageUrl":  ""
+                     }
+                 ]
+}

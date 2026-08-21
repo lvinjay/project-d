@@ -1,0 +1,108 @@
+{
+  "success": true,
+  "totalCount": 10,
+  "suspiciousCount": 1,
+  "suspicious": [
+    {
+      "brand_key": "드리미",
+      "brand_name": "드리미",
+      "brand_slug": "lezen",
+      "brand_site": "https://brand.naver.com/lezen",
+      "source": "serpapi_product_match",
+      "confidence": 100,
+      "updated_at": "2026-08-21T01:22:55.869+00:00"
+    }
+  ],
+  "rows": [
+    {
+      "brand_key": "ecovacs",
+      "brand_name": "ECOVACS",
+      "brand_slug": "ecovacs",
+      "brand_site": "https://brand.naver.com/ecovacs",
+      "source": "verified_product_url",
+      "confidence": 100,
+      "updated_at": "2026-08-18T07:26:16.234+00:00"
+    },
+    {
+      "brand_key": "jonr",
+      "brand_name": "JONR",
+      "brand_slug": "inic",
+      "brand_site": "https://brand.naver.com/inic",
+      "source": "serpapi_product_match",
+      "confidence": 100,
+      "updated_at": "2026-08-20T06:20:35.086+00:00"
+    },
+    {
+      "brand_key": "mova",
+      "brand_name": "MOVA",
+      "brand_slug": "mova",
+      "brand_site": "https://brand.naver.com/mova",
+      "source": "google_product_match",
+      "confidence": 100,
+      "updated_at": "2026-08-19T07:09:39.163+00:00"
+    },
+    {
+      "brand_key": "roborock",
+      "brand_name": "Roborock",
+      "brand_slug": "roborock",
+      "brand_site": "https://brand.naver.com/roborock",
+      "source": "verified_product_url",
+      "confidence": 100,
+      "updated_at": "2026-08-18T07:26:16.537+00:00"
+    },
+    {
+      "brand_key": "드리미",
+      "brand_name": "드리미",
+      "brand_slug": "lezen",
+      "brand_site": "https://brand.naver.com/lezen",
+      "source": "serpapi_product_match",
+      "confidence": 100,
+      "updated_at": "2026-08-21T01:22:55.869+00:00"
+    },
+    {
+      "brand_key": "로보락",
+      "brand_name": "로보락",
+      "brand_slug": "roborock",
+      "brand_site": "https://brand.naver.com/roborock",
+      "source": "serpapi_product_match",
+      "confidence": 100,
+      "updated_at": "2026-08-20T07:36:59.493+00:00"
+    },
+    {
+      "brand_key": "로보락s10",
+      "brand_name": "로보락S10",
+      "brand_slug": "roborock",
+      "brand_site": "https://brand.naver.com/roborock",
+      "source": "google_brand_discovery",
+      "confidence": 95,
+      "updated_at": "2026-08-19T07:14:31.297+00:00"
+    },
+    {
+      "brand_key": "모바",
+      "brand_name": "모바",
+      "brand_slug": "mova",
+      "brand_site": "https://brand.naver.com/mova",
+      "source": "serpapi_product_match",
+      "confidence": 100,
+      "updated_at": "2026-08-21T01:09:32.796+00:00"
+    },
+    {
+      "brand_key": "에브리봇",
+      "brand_name": "에브리봇",
+      "brand_slug": "everybot",
+      "brand_site": "https://brand.naver.com/everybot",
+      "source": "verified_product_url",
+      "confidence": 100,
+      "updated_at": "2026-08-18T07:26:14.788+00:00"
+    },
+    {
+      "brand_key": "에코백스",
+      "brand_name": "에코백스",
+      "brand_slug": "ecovacs",
+      "brand_site": "https://brand.naver.com/ecovacs",
+      "source": "verified_product_url",
+      "confidence": 100,
+      "updated_at": "2026-08-18T07:26:16.088+00:00"
+    }
+  ]
+}

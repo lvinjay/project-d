@@ -1,0 +1,240 @@
+﻿import { NextResponse } from "next/server";
+import { supabase } from "../../../lib/supabase";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+type RegisterProductRequest = {
+  category?: unknown;
+  productName?: unknown;
+  sourceUrl?: unknown;
+  checkoutMerchantNo?: unknown;
+  originProductNo?: unknown;
+};
+
+type ProductRow = {
+  id: string;
+  category: string;
+  product_name: string;
+  source_url: string;
+  checkout_merchant_no: number | null;
+  origin_product_no: number | null;
+  review_analysis: unknown | null;
+  created_at: string;
+  updated_at: string;
+};
+
+const PRODUCT_SELECT_FIELDS =
+  "id, category, product_name, source_url, checkout_merchant_no, origin_product_no, review_analysis, created_at, updated_at";
+
+function normalizeText(value: unknown) {
+  return typeof value === "string"
+    ? value.replace(/\s+/g, " ").trim()
+    : "";
+}
+
+function normalizeProductUrl(value: string) {
+  const url = new URL(value);
+
+  if (
+    url.protocol !== "https:" &&
+    url.protocol !== "http:"
+  ) {
+    throw new Error(
+      "?곹뭹 URL? http ?먮뒗 https 二쇱냼?ъ빞 ?⑸땲??",
+    );
+  }
+
+  const supportedHosts = [
+    "brand.naver.com",
+    "smartstore.naver.com",
+  ];
+
+  if (!supportedHosts.includes(url.hostname)) {
+    throw new Error(
+      "?꾩옱???ㅼ씠踰?釉뚮옖?쒖뒪?좎뼱? ?ㅻ쭏?몄뒪?좎뼱 ?곹뭹留?吏?먰빀?덈떎.",
+    );
+  }
+
+  url.search = "";
+  url.hash = "";
+
+  return url.toString().replace(/\/$/, "");
+}
+
+function normalizePositiveInteger(
+  value: unknown,
+  fieldName: string,
+) {
+  const numberValue = Number(value);
+
+  if (
+    !Number.isSafeInteger(numberValue) ||
+    numberValue <= 0
+  ) {
+    throw new Error(
+      `${fieldName}媛 ?щ컮瑜댁? ?딆뒿?덈떎.`,
+    );
+  }
+
+  return numberValue;
+}
+
+export async function POST(request: Request) {
+  try {
+    const body =
+      (await request.json()) as RegisterProductRequest;
+
+    const productName = normalizeText(
+      body.productName,
+    );
+
+    const sourceUrlText = normalizeText(
+      body.sourceUrl,
+    );
+
+    const category =
+      normalizeText(body.category) ||
+      "移댄뀒怨좊━ 誘몄???;
+
+    if (!productName) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "?먮룞 異붿텧???쒗뭹紐낆씠 鍮꾩뼱 ?덉뒿?덈떎.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (!sourceUrlText) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "?곹뭹 URL???꾩슂?⑸땲??",
+        },
+        { status: 400 },
+      );
+    }
+
+    const sourceUrl =
+      normalizeProductUrl(sourceUrlText);
+
+    const checkoutMerchantNo =
+      normalizePositiveInteger(
+        body.checkoutMerchantNo,
+        "?ㅼ씠踰??먮ℓ??踰덊샇",
+      );
+
+    const originProductNo =
+      normalizePositiveInteger(
+        body.originProductNo,
+        "?ㅼ씠踰??먯긽??踰덊샇",
+      );
+
+    /*
+     * URL???щ씪??媛숈? ?ㅼ씠踰??먯긽??踰덊샇硫?
+     * ?숈씪???쒗뭹?쇰줈 ?먮떒?쒕떎.
+     */
+    const {
+      data: existingProducts,
+      error: existingError,
+    } = await supabase
+      .from("products")
+      .select(PRODUCT_SELECT_FIELDS)
+      .or(
+        `origin_product_no.eq.${originProductNo},source_url.eq.${sourceUrl}`,
+      )
+      .limit(1);
+
+    if (existingError) {
+      throw existingError;
+    }
+
+    const existingProduct =
+      Array.isArray(existingProducts)
+        ? (existingProducts[0] as
+            | ProductRow
+            | undefined)
+        : undefined;
+
+    if (existingProduct) {
+      const { data, error } = await supabase
+        .from("products")
+        .update({
+          category,
+          product_name: productName,
+          source_url: sourceUrl,
+          checkout_merchant_no:
+            checkoutMerchantNo,
+          origin_product_no:
+            originProductNo,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingProduct.id)
+        .select(PRODUCT_SELECT_FIELDS)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return NextResponse.json({
+        success: true,
+        created: false,
+        message:
+          "?대? ?깅줉???쒗뭹??理쒖떊 ?뺣낫濡?媛깆떊?덉뒿?덈떎.",
+        product: data as ProductRow,
+      });
+    }
+
+    const { data, error } = await supabase
+      .from("products")
+      .insert({
+        category,
+        product_name: productName,
+        source_url: sourceUrl,
+        checkout_merchant_no:
+          checkoutMerchantNo,
+        origin_product_no:
+          originProductNo,
+      })
+      .select(PRODUCT_SELECT_FIELDS)
+      .single();
+
+    if (error) {
+      if (error.code === "23505") {
+        throw new Error(
+          "?숈씪???곹뭹???대? ?깅줉?섏뼱 ?덉뒿?덈떎.",
+        );
+      }
+
+      throw error;
+    }
+
+    return NextResponse.json({
+      success: true,
+      created: true,
+      message:
+        "???쒗뭹??Project D???먮룞 ?깅줉?덉뒿?덈떎.",
+      product: data as ProductRow,
+    });
+  } catch (error) {
+    console.error(
+      "Auto register product API error:",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        success: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : "?쒗뭹 ?먮룞 ?깅줉 以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.",
+      },
+      { status: 500 },
+    );
+  }
+}

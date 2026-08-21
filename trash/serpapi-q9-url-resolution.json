@@ -1,0 +1,233 @@
+{
+  "search_metadata": {
+    "id": "6a7e72c1a39c28ec7bcc4673",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/lbIdWRZZV3VEE2bGbJo6QQ/6a7e72c1a39c28ec7bcc4673.json",
+    "created_at": "2026-08-14 01:43:29 UTC",
+    "processed_at": "2026-08-14 01:43:29 UTC",
+    "naver_url": "https://search.naver.com/search.naver?query=10775617216+%EC%97%90%EB%B8%8C%EB%A6%AC%EB%B4%87+Q9&where=nexearch",
+    "raw_html_file": "https://serpapi.com/searches/lbIdWRZZV3VEE2bGbJo6QQ/6a7e72c1a39c28ec7bcc4673.html",
+    "total_time_taken": 1.9
+  },
+  "search_parameters": {
+    "query": "10775617216 에브리봇 Q9",
+    "engine": "naver",
+    "device": "desktop",
+    "where": "nexearch"
+  },
+  "ads_results": [
+    {
+      "title": "TS800 3차오픈 라이브",
+      "sub_title": "최대 슈퍼 15%적립! 오늘주문 내일도착!",
+      "description": "오늘 단 하루 쇼핑라이브! 10만원 할인+1만원 추가적립+특별사은품 증정까지!",
+      "site": "brand.naver.com/everybot",
+      "link": "https://ader.naver.com/v1/QT8Ra__u2vtdqvL_0W8hCfxG8mHUcMiFjWgJPLzzwR767zF_67MnZ9GU9ztwaF-NEPUO6AM_jZEK0qBJCin4dIp3nz-ERihbln6DsZ4UwwPSjEJYuBUF-dELbQNzZ-nNf9JdcR0nC9mxwSMoVAS1z3uXuhpUlH8qMYnPxWBR97ow8Dyyy3B1cO90pzelC0jHkDookjUFM9yh2cgwAjk7GocJydPGJin3N8WoCWZEkHpkUrSVtYVl-4wWdmg2ajFM6Kju5XRpHS-3PKs5T_ocS5oCD8qzOSCqajWOO6_LJeK_85L49RoMdSyPejNQrSEGTf9Wgvdz1AZ4NMu_twKQg2hF5rpDpAJQxipM5FRZLcyTpDn0eyt4TwZlNwHivPuJojxwRQTiou_MSWOcROSbqd0R-ITRLJatnxCg7NF_k1vpGI66ZuBWPZ9-Qa_IMzJ4?c=naver.search.pc.plsearch&t=0",
+      "thumbnails": [
+        "https://searchad-phinf.pstatic.net/MjAyNjA2MTFfMjE0/MDAxNzgxMTQ1NzgzMTA3.9LLMtlY3Ct0j2S8cxSqgb6cUNaeFv6rB5AR7BHVZYMIg.0hn8GS3BQnAHzkwtNunbGSLJKGqjRotdWqx2pzoKaLgg.PNG/1111156-129ba3b3-144f-4d6f-8b41-dd48b886f540.png?type=f160_160",
+        "https://searchad-phinf.pstatic.net/MjAyNjA2MTFfMTAx/MDAxNzgxMTQ2MDcyOTE2.H1QIU1TgCYWAGw8P0cgcGUDIAwWZ-8Q6qE_xmyZQ10Ig.AbQokT2NMLoUvFdnkPiDpf_NLECQxwYXUOFtwCRgK4Ig.PNG/1111156-8b4b61a8-2259-4e7d-92e0-9d6258f18937.png?type=f160_160",
+        "https://searchad-phinf.pstatic.net/MjAyNjA3MDNfMjIw/MDAxNzgzMDQyNTEwNzM5.-RgHT-tUid7mTgSJuCr_-ZJx7VANU39-JEwbRH-2yWYg.IRhKGwJziNNbk2yUdu5jzj77KaDNRIWKOZqLag-ytpQg.PNG/1111156-7aed50ba-1592-402b-941d-b714bfc96126.png?type=f160_160"
+      ],
+      "thumbnail": "https://searchad-phinf.pstatic.net/MjAyNjA2MTFfMjE0/MDAxNzgxMTQ1NzgzMTA3.9LLMtlY3Ct0j2S8cxSqgb6cUNaeFv6rB5AR7BHVZYMIg.0hn8GS3BQnAHzkwtNunbGSLJKGqjRotdWqx2pzoKaLgg.PNG/1111156-129ba3b3-144f-4d6f-8b41-dd48b886f540.png?type=f160_160"
+    },
+    {
+      "title": "CJ온스타일X에브리봇",
+      "sub_title": "매일 새로운 라이브 혜택",
+      "description": "AI 탑재 프리미엄 로봇 청소기 에브리봇, 지금 필요한 순간 바로도착!",
+      "link_list": [
+        {
+          "title": "방송라인업",
+          "link": "https://ader.naver.com/v1/7PhK6rzlm1xx2GxvcDfqpIT9jhGVUizl6MHp_bYIHxI2vAU7tkKw0f1hevtZ3xDaSb_S_kjFIr1LwYMdCyBW_IQGGyiBIYSS6ReAAqwvSftEjhzZ5AsdAVGx8jkBCEoEEXbFoAaWkL2JVEA97c8mDAEoPL78D_3PDGIomnZg-wAnkGyZqHNY2qja76tC2xQWKtQEJH1zOaJTv3MfGgXAjSVC20jVd5_U74aKELNT301RCWXvoXl7y0Vls3DuzDUf0CNEdisZuCx5Chj3YJnkPpUIpaJJdjJ1NfeR__-7MTuYA58ZvKqLoI5iPyqrylNE3RrUiC5cnyT0wTTbUgxBOWz9DDwi0uLgZk2qQk-8Gp--os91LDVkPYIbX57GWGLIym4KN_l8LrD_fGDAVNeovqCicFNmVRu6ccShMzbTE4mf3d-5XYO9k0fokI-AAekmP7B0kTdZQEmn5_SZc3zfJlENOhh7txq9oOesjjpc-lYRpxPkw7ctn5A89O9yz0A7mWnExVDxozkzdi9WglbLdZXN5gwmv-9zPbcC3LGK9XNxdq9Q1xwGYtd8IbmshSQmw_QDEu1aYOGufpXO7yVgc3gn7FuI4GLTBliGaIVdX1k=?c=naver.search.pc.plsearch&t=0"
+        },
+        {
+          "title": "첫구매쿠폰",
+          "link": "https://ader.naver.com/v1/pG0Ir5R15tFhKLe7cAeMtTUuIVkdwkKy3EVIFt3dCoReKI5Db3_F5hI2GU99ND2N9B4i9bPuYRt95Bmzuu916gpskdjRX70PtOYw_uoV1XIyAtrguqd0cO1bQCFKhW5adZD0bplnRYwA-zr2o32m9x1kiAQI2czMDWjjsNEg_EYH1_bmarSLldiXIRDoIABpUZu7V6GidDosC1X5zWxTe75Nq7QxNWJwUlUqBPZg1CvSzpGDr8ICq86bBvAz-LXCEcntosgcggooDA8wZ7qac-uLym5DVg2x-F2rM4kKoe7DLrP7_urkVAMo_sC8xxMohOxeR2cfAD3A5xXDy4AYxHtOgUf84oSPC4wKfKz726v2nNB1w1FE_CIHCL82Orcu2cbovgdbViyrhrY7d9YO9kF3J3UIErgB-x9wdfFmApy0j50rYanFa9Ul_6nPw8JThO7rK69BnktyC5MDO-BG1bLV1ybCLg7wib_wnb4rUuo9w6Aqwiboq6W-YsjvVzK7eriwSRxo3TFvir5xY973aYNnMNFnj0KmYCey_eXwV5sxYVaRK4nxMXjAmpBKFVlveBMNXyaSlizHAejEnYlyRVY2gsI9VuIO4m2CcTTJzyRHr9SBLmR0p266qDJNOe_S?c=naver.search.pc.plsearch&t=0"
+        },
+        {
+          "title": "쿠폰&행사",
+          "link": "https://ader.naver.com/v1/xv-rdLtYmCEvINdnKMNrTHlMicM5Zm3IB39mUYQZ4_K-sXb39PIp_LjDpl8CgUaWSwjoD-lY5-OeN9A-RssMaOJn3PgE1Sw1S28FSFTvyNJNmnNzQUyD4nKt6LoPafV2GmZW7wTJptdv5888WD-QbEPkMT1f9lDTHhyHrW0cjgjhvts9nyXFP7InWBTq59XGm7SWq0zVPW3wGUet_9rdhisKmn8t0TZ6_cdfp_-zw1Onqp0JpuFAcAaIDv2I5X_0Nx9mbEQ9PtuLjFFN4EndW77x6jYTBKD1Wt-ZITDrQCpBIbvbzRgotwoBOyQwpTzb_PNlgy9MViKL4xEwiYJKZjydW7ImE0I2HIO0O-HM4PUYgnwp6bm17-RlRvmESN0v6PwCUo9o3gOG7Cz7azulmuMaYtr3hCuHikIxUkucDhVv1WnyvZY1D8KtZPlGX9r1nUYRG1NNYDW8XN8muGUAL9pranut-t1teY-yWpYjS7xk_IZ6bJgzCBj-mTZNBBX8PUwAHCAOjK-4SLIONuk5zbskgU3zy03qp0jXg7fOuQWkokNFWDx4T_u_UZvKzaCsdGX5yf_rCpvN13SJlSNKIpNCOtebtCuLm617iEhwuCA=?c=naver.search.pc.plsearch&t=0"
+        }
+      ],
+      "site": "cjonstyle.com",
+      "link": "https://ader.naver.com/v1/xhwe7VQhdNar8tiixDEECGo_RFrnjf7NgKo8IN9Pb5Rl4Kgsb5boRe0ZlaqBcV-bp6gPTqP4ALhn5jFY4BLKLwWP7iiz94_imlObDvsSS6sa4i8LgJJv1airtfw542-7IZDQXWt1sm2JsxQeGSY8ITKsY-dyYFonZybWFYqQn20D0ZZX_ZBMmVZQTUj6bOa5yJt9L1FzxqnRP5Ga79LOPVjcsbck6bpZDgI4ZLJrnUty0xDqVoYG_8NS2vAXJKZQE4iAwEHJTKzBLTAFY16aoHR_oC_248LcGCidWN3GH_d7o2YWYa82ZOoN67F-3_23W6aFXED9mFmXJv083J_cTbWruLq8m0qQd8a7VkuqA_LoKG70eBz3It0pmQUN-o0LZ9h7_z2hvVXHDr3YjPq8CDNbM2fE3z8_gtJCsonsQIWr1xvy9A4CmzYcykoLBa_gIpBEjMEdSUYDS3X7wLBEmBCXFBl2SLDr-6aHG73Rwnc8vaGM0xoxvzM4IoudAK5cmX9lyFf39qUyEVq5WYwat8ftt9TJRV7z2oH7C0zfBHo=?c=naver.search.pc.plsearch&t=0",
+      "thumbnail": "https://searchad-phinf.pstatic.net/MjAyNjAzMDlfMjY2/MDAxNzczMDI2NTE2MjQy.9wmLv5A3FGHQRvTuDDS25JiCzJvjBEykDUTEbWqqiz8g.yeioVqtGptZnC01eJdAuro_EV2JaaDE49lfQ2K4wKaog.PNG/218089-90d66882-8365-4a1b-b65a-f0235ad87ef6.png?type=f160_160"
+    },
+    {
+      "title": "에브리봇브러쉬 쿠팡",
+      "sub_title": "와우회원 캐시 적립 혜택 오늘주문 내일도착 로켓",
+      "description": "가격 부담 없이 에브리봇브러쉬 교체, 와우회원 캐시적립으로 더욱 알뜰하게.",
+      "price_list": [
+        {
+          "price": "33,300원",
+          "link": "https://ader.naver.com/v1/Z1uotq_JLWv3h_MguRx41HIiPOQ04dlI2gx8hsNoPXOehCxcCEZ5aiazVz9jl7YRN_KUToomw1YAkF1D159i-8HHXk43k-cMNXod40JZK8DhntjSzYSidIP11fiY1CpOJxnT3z-UIqE4VST_8UAJKyAjybSoL5BB0qYZiwPakSxyGv8ZWFW5xjuWoid5T0OgGS64t4d42UAoT6g_LuHI0oJc6hbUo72xZIfzQdlYfA171XbHUrOnbBGSGMnducvkDMXuXwJawOstV6D7KcNXyO68ow8VPH-D7wXg8GTm2daynt0M6EOZMS0LEu2dwLFzM4heojeiOM3Qx7Nwno5U7FEvWtp_FsC3NcMnHAifmWH0TCsL15ZXcZD2sbMMdz25j8OQuM5uLo-ORRhZ1yS9H3bxShutAg4YXtqKex0B9sK-JJvfwdGhdgMZN_SJdwvJKhSHOL_ANSCzZB8yQ8b33tvcrIeL3INooryCxWbRCsbxuKJaeE3YuEXTqoXyaTQS6VojpUl281mCoQCFMauVPl-gry8mbzCQXbBomRdTNvbMX0foZT2FWLdXs9cR581D?c=naver.search.pc.plsearch&t=0",
+          "thumbnail": "https://shopping-phinf.pstatic.net/main_6108453/61084539062.4.jpg?type=f200"
+        },
+        {
+          "price": "964,600원",
+          "link": "https://ader.naver.com/v1/qJpztmR8sN5TofSAZjnUqn_y2mOBUGRYrm8cwDs6m8lWzdy9JPOcrCk4BE5hCCzFEpUn-7Now-ClaAb5M_yyot8mwF3wuHYeoxKNUgLjn8ij-8ufb84okVSXRVWQ1bU4ORu68P6dOcWB6qoeW4lxFs6QZEyJbSVouuqYPfzQvbB44STsc71DJXsns4VCY80j0pVQeaz1Fwh9grR6AraWKXxDpEzr09J-5S2_LyuODX7HheLzgr1C4I_DDKcCz3k5sFriU6YtACacDDgbX4Fvu4PjiBoQw6VTtMkBUDb_uk38D7hfH4ALycuVl1w3mukIGDpx4cF-q6638vmHaaL_VQ8I3008IKuuaP74-sb1qH423csvZC72gNVOxJHsrzMdyb_ap0SlPExZDOaXzwxtlJdxadNheincexNBFdeljqvox8Z3stDhbFNQQ16rodXWeEcYWVuF3HZbMI7BfIaG1HdVFGJt-eDMC18Oviv2V8qxKfCnZeDJkC4CXSdgNFMUX_zBujjzFj-I2zUT5PCKyeV7VYXyLxJXmFq7n9pIHNmp_e-A2m2Ta6GnxkZtOo8T?c=naver.search.pc.plsearch&t=0",
+          "thumbnail": "https://shopping-phinf.pstatic.net/main_5616110/56161106890.jpg?type=f200"
+        },
+        {
+          "price": "499,000원",
+          "link": "https://ader.naver.com/v1/7HCTMu1k5dsEElR_SVq3bcdigy46hiJo9Wdhbnhb9Q0pGUTBr5jt5d5N2l1ohuq2fYR-NeaB2GldRscDDjH2ij2DnYcBTnkjN_wYNWgxOHW8FJULbB_ZdNLfjQ6L97Lmt9ltCb2p-BhSACUx8hSZEVB6u3Jh7kN86dLwoVRMNuiKsfq4Yk-DqzOYA84_X5k4UgIiMBSEPaW4xu-8qAwwvGtL-QK-kN89F6W2Vd2U5yo2wMOfiNnArzH7r4fE2LFg53yfLDdVF76vGacfV1aF7nKmwUjmvF_XO7d4TiPCm9_RzN648z6gWHZAITqXvvYfK8SSmuvjS05Y3pWu_YNYBG-YnFgPjgrjv6jgfda41txj6L63HVG2hLQdhLmhh5PGAAOOBN974fa37-IsNaQOAJLilsF_QNZ4PhKB8YM8c4bsFDDhBWDLLcCncSZQp8al1YYAATYiBxL99s6MFwJ9TNvhGOM2-NHHbykoZv9ZXxN-tIW5uDY6HDPHTKDUnOdvMs8XUmLLHmYO1xC8pG9evASeEwrHN-aqr7iR7cLmFy5CaEJIfr3PF3KVIkVtDaLE?c=naver.search.pc.plsearch&t=0",
+          "thumbnail": "https://shopping-phinf.pstatic.net/main_5675680/56756805051.11.jpg?type=f200"
+        },
+        {
+          "price": "799,000원",
+          "link": "https://ader.naver.com/v1/BK3RSu8pb26JUb8hpRmuV7FEB8e8q5---wAlauYO9bToyz7jHvQ0mUm8hck-Mzvidqoc7Q-Cl699fMJRxKs3cbNc_RyYaQ-hNQMjt1PCRtmLAl0R2MmSbkz-5fInLsYEhdeEur5JZjZXtEdMLFrVUgo0ayJXM1b_sBr5oHk5NzHUyg2sDlSBlWbP-evi3WAq2oZJTcq0XKCDU0fAyAg-IUA_d5rlufLhjrWFT-LvTpEDnZ9O4tXoJsZk_yOZV_7VqZEcCuEdq-LIzuMaW8DDeybAloY-8j_PXqMLWUCMJYcwc1O_juF-4inSjPn9E9e6ejLVbD9MWq_c_rEmqUZT49AdhR45AIupHVQoHdk2A4sz4Mdgb6LZ70tB9cIF10J--eO6fHKhhPR24wYPFaoszyh4EleWG1lDqMkW0gRdarkHxPzANC8SBmqpIwg07bHNygQ8jEkZM4TKKSo7F5pwtQcTZuOXTH6I-A6Lo8MbHMDJO5hmkISOhTqtdJaVnWkzUPDmnrhplmX0_fRtt6-89sN7f0TUPCVf_qqZhlNgzENmx_Sr4_hxWwMWfM1FTHj4?c=naver.search.pc.plsearch&t=0",
+          "thumbnail": "https://shopping-phinf.pstatic.net/main_6059491/60594917687.jpg?type=f200"
+        },
+        {
+          "price": "14,200원",
+          "link": "https://ader.naver.com/v1/-glHNokg-64mEXPmFq3tsf6Y3jpxCKT_Q0VQ87HzJq7igeKx-MP0jBVvHwu8jxXSmvh5itWg5KcGRkXB1mUkUV0F2Oqtkfsjk7-W_A0Ass4BOtsQwpgsGS53uw6OZpTdG0ljd-OlRUnePZ7H1PZOgbII_gdgfhz0fvrVKTGZ0zD6FSPrsVnNZm1tm0SALU-kswjD2yRTguHdVgAHW_hd5WUdPCX6pxRDFwqxAe5xqI6Q214ibKx1_0V00aEmig779Q7xMbrJ4aHhJku6YFNvWXgR7Mmtztj6zl8pHbKhC-O6Lu1tKohAtGffLWRQA6mo5-07tUca7hzmbUFUnZOnZ8epPqw4HYf9t4hXkv7Or5p3pJD4vnvP5u08rSwWkfMbKcmmYq3LTdZc0VCORwNAylxCiK40msYekRwo7H5n6-ttxYOMok2LX8Gv_pnZYzJANbgyRktZYmOlMWp1Vg_FPr5gcSa0Gas0lzzTlEHdpOD5EMdLJdG2ll0Da0aJTuby6esgai6lRWztZDwjlBmp5xsQh7dCadsequsDahKK-JaUxn8PfIPRNgN7KtJKkAwD?c=naver.search.pc.plsearch&t=0",
+          "thumbnail": "https://shopping-phinf.pstatic.net/main_6059493/60594933298.jpg?type=f200"
+        },
+        {
+          "price": "22,800원",
+          "link": "https://ader.naver.com/v1/GGZhvjAMElpWr2-vZV67MX8UM_naicMcv_RCWxxRmnTKxzXmGE3FFWRTBObgwGu2SoR2QqegtT-Er095R39kblFVnC9pL6Hj_NP0zpGHLXiVHRQaqOIW3nL1u4fjpFiVm9p_bexDooiG7poTjVacorc65m_Oo40jhgADCX6gPgEJUirG9kHeUvadcul9FL_ZW6XIU-YjnhgyrCJTO-fnmWMHl0-jZ1qxpCVU_ecbdKsxdZbPv3EBDoDCtcgmsTHrhg-T0ZaDk8llAxUZfBmjLhPTdYllzEVcWnJ4Mo1A7UQJkVZD374qTCNi0wza-iIGmir2F6FNaWnfD4a1TJPeb1L7pDlMKKvONmgrqHOxYwT6EM-FdfzQ36IbErm9JTDSPuht_w8nlSXuG46SHJKh63zphTBKq79gI1voGtMVwxaCEzgVdKuQIrnteSzREhiRi-UHGQRa7UBMwYgwGeM4xX4F-avR9e4WD8eQT1VRyk6K_0RH6Ck4n1FfJThN67KMzoHF9IraFc1-ovNlcsQ4FnAMaWMEgV1E7xzq8Lt5QRnaXaPsgwVIz3SPKGkywQpm?c=naver.search.pc.plsearch&t=0",
+          "thumbnail": "https://shopping-phinf.pstatic.net/main_6125805/61258054039.jpg?type=f200"
+        },
+        {
+          "price": "15,200원",
+          "link": "https://ader.naver.com/v1/hwaWslLMqcreV2I8tmRe8kNV_8pbmr0A_tUEtncovq3bqNGrW9RbPU7t1EaJPVooAE4MaezIKwWeDB88tOzkIBI_kKbxbcTuTiMnJ8MqyzOMLDo7vWidXIrMBUm1JtI9-OeKktS_DTZwCss-KcMXC5UbACYoQesPJU_YkrXrFMqfRMgyGHwh6bQK3GV50X9oSGg4rZ55_8QsGJhN4CQCK6_OSsDUlakuJQhzCdWocFQ4ltzuJzKuya4Ep4XMgk3dC_c4JJp0ISrzLH5GbMoKLTCCoSG93RP53RgFVrjACrEqbf4TeN4A_KOGvWy1df_JEahgP-U59dvdevCYU5GLrqDYVO8VkfbJ79_vLhPmtniUQVvYCEIAKjDAHr-WQRnSIEpnJrlkmHgM87Ar6ciLy_0f1gO2ix6pWhcITAMmg-h9r1Q8LobRPFOTSDCMfbDVJ4kvsRLBRiTQ70KhX6DzCRY9p924EDEoeuecJtkiMADFBpZ9jM4t-bqvlajlhj12npK8ztzZkf3rDyl1LQPFVlx2bmYkAuyaUQ3acP6LkJRC1x9E-2q4mnDwHYlHM10v?c=naver.search.pc.plsearch&t=0",
+          "thumbnail": "https://shopping-phinf.pstatic.net/main_6125804/61258044949.jpg?type=f200"
+        },
+        {
+          "price": "30,800원",
+          "link": "https://ader.naver.com/v1/J_4Ow734rIl3N6VTts0GTG5wumixfu8ny46uhAXlKt6M0bmydH_WcBt4bLGNgQkOijV0_tFnFvcxrFSIO5O8LgN2eWxJPBZuEPr_tsiVVQrY3dcXxX6y-UTj0G4yXGmfz2h7speHWUr-qa_CxQhchWc3zg_bx-l0rqgTNlBC4gjxkMUkvhkbBmYcxc_qBcJFt9Fh-7ibTjRwtNhOW5vGRBErU5SMnom7ilI8UNi7ugyaLsf8o0G5zOhwQlD0MzIgeavw3sh8ApGd6KCTrcz_4U9zdQoYuxklV632aeSKorUflNM85WtAW0cn7znrJ1dk55rPaXHTCyTKg6JDoZvMlYGJTTngyYmQyQgl4aXWes8JY9OVmemOYxN__DTksiPWkPcKJA9si58Zw-hChkQHz25xo0GL18kgAqUdFS0iG4-R079wqCkZxciOf21s8oi8qfGjIHuElxCeVD6nm8fIOuwNdRBDdAUfjfOWiXqFsVn6bgme_nanWfmK9WcR4OsWWOXmBEzcxprxkd4sBSLakYD3JUzIzXkw8-RLKyxf5t7knrXYyBmpS9A245zLC2JF?c=naver.search.pc.plsearch&t=0",
+          "thumbnail": "https://shopping-phinf.pstatic.net/main_6125798/61257981571.jpg?type=f200"
+        }
+      ],
+      "link_list": [
+        {
+          "title": "와우회원혜택",
+          "link": "https://ader.naver.com/v1/RokBrMfBVUbHvRfuSonSpZRjoxy9Yxq4ZNTArwsWRdx6T7aAr62L-lMynFYnHDopeJpSyC3I5AoeVYaydbvdWLHomPAvOfAgErlIY0IqqyhIsavQHaRtRXFwEld40zNg7yv3N2OnJFWMXONUAN-7Wl4bWZcB3_23VXHRYPdjFYSQN4MPWO4QyMwC8MaC4Y-1sd9xIqkmnamJHTp3Og3p13eEAs4mTCLVbAXdviTk_Hpfvi1ku7eSs035eOnYFdNvjP-AlEF4QArpJ9bMo5C2kEUTImah_VfIVM5CINGgvX0wl_LGHR5oENPa9JYFqajjrDbX4Fh78D5zVaUwMFaHQnAODMryUkIkb9eRRg1jgFAEqfEFZwzox9SV38pgJnkq7PV2BL1JaIzkDVa8ENOqJ6dfNG9eeC6ebWqemfeMTcRcEpmq87p1w_8cfcPw3vUs2MpLizOw-LHMHOTAUUZ2I7w6WIcHpcub_CF9GEnDYVRdQXill94aAuH0Co6GrnAV?c=naver.search.pc.plsearch&t=0"
+        },
+        {
+          "title": "첫구매할인",
+          "link": "https://ader.naver.com/v1/XWb2I-FPQ-t5A4ARS0GGt2HHhRNa8DcsgXKJQJJ_2Brdb5H7MjJGNpQlxSbUP8dUfY3R9AsonfYzdbKOl3IfejS10TtnWgqC8KQeFafqKaMBmZiMg0mJ-JUZPUzs3GkJxgd07lqJyv8xBy5exaA9we9Av0B1a4u8DnbsShLhJZL7ahqtK7j2wSfBv5sMB5r7GqxfKxjdhaA3ucoT3YwErJUPT8GeU1oytTbi-1NnjO1MG_UXEoYV5BTGFROBcgKym3C-X9Hl1ZmrS0WTcRbZK9wFJXEIbR9FqpPFjff1pK06ne5vr936GCrkwU5OqVSVqZG55PjB8ib8-w4Iic7nAIOuxDtvYWODwnvsMQukPNiEmJP66tu4Pw21PHmynXm790MmO4FM_nCng9Xd_GtquhWQAgwi9KZ42cLsFF6e-WY6U0_FN5hJm8MI4Q_S000Yb0ALs8tvnhmWSHAvSz_zsZZ-D0XvF7LcGc7KKPJdahJSEwG4eKDkb0SBv-g244_5?c=naver.search.pc.plsearch&t=0"
+        },
+        {
+          "title": "로켓배송",
+          "link": "https://ader.naver.com/v1/nSikHnPFk7qpPIvwR22OELHPgsCn7yvYuf54hiIMxCgrnfHf7RsXd240UC-tzEjy21xpVvtACPThgpW7jx-xgA2mGXiFW5VyDjUfImzAKogqX8oFnDQojEY2VgVYXietLGHnJUzOCWoBBlcQW88RygeNe1HY6TUJBR45xwaUoPuC_zleoyPQaisAOXogfvjEDDCbQLzp96T6jCOBfSBL7UTpTtaPh1BuYc-3LrsacZC71IUx1LFZ0E6BU5EdofJkJ6QjqdHVOch_Mj59xo4dxWx9bbd-CUUrG9kjGSV8lTj5KhMLGztvVKvF5EIDQDBvvziVktE3imJ6BdhS3tRG9evGZBzfNVT0GGjIqadsc1KrgpDEtsyjjugutFVkOzVnmZg9_ZvQ5gC4NNz7nhJEFl9v1gC7nBW3MoHU1jGYvvNKtrj8a2ztC34ZhQst4mUMk6-Rj43T1TQBYJehG_zZBay3vE4soj2UPSoT2kio-w2sgfFCACopw8dVfloAA4QN?c=naver.search.pc.plsearch&t=0"
+        },
+        {
+          "title": "로켓프레시",
+          "link": "https://ader.naver.com/v1/hQKJalghbqUOD12rB7BPp5_KAkmZQdSIEimS872suhZKNBWlZm3wXIJYuSj1vIhuFAT0YkkJI4bCeSPOqMM3wWV8WsZ5dbYEQbe794ce9NfPKUYVXj3yfSWgGuYD8sJK-HS8cmR_1i5P0zOwV0OmGWrrkoTczfsbbTiPPFHLNjkGIIhihzp5Q0_VGr-qhHqaHOq4CMldRTUMLQxYGCLRRWkEGMVGD8uHMneL-HwyIqvqwQY5blw1WTTMLu-BPfFH6I-EBe-BTu6Lzh9_6EjOkR2Od39xeXTyMd6s6XHjNYpPTu1EdwQjmCidgWT523Sye6aH1L61VebBuqUWVtiGMdiGhhM05occJVHT38UE-uNrp1KpVxk-Qpep4MWozty6Dq9Up_40xlRzqG6CpeA4MzXq_3J-0HjWb-RnCSj5e3hNQ1TWiTLwvpNKCh9lUzmBujJZAE4zRKcVPb-hEMYrIyv46QtL_qq4L8tRwY5RAbTICes2jlVOgqPW30Y3MHb_?c=naver.search.pc.plsearch&t=0"
+        }
+      ],
+      "site": "coupang.com",
+      "link": "https://ader.naver.com/v1/uCsgQYmtNWjCpgqUS4hK7u8bmWAdrdGrCI_rIjFkdocqrAwNRNUmCN7v1XYMMGP549Z1tkh7Bt-73CpiJ0HzieTtbfHrZPj-BsIrKU8QJ5CM7FIm6OS4abBCF_ZLCrO2mvmHPb8ficPpcsZzVkplt-UKMMJhDIEnE899XFQzdWtTjW53KzCfVSqH7pXiFJE38lQllO0cUoQCHuKWlhRkJj598RZoF5mmCA7-d9EQ9JShDD_i_BqXNteBLl4dtvMFJAZOn4QqQy5WQmWpBImXRSoxqfsaDf__vmJhRk-nzFGj6fuEdG0h4ima9zpLxs7mAbOHcWbDDIOarlBogj7W99zbTQlfZ4UBvUaGyQt9EAIWyhNAEF36vlsU9A9LD8zWC6qHpzeovdZzJxkv9C_sBJCBr-g25I-X5rcPS--iZfmIFWO57ysLSfx8PfjeU1Hu4rDjQH-lMmXxly_ZNvfw6FNReQzrc7ZNxm0MSmMdqP8=?c=naver.search.pc.plsearch&t=0",
+      "thumbnail": "https://shopping-phinf.pstatic.net/main_6108453/61084539062.4.jpg?type=f200"
+    }
+  ],
+  "web_results": [
+    {
+      "position": 1,
+      "title": "N배송 : 네이버+ 스토어 : 에브리봇 AI 올인원 로봇청소기 Q9 프리미엄",
+      "source_icon": "https://search.pstatic.net/sunny?src=https%3A%2F%2Fshopping.naver.com%2Ffavicon.ico&type=f30_30_png_expire24",
+      "source": "네이버+ 스토어",
+      "link": "https://shopping.naver.com/logistics/products/10775617216",
+      "displayed_link": "shopping.naver.com",
+      "snippet": "상품정보 ; 상품번호 : 10775617216 · 복사, 제조사 : 에브리봇 협력사, 브랜드 : 에브리봇, 모델명 : 올인원 로봇청소기 Q9 화이트, 원산지 : 중국산(중국), 제조일자 : 2025.09.01. 출시일자 : 2024.08.28. 출시년도 : 2025년, 모터 : BLDC모터, 인증정보 : 판매자가 등록한 것으로 등록 정보에 대한 일체 책임은 판매자에게 있습니다.",
+      "thumbnail": "https://search.pstatic.net/sunny?src=https%3A%2F%2Fshop-phinf.pstatic.net%2F20260220_172%2F1771557892367Mgckg_JPEG%2F21530245478138581_120328175.jpg%3Ftype%3Dm450&type=fff208_208_ar",
+      "additional": [
+        {
+          "position": 1,
+          "title": "평점",
+          "value": "4.7/55,606 참여"
+        }
+      ]
+    },
+    {
+      "position": 2,
+      "title": "2025 국산 로봇청소기 추천 TOP3 | 삼성·LG·에브리봇 안전 비교",
+      "source_icon": "https://search.pstatic.net/sunny?src=https%3A%2F%2Fssl.pstatic.net%2Fstatic%2Fblog%2Ficon%2Ffavicon.ico&type=f30_30_png_expire24",
+      "source": "도쿄지엔",
+      "link": "https://blog.naver.com/qpiter/224007544049",
+      "displayed_link": "blog.naver.com",
+      "snippet": "2025.09.14.",
+      "thumbnail": "https://search.pstatic.net/common?src=http%3A%2F%2Fblogfiles.naver.net%2FMjAyNTA5MTRfMjk5%2FMDAxNzU3ODMzNzkyNjQ3.0EawzMwyUUhwRDkf-cWS3YB5neBfa7dGgmKeugEprjMg.fdlBLNkg33RhQHpVIqgaTk8vJMasZ6aF4YXeaQM3X4Mg.JPEG%2F%25BB%25EF%25BC%25BA.JPG&type=fff208_208_ar"
+    },
+    {
+      "position": 3,
+      "title": "일상잡담 - 에브ㄹ1봇 청소기 회사에서 쓰기 어때?",
+      "source_icon": "https://search.pstatic.net/sunny?src=https%3A%2F%2Fwww.dmitory.com%2Ffiles%2Fattach%2Fxeicon%2Ffavicon.ico&type=f30_30_png_expire24",
+      "source": "디미토리",
+      "link": "https://www.dmitory.com/talk/391903321",
+      "displayed_link": "www.dmitory.com",
+      "snippet": "2025.12.09."
+    }
+  ],
+  "shopping_results": [
+    {
+      "position": 1,
+      "title": "에브리봇 AI 클린케어 올인원 로봇청소기 Q9 Q9HOME 세트 화이트 흡입 물걸레 로봇 진공 스마트 무선 자동 청소기",
+      "link": "https://ader.naver.com/v1/zFjJ0_w5c8BH6KUNWNM0x8reqw3tLDTpfQcEbmcnmd0Jark3hlo9Ra7wi3-H8WhtmKRK-RT2DFcXJImHkuFuh4w7q4T20DnQcxMHN-4tCqv0nVerHb9Wij6SQCzko_H8EB6myfs_slE8cfny0mD_DQLAZQjrE2ltEamAtAsj_otS16rRgZ4roM8tUu1CPu3_P9-DDfXKBKWlD5GM219t08KEzQD0hf5_MMaQ1Dxs3i7CK5QE2MO2vzPrtss6ZLQKhpVplJzlEJP2DfO2R1KGsiNWC4PLFf3M6IC9xAdY-8o3a3-PF2VKjNyI2GbgxfTM7f6CG0RSUZQ0wIvIeEaiMbEEuq_12sbZbW6r0Mx46DP4TsfG-g_xXPOGq04mqMRtmTz8OzfWJ61a6VywKGRYjWCzMexqJFOgR1Hvr1Vtot4nvpVraVHvu3zd2k50FwkkuJnVR82wWOL175icqUE1PMGLB7Ii6LTxW8DJMvhFWMz539llTkkl5mmNceTRBi5rwD5q6vxtYtLSTyyHZmwpZGdsL7t9ULeFTk-LJuYG0JWwsvHRIfKKyHbphzb_Aby2r1j-6Lg1haOJjQNWGpGzALvyTgQ8TUOAUOBR37gZiaA=?c=naver.search.pc.npla&t=0&ui=GUIDE",
+      "thumbnail": "https://shopping-phinf.pstatic.net/main_5675680/56756805051.11.jpg?type=f300",
+      "price": 499000,
+      "stores": "쿠팡"
+    },
+    {
+      "position": 2,
+      "title": "에브리봇 Q9 AI 올인원 로봇청소기 무선 청소기 가정용 혼합",
+      "link": "https://ader.naver.com/v1/ZAvobmcsgTDyILig1CfKu_PH3BAmJAqCz2TScltfHQnpwZnaYMnozYpb5qFRH6JODO2eBW_Q4QV3-1nbwiH__mQJxpjToOehAK8XLFKrQSKYqVZ4E-0MYzCa5X16aBzesKRT1Nq5y7qFF2XG13XqUBQWdtu3nUGpUSqgho93l2d7sZFFPMaLINKp_lR9MtkfFgNZHhImOVkKQpeYUw98KrlYRJIeh8oyKnUyXCzCdKUKrzKFKMhFcsZ0NelOQ-F3oaMoWZEvJjRLdyQRo4tUHGDTeUG-sh4lQT0aZg7J4XoFe0zTII1cxnkOqL4CG9oRph7CHWan3v13_K-jD9snzO8veKz6NqJMBKgRc3ZcCM1lnhaJJBWMTjays7fHXy2D9wdFeswyOKdDTkQvoSe8yZQHTKU8csssBs_8Cj6AsYBy3SfhTpcMuZYmiusyzV5zrar5TdV797gP4V_xWHBiPtsiXAUZwjhPyMI7MGGcoml9lZzMRsgR52mOfBz_uAiMqxfMHSAPTjnKj8kp4XXpuVDAm3HW40ZczDjsOGslb6YFPis-EXUWmxSk_yK9wy7J1i6xjbUrI2iJxxZgHe6qsaQjzkITwRoq0pIXqSIOURM=?c=naver.search.pc.npla&t=0&ui=GUIDE",
+      "thumbnail": "https://shopping-phinf.pstatic.net/main_6059491/60594917687.jpg?type=f300",
+      "price": 799000,
+      "stores": "쿠팡"
+    },
+    {
+      "position": 3,
+      "title": "에브리봇 로봇청소기 AI 올인원 Q9 인공지능 자동 화이트, 단품",
+      "link": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=54024790735&cat_id=50015541&query=10775617216%20%EC%97%90%EB%B8%8C%EB%A6%AC%EB%B4%87%20Q9&t=mssa9jtn&h=72c2db0bbc6ab6c81f4b87f67ba32a3079de6507&frm=NVSCPRO",
+      "thumbnail": "https://shopping-phinf.pstatic.net/main_5402479/54024790735.20250914214026.jpg?type=f300",
+      "price": 499000,
+      "rating": 4.78,
+      "reviews": 5720,
+      "stores": "판매처 17"
+    },
+    {
+      "position": 4,
+      "title": "에브리봇 에브리봇 Q9 로봇청소기 AI 올인원 집들이 신혼부부 BNS",
+      "link": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=61256420284&cat_id=50015541&query=10775617216%20%EC%97%90%EB%B8%8C%EB%A6%AC%EB%B4%87%20Q9&t=mssa9jto&h=2722780388e2dc5f98e1f5f5dd51fe205b99d74d&frm=NVSCPRO",
+      "thumbnail": "https://shopping-phinf.pstatic.net/main_6125642/61256420284.jpg?type=f300",
+      "price": 1086690,
+      "stores": "옥션"
+    },
+    {
+      "position": 5,
+      "title": "에브리봇 Q9 로봇청소기 AI 올인원 집들이 신혼부부 BNS",
+      "link": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=91238535748&cat_id=50015541&query=10775617216%20%EC%97%90%EB%B8%8C%EB%A6%AC%EB%B4%87%20Q9&t=mssa9jto&h=69babafa70c610ff583049f7763249268bd59938&frm=NVSCPRO",
+      "thumbnail": "https://shopping-phinf.pstatic.net/main_9123853/91238535748.jpg?type=f300",
+      "price": 1086690,
+      "stores": "블랙비b"
+    },
+    {
+      "position": 6,
+      "title": "에브리봇 Q9 AI 올인원 로봇청소기 무선 청소기 가정용",
+      "link": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=91184796987&cat_id=50015541&query=10775617216%20%EC%97%90%EB%B8%8C%EB%A6%AC%EB%B4%87%20Q9&t=mssa9jtp&h=23826db22e78e67d7b0e4e40f91f233ce3c483db&frm=NVSCPRO",
+      "thumbnail": "https://shopping-phinf.pstatic.net/main_9118479/91184796987.jpg?type=f300",
+      "price": 799000,
+      "stores": "대경플러스"
+    },
+    {
+      "position": 7,
+      "title": "에브리봇 Q9 물걸레로봇청소기 자동먼지비움",
+      "link": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=91184763689&cat_id=50015541&query=10775617216%20%EC%97%90%EB%B8%8C%EB%A6%AC%EB%B4%87%20Q9&t=mssa9jtp&h=58766d97b83d04b6c263d118db015cac26784647&frm=NVSCPRO",
+      "thumbnail": "https://shopping-phinf.pstatic.net/main_9118476/91184763689.jpg?type=f300",
+      "price": 1380000,
+      "stores": "더 착한가게"
+    },
+    {
+      "position": 8,
+      "title": "에브리봇 Q9 로봇청소기 AI 올인원 집들이 신혼부부 BNS",
+      "link": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=60611254613&cat_id=50015541&query=10775617216%20%EC%97%90%EB%B8%8C%EB%A6%AC%EB%B4%87%20Q9&t=mssa9jtp&h=cfbb1069e997444b72291c948b3e9e01dd0645c7&frm=NVSCPRO",
+      "thumbnail": "https://shopping-phinf.pstatic.net/main_6061125/60611254613.jpg?type=f300",
+      "price": 1086690,
+      "stores": "롯데ON"
+    }
+  ],
+  "pagination": {
+    "other_pages": {}
+  },
+  "serpapi_pagination": {}
+}

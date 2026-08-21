@@ -1,0 +1,1290 @@
+﻿import {
+  buildResolverSearchPlan,
+  getResolverSearchBudget,
+  getStrongSearchModelTokens,
+} from "./buildResolverSearchPlan";
+import {
+  findBrandStoreMapping,
+  saveBrandStoreMapping,
+} from "./brandStoreMappings";
+type SerpApiResult = {
+  organic_results?: {
+    title?: string;
+    link?: string;
+    snippet?: string;
+  }[];
+
+  ads_results?: {
+    site?: string;
+    title?: string;
+    sub_title?: string;
+    description?: string;
+  }[];
+
+  web_results?: {
+    title?: string;
+    link?: string;
+    snippet?: string;
+  }[];
+
+  shopping_results?: {
+    title?: string;
+    link?: string;
+    stores?: string;
+    price?: number | string;
+    rating?: number | string;
+    reviews?: number | string;
+  }[];
+};
+
+type SerpApiResponse =
+  SerpApiResult & {
+    error?: string;
+  };
+
+type CanonicalCandidate = {
+  productId: string;
+  brandSite: string;
+  canonicalUrl: string;
+  title: string;
+};
+
+function normalizeBrandSite(
+  value: unknown,
+) {
+  const text =
+    String(value ?? "")
+      .trim();
+
+  const match =
+    text.match(
+      /(?:https?:\/\/)?brand\.naver\.com\/([a-zA-Z0-9_-]+)/i,
+    );
+
+  if (!match) {
+    return "";
+  }
+
+  return (
+    "https://brand.naver.com/" +
+    match[1]
+  );
+}
+
+function normalizeCanonicalProductUrl(
+  value: unknown,
+) {
+  const text =
+    String(value ?? "")
+      .trim();
+
+  const match =
+    text.match(
+      /https?:\/\/brand\.naver\.com\/([a-zA-Z0-9_-]+)\/products\/(\d+)/i,
+    );
+
+  if (!match) {
+    return null;
+  }
+
+  const brandSite =
+    `https://brand.naver.com/${match[1]}`;
+
+  const productId =
+    match[2];
+
+  return {
+    productId,
+    brandSite,
+    canonicalUrl:
+      `${brandSite}/products/${productId}`,
+  };
+}
+
+async function searchNaver(
+  query: string,
+): Promise<SerpApiResponse> {
+  const apiKey =
+    process.env.SERPAPI_API_KEY;
+
+  if (!apiKey) {
+    throw new Error(
+      "SERPAPI_API_KEY가 설정되지 않았습니다.",
+    );
+  }
+
+  const params =
+    new URLSearchParams({
+      engine: "naver",
+      query,
+      where: "nexearch",
+      output: "json",
+      api_key: apiKey,
+    });
+
+  const response =
+    await fetch(
+      "https://serpapi.com/search?" +
+        params.toString(),
+      {
+        cache: "no-store",
+      },
+    );
+
+  const data =
+    (await response.json()) as
+      SerpApiResponse;
+
+  if (
+    !response.ok ||
+    data.error
+  ) {
+    throw new Error(
+      data.error ??
+        `SerpApi 검색 실패 (${response.status})`,
+    );
+  }
+
+  return data;
+}
+
+
+async function searchGoogle(
+  query: string,
+): Promise<SerpApiResponse> {
+  const apiKey =
+    process.env.SERPAPI_API_KEY;
+
+  if (!apiKey) {
+    throw new Error(
+      "SERPAPI_API_KEY가 설정되지 않았습니다.",
+    );
+  }
+
+  const params =
+    new URLSearchParams({
+      engine: "google",
+      q: query,
+      hl: "ko",
+      gl: "kr",
+      api_key: apiKey,
+    });
+
+  const response =
+    await fetch(
+      "https://serpapi.com/search?" +
+        params.toString(),
+      {
+        cache: "no-store",
+      },
+    );
+
+  const data =
+    (await response.json()) as
+      SerpApiResponse;
+
+  if (
+    !response.ok ||
+    data.error
+  ) {
+    throw new Error(
+      data.error ??
+        `SerpApi Google 검색 실패 (${response.status})`,
+    );
+  }
+
+  return data;
+}
+
+function extractGoogleCanonicalCandidates(
+  data: SerpApiResult,
+) {
+  const candidates =
+    new Map<
+      string,
+      CanonicalCandidate
+    >();
+
+  const add = (
+    value: unknown,
+    title = "",
+  ) => {
+    const normalized =
+      normalizeCanonicalProductUrl(
+        value,
+      );
+
+    if (!normalized) {
+      return;
+    }
+
+    if (
+      !candidates.has(
+        normalized.canonicalUrl,
+      )
+    ) {
+      candidates.set(
+        normalized.canonicalUrl,
+        {
+          ...normalized,
+          title,
+        },
+      );
+    }
+  };
+
+  for (
+    const result of
+    data.organic_results ?? []
+  ) {
+    add(
+      result.link,
+      String(
+        result.title ?? "",
+      ),
+    );
+
+    const snippet =
+      String(
+        result.snippet ?? "",
+      );
+
+    const snippetMatches =
+      snippet.match(
+        /https?:\/\/brand\.naver\.com\/[a-zA-Z0-9_-]+\/products\/\d+/gi,
+      ) ?? [];
+
+    for (
+      const match of
+      snippetMatches
+    ) {
+      add(
+        match,
+        String(
+          result.title ?? "",
+        ),
+      );
+    }
+  }
+
+  const serialized =
+    JSON.stringify(data);
+
+  const matches =
+    serialized.match(
+      /https?:\/\/brand\.naver\.com\/[a-zA-Z0-9_-]+\/products\/\d+/gi,
+    ) ?? [];
+
+  for (
+    const match of
+    matches
+  ) {
+    add(match);
+  }
+
+  return [
+    ...candidates.values(),
+  ];
+}
+
+function extractBrandSites(
+  data: SerpApiResult,
+) {
+  const sites =
+    new Set<string>();
+
+  const add = (
+    value: unknown,
+  ) => {
+    const site =
+      normalizeBrandSite(
+        value,
+      );
+
+    if (site) {
+      sites.add(site);
+    }
+  };
+
+  for (
+    const ad of
+    data.ads_results ?? []
+  ) {
+    add(ad.site);
+  }
+
+  for (
+    const result of
+    data.web_results ?? []
+  ) {
+    add(result.link);
+  }
+
+  for (
+    const result of
+    data.shopping_results ?? []
+  ) {
+    add(result.link);
+  }
+
+  const serialized =
+    JSON.stringify(data);
+
+  const matches =
+    serialized.match(
+      /brand\.naver\.com\/[a-zA-Z0-9_-]+/gi,
+    ) ?? [];
+
+  for (
+    const match of
+    matches
+  ) {
+    add(match);
+  }
+
+  return [...sites];
+}
+
+function extractCanonicalCandidates(
+  data: SerpApiResult,
+) {
+  const candidates =
+    new Map<
+      string,
+      CanonicalCandidate
+    >();
+
+  const add = (
+    value: unknown,
+    title = "",
+  ) => {
+    const normalized =
+      normalizeCanonicalProductUrl(
+        value,
+      );
+
+    if (!normalized) {
+      return;
+    }
+
+    const key =
+      normalized.canonicalUrl;
+
+    if (
+      !candidates.has(key)
+    ) {
+      candidates.set(
+        key,
+        {
+          ...normalized,
+          title,
+        },
+      );
+    }
+  };
+
+  for (
+    const result of
+    data.web_results ?? []
+  ) {
+    add(
+      result.link,
+      String(
+        result.title ?? "",
+      ),
+    );
+  }
+
+  for (
+    const result of
+    data.shopping_results ?? []
+  ) {
+    add(
+      result.link,
+      String(
+        result.title ?? "",
+      ),
+    );
+  }
+
+  /*
+    구조화 필드 밖에 공식 상품 URL이
+    들어오는 경우도 대응한다.
+  */
+  const serialized =
+    JSON.stringify(data);
+
+  const matches =
+    serialized.match(
+      /https?:\/\/brand\.naver\.com\/[a-zA-Z0-9_-]+\/products\/\d+/gi,
+    ) ?? [];
+
+  for (
+    const match of
+    matches
+  ) {
+    add(match);
+  }
+
+  return [
+    ...candidates.values(),
+  ];
+}
+
+function extractBrandName(
+  data: SerpApiResult,
+) {
+  for (
+    const result of
+    data.web_results ?? []
+  ) {
+    const combined =
+      [
+        result.title,
+        result.snippet,
+      ]
+        .filter(Boolean)
+        .join(" ");
+
+    const match =
+      combined.match(
+        /브랜드\s*[:：]\s*([가-힣A-Za-z0-9._+-]+)/,
+      );
+
+    if (match?.[1]) {
+      return match[1].trim();
+    }
+  }
+
+  return "";
+}
+
+function getProductId(
+  productUrl: string,
+) {
+  /*
+    1. smartstore / brand 상품 URL
+
+    예:
+    /products/10775617216
+    /main/products/10775617216
+  */
+  const pathMatch =
+    productUrl.match(
+      /\/(?:main\/)?products\/(\d+)/,
+    );
+
+  if (pathMatch?.[1]) {
+    return pathMatch[1];
+  }
+
+  /*
+    2. 네이버 쇼핑 bridge / 광고 URL의 nv_mid는
+    네이버 쇼핑 상품번호이지
+    brand.naver.com의 실제 productId가 아니다.
+
+    따라서 nv_mid를 공식 상품번호로 반환하지 않는다.
+
+    bridge URL은 빈 문자열을 반환해
+    아래 Resolver 검색 단계에서
+    실제 brand.naver.com 상품 URL과
+    실제 productId를 찾도록 한다.
+  */
+  return "";
+}
+
+function cleanProductName(
+  value: string,
+) {
+  return value
+    .replace(
+      /\[[^\]]*\]/g,
+      " ",
+    )
+    .replace(
+      /\([^)]*\)/g,
+      " ",
+    )
+    .replace(
+      /[,/|]+/g,
+      " ",
+    )
+    .replace(
+      /\s+/g,
+      " ",
+    )
+    .trim();
+}
+
+function getUsefulTokens(
+  productName: string,
+) {
+  const ignored =
+    new Set([
+      "로봇청소기",
+      "청소기",
+      "로봇",
+      "무선",
+      "가정용",
+      "자동",
+      "단품",
+      "화이트",
+      "블랙",
+      "공식",
+      "정품",
+      "신제품",
+      "인공지능",
+      "올인원",
+    ]);
+
+  return cleanProductName(
+    productName,
+  )
+    .split(" ")
+    .map(
+      (token) =>
+        token.trim(),
+    )
+    .filter(
+      (token) =>
+        token.length >= 2 &&
+        !ignored.has(token),
+    );
+}
+
+function getBrandCandidate(
+  productName: string,
+) {
+  const tokens =
+    cleanProductName(
+      productName,
+    ).split(" ");
+
+  return (
+    tokens.find(
+      (token) =>
+        token.length >= 2 &&
+        ![
+          "로봇청소기",
+          "청소기",
+          "로봇",
+        ].includes(token),
+    ) ?? ""
+  );
+}
+
+function candidateScore(
+  candidate:
+    CanonicalCandidate,
+  productName: string,
+  expectedProductId: string,
+) {
+  if (
+    expectedProductId &&
+    candidate.productId ===
+      expectedProductId
+  ) {
+    return 1000;
+  }
+
+  const wantedTokens =
+    getUsefulTokens(
+      productName,
+    )
+      .map(
+        (token) =>
+          token.toLowerCase(),
+      );
+
+  const title =
+    candidate.title
+      .toLowerCase();
+
+  let score = 0;
+
+  for (
+    const token of
+    wantedTokens
+  ) {
+    if (
+      title.includes(token)
+    ) {
+      score += 10;
+    }
+  }
+
+  return score;
+}
+
+/*
+  SerpApi 비용 상한.
+  Naver 검색 + Google broad fallback을 합쳐
+  제품당 최대 4회까지만 허용한다.
+*/
+const MAX_SERPAPI_QUERIES_PER_PRODUCT = 4;
+
+export async function resolveNaverBrandProductUrl(
+  productUrl: string,
+  productName: string,
+) {
+  /*
+    direct smartstore/brand URL이면
+    여기서 상품번호가 바로 잡힌다.
+
+    ader/cr3 같은 중간 URL이면
+    productId는 빈 문자열로 시작하고,
+    아래 SerpApi 공식상품 검색에서
+    실제 productId를 다시 확보한다.
+  */
+  const inputProductId =
+    getProductId(
+      productUrl,
+    );
+
+  const cleanedName =
+    cleanProductName(
+      productName,
+    );
+
+  const usefulTokens =
+    getUsefulTokens(
+      productName,
+    );
+
+  const initialBrandCandidate =
+    getBrandCandidate(
+      productName,
+    );
+
+  /*
+    브랜드명만으로도 기존에 학습된
+    공식 브랜드스토어 매핑을 미리 조회한다.
+
+    bridge URL처럼 inputProductId가 없어도
+    이후 검색 결과 후보의 브랜드스토어를
+    판별하는 데 사용한다.
+  */
+  const learnedBrandMapping =
+    initialBrandCandidate
+      ? await findBrandStoreMapping([
+          initialBrandCandidate,
+        ])
+      : null;
+
+  /*
+    direct smartstore/brand URL처럼
+    신뢰 가능한 productId가 이미 있으면
+    기존 학습 매핑을 즉시 재사용한다.
+  */
+  if (
+    inputProductId &&
+    learnedBrandMapping?.brandSite
+  ) {
+    return {
+      success: true as const,
+
+      productId:
+        inputProductId,
+
+      brandName:
+        learnedBrandMapping.brandName ||
+        initialBrandCandidate,
+
+      brandSite:
+        learnedBrandMapping.brandSite,
+
+      canonicalUrl:
+        `${learnedBrandMapping.brandSite}/products/${inputProductId}`,
+
+      triedQueries:
+        [] as string[],
+    };
+  }
+
+  const modelTokens =
+    usefulTokens
+      .filter(
+        (token) =>
+          token !==
+          initialBrandCandidate,
+      )
+      .slice(
+        0,
+        3,
+      );
+
+  const triedQueries:
+    string[] = [];
+
+  let brandName = "";
+
+  const canonicalCandidates:
+    CanonicalCandidate[] = [];
+
+  const brandSites =
+    new Set<string>();
+
+  const tryQuery =
+    async (
+      query: string,
+    ) => {
+      const normalized =
+        query
+          .replace(
+            /\s+/g,
+            " ",
+          )
+          .trim();
+
+      if (
+        !normalized ||
+        triedQueries.includes(
+          normalized,
+        )
+      ) {
+        return;
+      }
+
+      triedQueries.push(
+        normalized,
+      );
+
+      const data =
+        await searchNaver(
+          normalized,
+        );
+
+      for (
+        const site of
+        extractBrandSites(
+          data,
+        )
+      ) {
+        brandSites.add(site);
+      }
+
+      for (
+        const candidate of
+        extractCanonicalCandidates(
+          data,
+        )
+      ) {
+        if (
+          !canonicalCandidates.some(
+            (existing) =>
+              existing.canonicalUrl ===
+              candidate.canonicalUrl,
+          )
+        ) {
+          canonicalCandidates.push(
+            candidate,
+          );
+        }
+      }
+
+      if (!brandName) {
+        brandName =
+          extractBrandName(
+            data,
+          );
+      }
+    };
+
+  /*
+    학습된 공식 브랜드스토어와 일치하는 canonical 후보를
+    확보했다면 남은 Naver 검색을 생략한다.
+
+    canonical 후보가 단순히 하나 존재한다는 이유만으로
+    중단하지 않는다. 검색 결과에는 다른 브랜드 상품 URL도
+    섞일 수 있기 때문이다.
+  */
+  const hasTrustedBrandCandidate =
+    () =>
+      Boolean(
+        learnedBrandMapping?.brandSite &&
+        canonicalCandidates.some(
+          (candidate) =>
+            candidate.brandSite ===
+            learnedBrandMapping.brandSite,
+        ),
+      );
+
+  const modelLike =
+    usefulTokens.filter(
+      (token) =>
+        /[a-zA-Z]/.test(
+          token,
+        ) ||
+        /\d/.test(
+          token,
+        ),
+    );
+
+  /*
+    검색 순서 자체는 공용 모듈에서 관리한다.
+
+    중요한 점:
+    계획을 처음부터 전부 실행하지 않는다.
+
+    각 Naver 검색 후 신뢰 가능한 공식 브랜드 후보가
+    확보되면 남은 Naver 검색은 즉시 중단한다.
+
+    따라서:
+    - 회귀 테스트와 생산 코드가 같은 검색계획 사용
+    - 기존 조기 종료 최적화 유지
+    - 불필요한 SerpApi 검색 방지
+  */
+  const resolverSearchPlan =
+    buildResolverSearchPlan({
+      cleanedName,
+      initialBrandCandidate:
+        initialBrandCandidate || "",
+      learnedBrandSite:
+        learnedBrandMapping?.brandSite ||
+        "",
+      modelTokens,
+      modelLikeTokens:
+        modelLike,
+      inputProductId:
+        inputProductId || "",
+    });
+
+  const resolverSearchBudget =
+    Math.min(
+      MAX_SERPAPI_QUERIES_PER_PRODUCT,
+      getResolverSearchBudget(
+        learnedBrandMapping?.brandSite,
+      ),
+    );
+
+  for (
+    const step of
+    resolverSearchPlan
+  ) {
+    if (
+      triedQueries.length >=
+      resolverSearchBudget
+    ) {
+      break;
+    }
+
+    if (
+      step.type === "naver"
+    ) {
+      /*
+        product-id는 입력 상품번호가 있을 때
+        가장 먼저 실행되는 강한 검색이다.
+
+        이후 Naver 단계는 이미 신뢰 공식 후보를
+        확보했다면 실행하지 않는다.
+      */
+      if (
+        step.label !==
+          "product-id" &&
+        hasTrustedBrandCandidate()
+      ) {
+        continue;
+      }
+
+      await tryQuery(
+        step.query,
+      );
+
+      continue;
+    }
+
+    /*
+      Google broad는 Naver 검색으로 canonical 후보를
+      하나도 확보하지 못했을 때만 사용한다.
+
+      기존 Resolver의 안전장치를 그대로 유지한다.
+    */
+    if (
+      step.type ===
+        "google-broad"
+    ) {
+      if (
+        canonicalCandidates.length >
+        0
+      ) {
+        continue;
+      }
+
+      const labeledQuery =
+        `[google-broad] ${step.query}`;
+
+      triedQueries.push(
+        labeledQuery,
+      );
+
+      try {
+        const googleData =
+          await searchGoogle(
+            step.query,
+          );
+
+        for (
+          const candidate of
+          extractGoogleCanonicalCandidates(
+            googleData,
+          )
+        ) {
+          if (
+            !canonicalCandidates.some(
+              (existing) =>
+                existing.canonicalUrl ===
+                candidate.canonicalUrl,
+            )
+          ) {
+            canonicalCandidates.push(
+              candidate,
+            );
+          }
+        }
+
+        for (
+          const site of
+          extractBrandSites(
+            googleData,
+          )
+        ) {
+          brandSites.add(
+            site,
+          );
+        }
+      } catch (error) {
+        console.warn(
+          "Google broad fallback warning:",
+          error,
+        );
+      }
+    }
+  }
+  /*
+    공식 상품 URL 후보가 확보됐으면
+    상품번호 일치 또는 상품명 토큰 일치도가
+    가장 높은 후보를 선택한다.
+  */
+  /*
+    중간 Naver URL처럼 신뢰 가능한 inputProductId가 없는 경우에는
+    "같은 브랜드스토어"라는 이유만으로 다른 모델을 선택하면 안 된다.
+
+    예:
+    드리미 X60 Master
+    -> 오염된 학습 매핑이 lezen을 가리킴
+    -> 같은 lezen 후보에 +1000점
+    -> 실제 상세는 3D / RS20인데 canonical로 잘못 채택
+
+    따라서 모델번호처럼 영문+숫자가 섞인 강한 모델 토큰이 있으면
+    후보 title에도 그 모델 토큰이 실제로 존재하는 후보만
+    최종 canonical 후보로 인정한다.
+
+    direct product URL처럼 inputProductId가 이미 신뢰 가능한 경우에는
+    기존 productId 일치 규칙을 그대로 사용한다.
+  */
+  const strongModelTokens =
+    getStrongSearchModelTokens(
+      modelLike.length > 0
+        ? modelLike
+        : modelTokens,
+    );
+
+  const primaryStrongModelToken =
+    strongModelTokens.find(
+      (token) =>
+        /[a-zA-Z]/.test(token) &&
+        /\d/.test(token),
+    ) ?? "";
+
+  const rankedCandidates =
+    [...canonicalCandidates]
+      .map(
+        (candidate) => {
+          const modelTokenMatched =
+            !primaryStrongModelToken ||
+            candidate.title
+              .toLowerCase()
+              .includes(
+                primaryStrongModelToken
+                  .toLowerCase(),
+              );
+
+          return {
+            candidate,
+            modelTokenMatched,
+            score:
+              candidateScore(
+                candidate,
+                productName,
+                inputProductId,
+              ) +
+              (
+                learnedBrandMapping
+                  ?.brandSite ===
+                candidate.brandSite
+                  ? 1000
+                  : 0
+              ),
+          };
+        },
+      )
+      .sort(
+        (a, b) =>
+          b.score -
+          a.score,
+      );
+
+  const best =
+    rankedCandidates.find(
+      (item) =>
+        inputProductId
+          ? item.candidate
+              .productId ===
+            inputProductId
+          : item.modelTokenMatched &&
+            item.score > 0,
+    );
+
+  if (best) {
+    /*
+      최종 선택된 공식 brandSite와 브랜드명을 함께 맞춘다.
+
+      검색 중 extractBrandName()이 다른 검색결과의 브랜드명을
+      먼저 잡을 수 있으므로 brandName을 무조건 우선하지 않는다.
+
+      기존 학습 매핑이 최종 brandSite와 정확히 일치하면
+      그 매핑의 브랜드명을 가장 신뢰한다.
+
+      그렇지 않으면 원래 시장 상품명에서 추출한 브랜드명을
+      우선 사용하고, 마지막 fallback으로 검색 추출값을 사용한다.
+    */
+    const matchedLearnedBrandName =
+      learnedBrandMapping?.brandSite ===
+      best.candidate.brandSite
+        ? learnedBrandMapping.brandName
+        : "";
+
+    const resolvedBrandName =
+      matchedLearnedBrandName ||
+      initialBrandCandidate ||
+      brandName;
+
+    /*
+      매핑 저장 시에도 검색 중 우연히 추출된 brandName을
+      alias로 넣지 않는다.
+
+      잘못된 브랜드명이 올바른 brandSite에 학습되는
+      매핑 오염을 방지한다.
+    */
+    try {
+      await saveBrandStoreMapping(
+        [
+          initialBrandCandidate,
+          resolvedBrandName,
+        ],
+        best.candidate
+          .brandSite,
+        {
+          source:
+            "serpapi_product_match",
+          confidence:
+            100,
+        },
+      );
+    } catch (error) {
+      console.warn(
+        "Brand mapping save warning:",
+        error,
+      );
+    }
+
+    return {
+      success: true as const,
+
+      productId:
+        best.candidate
+          .productId,
+
+      brandName:
+        resolvedBrandName,
+
+      brandSite:
+        best.candidate
+          .brandSite,
+
+      canonicalUrl:
+        best.candidate
+          .canonicalUrl,
+
+      triedQueries,
+    };
+  }
+
+  /*
+    상품번호는 알고 있지만 검색결과에서
+    정확한 상품 URL을 직접 얻지 못한 경우,
+    공식 브랜드스토어만 확인되면 기존 방식대로
+    brandSite + productId를 조합한다.
+  */
+  if (
+    inputProductId &&
+    brandSites.size > 0
+  ) {
+    const brandSite =
+      [...brandSites][0];
+
+    /*
+      fallback 경로에서도 최종 brandSite와
+      브랜드명이 어긋나지 않도록 동일한 기준을 사용한다.
+    */
+    const matchedLearnedBrandName =
+      learnedBrandMapping?.brandSite ===
+      brandSite
+        ? learnedBrandMapping.brandName
+        : "";
+
+    const resolvedBrandName =
+      matchedLearnedBrandName ||
+      initialBrandCandidate ||
+      brandName;
+
+    try {
+      await saveBrandStoreMapping(
+        [
+          initialBrandCandidate,
+          resolvedBrandName,
+        ],
+        brandSite,
+        {
+          source:
+            "serpapi_brand_site",
+          confidence:
+            95,
+        },
+      );
+    } catch (error) {
+      console.warn(
+        "Brand mapping save warning:",
+        error,
+      );
+    }
+
+    return {
+      success: true as const,
+
+      productId:
+        inputProductId,
+
+      brandName:
+        resolvedBrandName,
+
+      brandSite,
+
+      canonicalUrl:
+        `${brandSite}/products/${inputProductId}`,
+
+      triedQueries,
+    };
+  }
+
+  if (inputProductId) {
+    const learned =
+      await findBrandStoreMapping([
+        initialBrandCandidate,
+        brandName,
+      ]);
+
+    if (
+      learned?.brandSite
+    ) {
+      return {
+        success: true as const,
+
+        productId:
+          inputProductId,
+
+        brandName:
+          learned.brandName ||
+          initialBrandCandidate ||
+          brandName,
+
+        brandSite:
+          learned.brandSite,
+
+        canonicalUrl:
+          `${learned.brandSite}/products/${inputProductId}`,
+
+        triedQueries,
+      };
+    }
+  }
+
+  return {
+    success: false as const,
+
+    productId:
+      inputProductId,
+
+    brandName:
+      brandName ||
+      initialBrandCandidate,
+
+    brandSite:
+      learnedBrandMapping?.brandSite ||
+      [...brandSites][0] ||
+      "",
+
+    canonicalUrl: "",
+
+    triedQueries,
+
+    diagnostic: {
+      primaryStrongModelToken,
+      canonicalCandidateCount:
+        canonicalCandidates.length,
+      canonicalCandidates:
+        rankedCandidates
+          .slice(0, 10)
+          .map((item) => ({
+            productId:
+              item.candidate.productId,
+            brandSite:
+              item.candidate.brandSite,
+            canonicalUrl:
+              item.candidate.canonicalUrl,
+            title:
+              item.candidate.title,
+            score:
+              item.score,
+            modelTokenMatched:
+              item.modelTokenMatched,
+          })),
+      discoveredBrandSites:
+        [...brandSites],
+      learnedBrandSite:
+        learnedBrandMapping?.brandSite ||
+        "",
+    },
+
+    reason:
+      inputProductId
+        ? "brand.naver.com 공식 상품 URL을 찾지 못했습니다."
+        : "중간 네이버 URL에서 공식 상품번호와 brand.naver.com 상품 URL을 확인하지 못했습니다.",
+  };
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,1004 @@
+﻿export type MarketSearchResult = {
+  name: string;
+  brand: string;
+  price: number;
+  image: string;
+  url: string;
+  reviewCount: number;
+  rating: number;
+};
+
+export type ProductOffer = MarketSearchResult & {
+  matchScore: number;
+};
+
+export type ProductOfferSearchResult = {
+  offers: ProductOffer[];
+  reviewSource: ProductOffer | null;
+  purchaseSource: ProductOffer | null;
+};
+
+type SerpApiShoppingResult = {
+  position?: number;
+  title?: string;
+  price?: number | string;
+  rating?: number | string;
+  reviews?: number | string;
+  stores?: string;
+  link?: string;
+  thumbnail?: string;
+};
+
+type SerpApiResponse = {
+  error?: string;
+  shopping_results?: SerpApiShoppingResult[];
+};
+
+function normalizeText(
+  value: unknown,
+) {
+  return typeof value === "string"
+    ? value
+        .replace(/\s+/g, " ")
+        .trim()
+    : "";
+}
+
+function normalizeNumber(
+  value: unknown,
+) {
+  if (
+    typeof value === "number" &&
+    Number.isFinite(value)
+  ) {
+    return value;
+  }
+
+  if (typeof value !== "string") {
+    return 0;
+  }
+
+  const parsed =
+    Number(
+      value.replace(
+        /[^\d.]/g,
+        "",
+      ),
+    );
+
+  return Number.isFinite(parsed)
+    ? parsed
+    : 0;
+}
+
+function createDuplicateKey(
+  product: MarketSearchResult,
+) {
+  return [
+    product.name
+      .toLowerCase()
+      .replace(/\s+/g, ""),
+    product.brand
+      .toLowerCase()
+      .replace(/\s+/g, ""),
+    product.price,
+  ].join("|");
+}
+
+function isUsefulProductName(
+  name: string,
+  keyword: string,
+) {
+  const normalizedName =
+    name
+      .toLowerCase()
+      .replace(/\s+/g, "");
+
+  const normalizedKeyword =
+    keyword
+      .toLowerCase()
+      .replace(/\s+/g, "");
+
+  if (
+    !normalizedName ||
+    normalizedName ===
+      normalizedKeyword
+  ) {
+    return false;
+  }
+
+  const banned =
+    /호환|소모품|부품|필터|먼지봉투|먼지백|물걸레\s*(패드|포|천|리필)|브러시|브러쉬|배터리|충전기|세정제|액세서리/i;
+
+  return !banned.test(name);
+}
+
+function normalizedMatchText(
+  value: string,
+) {
+  return value
+    .toLowerCase()
+    .replace(
+      /[^a-z0-9가-힣]+/g,
+      " ",
+    )
+    .replace(
+      /\s+/g,
+      " ",
+    )
+    .trim();
+}
+
+function compactToken(
+  value: string,
+) {
+  return value
+    .toLowerCase()
+    .replace(
+      /[^a-z0-9가-힣]/g,
+      "",
+    );
+}
+
+function getModelTokens(
+  productName: string,
+) {
+  const tokens =
+    normalizedMatchText(
+      productName,
+    )
+      .split(" ")
+      .filter(Boolean);
+
+  const ignored =
+    new Set([
+      "로봇청소기",
+      "청소기",
+      "로봇",
+      "올인원",
+      "자동",
+      "무선",
+      "스마트",
+      "화이트",
+      "블랙",
+      "실버",
+      "그레이",
+      "베이지",
+      "단품",
+      "정품",
+      "공식",
+      "물걸레",
+      "진공",
+      "바닥",
+      "걸레",
+      "흡입",
+      "세척",
+    ]);
+
+  const result:
+    string[] = [];
+
+  for (
+    let index = 0;
+    index < tokens.length;
+    index++
+  ) {
+    const token =
+      tokens[index];
+
+    if (
+      ignored.has(token) ||
+      token.length < 2
+    ) {
+      continue;
+    }
+
+    /*
+      모델명의 핵심은 보통 숫자가 포함된 토큰
+      (X60, P70, S10, N95TWU 등)이다.
+    */
+    if (/\d/.test(token)) {
+      result.push(token);
+
+      /*
+        X60 Ultra / P70 Pro / S10 MaxV처럼
+        모델번호 바로 뒤 영문 서브모델도 함께 사용한다.
+      */
+      const next =
+        tokens[index + 1];
+
+      if (
+        next &&
+        /^[a-z][a-z0-9_-]*$/i.test(
+          next,
+        ) &&
+        !ignored.has(next)
+      ) {
+        result.push(next);
+      }
+    }
+  }
+
+  /*
+    X60 Ultra와 X60ULTRA가 동시에 들어있는 제목처럼
+    같은 의미의 중복 토큰을 제거한다.
+  */
+  const unique:
+    string[] = [];
+
+  for (const token of result) {
+    const compact =
+      compactToken(token);
+
+    if (
+      !compact ||
+      unique.some(
+        (existing) =>
+          compactToken(existing) ===
+          compact,
+      )
+    ) {
+      continue;
+    }
+
+    unique.push(token);
+  }
+
+  return unique.slice(0, 4);
+}
+
+function getVariantTokens(
+  productName: string,
+) {
+  const text =
+    normalizedMatchText(
+      productName,
+    );
+
+  const variants = [
+    "화이트",
+    "블랙",
+    "실버",
+    "그레이",
+    "베이지",
+    "직배수",
+    "직배수형",
+    "물통형",
+    "스팀",
+  ];
+
+  return variants.filter(
+    (variant) =>
+      text.includes(variant),
+  );
+}
+
+function hasConflictingVariant(
+  targetName: string,
+  offerName: string,
+) {
+  const target =
+    normalizedMatchText(
+      targetName,
+    );
+
+  const offer =
+    normalizedMatchText(
+      offerName,
+    );
+
+  const colorGroups = [
+    ["화이트", "블랙"],
+    ["화이트", "실버"],
+    ["화이트", "그레이"],
+    ["화이트", "베이지"],
+    ["블랙", "실버"],
+    ["블랙", "그레이"],
+    ["블랙", "베이지"],
+  ];
+
+  for (
+    const [a, b] of colorGroups
+  ) {
+    if (
+      (
+        target.includes(a) &&
+        offer.includes(b)
+      ) ||
+      (
+        target.includes(b) &&
+        offer.includes(a)
+      )
+    ) {
+      return true;
+    }
+  }
+
+  /*
+    직배수형과 물통형은 같은 모델명이어도
+    구매 구성이 다를 수 있으므로 충돌로 본다.
+  */
+  const targetDirect =
+    target.includes("직배수");
+
+  const offerDirect =
+    offer.includes("직배수");
+
+  const targetTank =
+    target.includes("물통형");
+
+  const offerTank =
+    offer.includes("물통형");
+
+  if (
+    (
+      targetDirect &&
+      offerTank
+    ) ||
+    (
+      targetTank &&
+      offerDirect
+    )
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function offerMatchScore(
+  targetName: string,
+  offerName: string,
+) {
+  const targetText =
+    normalizedMatchText(
+      targetName,
+    );
+
+  const offerText =
+    normalizedMatchText(
+      offerName,
+    );
+
+  if (
+    !targetText ||
+    !offerText
+  ) {
+    return 0;
+  }
+
+  if (
+    hasConflictingVariant(
+      targetName,
+      offerName,
+    )
+  ) {
+    return 0;
+  }
+
+  const modelTokens =
+    getModelTokens(
+      targetName,
+    );
+
+  if (modelTokens.length === 0) {
+    return 0;
+  }
+
+  let matched = 0;
+
+  for (
+    const token of modelTokens
+  ) {
+    const compact =
+      compactToken(token);
+
+    const offerCompact =
+      compactToken(
+        offerText,
+      );
+
+    if (
+      compact &&
+      offerCompact.includes(
+        compact,
+      )
+    ) {
+      matched++;
+    }
+  }
+
+  /*
+    모델 핵심 토큰을 하나도 못 맞추면
+    동일 제품 판매처 후보로 보지 않는다.
+  */
+  if (matched === 0) {
+    return 0;
+  }
+
+  const ratio =
+    matched /
+    modelTokens.length;
+
+  let score =
+    ratio * 100;
+
+  const variants =
+    getVariantTokens(
+      targetName,
+    );
+
+  for (
+    const variant of variants
+  ) {
+    if (
+      offerText.includes(
+        variant,
+      )
+    ) {
+      score += 5;
+    }
+  }
+
+  /*
+    완전히 같은 정규화 상품명은 강하게 우대.
+  */
+  if (
+    targetText ===
+    offerText
+  ) {
+    score += 20;
+  }
+
+  return score;
+}
+
+function extractOfferProductId(
+  value: string,
+) {
+  try {
+    const url =
+      new URL(value);
+
+    const nvMid =
+      url.searchParams
+        .get("nv_mid")
+        ?.trim();
+
+    if (
+      nvMid &&
+      /^\d+$/.test(nvMid)
+    ) {
+      return nvMid;
+    }
+  } catch {
+    // 정규식 fallback 사용
+  }
+
+  return (
+    value.match(
+      /[?&]nv_mid=(\d+)/i,
+    )?.[1] ??
+    ""
+  );
+}
+
+function isBadOfferTitle(
+  name: string,
+) {
+  const banned =
+    /호환|소모품|부품|필터|먼지봉투|먼지백|물걸레\s*(패드|포|천|리필)|브러시|브러쉬|배터리|충전기|세정제|액세서리|악세사리|리퍼|중고|해외직구/i;
+
+  return banned.test(name);
+}
+
+async function searchNaverShopping(
+  query: string,
+  apiKey: string,
+) {
+  const params =
+    new URLSearchParams({
+      engine: "naver",
+      query,
+      where: "nexearch",
+      output: "json",
+      api_key: apiKey,
+    });
+
+  const response =
+    await fetch(
+      `https://serpapi.com/search?${params.toString()}`,
+      {
+        cache: "no-store",
+      },
+    );
+
+  const data =
+    (await response.json()) as
+      SerpApiResponse;
+
+  if (
+    !response.ok ||
+    data.error
+  ) {
+    throw new Error(
+      data.error ??
+        `상품 검색에 실패했습니다. (${response.status})`,
+    );
+  }
+
+  return Array.isArray(
+    data.shopping_results,
+  )
+    ? data.shopping_results
+    : [];
+}
+
+export async function searchMarketProducts(
+  keyword: string,
+): Promise<MarketSearchResult[]> {
+  const normalizedKeyword =
+    keyword.trim();
+
+  if (!normalizedKeyword) {
+    return [];
+  }
+
+  const apiKey =
+    process.env.SERPAPI_API_KEY;
+
+  if (!apiKey) {
+    throw new Error(
+      "SERPAPI_API_KEY가 설정되지 않았습니다.",
+    );
+  }
+
+  /*
+    Naver nexearch의 shopping_results가
+    한 검색어에서 소수만 반환될 수 있으므로
+    일반적인 검색 의도 확장을 사용한다.
+
+    후보 15개가 확보되는 순간
+    추가 SerpApi 호출은 하지 않는다.
+  */
+  const queries = [
+    normalizedKeyword,
+    `${normalizedKeyword} 추천`,
+    `${normalizedKeyword} 인기`,
+    `${normalizedKeyword} 비교`,
+  ];
+
+  const uniqueProducts:
+    MarketSearchResult[] = [];
+
+  const seen =
+    new Set<string>();
+
+  for (
+    const query of queries
+  ) {
+    if (
+      uniqueProducts.length >=
+      15
+    ) {
+      break;
+    }
+
+    const rawResults =
+      await searchNaverShopping(
+        query,
+        apiKey,
+      );
+
+    for (
+      const item of
+      rawResults
+    ) {
+      const name =
+        normalizeText(
+          item.title,
+        );
+
+      const url =
+        normalizeText(
+          item.link,
+        );
+
+      const price =
+        normalizeNumber(
+          item.price,
+        );
+
+      if (
+        !name ||
+        !url ||
+        price <= 0 ||
+        !isUsefulProductName(
+          name,
+          normalizedKeyword,
+        )
+      ) {
+        continue;
+      }
+
+      const product:
+        MarketSearchResult = {
+          name,
+
+          brand:
+            normalizeText(
+              item.stores,
+            ) ||
+            "판매처 미확인",
+
+          price,
+
+          image:
+            normalizeText(
+              item.thumbnail,
+            ),
+
+          url,
+
+          reviewCount:
+            Math.round(
+              normalizeNumber(
+                item.reviews,
+              ),
+            ),
+
+          rating:
+            normalizeNumber(
+              item.rating,
+            ),
+        };
+
+      const key =
+        createDuplicateKey(
+          product,
+        );
+
+      if (seen.has(key)) {
+        continue;
+      }
+
+      seen.add(key);
+
+      uniqueProducts.push(
+        product,
+      );
+
+      if (
+        uniqueProducts.length >=
+        15
+      ) {
+        break;
+      }
+    }
+  }
+
+  return uniqueProducts;
+}
+
+/*
+  특정 모델의 네이버 판매처들을 다시 검색한다.
+
+  역할:
+  - reviewSource: 동일 모델/구성 후보 중 리뷰 수가 가장 많은 결과
+  - purchaseSource: 동일 모델/구성 후보 중 최저가
+    (동가이면 리뷰 수가 많은 결과 우선)
+
+  주의:
+  이 함수는 '판매처 후보 선택'까지만 담당한다.
+  실제 리뷰 상세수집 가능 여부와 구매링크 최종 검증은
+  이후 단계에서 별도로 확인한다.
+*/
+export async function searchProductOffers(
+  productName: string,
+): Promise<ProductOfferSearchResult> {
+  const normalizedName =
+    productName.trim();
+
+  if (!normalizedName) {
+    return {
+      offers: [],
+      reviewSource: null,
+      purchaseSource: null,
+    };
+  }
+
+  const apiKey =
+    process.env.SERPAPI_API_KEY;
+
+  if (!apiKey) {
+    throw new Error(
+      "SERPAPI_API_KEY가 설정되지 않았습니다.",
+    );
+  }
+
+  const modelTokens =
+    getModelTokens(
+      normalizedName,
+    );
+
+  /*
+    너무 긴 원본 상품명 대신
+    브랜드/모델 핵심을 우선 검색한다.
+    모델 토큰이 없으면 원본 제목을 사용한다.
+  */
+  const firstToken =
+    normalizedMatchText(
+      normalizedName,
+    )
+      .split(" ")
+      .filter(Boolean)[0] ??
+    "";
+
+  const compactQuery =
+    [
+      firstToken,
+      ...modelTokens,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+
+  const queries =
+    [
+      compactQuery,
+      normalizedName,
+    ]
+      .filter(Boolean)
+      .filter(
+        (
+          query,
+          index,
+          array,
+        ) =>
+          array.indexOf(query) ===
+          index,
+      );
+
+  const offers:
+    ProductOffer[] = [];
+
+  const seen =
+    new Set<string>();
+
+  for (const query of queries) {
+    const rawResults =
+      await searchNaverShopping(
+        query,
+        apiKey,
+      );
+
+    for (
+      const item of rawResults
+    ) {
+      const name =
+        normalizeText(
+          item.title,
+        );
+
+      const url =
+        normalizeText(
+          item.link,
+        );
+
+      const price =
+        normalizeNumber(
+          item.price,
+        );
+
+      if (
+        !name ||
+        !url ||
+        price <= 0 ||
+        isBadOfferTitle(name)
+      ) {
+        continue;
+      }
+
+      const matchScore =
+        offerMatchScore(
+          normalizedName,
+          name,
+        );
+
+      /*
+        모델 핵심 토큰 대부분이 맞는 후보만 사용한다.
+        50점 미만은 다른 모델일 가능성이 높아 제외한다.
+      */
+      if (matchScore < 50) {
+        continue;
+      }
+
+      const offer:
+        ProductOffer = {
+          name,
+
+          brand:
+            normalizeText(
+              item.stores,
+            ) ||
+            "판매처 미확인",
+
+          price,
+
+          image:
+            normalizeText(
+              item.thumbnail,
+            ),
+
+          url,
+
+          reviewCount:
+            Math.round(
+              normalizeNumber(
+                item.reviews,
+              ),
+            ),
+
+          rating:
+            normalizeNumber(
+              item.rating,
+            ),
+
+          matchScore,
+        };
+
+      const offerProductId =
+        extractOfferProductId(
+          offer.url,
+        );
+
+      /*
+        같은 네이버 상품이 검색어만 달라져
+        query/t/h 추적값 때문에 여러 번 들어오는 것을 막는다.
+
+        nv_mid가 있으면 그것을 가장 강한 중복키로 사용하고,
+        nv_mid가 없는 광고/기타 링크만
+        상품명 + 판매처 + 가격 조합으로 fallback 한다.
+      */
+      const fallbackKey =
+        [
+          "fallback",
+          compactToken(
+            offer.name,
+          ),
+          compactToken(
+            offer.brand,
+          ),
+          offer.price,
+        ].join("|");
+
+      const primaryKey =
+        offerProductId
+          ? `nv_mid:${offerProductId}`
+          : fallbackKey;
+
+      /*
+        같은 상품이 한 검색에서는 cr3(nv_mid 포함),
+        다른 검색에서는 ader(광고 URL)로 노출될 수 있다.
+
+        따라서 nv_mid가 있는 상품도
+        상품명 + 판매처 + 가격 fallback key를 함께 등록해
+        cr3/ader 중복을 서로 잡아낸다.
+      */
+      if (
+        seen.has(primaryKey) ||
+        seen.has(fallbackKey)
+      ) {
+        continue;
+      }
+
+      seen.add(primaryKey);
+      seen.add(fallbackKey);
+      offers.push(offer);
+    }
+  }
+
+  offers.sort(
+    (a, b) => {
+      if (
+        b.matchScore !==
+        a.matchScore
+      ) {
+        return (
+          b.matchScore -
+          a.matchScore
+        );
+      }
+
+      if (
+        b.reviewCount !==
+        a.reviewCount
+      ) {
+        return (
+          b.reviewCount -
+          a.reviewCount
+        );
+      }
+
+      return (
+        a.price -
+        b.price
+      );
+    },
+  );
+
+  const reviewSource =
+    [...offers]
+      .filter(
+        (offer) =>
+          offer.reviewCount > 0,
+      )
+      .sort(
+        (a, b) => {
+          if (
+            b.reviewCount !==
+            a.reviewCount
+          ) {
+            return (
+              b.reviewCount -
+              a.reviewCount
+            );
+          }
+
+          if (
+            b.rating !==
+            a.rating
+          ) {
+            return (
+              b.rating -
+              a.rating
+            );
+          }
+
+          return (
+            b.matchScore -
+            a.matchScore
+          );
+        },
+      )[0] ??
+    null;
+
+  const purchaseSource =
+    [...offers]
+      .sort(
+        (a, b) => {
+          if (
+            a.price !==
+            b.price
+          ) {
+            return (
+              a.price -
+              b.price
+            );
+          }
+
+          if (
+            b.reviewCount !==
+            a.reviewCount
+          ) {
+            return (
+              b.reviewCount -
+              a.reviewCount
+            );
+          }
+
+          return (
+            b.matchScore -
+            a.matchScore
+          );
+        },
+      )[0] ??
+    null;
+
+  return {
+    offers,
+    reviewSource,
+    purchaseSource,
+  };
+}
+

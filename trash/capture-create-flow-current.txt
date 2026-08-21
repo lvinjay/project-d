@@ -1,0 +1,2095 @@
+﻿
+############################################################
+FILE: .\components\ProjectDAutomationPanel.tsx
+############################################################
+
+===== PATTERN: /api/market-candidates / MATCHES: 2 =====
+
+LINE: 270
+      updateStep(
+        "market",
+        "working",
+        `"${normalizedCategory}" 시장 후보를 자동 검색하는 중...`,
+      );
+
+      const marketResponse =
+        await fetch(
+          `/api/market-candidates?category=${encodeURIComponent(
+            normalizedCategory,
+          )}`,
+          {
+            cache: "no-store",
+          },
+        );
+
+      const marketResult =
+        await readJson(
+          marketResponse,
+        );
+
+      if (
+        !marketResponse.ok ||
+        marketResult.success !== true
+      ) {
+        throw new Error(
+          cleanText(
+
+LINE: 436
+      updateStep(
+        "enrich",
+        "working",
+        "최대 15개 후보의 실제 판매가·리뷰·중복·공식 상품 URL을 검증하는 중...",
+      );
+
+      const enrichedResponse =
+        await fetch(
+          `/api/market-candidates-enriched?captureId=${encodeURIComponent(
+            captureId,
+          )}`,
+          {
+            cache: "no-store",
+          },
+        );
+
+      const enriched =
+        await readJson(
+          enrichedResponse,
+        );
+
+      if (
+        !enrichedResponse.ok ||
+        enriched.success !== true
+      ) {
+        throw new Error(
+          cleanText(
+
+===== PATTERN: /api/naver-capture / MATCHES: 1 =====
+
+LINE: 369
+                candidate.rating ??
+                  0,
+              ),
+          }),
+        );
+
+      const captureResponse =
+        await fetch(
+          "/api/naver-capture",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+
+              minBudget:
+                min,
+
+              maxBudget:
+                max,
+
+
+===== PATTERN: captureId / MATCHES: 4 =====
+
+LINE: 411
+        throw new Error(
+          cleanText(
+            captureResult.message,
+          ) ||
+            "후보 임시 저장에 실패했습니다.",
+        );
+      }
+
+      const captureId =
+        cleanText(
+          captureResult.id,
+        );
+
+      if (!captureId) {
+        throw new Error(
+          "내부 후보 ID가 생성되지 않았습니다.",
+        );
+      }
+
+      /*
+        2단계
+        최대 15개 후보를
+        공식 URL + Bright Data로 상세 검증해
+        최종 5개를 확보한다.
+      */
+      updateStep(
+        "enrich",
+
+LINE: 416
+        );
+      }
+
+      const captureId =
+        cleanText(
+          captureResult.id,
+        );
+
+      if (!captureId) {
+        throw new Error(
+          "내부 후보 ID가 생성되지 않았습니다.",
+        );
+      }
+
+      /*
+        2단계
+        최대 15개 후보를
+        공식 URL + Bright Data로 상세 검증해
+        최종 5개를 확보한다.
+      */
+      updateStep(
+        "enrich",
+        "working",
+        "최대 15개 후보의 실제 판매가·리뷰·중복·공식 상품 URL을 검증하는 중...",
+      );
+
+      const enrichedResponse =
+
+LINE: 436
+      updateStep(
+        "enrich",
+        "working",
+        "최대 15개 후보의 실제 판매가·리뷰·중복·공식 상품 URL을 검증하는 중...",
+      );
+
+      const enrichedResponse =
+        await fetch(
+          `/api/market-candidates-enriched?captureId=${encodeURIComponent(
+            captureId,
+          )}`,
+          {
+            cache: "no-store",
+          },
+        );
+
+      const enriched =
+        await readJson(
+          enrichedResponse,
+        );
+
+      if (
+        !enrichedResponse.ok ||
+        enriched.success !== true
+      ) {
+        throw new Error(
+          cleanText(
+
+LINE: 437
+        "enrich",
+        "working",
+        "최대 15개 후보의 실제 판매가·리뷰·중복·공식 상품 URL을 검증하는 중...",
+      );
+
+      const enrichedResponse =
+        await fetch(
+          `/api/market-candidates-enriched?captureId=${encodeURIComponent(
+            captureId,
+          )}`,
+          {
+            cache: "no-store",
+          },
+        );
+
+      const enriched =
+        await readJson(
+          enrichedResponse,
+        );
+
+      if (
+        !enrichedResponse.ok ||
+        enriched.success !== true
+      ) {
+        throw new Error(
+          cleanText(
+            enriched.message,
+
+===== PATTERN: method: / MATCHES: 7 =====
+
+LINE: 371
+              ),
+          }),
+        );
+
+      const captureResponse =
+        await fetch(
+          "/api/naver-capture",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+
+              minBudget:
+                min,
+
+              maxBudget:
+                max,
+
+              products:
+                captureProducts,
+
+LINE: 526
+        "working",
+        "최종 후보를 제품 DB에 등록하는 중...",
+      );
+
+      const importResponse =
+        await fetch(
+          "/api/import-market-candidates",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+
+              candidates:
+                finalCandidates,
+            }),
+          },
+        );
+
+      const importResult =
+        await readJson(
+
+LINE: 585
+        "working",
+        "리뷰 분석용 1차 구매기준을 생성하는 중...",
+      );
+
+      const firstCriteriaResponse =
+        await fetch(
+          "/api/generate-category-criteria",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+            }),
+          },
+        );
+
+      const firstCriteriaResult =
+        await readJson(
+          firstCriteriaResponse,
+        );
+
+
+LINE: 706
+          "working",
+          `${index + 1}/${finalCandidates.length} · ${productName}`,
+        );
+
+        const analyzeResponse =
+          await fetch(
+            "/api/analyze-reviews",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+
+              body: JSON.stringify({
+                productName,
+
+                category:
+                  normalizedCategory,
+
+                reviews,
+
+                collectionStats: {
+                  total:
+                    reviews.length,
+
+
+LINE: 786
+        "working",
+        "리뷰 분석 결과를 DB에 저장하는 중...",
+      );
+
+      const saveResponse =
+        await fetch(
+          "/api/save-review-analysis-batch",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+
+              products:
+                analyzedProducts,
+            }),
+          },
+        );
+
+      const saveResult =
+        await readJson(
+
+LINE: 845
+        "working",
+        "상세정보와 리뷰 근거를 함께 사용해 구매기준을 최종 보정하는 중...",
+      );
+
+      const finalCriteriaResponse =
+        await fetch(
+          "/api/generate-category-criteria",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+            }),
+          },
+        );
+
+      const finalCriteriaResult =
+        await readJson(
+          finalCriteriaResponse,
+        );
+
+
+LINE: 897
+        "working",
+        "최종 제품 비교 점수를 계산하는 중...",
+      );
+
+      const scoreResponse =
+        await fetch(
+          "/api/generate-product-scores",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+            }),
+          },
+        );
+
+      const scoreResult =
+        await readJson(
+          scoreResponse,
+        );
+
+
+===== PATTERN: POST / MATCHES: 7 =====
+
+LINE: 371
+              ),
+          }),
+        );
+
+      const captureResponse =
+        await fetch(
+          "/api/naver-capture",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+
+              minBudget:
+                min,
+
+              maxBudget:
+                max,
+
+              products:
+                captureProducts,
+
+LINE: 526
+        "working",
+        "최종 후보를 제품 DB에 등록하는 중...",
+      );
+
+      const importResponse =
+        await fetch(
+          "/api/import-market-candidates",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+
+              candidates:
+                finalCandidates,
+            }),
+          },
+        );
+
+      const importResult =
+        await readJson(
+
+LINE: 585
+        "working",
+        "리뷰 분석용 1차 구매기준을 생성하는 중...",
+      );
+
+      const firstCriteriaResponse =
+        await fetch(
+          "/api/generate-category-criteria",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+            }),
+          },
+        );
+
+      const firstCriteriaResult =
+        await readJson(
+          firstCriteriaResponse,
+        );
+
+
+LINE: 706
+          "working",
+          `${index + 1}/${finalCandidates.length} · ${productName}`,
+        );
+
+        const analyzeResponse =
+          await fetch(
+            "/api/analyze-reviews",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+
+              body: JSON.stringify({
+                productName,
+
+                category:
+                  normalizedCategory,
+
+                reviews,
+
+                collectionStats: {
+                  total:
+                    reviews.length,
+
+
+LINE: 786
+        "working",
+        "리뷰 분석 결과를 DB에 저장하는 중...",
+      );
+
+      const saveResponse =
+        await fetch(
+          "/api/save-review-analysis-batch",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+
+              products:
+                analyzedProducts,
+            }),
+          },
+        );
+
+      const saveResult =
+        await readJson(
+
+LINE: 845
+        "working",
+        "상세정보와 리뷰 근거를 함께 사용해 구매기준을 최종 보정하는 중...",
+      );
+
+      const finalCriteriaResponse =
+        await fetch(
+          "/api/generate-category-criteria",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+            }),
+          },
+        );
+
+      const finalCriteriaResult =
+        await readJson(
+          finalCriteriaResponse,
+        );
+
+
+LINE: 897
+        "working",
+        "최종 제품 비교 점수를 계산하는 중...",
+      );
+
+      const scoreResponse =
+        await fetch(
+          "/api/generate-product-scores",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+            }),
+          },
+        );
+
+      const scoreResult =
+        await readJson(
+          scoreResponse,
+        );
+
+
+===== PATTERN: products / MATCHES: 9 =====
+
+LINE: 322
+        "done",
+        `${marketCandidates.length}개 시장 후보 수집 완료`,
+      );
+
+      /*
+        naver-capture는 이제 사용자에게
+        보이지 않는 내부 임시 저장소로만 사용한다.
+      */
+      const captureProducts =
+        marketCandidates.map(
+          (candidate) => ({
+            name:
+              cleanText(
+                candidate.productName,
+              ),
+
+            text: "",
+
+            seller:
+              cleanText(
+                candidate.seller,
+              ),
+
+            url:
+              cleanText(
+                candidate.sourceUrl,
+              ),
+
+LINE: 388
+                normalizedCategory,
+
+              minBudget:
+                min,
+
+              maxBudget:
+                max,
+
+              products:
+                captureProducts,
+            }),
+          },
+        );
+
+      const captureResult =
+        await readJson(
+          captureResponse,
+        );
+
+      if (
+        !captureResponse.ok ||
+        captureResult.success !== true
+      ) {
+        throw new Error(
+          cleanText(
+            captureResult.message,
+          ) ||
+
+LINE: 389
+
+              minBudget:
+                min,
+
+              maxBudget:
+                max,
+
+              products:
+                captureProducts,
+            }),
+          },
+        );
+
+      const captureResult =
+        await readJson(
+          captureResponse,
+        );
+
+      if (
+        !captureResponse.ok ||
+        captureResult.success !== true
+      ) {
+        throw new Error(
+          cleanText(
+            captureResult.message,
+          ) ||
+            "후보 임시 저장에 실패했습니다.",
+
+LINE: 514
+        `${finalCandidates.length}개 최종 후보 확보 · Bright Data ${Number(
+          enriched.brightDataCalls ??
+            0,
+        )}회`,
+      );
+
+      /*
+        3단계
+        최종 5개를 products에 등록/갱신.
+      */
+      updateStep(
+        "import",
+        "working",
+        "최종 후보를 제품 DB에 등록하는 중...",
+      );
+
+      const importResponse =
+        await fetch(
+          "/api/import-market-candidates",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+
+LINE: 634
+        제품별로 AI 분석.
+      */
+      updateStep(
+        "reviews",
+        "working",
+        "제품 5개의 리뷰를 순서대로 AI 분석 중...",
+      );
+
+      const analyzedProducts:
+        Array<{
+          productId: string;
+          productName: string;
+          analysis: unknown;
+        }> = [];
+
+      for (
+        let index = 0;
+        index <
+        finalCandidates.length;
+        index++
+      ) {
+        const candidate =
+          finalCandidates[index];
+
+        const detail =
+          candidate.detail ?? {};
+
+
+LINE: 756
+              cleanText(
+                analyzeResult.message,
+              ) ||
+              "리뷰 AI 분석 실패"
+            }`,
+          );
+        }
+
+        analyzedProducts.push({
+          productId,
+
+          productName,
+
+          analysis:
+            analyzeResult.analysis,
+        });
+      }
+
+      updateStep(
+        "reviews",
+        "done",
+        `${analyzedProducts.length}개 제품 리뷰 AI 분석 완료`,
+      );
+
+      /*
+        6단계
+        리뷰 분석 저장.
+
+LINE: 769
+          analysis:
+            analyzeResult.analysis,
+        });
+      }
+
+      updateStep(
+        "reviews",
+        "done",
+        `${analyzedProducts.length}개 제품 리뷰 AI 분석 완료`,
+      );
+
+      /*
+        6단계
+        리뷰 분석 저장.
+      */
+      updateStep(
+        "save-reviews",
+        "working",
+        "리뷰 분석 결과를 DB에 저장하는 중...",
+      );
+
+      const saveResponse =
+        await fetch(
+          "/api/save-review-analysis-batch",
+          {
+            method: "POST",
+
+
+LINE: 797
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+
+              products:
+                analyzedProducts,
+            }),
+          },
+        );
+
+      const saveResult =
+        await readJson(
+          saveResponse,
+        );
+
+      if (
+        !saveResponse.ok ||
+        saveResult.success !==
+          true
+      ) {
+        throw new Error(
+          cleanText(
+            saveResult.message,
+
+LINE: 798
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+
+              products:
+                analyzedProducts,
+            }),
+          },
+        );
+
+      const saveResult =
+        await readJson(
+          saveResponse,
+        );
+
+      if (
+        !saveResponse.ok ||
+        saveResult.success !==
+          true
+      ) {
+        throw new Error(
+          cleanText(
+            saveResult.message,
+          ) ||
+
+===== PATTERN: minBudget / MATCHES: 8 =====
+
+LINE: 162
+  const [
+    category,
+    setCategory,
+  ] = useState(
+    "로봇청소기",
+  );
+
+  const [
+    minBudget,
+    setMinBudget,
+  ] = useState(
+    "500,000",
+  );
+
+  const [
+    maxBudget,
+    setMaxBudget,
+  ] = useState(
+    "1,500,000",
+  );
+
+  const [
+    steps,
+    setSteps,
+  ] = useState<Step[]>(
+    INITIAL_STEPS,
+  );
+
+LINE: 163
+    category,
+    setCategory,
+  ] = useState(
+    "로봇청소기",
+  );
+
+  const [
+    minBudget,
+    setMinBudget,
+  ] = useState(
+    "500,000",
+  );
+
+  const [
+    maxBudget,
+    setMaxBudget,
+  ] = useState(
+    "1,500,000",
+  );
+
+  const [
+    steps,
+    setSteps,
+  ] = useState<Step[]>(
+    INITIAL_STEPS,
+  );
+
+
+LINE: 218
+  }
+
+  async function run() {
+    const normalizedCategory =
+      category.trim();
+
+    const min =
+      parsePrice(
+        minBudget,
+      );
+
+    const max =
+      parsePrice(
+        maxBudget,
+      );
+
+    if (!normalizedCategory) {
+      alert(
+        "제품군을 입력하세요.",
+      );
+      return;
+    }
+
+    if (
+      min > 0 &&
+      max > 0 &&
+      min > max
+
+LINE: 382
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+
+              minBudget:
+                min,
+
+              maxBudget:
+                max,
+
+              products:
+                captureProducts,
+            }),
+          },
+        );
+
+      const captureResult =
+        await readJson(
+          captureResponse,
+        );
+
+      if (
+        !captureResponse.ok ||
+
+LINE: 1060
+          display: "grid",
+          gridTemplateColumns:
+            "1fr 1fr",
+          gap: 16,
+          marginTop: 18,
+        }}
+      >
+        <div className="field">
+          <label htmlFor="automationMinBudget">
+            최소 예산
+          </label>
+
+          <input
+            id="automationMinBudget"
+            className="textInput"
+            inputMode="numeric"
+            value={minBudget}
+            disabled={isRunning}
+            onChange={(event) =>
+              setMinBudget(
+                displayPrice(
+                  event.target.value,
+                ),
+              )
+            }
+            placeholder="500,000"
+          />
+
+LINE: 1065
+        }}
+      >
+        <div className="field">
+          <label htmlFor="automationMinBudget">
+            최소 예산
+          </label>
+
+          <input
+            id="automationMinBudget"
+            className="textInput"
+            inputMode="numeric"
+            value={minBudget}
+            disabled={isRunning}
+            onChange={(event) =>
+              setMinBudget(
+                displayPrice(
+                  event.target.value,
+                ),
+              )
+            }
+            placeholder="500,000"
+          />
+        </div>
+
+        <div className="field">
+          <label htmlFor="automationMaxBudget">
+            최대 예산
+
+LINE: 1068
+          <label htmlFor="automationMinBudget">
+            최소 예산
+          </label>
+
+          <input
+            id="automationMinBudget"
+            className="textInput"
+            inputMode="numeric"
+            value={minBudget}
+            disabled={isRunning}
+            onChange={(event) =>
+              setMinBudget(
+                displayPrice(
+                  event.target.value,
+                ),
+              )
+            }
+            placeholder="500,000"
+          />
+        </div>
+
+        <div className="field">
+          <label htmlFor="automationMaxBudget">
+            최대 예산
+          </label>
+
+          <input
+
+LINE: 1071
+
+          <input
+            id="automationMinBudget"
+            className="textInput"
+            inputMode="numeric"
+            value={minBudget}
+            disabled={isRunning}
+            onChange={(event) =>
+              setMinBudget(
+                displayPrice(
+                  event.target.value,
+                ),
+              )
+            }
+            placeholder="500,000"
+          />
+        </div>
+
+        <div className="field">
+          <label htmlFor="automationMaxBudget">
+            최대 예산
+          </label>
+
+          <input
+            id="automationMaxBudget"
+            className="textInput"
+            inputMode="numeric"
+
+===== PATTERN: maxBudget / MATCHES: 8 =====
+
+LINE: 169
+  const [
+    minBudget,
+    setMinBudget,
+  ] = useState(
+    "500,000",
+  );
+
+  const [
+    maxBudget,
+    setMaxBudget,
+  ] = useState(
+    "1,500,000",
+  );
+
+  const [
+    steps,
+    setSteps,
+  ] = useState<Step[]>(
+    INITIAL_STEPS,
+  );
+
+  const [
+    isRunning,
+    setIsRunning,
+  ] = useState(false);
+
+  const [
+
+LINE: 170
+    minBudget,
+    setMinBudget,
+  ] = useState(
+    "500,000",
+  );
+
+  const [
+    maxBudget,
+    setMaxBudget,
+  ] = useState(
+    "1,500,000",
+  );
+
+  const [
+    steps,
+    setSteps,
+  ] = useState<Step[]>(
+    INITIAL_STEPS,
+  );
+
+  const [
+    isRunning,
+    setIsRunning,
+  ] = useState(false);
+
+  const [
+    finalMessage,
+
+LINE: 223
+
+    const min =
+      parsePrice(
+        minBudget,
+      );
+
+    const max =
+      parsePrice(
+        maxBudget,
+      );
+
+    if (!normalizedCategory) {
+      alert(
+        "제품군을 입력하세요.",
+      );
+      return;
+    }
+
+    if (
+      min > 0 &&
+      max > 0 &&
+      min > max
+    ) {
+      alert(
+        "최소 예산은 최대 예산보다 작아야 합니다.",
+      );
+      return;
+
+LINE: 385
+
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+
+              minBudget:
+                min,
+
+              maxBudget:
+                max,
+
+              products:
+                captureProducts,
+            }),
+          },
+        );
+
+      const captureResult =
+        await readJson(
+          captureResponse,
+        );
+
+      if (
+        !captureResponse.ok ||
+        captureResult.success !== true
+      ) {
+        throw new Error(
+
+LINE: 1082
+                ),
+              )
+            }
+            placeholder="500,000"
+          />
+        </div>
+
+        <div className="field">
+          <label htmlFor="automationMaxBudget">
+            최대 예산
+          </label>
+
+          <input
+            id="automationMaxBudget"
+            className="textInput"
+            inputMode="numeric"
+            value={maxBudget}
+            disabled={isRunning}
+            onChange={(event) =>
+              setMaxBudget(
+                displayPrice(
+                  event.target.value,
+                ),
+              )
+            }
+            placeholder="1,500,000"
+          />
+
+LINE: 1087
+        </div>
+
+        <div className="field">
+          <label htmlFor="automationMaxBudget">
+            최대 예산
+          </label>
+
+          <input
+            id="automationMaxBudget"
+            className="textInput"
+            inputMode="numeric"
+            value={maxBudget}
+            disabled={isRunning}
+            onChange={(event) =>
+              setMaxBudget(
+                displayPrice(
+                  event.target.value,
+                ),
+              )
+            }
+            placeholder="1,500,000"
+          />
+        </div>
+      </div>
+
+      <div
+        style={{
+
+LINE: 1090
+          <label htmlFor="automationMaxBudget">
+            최대 예산
+          </label>
+
+          <input
+            id="automationMaxBudget"
+            className="textInput"
+            inputMode="numeric"
+            value={maxBudget}
+            disabled={isRunning}
+            onChange={(event) =>
+              setMaxBudget(
+                displayPrice(
+                  event.target.value,
+                ),
+              )
+            }
+            placeholder="1,500,000"
+          />
+        </div>
+      </div>
+
+      <div
+        style={{
+          marginTop: 20,
+          display: "grid",
+          gap: 10,
+
+LINE: 1093
+
+          <input
+            id="automationMaxBudget"
+            className="textInput"
+            inputMode="numeric"
+            value={maxBudget}
+            disabled={isRunning}
+            onChange={(event) =>
+              setMaxBudget(
+                displayPrice(
+                  event.target.value,
+                ),
+              )
+            }
+            placeholder="1,500,000"
+          />
+        </div>
+      </div>
+
+      <div
+        style={{
+          marginTop: 20,
+          display: "grid",
+          gap: 10,
+        }}
+      >
+        {steps.map(
+
+############################################################
+FILE: .\app\api\market-candidates\route.ts
+############################################################
+
+===== PATTERN: /api/market-candidates / MATCHES: 0 =====
+
+===== PATTERN: /api/naver-capture / MATCHES: 0 =====
+
+===== PATTERN: captureId / MATCHES: 0 =====
+
+===== PATTERN: method: / MATCHES: 0 =====
+
+===== PATTERN: POST / MATCHES: 0 =====
+
+===== PATTERN: products / MATCHES: 5 =====
+
+LINE: 3
+import { NextResponse } from "next/server";
+import {
+  searchMarketProducts,
+} from "../../../lib/marketSearch";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export async function GET(
+  request: Request,
+) {
+  try {
+    const {
+      searchParams,
+    } = new URL(
+      request.url,
+    );
+
+    const category =
+      (
+        searchParams.get("category") ??
+
+LINE: 40
+          candidates: [],
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    const products =
+      await searchMarketProducts(
+        category,
+      );
+
+    /*
+      현재 단계의 점수는
+      '대표제품 최종 선정점수'가 아니다.
+
+      검색 직후 후보를 보기 쉽게 정렬하기 위한
+      1차 참고점수만 계산한다.
+
+      이후:
+      - 시장 인기/인지도
+      - 리뷰 신뢰도
+      - 제품 경쟁력
+      - 가격 경쟁력
+      - 정보 충실도
+      - 판매 안정성
+
+LINE: 41
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    const products =
+      await searchMarketProducts(
+        category,
+      );
+
+    /*
+      현재 단계의 점수는
+      '대표제품 최종 선정점수'가 아니다.
+
+      검색 직후 후보를 보기 쉽게 정렬하기 위한
+      1차 참고점수만 계산한다.
+
+      이후:
+      - 시장 인기/인지도
+      - 리뷰 신뢰도
+      - 제품 경쟁력
+      - 가격 경쟁력
+      - 정보 충실도
+      - 판매 안정성
+
+
+LINE: 65
+      - 정보 충실도
+      - 판매 안정성
+
+      6개 기준의 실제 선정 로직을 별도로 붙인다.
+    */
+    const maximumReviews =
+      Math.max(
+        1,
+        ...products.map(
+          (product) =>
+            product.reviewCount,
+        ),
+      );
+
+    const candidates =
+      products
+        .map(
+          (
+            product,
+            index,
+          ) => {
+            const reviewScore =
+              Math.min(
+                100,
+                (
+                  product.reviewCount /
+                  maximumReviews
+
+LINE: 72
+        1,
+        ...products.map(
+          (product) =>
+            product.reviewCount,
+        ),
+      );
+
+    const candidates =
+      products
+        .map(
+          (
+            product,
+            index,
+          ) => {
+            const reviewScore =
+              Math.min(
+                100,
+                (
+                  product.reviewCount /
+                  maximumReviews
+                ) *
+                  100,
+              );
+
+            const ratingScore =
+              product.rating > 0
+                ? Math.min(
+
+===== PATTERN: minBudget / MATCHES: 0 =====
+
+===== PATTERN: maxBudget / MATCHES: 0 =====
+
+############################################################
+FILE: .\app\api\naver-capture\route.ts
+############################################################
+
+===== PATTERN: /api/market-candidates / MATCHES: 0 =====
+
+===== PATTERN: /api/naver-capture / MATCHES: 0 =====
+
+===== PATTERN: captureId / MATCHES: 0 =====
+
+===== PATTERN: method: / MATCHES: 0 =====
+
+===== PATTERN: POST / MATCHES: 2 =====
+
+LINE: 64
+    .projectDNaverCaptures;
+}
+
+function corsHeaders() {
+  return {
+    "Access-Control-Allow-Origin":
+      "*",
+    "Access-Control-Allow-Methods":
+      "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers":
+      "Content-Type",
+  };
+}
+
+function text(
+  value: unknown,
+) {
+  return String(
+    value ?? "",
+  )
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function number(
+  value: unknown,
+) {
+
+LINE: 104
+    {
+      status: 204,
+      headers:
+        corsHeaders(),
+    },
+  );
+}
+
+export async function POST(
+  request: Request,
+) {
+  try {
+    const body =
+      await request.json();
+
+    const incoming =
+      Array.isArray(
+        body.products,
+      )
+        ? body.products
+        : [];
+
+    const products:
+      CapturedProduct[] =
+      incoming
+        .slice(0, 100)
+        .map(
+
+===== PATTERN: products / MATCHES: 10 =====
+
+LINE: 26
+  reviewCount: number;
+  rating: number;
+};
+
+type CaptureData = {
+  category: string;
+  minBudget: number;
+  maxBudget: number;
+  products: CapturedProduct[];
+  createdAt: number;
+};
+
+type IncomingProduct = {
+  name?: unknown;
+  text?: unknown;
+  seller?: unknown;
+  url?: unknown;
+  imageUrl?: unknown;
+  price?: unknown;
+  reviewCount?: unknown;
+  rating?: unknown;
+};
+
+declare global {
+  var projectDNaverCaptures:
+    Map<string, CaptureData>
+    | undefined;
+
+LINE: 113
+  request: Request,
+) {
+  try {
+    const body =
+      await request.json();
+
+    const incoming =
+      Array.isArray(
+        body.products,
+      )
+        ? body.products
+        : [];
+
+    const products:
+      CapturedProduct[] =
+      incoming
+        .slice(0, 100)
+        .map(
+          (
+            raw:
+              IncomingProduct,
+          ) => ({
+            name:
+              text(
+                raw.name,
+              ),
+
+
+LINE: 115
+  try {
+    const body =
+      await request.json();
+
+    const incoming =
+      Array.isArray(
+        body.products,
+      )
+        ? body.products
+        : [];
+
+    const products:
+      CapturedProduct[] =
+      incoming
+        .slice(0, 100)
+        .map(
+          (
+            raw:
+              IncomingProduct,
+          ) => ({
+            name:
+              text(
+                raw.name,
+              ),
+
+            text:
+              text(
+
+LINE: 118
+
+    const incoming =
+      Array.isArray(
+        body.products,
+      )
+        ? body.products
+        : [];
+
+    const products:
+      CapturedProduct[] =
+      incoming
+        .slice(0, 100)
+        .map(
+          (
+            raw:
+              IncomingProduct,
+          ) => ({
+            name:
+              text(
+                raw.name,
+              ),
+
+            text:
+              text(
+                raw.text,
+              ),
+
+
+LINE: 184
+            Boolean(
+              product.url,
+            ) &&
+            product.price >
+              0,
+        );
+
+    if (
+      products.length ===
+      0
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "수집 상품이 없습니다.",
+        },
+        {
+          status: 400,
+          headers:
+            corsHeaders(),
+        },
+      );
+    }
+
+    const id =
+      crypto.randomUUID();
+
+LINE: 222
+            body.minBudget,
+          ),
+
+        maxBudget:
+          number(
+            body.maxBudget,
+          ),
+
+        products,
+
+        createdAt:
+          Date.now(),
+      },
+    );
+
+    return NextResponse.json(
+      {
+        success: true,
+        id,
+        count:
+          products.length,
+      },
+      {
+        headers:
+          corsHeaders(),
+      },
+    );
+
+LINE: 234
+      },
+    );
+
+    return NextResponse.json(
+      {
+        success: true,
+        id,
+        count:
+          products.length,
+      },
+      {
+        headers:
+          corsHeaders(),
+      },
+    );
+  } catch (error) {
+    return NextResponse.json(
+      {
+        success: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : "후보 저장 실패",
+      },
+      {
+        status: 500,
+        headers:
+
+LINE: 314
+
+    minBudget:
+      capture.minBudget,
+
+    maxBudget:
+      capture.maxBudget,
+
+    count:
+      capture.products.length,
+
+    products:
+      capture.products,
+  });
+}
+
+LINE: 316
+      capture.minBudget,
+
+    maxBudget:
+      capture.maxBudget,
+
+    count:
+      capture.products.length,
+
+    products:
+      capture.products,
+  });
+}
+
+LINE: 317
+
+    maxBudget:
+      capture.maxBudget,
+
+    count:
+      capture.products.length,
+
+    products:
+      capture.products,
+  });
+}
+
+===== PATTERN: minBudget / MATCHES: 5 =====
+
+LINE: 24
+  imageUrl: string;
+  price: number;
+  reviewCount: number;
+  rating: number;
+};
+
+type CaptureData = {
+  category: string;
+  minBudget: number;
+  maxBudget: number;
+  products: CapturedProduct[];
+  createdAt: number;
+};
+
+type IncomingProduct = {
+  name?: unknown;
+  text?: unknown;
+  seller?: unknown;
+  url?: unknown;
+  imageUrl?: unknown;
+  price?: unknown;
+  reviewCount?: unknown;
+  rating?: unknown;
+};
+
+declare global {
+  var projectDNaverCaptures:
+
+LINE: 212
+    getStore().set(
+      id,
+      {
+        category:
+          text(
+            body.category,
+          ),
+
+        minBudget:
+          number(
+            body.minBudget,
+          ),
+
+        maxBudget:
+          number(
+            body.maxBudget,
+          ),
+
+        products,
+
+        createdAt:
+          Date.now(),
+      },
+    );
+
+    return NextResponse.json(
+      {
+
+LINE: 214
+      {
+        category:
+          text(
+            body.category,
+          ),
+
+        minBudget:
+          number(
+            body.minBudget,
+          ),
+
+        maxBudget:
+          number(
+            body.maxBudget,
+          ),
+
+        products,
+
+        createdAt:
+          Date.now(),
+      },
+    );
+
+    return NextResponse.json(
+      {
+        success: true,
+        id,
+
+LINE: 307
+  }
+
+  return NextResponse.json({
+    success: true,
+
+    category:
+      capture.category,
+
+    minBudget:
+      capture.minBudget,
+
+    maxBudget:
+      capture.maxBudget,
+
+    count:
+      capture.products.length,
+
+    products:
+      capture.products,
+  });
+}
+
+LINE: 308
+
+  return NextResponse.json({
+    success: true,
+
+    category:
+      capture.category,
+
+    minBudget:
+      capture.minBudget,
+
+    maxBudget:
+      capture.maxBudget,
+
+    count:
+      capture.products.length,
+
+    products:
+      capture.products,
+  });
+}
+
+===== PATTERN: maxBudget / MATCHES: 5 =====
+
+LINE: 25
+  price: number;
+  reviewCount: number;
+  rating: number;
+};
+
+type CaptureData = {
+  category: string;
+  minBudget: number;
+  maxBudget: number;
+  products: CapturedProduct[];
+  createdAt: number;
+};
+
+type IncomingProduct = {
+  name?: unknown;
+  text?: unknown;
+  seller?: unknown;
+  url?: unknown;
+  imageUrl?: unknown;
+  price?: unknown;
+  reviewCount?: unknown;
+  rating?: unknown;
+};
+
+declare global {
+  var projectDNaverCaptures:
+    Map<string, CaptureData>
+
+LINE: 217
+            body.category,
+          ),
+
+        minBudget:
+          number(
+            body.minBudget,
+          ),
+
+        maxBudget:
+          number(
+            body.maxBudget,
+          ),
+
+        products,
+
+        createdAt:
+          Date.now(),
+      },
+    );
+
+    return NextResponse.json(
+      {
+        success: true,
+        id,
+        count:
+          products.length,
+      },
+
+LINE: 219
+
+        minBudget:
+          number(
+            body.minBudget,
+          ),
+
+        maxBudget:
+          number(
+            body.maxBudget,
+          ),
+
+        products,
+
+        createdAt:
+          Date.now(),
+      },
+    );
+
+    return NextResponse.json(
+      {
+        success: true,
+        id,
+        count:
+          products.length,
+      },
+      {
+        headers:
+
+LINE: 310
+    success: true,
+
+    category:
+      capture.category,
+
+    minBudget:
+      capture.minBudget,
+
+    maxBudget:
+      capture.maxBudget,
+
+    count:
+      capture.products.length,
+
+    products:
+      capture.products,
+  });
+}
+
+LINE: 311
+
+    category:
+      capture.category,
+
+    minBudget:
+      capture.minBudget,
+
+    maxBudget:
+      capture.maxBudget,
+
+    count:
+      capture.products.length,
+
+    products:
+      capture.products,
+  });
+}

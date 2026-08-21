@@ -1,0 +1,4687 @@
+﻿
+############################################################
+PATTERN: manufacturerDetail
+MATCHES: 6
+############################################################
+
+===== LINE 1254 =====
+ 1229:       console.log(
+ 1230:         `[ENRICH ${position}/${marketCandidates.length}] 시작`,
+ 1231:         market.name,
+ 1232:       );
+ 1233: 
+ 1234:       let resolvedProductId =
+ 1235:         "";
+ 1236: 
+ 1237:       let resolvedUrl =
+ 1238:         "";
+ 1239: 
+ 1240:       let resolvedBrandName =
+ 1241:         "";
+ 1242: 
+ 1243:       let resolvedBrandSite =
+ 1244:         "";
+ 1245: 
+ 1246:       let canonicalSourceType:
+ 1247:         | "naver-brand"
+ 1248:         | "manufacturer" =
+ 1249:         "naver-brand";
+ 1250: 
+ 1251:       let identityKey =
+ 1252:         "";
+ 1253: 
+ 1254:       let manufacturerDetail:
+ 1255:         Awaited<
+ 1256:           ReturnType<
+ 1257:             typeof collectManufacturerProduct
+ 1258:           >
+ 1259:         > | null =
+ 1260:         null;
+ 1261: 
+ 1262:       /*
+ 1263:         URL 처리 원칙:
+ 1264: 
+ 1265:         1. brand.naver.com 상품 URL
+ 1266:            → 그대로 Bright Data에 전달
+ 1267: 
+ 1268:         2. smartstore.naver.com 상품 URL
+ 1269:            → Bright Data에 직접 넣지 않는다.
+ 1270:            → resolver로 공식 Brand 상품 URL을 찾은 뒤 사용
+ 1271: 
+ 1272:         3. 그 외 네이버 중간 URL
+ 1273:            → 기존 resolver 사용
+ 1274:       */
+ 1275:       const urlInfo =
+ 1276:         getNaverProductUrlInfo(
+ 1277:           market.url,
+ 1278:         );
+ 1279: 
+ 1280:       let candidateResolverAttempts =
+ 1281:         0;
+ 1282: 
+ 1283:       if (
+ 1284:         urlInfo?.type ===
+ 1285:         "brand"
+ 1286:       ) {
+ 1287:         resolvedProductId =
+ 1288:           urlInfo.productId;
+ 1289: 
+
+===== LINE 1414 =====
+ 1389:               officialMapping?.officialSite &&
+ 1390:               manufacturerSearchTerms.length >
+ 1391:                 0
+ 1392:             ) {
+ 1393:               console.log(
+ 1394:                 `[ENRICH ${position}] Manufacturer fallback 시작`,
+ 1395:                 officialMapping.officialSite,
+ 1396:                 manufacturerSearchTerms.join(
+ 1397:                   " ",
+ 1398:                 ),
+ 1399:               );
+ 1400: 
+ 1401:               try {
+ 1402:                 const collected =
+ 1403:                   await collectManufacturerProduct({
+ 1404:                     officialSite:
+ 1405:                       officialMapping.officialSite,
+ 1406: 
+ 1407:                     searchTerms:
+ 1408:                       manufacturerSearchTerms,
+ 1409:                   });
+ 1410: 
+ 1411:                 if (
+ 1412:                   collected.success
+ 1413:                 ) {
+ 1414:                   manufacturerDetail =
+ 1415:                     collected;
+ 1416: 
+ 1417:                   canonicalSourceType =
+ 1418:                     "manufacturer";
+ 1419: 
+ 1420:                   resolvedProductId =
+ 1421:                     "";
+ 1422: 
+ 1423:                   resolvedUrl =
+ 1424:                     collected.discoveredUrl;
+ 1425: 
+ 1426:                   resolvedBrandName =
+ 1427:                     collected.detail.brand ||
+ 1428:                     officialMapping.brandName;
+ 1429: 
+ 1430:                   resolvedBrandSite =
+ 1431:                     officialMapping.officialSite;
+ 1432: 
+ 1433:                   console.log(
+ 1434:                     `[ENRICH ${position}] Manufacturer fallback 성공`,
+ 1435:                     resolvedUrl,
+ 1436:                   );
+ 1437:                 } else {
+ 1438:                   console.log(
+ 1439:                     `[ENRICH ${position}] Manufacturer fallback 실패`,
+ 1440:                     collected.reason,
+ 1441:                   );
+ 1442:                 }
+ 1443:               } catch (error) {
+ 1444:                 console.warn(
+ 1445:                   `[ENRICH ${position}] Manufacturer fallback 오류`,
+ 1446:                   error,
+ 1447:                 );
+ 1448:               }
+ 1449:             }
+
+===== LINE 1452 =====
+ 1427:                     collected.detail.brand ||
+ 1428:                     officialMapping.brandName;
+ 1429: 
+ 1430:                   resolvedBrandSite =
+ 1431:                     officialMapping.officialSite;
+ 1432: 
+ 1433:                   console.log(
+ 1434:                     `[ENRICH ${position}] Manufacturer fallback 성공`,
+ 1435:                     resolvedUrl,
+ 1436:                   );
+ 1437:                 } else {
+ 1438:                   console.log(
+ 1439:                     `[ENRICH ${position}] Manufacturer fallback 실패`,
+ 1440:                     collected.reason,
+ 1441:                   );
+ 1442:                 }
+ 1443:               } catch (error) {
+ 1444:                 console.warn(
+ 1445:                   `[ENRICH ${position}] Manufacturer fallback 오류`,
+ 1446:                   error,
+ 1447:                 );
+ 1448:               }
+ 1449:             }
+ 1450: 
+ 1451:             if (
+ 1452:               !manufacturerDetail ||
+ 1453:               !manufacturerDetail.success
+ 1454:             ) {
+ 1455:               console.log(
+ 1456:                 `[ENRICH ${position}] partial 유지(resolve 실패)`,
+ 1457:                 naverReason,
+ 1458:               );
+ 1459: 
+ 1460:               return {
+ 1461:                 success: true,
+ 1462: 
+ 1463:                 position,
+ 1464: 
+ 1465:                 productId:
+ 1466:                   extractMarketProductId(
+ 1467:                     market.url,
+ 1468:                   ) ||
+ 1469:                   `partial-${position}`,
+ 1470: 
+ 1471:                 resolverAttempts:
+ 1472:                   candidateResolverAttempts,
+ 1473: 
+ 1474:                 brightDataCalls: 0,
+ 1475: 
+ 1476:                 candidate:
+ 1477:                   createPartialMarketCandidate(
+ 1478:                     market,
+ 1479:                     position,
+ 1480:                   ),
+ 1481:               };
+ 1482:             }
+ 1483:           }
+ 1484: 
+ 1485:           /*
+ 1486:             SmartStore 상품번호와
+ 1487:             resolver가 찾은 Brand 상품번호가 다르면
+
+===== LINE 1453 =====
+ 1428:                     officialMapping.brandName;
+ 1429: 
+ 1430:                   resolvedBrandSite =
+ 1431:                     officialMapping.officialSite;
+ 1432: 
+ 1433:                   console.log(
+ 1434:                     `[ENRICH ${position}] Manufacturer fallback 성공`,
+ 1435:                     resolvedUrl,
+ 1436:                   );
+ 1437:                 } else {
+ 1438:                   console.log(
+ 1439:                     `[ENRICH ${position}] Manufacturer fallback 실패`,
+ 1440:                     collected.reason,
+ 1441:                   );
+ 1442:                 }
+ 1443:               } catch (error) {
+ 1444:                 console.warn(
+ 1445:                   `[ENRICH ${position}] Manufacturer fallback 오류`,
+ 1446:                   error,
+ 1447:                 );
+ 1448:               }
+ 1449:             }
+ 1450: 
+ 1451:             if (
+ 1452:               !manufacturerDetail ||
+ 1453:               !manufacturerDetail.success
+ 1454:             ) {
+ 1455:               console.log(
+ 1456:                 `[ENRICH ${position}] partial 유지(resolve 실패)`,
+ 1457:                 naverReason,
+ 1458:               );
+ 1459: 
+ 1460:               return {
+ 1461:                 success: true,
+ 1462: 
+ 1463:                 position,
+ 1464: 
+ 1465:                 productId:
+ 1466:                   extractMarketProductId(
+ 1467:                     market.url,
+ 1468:                   ) ||
+ 1469:                   `partial-${position}`,
+ 1470: 
+ 1471:                 resolverAttempts:
+ 1472:                   candidateResolverAttempts,
+ 1473: 
+ 1474:                 brightDataCalls: 0,
+ 1475: 
+ 1476:                 candidate:
+ 1477:                   createPartialMarketCandidate(
+ 1478:                     market,
+ 1479:                     position,
+ 1480:                   ),
+ 1481:               };
+ 1482:             }
+ 1483:           }
+ 1484: 
+ 1485:           /*
+ 1486:             SmartStore 상품번호와
+ 1487:             resolver가 찾은 Brand 상품번호가 다르면
+ 1488:             잘못 연결된 공식상품일 가능성이 있으므로 차단.
+
+===== LINE 1660 =====
+ 1635: 
+ 1636:           failure: {
+ 1637:             position,
+ 1638: 
+ 1639:             marketProduct:
+ 1640:               market.name,
+ 1641: 
+ 1642:             stage:
+ 1643:               "duplicate",
+ 1644: 
+ 1645:             reason,
+ 1646:           },
+ 1647:         };
+ 1648:       }
+ 1649: 
+ 1650:       let detail:
+ 1651:         NaverProductDetail | null =
+ 1652:         null;
+ 1653: 
+ 1654:       let usedCache =
+ 1655:         false;
+ 1656: 
+ 1657:       if (
+ 1658:         canonicalSourceType ===
+ 1659:           "manufacturer" &&
+ 1660:         manufacturerDetail?.success
+ 1661:       ) {
+ 1662:         const manufacturer =
+ 1663:           manufacturerDetail.detail;
+ 1664: 
+ 1665:         detail = {
+ 1666:           url:
+ 1667:             manufacturer.canonicalUrl,
+ 1668: 
+ 1669:           productId: "",
+ 1670: 
+ 1671:           title:
+ 1672:             manufacturer.title,
+ 1673: 
+ 1674:           originalPrice:
+ 1675:             manufacturer.originalPrice,
+ 1676: 
+ 1677:           finalPrice:
+ 1678:             manufacturer.finalPrice,
+ 1679: 
+ 1680:           discountRate: 0,
+ 1681: 
+ 1682:           currency:
+ 1683:             "KRW",
+ 1684: 
+ 1685:           imageUrl:
+ 1686:             manufacturer.imageUrl,
+ 1687: 
+ 1688:           totalReviews: 0,
+ 1689: 
+ 1690:           averageRating:
+ 1691:             null,
+ 1692: 
+ 1693:           soldOut: false,
+ 1694: 
+ 1695:           sellerName:
+
+===== LINE 1663 =====
+ 1638: 
+ 1639:             marketProduct:
+ 1640:               market.name,
+ 1641: 
+ 1642:             stage:
+ 1643:               "duplicate",
+ 1644: 
+ 1645:             reason,
+ 1646:           },
+ 1647:         };
+ 1648:       }
+ 1649: 
+ 1650:       let detail:
+ 1651:         NaverProductDetail | null =
+ 1652:         null;
+ 1653: 
+ 1654:       let usedCache =
+ 1655:         false;
+ 1656: 
+ 1657:       if (
+ 1658:         canonicalSourceType ===
+ 1659:           "manufacturer" &&
+ 1660:         manufacturerDetail?.success
+ 1661:       ) {
+ 1662:         const manufacturer =
+ 1663:           manufacturerDetail.detail;
+ 1664: 
+ 1665:         detail = {
+ 1666:           url:
+ 1667:             manufacturer.canonicalUrl,
+ 1668: 
+ 1669:           productId: "",
+ 1670: 
+ 1671:           title:
+ 1672:             manufacturer.title,
+ 1673: 
+ 1674:           originalPrice:
+ 1675:             manufacturer.originalPrice,
+ 1676: 
+ 1677:           finalPrice:
+ 1678:             manufacturer.finalPrice,
+ 1679: 
+ 1680:           discountRate: 0,
+ 1681: 
+ 1682:           currency:
+ 1683:             "KRW",
+ 1684: 
+ 1685:           imageUrl:
+ 1686:             manufacturer.imageUrl,
+ 1687: 
+ 1688:           totalReviews: 0,
+ 1689: 
+ 1690:           averageRating:
+ 1691:             null,
+ 1692: 
+ 1693:           soldOut: false,
+ 1694: 
+ 1695:           sellerName:
+ 1696:             manufacturer.brand,
+ 1697: 
+ 1698:           sellers: [],
+
+############################################################
+PATTERN: canonicalSourceType
+MATCHES: 13
+############################################################
+
+===== LINE 1246 =====
+ 1221:       index: number,
+ 1222:     ): Promise<ProcessResult> {
+ 1223:       const position =
+ 1224:         index + 1;
+ 1225: 
+ 1226:       const startedAt =
+ 1227:         Date.now();
+ 1228: 
+ 1229:       console.log(
+ 1230:         `[ENRICH ${position}/${marketCandidates.length}] 시작`,
+ 1231:         market.name,
+ 1232:       );
+ 1233: 
+ 1234:       let resolvedProductId =
+ 1235:         "";
+ 1236: 
+ 1237:       let resolvedUrl =
+ 1238:         "";
+ 1239: 
+ 1240:       let resolvedBrandName =
+ 1241:         "";
+ 1242: 
+ 1243:       let resolvedBrandSite =
+ 1244:         "";
+ 1245: 
+ 1246:       let canonicalSourceType:
+ 1247:         | "naver-brand"
+ 1248:         | "manufacturer" =
+ 1249:         "naver-brand";
+ 1250: 
+ 1251:       let identityKey =
+ 1252:         "";
+ 1253: 
+ 1254:       let manufacturerDetail:
+ 1255:         Awaited<
+ 1256:           ReturnType<
+ 1257:             typeof collectManufacturerProduct
+ 1258:           >
+ 1259:         > | null =
+ 1260:         null;
+ 1261: 
+ 1262:       /*
+ 1263:         URL 처리 원칙:
+ 1264: 
+ 1265:         1. brand.naver.com 상품 URL
+ 1266:            → 그대로 Bright Data에 전달
+ 1267: 
+ 1268:         2. smartstore.naver.com 상품 URL
+ 1269:            → Bright Data에 직접 넣지 않는다.
+ 1270:            → resolver로 공식 Brand 상품 URL을 찾은 뒤 사용
+ 1271: 
+ 1272:         3. 그 외 네이버 중간 URL
+ 1273:            → 기존 resolver 사용
+ 1274:       */
+ 1275:       const urlInfo =
+ 1276:         getNaverProductUrlInfo(
+ 1277:           market.url,
+ 1278:         );
+ 1279: 
+ 1280:       let candidateResolverAttempts =
+ 1281:         0;
+
+===== LINE 1417 =====
+ 1392:             ) {
+ 1393:               console.log(
+ 1394:                 `[ENRICH ${position}] Manufacturer fallback 시작`,
+ 1395:                 officialMapping.officialSite,
+ 1396:                 manufacturerSearchTerms.join(
+ 1397:                   " ",
+ 1398:                 ),
+ 1399:               );
+ 1400: 
+ 1401:               try {
+ 1402:                 const collected =
+ 1403:                   await collectManufacturerProduct({
+ 1404:                     officialSite:
+ 1405:                       officialMapping.officialSite,
+ 1406: 
+ 1407:                     searchTerms:
+ 1408:                       manufacturerSearchTerms,
+ 1409:                   });
+ 1410: 
+ 1411:                 if (
+ 1412:                   collected.success
+ 1413:                 ) {
+ 1414:                   manufacturerDetail =
+ 1415:                     collected;
+ 1416: 
+ 1417:                   canonicalSourceType =
+ 1418:                     "manufacturer";
+ 1419: 
+ 1420:                   resolvedProductId =
+ 1421:                     "";
+ 1422: 
+ 1423:                   resolvedUrl =
+ 1424:                     collected.discoveredUrl;
+ 1425: 
+ 1426:                   resolvedBrandName =
+ 1427:                     collected.detail.brand ||
+ 1428:                     officialMapping.brandName;
+ 1429: 
+ 1430:                   resolvedBrandSite =
+ 1431:                     officialMapping.officialSite;
+ 1432: 
+ 1433:                   console.log(
+ 1434:                     `[ENRICH ${position}] Manufacturer fallback 성공`,
+ 1435:                     resolvedUrl,
+ 1436:                   );
+ 1437:                 } else {
+ 1438:                   console.log(
+ 1439:                     `[ENRICH ${position}] Manufacturer fallback 실패`,
+ 1440:                     collected.reason,
+ 1441:                   );
+ 1442:                 }
+ 1443:               } catch (error) {
+ 1444:                 console.warn(
+ 1445:                   `[ENRICH ${position}] Manufacturer fallback 오류`,
+ 1446:                   error,
+ 1447:                 );
+ 1448:               }
+ 1449:             }
+ 1450: 
+ 1451:             if (
+ 1452:               !manufacturerDetail ||
+
+===== LINE 1586 =====
+ 1561:               extractMarketProductId(
+ 1562:                 market.url,
+ 1563:               ) ||
+ 1564:               `partial-${position}`,
+ 1565: 
+ 1566:             resolverAttempts:
+ 1567:               candidateResolverAttempts,
+ 1568: 
+ 1569:             brightDataCalls: 0,
+ 1570: 
+ 1571:             candidate:
+ 1572:               createPartialMarketCandidate(
+ 1573:                 market,
+ 1574:                 position,
+ 1575:               ),
+ 1576:           };
+ 1577:         }
+ 1578:       }
+ 1579: 
+ 1580:       /*
+ 1581:         Naver와 Manufacturer 모두 같은 공용 identity 규칙을 사용한다.
+ 1582:       */
+ 1583:       const canonicalIdentity =
+ 1584:         buildCanonicalPipelineIdentity({
+ 1585:           sourceType:
+ 1586:             canonicalSourceType,
+ 1587: 
+ 1588:           canonicalUrl:
+ 1589:             resolvedUrl,
+ 1590: 
+ 1591:           productId:
+ 1592:             canonicalSourceType ===
+ 1593:               "naver-brand"
+ 1594:               ? resolvedProductId
+ 1595:               : undefined,
+ 1596: 
+ 1597:           officialSite:
+ 1598:             resolvedBrandSite ||
+ 1599:             resolvedUrl,
+ 1600: 
+ 1601:           brandName:
+ 1602:             resolvedBrandName,
+ 1603: 
+ 1604:           title:
+ 1605:             market.name,
+ 1606:         });
+ 1607: 
+ 1608:       identityKey =
+ 1609:         canonicalIdentity.identityKey;
+ 1610: 
+ 1611:       /*
+ 1612:         이전 배치에서 이미 확보된 상품이면
+ 1613:         상세수집 전에 차단.
+ 1614:       */
+ 1615:       if (
+ 1616:         seenIdentityKeys.has(
+ 1617:           identityKey,
+ 1618:         )
+ 1619:       ) {
+ 1620:         const reason =
+ 1621:           `동일 canonical identity 중복: ${identityKey}`;
+
+===== LINE 1592 =====
+ 1567:               candidateResolverAttempts,
+ 1568: 
+ 1569:             brightDataCalls: 0,
+ 1570: 
+ 1571:             candidate:
+ 1572:               createPartialMarketCandidate(
+ 1573:                 market,
+ 1574:                 position,
+ 1575:               ),
+ 1576:           };
+ 1577:         }
+ 1578:       }
+ 1579: 
+ 1580:       /*
+ 1581:         Naver와 Manufacturer 모두 같은 공용 identity 규칙을 사용한다.
+ 1582:       */
+ 1583:       const canonicalIdentity =
+ 1584:         buildCanonicalPipelineIdentity({
+ 1585:           sourceType:
+ 1586:             canonicalSourceType,
+ 1587: 
+ 1588:           canonicalUrl:
+ 1589:             resolvedUrl,
+ 1590: 
+ 1591:           productId:
+ 1592:             canonicalSourceType ===
+ 1593:               "naver-brand"
+ 1594:               ? resolvedProductId
+ 1595:               : undefined,
+ 1596: 
+ 1597:           officialSite:
+ 1598:             resolvedBrandSite ||
+ 1599:             resolvedUrl,
+ 1600: 
+ 1601:           brandName:
+ 1602:             resolvedBrandName,
+ 1603: 
+ 1604:           title:
+ 1605:             market.name,
+ 1606:         });
+ 1607: 
+ 1608:       identityKey =
+ 1609:         canonicalIdentity.identityKey;
+ 1610: 
+ 1611:       /*
+ 1612:         이전 배치에서 이미 확보된 상품이면
+ 1613:         상세수집 전에 차단.
+ 1614:       */
+ 1615:       if (
+ 1616:         seenIdentityKeys.has(
+ 1617:           identityKey,
+ 1618:         )
+ 1619:       ) {
+ 1620:         const reason =
+ 1621:           `동일 canonical identity 중복: ${identityKey}`;
+ 1622: 
+ 1623:         console.log(
+ 1624:           `[ENRICH ${position}] 탈락(duplicate)`,
+ 1625:           reason,
+ 1626:         );
+ 1627: 
+
+===== LINE 1658 =====
+ 1633: 
+ 1634:           brightDataCalls: 0,
+ 1635: 
+ 1636:           failure: {
+ 1637:             position,
+ 1638: 
+ 1639:             marketProduct:
+ 1640:               market.name,
+ 1641: 
+ 1642:             stage:
+ 1643:               "duplicate",
+ 1644: 
+ 1645:             reason,
+ 1646:           },
+ 1647:         };
+ 1648:       }
+ 1649: 
+ 1650:       let detail:
+ 1651:         NaverProductDetail | null =
+ 1652:         null;
+ 1653: 
+ 1654:       let usedCache =
+ 1655:         false;
+ 1656: 
+ 1657:       if (
+ 1658:         canonicalSourceType ===
+ 1659:           "manufacturer" &&
+ 1660:         manufacturerDetail?.success
+ 1661:       ) {
+ 1662:         const manufacturer =
+ 1663:           manufacturerDetail.detail;
+ 1664: 
+ 1665:         detail = {
+ 1666:           url:
+ 1667:             manufacturer.canonicalUrl,
+ 1668: 
+ 1669:           productId: "",
+ 1670: 
+ 1671:           title:
+ 1672:             manufacturer.title,
+ 1673: 
+ 1674:           originalPrice:
+ 1675:             manufacturer.originalPrice,
+ 1676: 
+ 1677:           finalPrice:
+ 1678:             manufacturer.finalPrice,
+ 1679: 
+ 1680:           discountRate: 0,
+ 1681: 
+ 1682:           currency:
+ 1683:             "KRW",
+ 1684: 
+ 1685:           imageUrl:
+ 1686:             manufacturer.imageUrl,
+ 1687: 
+ 1688:           totalReviews: 0,
+ 1689: 
+ 1690:           averageRating:
+ 1691:             null,
+ 1692: 
+ 1693:           soldOut: false,
+
+===== LINE 1747 =====
+ 1722:           `[ENRICH ${position}] Manufacturer 상세 사용`,
+ 1723:           detail.title,
+ 1724:         );
+ 1725:       } else {
+ 1726:         detail =
+ 1727:           await getCachedProductDetail(
+ 1728:             resolvedProductId,
+ 1729:           );
+ 1730: 
+ 1731:         usedCache =
+ 1732:           Boolean(detail);
+ 1733: 
+ 1734:         if (detail) {
+ 1735:           console.log(
+ 1736:             `[ENRICH ${position}] DB 상세 캐시 사용`,
+ 1737:             resolvedProductId,
+ 1738:           );
+ 1739:         }
+ 1740:       }
+ 1741: 
+ 1742:       const brightDataStartedAt =
+ 1743:         Date.now();
+ 1744: 
+ 1745:       if (
+ 1746:         !detail &&
+ 1747:         canonicalSourceType ===
+ 1748:           "naver-brand"
+ 1749:       ) {
+ 1750:         console.log(
+ 1751:           `[ENRICH ${position}] Bright Data 시작`,
+ 1752:           resolvedUrl,
+ 1753:         );
+ 1754: 
+ 1755:         try {
+ 1756:           detail =
+ 1757:             await collectNaverProduct(
+ 1758:               resolvedUrl,
+ 1759:             );
+ 1760:         } catch (error) {
+ 1761:         const reason =
+ 1762:           error instanceof Error
+ 1763:             ? error.message
+ 1764:             : "Bright Data 상세수집 실패";
+ 1765: 
+ 1766:         console.log(
+ 1767:           `[ENRICH ${position}] 탈락(brightdata)`,
+ 1768:           `${Math.round(
+ 1769:             (
+ 1770:               Date.now() -
+ 1771:               brightDataStartedAt
+ 1772:             ) /
+ 1773:               1000,
+ 1774:           )}초`,
+ 1775:           reason,
+ 1776:         );
+ 1777: 
+ 1778:         return {
+ 1779:           success: false,
+ 1780: 
+ 1781:           resolverAttempts:
+ 1782:             candidateResolverAttempts,
+
+===== LINE 1805 =====
+ 1780: 
+ 1781:           resolverAttempts:
+ 1782:             candidateResolverAttempts,
+ 1783: 
+ 1784:           brightDataCalls:
+ 1785:             usedCache
+ 1786:               ? 0
+ 1787:               : 1,
+ 1788: 
+ 1789:           failure: {
+ 1790:             position,
+ 1791: 
+ 1792:             marketProduct:
+ 1793:               market.name,
+ 1794: 
+ 1795:             stage:
+ 1796:               "brightdata",
+ 1797: 
+ 1798:             reason,
+ 1799:           },
+ 1800:         };
+ 1801:         }
+ 1802:       }
+ 1803: 
+ 1804:       if (
+ 1805:         canonicalSourceType ===
+ 1806:           "naver-brand" &&
+ 1807:         !usedCache &&
+ 1808:         detail
+ 1809:       ) {
+ 1810:         console.log(
+ 1811:           `[ENRICH ${position}] Bright Data 완료`,
+ 1812:         `${Math.round(
+ 1813:           (
+ 1814:             Date.now() -
+ 1815:             brightDataStartedAt
+ 1816:           ) /
+ 1817:             1000,
+ 1818:         )}초`,
+ 1819:         );
+ 1820:       }
+ 1821: 
+ 1822:       if (!detail) {
+ 1823:         return {
+ 1824:           success: false,
+ 1825: 
+ 1826:           resolverAttempts:
+ 1827:             candidateResolverAttempts,
+ 1828: 
+ 1829:           brightDataCalls:
+ 1830:             usedCache
+ 1831:               ? 0
+ 1832:               : 1,
+ 1833: 
+ 1834:           failure: {
+ 1835:             position,
+ 1836: 
+ 1837:             marketProduct:
+ 1838:               market.name,
+ 1839: 
+ 1840:             stage:
+
+===== LINE 1864 =====
+ 1839: 
+ 1840:             stage:
+ 1841:               "brightdata",
+ 1842: 
+ 1843:             reason:
+ 1844:               "상품 상세정보를 확보하지 못했습니다.",
+ 1845:           },
+ 1846:         };
+ 1847:       }
+ 1848: 
+ 1849:       const matchValidation =
+ 1850:         validateProductMatch(
+ 1851:           market.name,
+ 1852:           detail.title,
+ 1853:           detail.modelName,
+ 1854:         );
+ 1855: 
+ 1856:       const usable =
+ 1857:         Boolean(
+ 1858:           detail.title,
+ 1859:         ) &&
+ 1860:         detail.finalPrice >
+ 1861:           0 &&
+ 1862:         matchValidation.matched &&
+ 1863:         (
+ 1864:           canonicalSourceType ===
+ 1865:             "manufacturer" ||
+ 1866:           Boolean(
+ 1867:             detail.productId,
+ 1868:           )
+ 1869:         );
+ 1870: 
+ 1871:       if (!usable) {
+ 1872:         const reason =
+ 1873:           "상세수집은 완료됐지만 필수 상품정보가 없습니다.";
+ 1874: 
+ 1875:         console.log(
+ 1876:           `[ENRICH ${position}] 탈락(validation)`,
+ 1877:           reason,
+ 1878:         );
+ 1879: 
+ 1880:         return {
+ 1881:           success: false,
+ 1882: 
+ 1883:           resolverAttempts:
+ 1884:             candidateResolverAttempts,
+ 1885: 
+ 1886:           brightDataCalls:
+ 1887:             usedCache
+ 1888:               ? 0
+ 1889:               : 1,
+ 1890: 
+ 1891:           failure: {
+ 1892:             position,
+ 1893: 
+ 1894:             marketProduct:
+ 1895:               market.name,
+ 1896: 
+ 1897:             stage:
+ 1898:               "validation",
+ 1899: 
+
+===== LINE 2059 =====
+ 2034:             typeof searchProductOffers
+ 2035:           >
+ 2036:         > | null =
+ 2037:         null;
+ 2038: 
+ 2039:       try {
+ 2040:         offerSearch =
+ 2041:           await searchProductOffers(
+ 2042:             detail.title ||
+ 2043:               market.name,
+ 2044:           );
+ 2045:       } catch (error) {
+ 2046:         console.warn(
+ 2047:           `[ENRICH ${position}] 판매처 재검색 warning`,
+ 2048:           error,
+ 2049:         );
+ 2050:       }
+ 2051: 
+ 2052:       const selectedReviewSource =
+ 2053:         offerSearch?.reviewSource;
+ 2054: 
+ 2055:       const selectedPurchaseSource =
+ 2056:         offerSearch?.purchaseSource;
+ 2057: 
+ 2058:       const finalProductId =
+ 2059:         canonicalSourceType ===
+ 2060:           "naver-brand"
+ 2061:           ? String(
+ 2062:               detail.productId,
+ 2063:             )
+ 2064:           : "";
+ 2065: 
+ 2066:       /*
+ 2067:         실제 리뷰 본문은 reviewSource에서 가져오는 것을 원칙으로 한다.
+ 2068: 
+ 2069:         단, reviewSource의 실제 네이버 상품번호가 canonicalSource와
+ 2070:         같다면 같은 상품 페이지이므로 Bright Data를 한 번 더 호출하지 않고
+ 2071:         이미 수집한 detail.topReviews를 그대로 재사용한다.
+ 2072: 
+ 2073:         상품번호가 다를 때만 reviewSource.resolvedUrl을 Bright Data로
+ 2074:         추가 수집한다. 실패하면 자동으로 canonical 리뷰로 fallback 한다.
+ 2075:       */
+ 2076:       let reviewDetail:
+ 2077:         NaverProductDetail =
+ 2078:         detail;
+ 2079: 
+ 2080:       let reviewTextSource:
+ 2081:         | "selected-source"
+ 2082:         | "canonical-reuse"
+ 2083:         | "canonical-fallback" =
+ 2084:         "canonical-fallback";
+ 2085: 
+ 2086:       let reviewSourceUrl =
+ 2087:         detail.url;
+ 2088: 
+ 2089:       let extraReviewBrightDataCalls =
+ 2090:         0;
+ 2091: 
+ 2092:       if (
+ 2093:         selectedReviewSource?.resolvedUrl &&
+ 2094:         selectedReviewSource.sourceType ===
+
+===== LINE 2225 =====
+ 2200:         `${Math.round(
+ 2201:           (
+ 2202:             Date.now() -
+ 2203:             startedAt
+ 2204:           ) /
+ 2205:             1000,
+ 2206:         )}초`,
+ 2207:         detail.title,
+ 2208:       );
+ 2209: 
+ 2210:       return {
+ 2211:         success: true,
+ 2212: 
+ 2213:         position,
+ 2214: 
+ 2215:         productId:
+ 2216:           finalProductId,
+ 2217: 
+ 2218:         identityKey,
+ 2219: 
+ 2220:         resolverAttempts:
+ 2221:           candidateResolverAttempts,
+ 2222: 
+ 2223:         brightDataCalls:
+ 2224:           (
+ 2225:             canonicalSourceType ===
+ 2226:               "naver-brand"
+ 2227:               ? (
+ 2228:                   usedCache
+ 2229:                     ? 0
+ 2230:                     : 1
+ 2231:                 )
+ 2232:               : 0
+ 2233:           ) +
+ 2234:           extraReviewBrightDataCalls,
+ 2235: 
+ 2236:         candidate: {
+ 2237:           position,
+ 2238: 
+ 2239:           canonicalSource: {
+ 2240:             productId:
+ 2241:               finalProductId,
+ 2242: 
+ 2243:             brandName:
+ 2244:               resolvedBrandName ||
+ 2245:               detail.brand,
+ 2246: 
+ 2247:             brandSite:
+ 2248:               resolvedBrandSite,
+ 2249: 
+ 2250:             url:
+ 2251:               resolvedUrl,
+ 2252: 
+ 2253:             sourceType:
+ 2254:               canonicalSourceType,
+ 2255: 
+ 2256:             identityKey,
+ 2257:           },
+ 2258: 
+ 2259:           reviewSource:
+ 2260:             selectedReviewSource
+
+===== LINE 2254 =====
+ 2229:                     ? 0
+ 2230:                     : 1
+ 2231:                 )
+ 2232:               : 0
+ 2233:           ) +
+ 2234:           extraReviewBrightDataCalls,
+ 2235: 
+ 2236:         candidate: {
+ 2237:           position,
+ 2238: 
+ 2239:           canonicalSource: {
+ 2240:             productId:
+ 2241:               finalProductId,
+ 2242: 
+ 2243:             brandName:
+ 2244:               resolvedBrandName ||
+ 2245:               detail.brand,
+ 2246: 
+ 2247:             brandSite:
+ 2248:               resolvedBrandSite,
+ 2249: 
+ 2250:             url:
+ 2251:               resolvedUrl,
+ 2252: 
+ 2253:             sourceType:
+ 2254:               canonicalSourceType,
+ 2255: 
+ 2256:             identityKey,
+ 2257:           },
+ 2258: 
+ 2259:           reviewSource:
+ 2260:             selectedReviewSource
+ 2261:               ? {
+ 2262:                   productName:
+ 2263:                     selectedReviewSource.name,
+ 2264: 
+ 2265:                   seller:
+ 2266:                     selectedReviewSource.brand,
+ 2267: 
+ 2268:                   price:
+ 2269:                     selectedReviewSource.price,
+ 2270: 
+ 2271:                   reviewCount:
+ 2272:                     selectedReviewSource.reviewCount,
+ 2273: 
+ 2274:                   rating:
+ 2275:                     selectedReviewSource.rating,
+ 2276: 
+ 2277:                   url:
+ 2278:                     selectedReviewSource.url,
+ 2279: 
+ 2280:                   resolvedUrl:
+ 2281:                     selectedReviewSource.resolvedUrl,
+ 2282: 
+ 2283:                   sourceType:
+ 2284:                     selectedReviewSource.sourceType,
+ 2285: 
+ 2286:                   isIndividualSeller:
+ 2287:                     selectedReviewSource.isIndividualSeller,
+ 2288: 
+ 2289:                   matchScore:
+
+===== LINE 2321 =====
+ 2296:                 }
+ 2297:               : {
+ 2298:                   productName:
+ 2299:                     detail.title,
+ 2300: 
+ 2301:                   seller:
+ 2302:                     detail.sellerName,
+ 2303: 
+ 2304:                   price:
+ 2305:                     detail.finalPrice,
+ 2306: 
+ 2307:                   reviewCount:
+ 2308:                     detail.totalReviews,
+ 2309: 
+ 2310:                   rating:
+ 2311:                     detail.averageRating ??
+ 2312:                     0,
+ 2313: 
+ 2314:                   url:
+ 2315:                     resolvedUrl,
+ 2316: 
+ 2317:                   resolvedUrl:
+ 2318:                     resolvedUrl,
+ 2319: 
+ 2320:                   sourceType:
+ 2321:                     canonicalSourceType ===
+ 2322:                       "manufacturer"
+ 2323:                       ? "external-store" as const
+ 2324:                       : "naver-store" as const,
+ 2325: 
+ 2326:                   isIndividualSeller:
+ 2327:                     true,
+ 2328: 
+ 2329:                   matchScore:
+ 2330:                     0,
+ 2331: 
+ 2332:                   reviewTextSource:
+ 2333:                     "canonical-fallback" as const,
+ 2334: 
+ 2335:                   status:
+ 2336:                     "fallback-canonical" as const,
+ 2337:                 },
+ 2338: 
+ 2339:           purchaseSource:
+ 2340:             selectedPurchaseSource
+ 2341:               ? {
+ 2342:                   productName:
+ 2343:                     selectedPurchaseSource.name,
+ 2344: 
+ 2345:                   seller:
+ 2346:                     selectedPurchaseSource.brand,
+ 2347: 
+ 2348:                   price:
+ 2349:                     selectedPurchaseSource.price,
+ 2350: 
+ 2351:                   reviewCount:
+ 2352:                     selectedPurchaseSource.reviewCount,
+ 2353: 
+ 2354:                   rating:
+ 2355:                     selectedPurchaseSource.rating,
+ 2356: 
+
+===== LINE 2447 =====
+ 2422: 
+ 2423:             rating:
+ 2424:               market.rating,
+ 2425: 
+ 2426:             imageUrl:
+ 2427:               market.imageUrl,
+ 2428: 
+ 2429:             sourceUrl:
+ 2430:               market.url,
+ 2431:           },
+ 2432: 
+ 2433:           resolution: {
+ 2434:             productId:
+ 2435:               finalProductId,
+ 2436: 
+ 2437:             brandName:
+ 2438:               resolvedBrandName,
+ 2439: 
+ 2440:             brandSite:
+ 2441:               resolvedBrandSite,
+ 2442: 
+ 2443:             canonicalUrl:
+ 2444:               resolvedUrl,
+ 2445: 
+ 2446:             sourceType:
+ 2447:               canonicalSourceType,
+ 2448: 
+ 2449:             identityKey,
+ 2450:           },
+ 2451: 
+ 2452:           detail: {
+ 2453:             productId:
+ 2454:               finalProductId,
+ 2455: 
+ 2456:             productName:
+ 2457:               detail.title,
+ 2458: 
+ 2459:             brand:
+ 2460:               detail.brand,
+ 2461: 
+ 2462:             manufacturer:
+ 2463:               detail.manufacturer,
+ 2464: 
+ 2465:             modelName:
+ 2466:               detail.modelName,
+ 2467: 
+ 2468:             originalPrice:
+ 2469:               detail.originalPrice,
+ 2470: 
+ 2471:             finalPrice:
+ 2472:               detail.finalPrice,
+ 2473: 
+ 2474:             discountRate:
+ 2475:               detail.discountRate,
+ 2476: 
+ 2477:             reviewCount:
+ 2478:               reviewDetail.totalReviews,
+ 2479: 
+ 2480:             rating:
+ 2481:               reviewDetail.averageRating,
+ 2482: 
+
+############################################################
+PATTERN: topReviews
+MATCHES: 11
+############################################################
+
+===== LINE 745 =====
+  720: 
+  721:     averageRating:
+  722:       typeof detail.rating ===
+  723:         "number"
+  724:         ? detail.rating
+  725:         : null,
+  726: 
+  727:     sellerName:
+  728:       String(
+  729:         detail.sellerName ??
+  730:           "",
+  731:       ),
+  732: 
+  733:     categoryName:
+  734:       String(
+  735:         detail.categoryName ??
+  736:           "",
+  737:       ),
+  738: 
+  739:     imageUrl:
+  740:       String(
+  741:         detail.imageUrl ??
+  742:           "",
+  743:       ),
+  744: 
+  745:     topReviews:
+  746:       reviews as {
+  747:         rating: number;
+  748:         date: string;
+  749:         text: string;
+  750:         helpfulCount: number;
+  751:       }[],
+  752: 
+  753:     url:
+  754:       String(
+  755:         detail.sourceUrl ??
+  756:           "",
+  757:       ),
+  758:   } as NaverProductDetail;
+  759: }
+  760: 
+  761: function getNaverProductUrlInfo(
+  762:   value: string,
+  763: ) {
+  764:   try {
+  765:     const url =
+  766:       new URL(value);
+  767: 
+  768:     const match =
+  769:       url.pathname.match(
+  770:         /\/products\/(\d+)/i,
+  771:       );
+  772: 
+  773:     if (!match?.[1]) {
+  774:       return null;
+  775:     }
+  776: 
+  777:     if (
+  778:       url.hostname ===
+  779:       "brand.naver.com"
+  780:     ) {
+
+===== LINE 1718 =====
+ 1693:           soldOut: false,
+ 1694: 
+ 1695:           sellerName:
+ 1696:             manufacturer.brand,
+ 1697: 
+ 1698:           sellers: [],
+ 1699: 
+ 1700:           purchaseSeller: "",
+ 1701: 
+ 1702:           purchasePrice: 0,
+ 1703: 
+ 1704:           purchaseUrl: "",
+ 1705: 
+ 1706:           brand:
+ 1707:             manufacturer.brand,
+ 1708: 
+ 1709:           manufacturer:
+ 1710:             manufacturer.manufacturer,
+ 1711: 
+ 1712:           modelName:
+ 1713:             manufacturer.modelName,
+ 1714: 
+ 1715:           categoryName:
+ 1716:             category,
+ 1717: 
+ 1718:           topReviews: [],
+ 1719:         };
+ 1720: 
+ 1721:         console.log(
+ 1722:           `[ENRICH ${position}] Manufacturer 상세 사용`,
+ 1723:           detail.title,
+ 1724:         );
+ 1725:       } else {
+ 1726:         detail =
+ 1727:           await getCachedProductDetail(
+ 1728:             resolvedProductId,
+ 1729:           );
+ 1730: 
+ 1731:         usedCache =
+ 1732:           Boolean(detail);
+ 1733: 
+ 1734:         if (detail) {
+ 1735:           console.log(
+ 1736:             `[ENRICH ${position}] DB 상세 캐시 사용`,
+ 1737:             resolvedProductId,
+ 1738:           );
+ 1739:         }
+ 1740:       }
+ 1741: 
+ 1742:       const brightDataStartedAt =
+ 1743:         Date.now();
+ 1744: 
+ 1745:       if (
+ 1746:         !detail &&
+ 1747:         canonicalSourceType ===
+ 1748:           "naver-brand"
+ 1749:       ) {
+ 1750:         console.log(
+ 1751:           `[ENRICH ${position}] Bright Data 시작`,
+ 1752:           resolvedUrl,
+ 1753:         );
+
+===== LINE 1906 =====
+ 1881:           success: false,
+ 1882: 
+ 1883:           resolverAttempts:
+ 1884:             candidateResolverAttempts,
+ 1885: 
+ 1886:           brightDataCalls:
+ 1887:             usedCache
+ 1888:               ? 0
+ 1889:               : 1,
+ 1890: 
+ 1891:           failure: {
+ 1892:             position,
+ 1893: 
+ 1894:             marketProduct:
+ 1895:               market.name,
+ 1896: 
+ 1897:             stage:
+ 1898:               "validation",
+ 1899: 
+ 1900:             reason,
+ 1901:           },
+ 1902:         };
+ 1903:       }
+ 1904: 
+ 1905:       if (
+ 1906:         detail.topReviews.length <
+ 1907:         5
+ 1908:       ) {
+ 1909:         const reason =
+ 1910:           `분석 가능한 리뷰가 부족합니다. (${detail.topReviews.length}개)`;
+ 1911: 
+ 1912:         console.log(
+ 1913:           `[ENRICH ${position}] 탈락(validation)`,
+ 1914:           reason,
+ 1915:         );
+ 1916: 
+ 1917:         return {
+ 1918:           success: false,
+ 1919: 
+ 1920:           resolverAttempts:
+ 1921:             candidateResolverAttempts,
+ 1922: 
+ 1923:           brightDataCalls:
+ 1924:             usedCache
+ 1925:               ? 0
+ 1926:               : 1,
+ 1927: 
+ 1928:           failure: {
+ 1929:             position,
+ 1930: 
+ 1931:             marketProduct:
+ 1932:               market.name,
+ 1933: 
+ 1934:             stage:
+ 1935:               "validation",
+ 1936: 
+ 1937:             reason,
+ 1938:           },
+ 1939:         };
+ 1940:       }
+ 1941: 
+
+===== LINE 1910 =====
+ 1885: 
+ 1886:           brightDataCalls:
+ 1887:             usedCache
+ 1888:               ? 0
+ 1889:               : 1,
+ 1890: 
+ 1891:           failure: {
+ 1892:             position,
+ 1893: 
+ 1894:             marketProduct:
+ 1895:               market.name,
+ 1896: 
+ 1897:             stage:
+ 1898:               "validation",
+ 1899: 
+ 1900:             reason,
+ 1901:           },
+ 1902:         };
+ 1903:       }
+ 1904: 
+ 1905:       if (
+ 1906:         detail.topReviews.length <
+ 1907:         5
+ 1908:       ) {
+ 1909:         const reason =
+ 1910:           `분석 가능한 리뷰가 부족합니다. (${detail.topReviews.length}개)`;
+ 1911: 
+ 1912:         console.log(
+ 1913:           `[ENRICH ${position}] 탈락(validation)`,
+ 1914:           reason,
+ 1915:         );
+ 1916: 
+ 1917:         return {
+ 1918:           success: false,
+ 1919: 
+ 1920:           resolverAttempts:
+ 1921:             candidateResolverAttempts,
+ 1922: 
+ 1923:           brightDataCalls:
+ 1924:             usedCache
+ 1925:               ? 0
+ 1926:               : 1,
+ 1927: 
+ 1928:           failure: {
+ 1929:             position,
+ 1930: 
+ 1931:             marketProduct:
+ 1932:               market.name,
+ 1933: 
+ 1934:             stage:
+ 1935:               "validation",
+ 1936: 
+ 1937:             reason,
+ 1938:           },
+ 1939:         };
+ 1940:       }
+ 1941: 
+ 1942:       /*
+ 1943:         실제 판매가 기준 예산 검증.
+ 1944: 
+ 1945:         시장목록 가격부터 예산 밖이었던 상품은
+
+===== LINE 2025 =====
+ 2000:         };
+ 2001:       }
+ 2002: 
+ 2003:       if (
+ 2004:         marketBudgetFallback
+ 2005:       ) {
+ 2006:         console.log(
+ 2007:           `[ENRICH ${position}] 예산 근접 fallback 후보`,
+ 2008:           `목록가 ${market.price.toLocaleString(
+ 2009:             "ko-KR",
+ 2010:           )}원`,
+ 2011:         );
+ 2012:       }
+ 2013: 
+ 2014:       /*
+ 2015:         같은 모델의 네이버 판매처를 다시 검색해
+ 2016:         역할을 분리한다.
+ 2017: 
+ 2018:         canonicalSource:
+ 2019:           공식 Brand 상품 URL
+ 2020:           → 제품 식별 / 스펙 / 대표 이미지용
+ 2021: 
+ 2022:         reviewSource:
+ 2023:           동일 모델/구성 후보 중 리뷰 수가 가장 많은 판매처
+ 2024:           → 현재는 "어느 판매처 리뷰를 써야 하는지"만 선택한다.
+ 2025:           → 실제 리뷰 텍스트는 아직 detail.topReviews를 유지한다.
+ 2026: 
+ 2027:         purchaseSource:
+ 2028:           동일 모델/구성 후보 중 최저가 판매처
+ 2029:           → 최종 구매 버튼용 후보.
+ 2030:       */
+ 2031:       let offerSearch:
+ 2032:         Awaited<
+ 2033:           ReturnType<
+ 2034:             typeof searchProductOffers
+ 2035:           >
+ 2036:         > | null =
+ 2037:         null;
+ 2038: 
+ 2039:       try {
+ 2040:         offerSearch =
+ 2041:           await searchProductOffers(
+ 2042:             detail.title ||
+ 2043:               market.name,
+ 2044:           );
+ 2045:       } catch (error) {
+ 2046:         console.warn(
+ 2047:           `[ENRICH ${position}] 판매처 재검색 warning`,
+ 2048:           error,
+ 2049:         );
+ 2050:       }
+ 2051: 
+ 2052:       const selectedReviewSource =
+ 2053:         offerSearch?.reviewSource;
+ 2054: 
+ 2055:       const selectedPurchaseSource =
+ 2056:         offerSearch?.purchaseSource;
+ 2057: 
+ 2058:       const finalProductId =
+ 2059:         canonicalSourceType ===
+ 2060:           "naver-brand"
+
+===== LINE 2071 =====
+ 2046:         console.warn(
+ 2047:           `[ENRICH ${position}] 판매처 재검색 warning`,
+ 2048:           error,
+ 2049:         );
+ 2050:       }
+ 2051: 
+ 2052:       const selectedReviewSource =
+ 2053:         offerSearch?.reviewSource;
+ 2054: 
+ 2055:       const selectedPurchaseSource =
+ 2056:         offerSearch?.purchaseSource;
+ 2057: 
+ 2058:       const finalProductId =
+ 2059:         canonicalSourceType ===
+ 2060:           "naver-brand"
+ 2061:           ? String(
+ 2062:               detail.productId,
+ 2063:             )
+ 2064:           : "";
+ 2065: 
+ 2066:       /*
+ 2067:         실제 리뷰 본문은 reviewSource에서 가져오는 것을 원칙으로 한다.
+ 2068: 
+ 2069:         단, reviewSource의 실제 네이버 상품번호가 canonicalSource와
+ 2070:         같다면 같은 상품 페이지이므로 Bright Data를 한 번 더 호출하지 않고
+ 2071:         이미 수집한 detail.topReviews를 그대로 재사용한다.
+ 2072: 
+ 2073:         상품번호가 다를 때만 reviewSource.resolvedUrl을 Bright Data로
+ 2074:         추가 수집한다. 실패하면 자동으로 canonical 리뷰로 fallback 한다.
+ 2075:       */
+ 2076:       let reviewDetail:
+ 2077:         NaverProductDetail =
+ 2078:         detail;
+ 2079: 
+ 2080:       let reviewTextSource:
+ 2081:         | "selected-source"
+ 2082:         | "canonical-reuse"
+ 2083:         | "canonical-fallback" =
+ 2084:         "canonical-fallback";
+ 2085: 
+ 2086:       let reviewSourceUrl =
+ 2087:         detail.url;
+ 2088: 
+ 2089:       let extraReviewBrightDataCalls =
+ 2090:         0;
+ 2091: 
+ 2092:       if (
+ 2093:         selectedReviewSource?.resolvedUrl &&
+ 2094:         selectedReviewSource.sourceType ===
+ 2095:           "naver-store"
+ 2096:       ) {
+ 2097:         const selectedReviewProductId =
+ 2098:           extractMarketProductId(
+ 2099:             selectedReviewSource.resolvedUrl,
+ 2100:           );
+ 2101: 
+ 2102:         if (
+ 2103:           selectedReviewProductId &&
+ 2104:           selectedReviewProductId ===
+ 2105:             finalProductId
+ 2106:         ) {
+
+===== LINE 2163 =====
+ 2138:               collectedReviewDetail;
+ 2139: 
+ 2140:             reviewSourceUrl =
+ 2141:               selectedReviewSource.resolvedUrl;
+ 2142: 
+ 2143:             reviewTextSource =
+ 2144:               "selected-source";
+ 2145: 
+ 2146:             console.log(
+ 2147:               `[ENRICH ${position}] 리뷰소스 DB 캐시 사용`,
+ 2148:               selectedReviewProductId,
+ 2149:             );
+ 2150:           } else {
+ 2151:             try {
+ 2152:               console.log(
+ 2153:                 `[ENRICH ${position}] 리뷰소스 Bright Data 시작`,
+ 2154:                 selectedReviewSource.resolvedUrl,
+ 2155:               );
+ 2156: 
+ 2157:               const collected =
+ 2158:                 await collectNaverProduct(
+ 2159:                   selectedReviewSource.resolvedUrl,
+ 2160:                 );
+ 2161: 
+ 2162:               if (
+ 2163:                 collected.topReviews.length >=
+ 2164:                 5
+ 2165:               ) {
+ 2166:                 reviewDetail =
+ 2167:                   collected;
+ 2168: 
+ 2169:                 reviewSourceUrl =
+ 2170:                   selectedReviewSource.resolvedUrl;
+ 2171: 
+ 2172:                 reviewTextSource =
+ 2173:                   "selected-source";
+ 2174: 
+ 2175:                 extraReviewBrightDataCalls =
+ 2176:                   1;
+ 2177: 
+ 2178:                 console.log(
+ 2179:                   `[ENRICH ${position}] 리뷰소스 Bright Data 완료`,
+ 2180:                   collected.topReviews.length,
+ 2181:                 );
+ 2182:               } else {
+ 2183:                 console.warn(
+ 2184:                   `[ENRICH ${position}] 리뷰소스 샘플 부족 → canonical fallback`,
+ 2185:                   collected.topReviews.length,
+ 2186:                 );
+ 2187:               }
+ 2188:             } catch (error) {
+ 2189:               console.warn(
+ 2190:                 `[ENRICH ${position}] 리뷰소스 Bright Data 실패 → canonical fallback`,
+ 2191:                 error,
+ 2192:               );
+ 2193:             }
+ 2194:           }
+ 2195:         }
+ 2196:       }
+ 2197: 
+ 2198:       console.log(
+
+===== LINE 2180 =====
+ 2155:               );
+ 2156: 
+ 2157:               const collected =
+ 2158:                 await collectNaverProduct(
+ 2159:                   selectedReviewSource.resolvedUrl,
+ 2160:                 );
+ 2161: 
+ 2162:               if (
+ 2163:                 collected.topReviews.length >=
+ 2164:                 5
+ 2165:               ) {
+ 2166:                 reviewDetail =
+ 2167:                   collected;
+ 2168: 
+ 2169:                 reviewSourceUrl =
+ 2170:                   selectedReviewSource.resolvedUrl;
+ 2171: 
+ 2172:                 reviewTextSource =
+ 2173:                   "selected-source";
+ 2174: 
+ 2175:                 extraReviewBrightDataCalls =
+ 2176:                   1;
+ 2177: 
+ 2178:                 console.log(
+ 2179:                   `[ENRICH ${position}] 리뷰소스 Bright Data 완료`,
+ 2180:                   collected.topReviews.length,
+ 2181:                 );
+ 2182:               } else {
+ 2183:                 console.warn(
+ 2184:                   `[ENRICH ${position}] 리뷰소스 샘플 부족 → canonical fallback`,
+ 2185:                   collected.topReviews.length,
+ 2186:                 );
+ 2187:               }
+ 2188:             } catch (error) {
+ 2189:               console.warn(
+ 2190:                 `[ENRICH ${position}] 리뷰소스 Bright Data 실패 → canonical fallback`,
+ 2191:                 error,
+ 2192:               );
+ 2193:             }
+ 2194:           }
+ 2195:         }
+ 2196:       }
+ 2197: 
+ 2198:       console.log(
+ 2199:         `[ENRICH ${position}] 검증 통과`,
+ 2200:         `${Math.round(
+ 2201:           (
+ 2202:             Date.now() -
+ 2203:             startedAt
+ 2204:           ) /
+ 2205:             1000,
+ 2206:         )}초`,
+ 2207:         detail.title,
+ 2208:       );
+ 2209: 
+ 2210:       return {
+ 2211:         success: true,
+ 2212: 
+ 2213:         position,
+ 2214: 
+ 2215:         productId:
+
+===== LINE 2185 =====
+ 2160:                 );
+ 2161: 
+ 2162:               if (
+ 2163:                 collected.topReviews.length >=
+ 2164:                 5
+ 2165:               ) {
+ 2166:                 reviewDetail =
+ 2167:                   collected;
+ 2168: 
+ 2169:                 reviewSourceUrl =
+ 2170:                   selectedReviewSource.resolvedUrl;
+ 2171: 
+ 2172:                 reviewTextSource =
+ 2173:                   "selected-source";
+ 2174: 
+ 2175:                 extraReviewBrightDataCalls =
+ 2176:                   1;
+ 2177: 
+ 2178:                 console.log(
+ 2179:                   `[ENRICH ${position}] 리뷰소스 Bright Data 완료`,
+ 2180:                   collected.topReviews.length,
+ 2181:                 );
+ 2182:               } else {
+ 2183:                 console.warn(
+ 2184:                   `[ENRICH ${position}] 리뷰소스 샘플 부족 → canonical fallback`,
+ 2185:                   collected.topReviews.length,
+ 2186:                 );
+ 2187:               }
+ 2188:             } catch (error) {
+ 2189:               console.warn(
+ 2190:                 `[ENRICH ${position}] 리뷰소스 Bright Data 실패 → canonical fallback`,
+ 2191:                 error,
+ 2192:               );
+ 2193:             }
+ 2194:           }
+ 2195:         }
+ 2196:       }
+ 2197: 
+ 2198:       console.log(
+ 2199:         `[ENRICH ${position}] 검증 통과`,
+ 2200:         `${Math.round(
+ 2201:           (
+ 2202:             Date.now() -
+ 2203:             startedAt
+ 2204:           ) /
+ 2205:             1000,
+ 2206:         )}초`,
+ 2207:         detail.title,
+ 2208:       );
+ 2209: 
+ 2210:       return {
+ 2211:         success: true,
+ 2212: 
+ 2213:         position,
+ 2214: 
+ 2215:         productId:
+ 2216:           finalProductId,
+ 2217: 
+ 2218:         identityKey,
+ 2219: 
+ 2220:         resolverAttempts:
+
+===== LINE 2493 =====
+ 2468:             originalPrice:
+ 2469:               detail.originalPrice,
+ 2470: 
+ 2471:             finalPrice:
+ 2472:               detail.finalPrice,
+ 2473: 
+ 2474:             discountRate:
+ 2475:               detail.discountRate,
+ 2476: 
+ 2477:             reviewCount:
+ 2478:               reviewDetail.totalReviews,
+ 2479: 
+ 2480:             rating:
+ 2481:               reviewDetail.averageRating,
+ 2482: 
+ 2483:             sellerName:
+ 2484:               detail.sellerName,
+ 2485: 
+ 2486:             categoryName:
+ 2487:               detail.categoryName,
+ 2488: 
+ 2489:             imageUrl:
+ 2490:               detail.imageUrl,
+ 2491: 
+ 2492:             reviewSamples:
+ 2493:               reviewDetail.topReviews.length,
+ 2494: 
+ 2495:             reviews:
+ 2496:               reviewDetail.topReviews,
+ 2497: 
+ 2498:             sourceUrl:
+ 2499:               detail.url,
+ 2500: 
+ 2501:             reviewSourceUrl,
+ 2502: 
+ 2503:             detailStatus:
+ 2504:               "full",
+ 2505:           },
+ 2506:         },
+ 2507:       };
+ 2508:     }
+ 2509: 
+ 2510:     /*
+ 2511:       3개씩 병렬 처리.
+ 2512: 
+ 2513:       한 묶음이 끝날 때마다 결과를 반영하고,
+ 2514:       최종 5개가 확보되면 다음 묶음은 시작하지 않는다.
+ 2515:     */
+ 2516:     for (
+ 2517:       let start = 0;
+ 2518:       start <
+ 2519:       marketCandidates.length;
+ 2520:       start +=
+ 2521:         BATCH_SIZE
+ 2522:     ) {
+ 2523:       if (
+ 2524:         finalCandidates.length >=
+ 2525:         TARGET_COUNT
+ 2526:       ) {
+ 2527:         break;
+ 2528:       }
+
+===== LINE 2496 =====
+ 2471:             finalPrice:
+ 2472:               detail.finalPrice,
+ 2473: 
+ 2474:             discountRate:
+ 2475:               detail.discountRate,
+ 2476: 
+ 2477:             reviewCount:
+ 2478:               reviewDetail.totalReviews,
+ 2479: 
+ 2480:             rating:
+ 2481:               reviewDetail.averageRating,
+ 2482: 
+ 2483:             sellerName:
+ 2484:               detail.sellerName,
+ 2485: 
+ 2486:             categoryName:
+ 2487:               detail.categoryName,
+ 2488: 
+ 2489:             imageUrl:
+ 2490:               detail.imageUrl,
+ 2491: 
+ 2492:             reviewSamples:
+ 2493:               reviewDetail.topReviews.length,
+ 2494: 
+ 2495:             reviews:
+ 2496:               reviewDetail.topReviews,
+ 2497: 
+ 2498:             sourceUrl:
+ 2499:               detail.url,
+ 2500: 
+ 2501:             reviewSourceUrl,
+ 2502: 
+ 2503:             detailStatus:
+ 2504:               "full",
+ 2505:           },
+ 2506:         },
+ 2507:       };
+ 2508:     }
+ 2509: 
+ 2510:     /*
+ 2511:       3개씩 병렬 처리.
+ 2512: 
+ 2513:       한 묶음이 끝날 때마다 결과를 반영하고,
+ 2514:       최종 5개가 확보되면 다음 묶음은 시작하지 않는다.
+ 2515:     */
+ 2516:     for (
+ 2517:       let start = 0;
+ 2518:       start <
+ 2519:       marketCandidates.length;
+ 2520:       start +=
+ 2521:         BATCH_SIZE
+ 2522:     ) {
+ 2523:       if (
+ 2524:         finalCandidates.length >=
+ 2525:         TARGET_COUNT
+ 2526:       ) {
+ 2527:         break;
+ 2528:       }
+ 2529: 
+ 2530:       const batch =
+ 2531:         marketCandidates.slice(
+
+############################################################
+PATTERN: reviewSource
+MATCHES: 36
+############################################################
+
+===== LINE 128 =====
+  103:   stage:
+  104:     | "resolve"
+  105:     | "brightdata"
+  106:     | "validation"
+  107:     | "budget"
+  108:     | "duplicate";
+  109:   reason: string;
+  110: };
+  111: 
+  112: type FinalCandidate = {
+  113:   position: number;
+  114: 
+  115:   canonicalSource: {
+  116:     productId: string;
+  117:     brandName: string;
+  118:     brandSite: string;
+  119:     url: string;
+  120: 
+  121:     sourceType?:
+  122:       | "naver-brand"
+  123:       | "manufacturer";
+  124: 
+  125:     identityKey?: string;
+  126:   };
+  127: 
+  128:   reviewSource: {
+  129:     productName: string;
+  130:     seller: string;
+  131:     price: number;
+  132:     reviewCount: number;
+  133:     rating: number;
+  134:     url: string;
+  135:     resolvedUrl: string;
+  136:     sourceType:
+  137:       | "naver-store"
+  138:       | "external-store"
+  139:       | "naver-aggregate"
+  140:       | "unknown";
+  141:     isIndividualSeller: boolean;
+  142:     matchScore: number;
+  143:     reviewTextSource:
+  144:       | "selected-source"
+  145:       | "canonical-reuse"
+  146:       | "canonical-fallback";
+  147:     status:
+  148:       | "selected"
+  149:       | "fallback-canonical";
+  150:   };
+  151: 
+  152:   purchaseSource: {
+  153:     productName: string;
+  154:     seller: string;
+  155:     price: number;
+  156:     reviewCount: number;
+  157:     rating: number;
+  158:     url: string;
+  159:     resolvedUrl: string;
+  160:     sourceType:
+  161:       | "naver-store"
+  162:       | "external-store"
+  163:       | "naver-aggregate"
+
+===== LINE 220 =====
+  195:   detail: {
+  196:     productId: string;
+  197:     productName: string;
+  198:     brand: string;
+  199:     manufacturer: string;
+  200:     modelName: string;
+  201: 
+  202:     originalPrice: number;
+  203:     finalPrice: number;
+  204:     discountRate: number;
+  205: 
+  206:     reviewCount: number;
+  207:     rating: number | null;
+  208: 
+  209:     sellerName: string;
+  210:     categoryName: string;
+  211: 
+  212:     imageUrl: string;
+  213: 
+  214:     reviewSamples: number;
+  215: 
+  216:     /*
+  217:       현재 단계의 reviews는 canonicalSource(Bright Data)에서
+  218:       수집된 기존 리뷰 샘플이다.
+  219: 
+  220:       reviewSource에는 "리뷰를 가장 많이 보유한 판매처"만
+  221:       별도로 선택해 두며, 실제 해당 판매처 리뷰 텍스트 수집은
+  222:       다음 단계에서 연결한다.
+  223:     */
+  224:     reviews: {
+  225:       rating: number;
+  226:       date: string;
+  227:       text: string;
+  228:       helpfulCount: number;
+  229:     }[];
+  230: 
+  231:     sourceUrl: string;
+  232:     reviewSourceUrl: string;
+  233: 
+  234:     detailStatus:
+  235:       | "full"
+  236:       | "partial-market";
+  237:   };
+  238: };
+  239: 
+  240: type ProcessSuccess = {
+  241:   success: true;
+  242: 
+  243:   position: number;
+  244: 
+  245:   productId: string;
+  246: 
+  247:   identityKey?: string;
+  248: 
+  249:   candidate: FinalCandidate;
+  250: 
+  251:   resolverAttempts: number;
+  252: 
+  253:   brightDataCalls: number;
+  254: };
+  255: 
+
+===== LINE 232 =====
+  207:     rating: number | null;
+  208: 
+  209:     sellerName: string;
+  210:     categoryName: string;
+  211: 
+  212:     imageUrl: string;
+  213: 
+  214:     reviewSamples: number;
+  215: 
+  216:     /*
+  217:       현재 단계의 reviews는 canonicalSource(Bright Data)에서
+  218:       수집된 기존 리뷰 샘플이다.
+  219: 
+  220:       reviewSource에는 "리뷰를 가장 많이 보유한 판매처"만
+  221:       별도로 선택해 두며, 실제 해당 판매처 리뷰 텍스트 수집은
+  222:       다음 단계에서 연결한다.
+  223:     */
+  224:     reviews: {
+  225:       rating: number;
+  226:       date: string;
+  227:       text: string;
+  228:       helpfulCount: number;
+  229:     }[];
+  230: 
+  231:     sourceUrl: string;
+  232:     reviewSourceUrl: string;
+  233: 
+  234:     detailStatus:
+  235:       | "full"
+  236:       | "partial-market";
+  237:   };
+  238: };
+  239: 
+  240: type ProcessSuccess = {
+  241:   success: true;
+  242: 
+  243:   position: number;
+  244: 
+  245:   productId: string;
+  246: 
+  247:   identityKey?: string;
+  248: 
+  249:   candidate: FinalCandidate;
+  250: 
+  251:   resolverAttempts: number;
+  252: 
+  253:   brightDataCalls: number;
+  254: };
+  255: 
+  256: type ProcessFailure = {
+  257:   success: false;
+  258: 
+  259:   failure: FailureItem;
+  260: 
+  261:   resolverAttempts: number;
+  262: 
+  263:   brightDataCalls: number;
+  264: };
+  265: 
+  266: type ProcessResult =
+  267:   | ProcessSuccess
+
+===== LINE 839 =====
+  814: 
+  815: 
+  816: function createPartialMarketCandidate(
+  817:   market: CapturedProduct,
+  818:   position: number,
+  819: ): FinalCandidate {
+  820:   const fallbackProductId =
+  821:     extractMarketProductId(
+  822:       market.url,
+  823:     );
+  824: 
+  825:   return {
+  826:     position,
+  827: 
+  828:     canonicalSource: {
+  829:       productId:
+  830:         fallbackProductId,
+  831:       brandName:
+  832:         "",
+  833:       brandSite:
+  834:         "",
+  835:       url:
+  836:         market.url,
+  837:     },
+  838: 
+  839:     reviewSource: {
+  840:       productName:
+  841:         market.name,
+  842:       seller:
+  843:         market.seller,
+  844:       price:
+  845:         market.price,
+  846:       reviewCount:
+  847:         market.reviewCount,
+  848:       rating:
+  849:         market.rating,
+  850:       url:
+  851:         market.url,
+  852:       resolvedUrl:
+  853:         market.url,
+  854:       sourceType:
+  855:         "naver-aggregate",
+  856:       isIndividualSeller:
+  857:         false,
+  858:       matchScore:
+  859:         0,
+  860:       reviewTextSource:
+  861:         "canonical-fallback",
+  862:       status:
+  863:         "fallback-canonical",
+  864:     },
+  865: 
+  866:     purchaseSource: {
+  867:       productName:
+  868:         market.name,
+  869:       seller:
+  870:         market.seller,
+  871:       price:
+  872:         market.price,
+  873:       reviewCount:
+  874:         market.reviewCount,
+
+===== LINE 960 =====
+  935:       discountRate:
+  936:         0,
+  937: 
+  938:       reviewCount:
+  939:         market.reviewCount,
+  940:       rating:
+  941:         market.rating > 0
+  942:           ? market.rating
+  943:           : null,
+  944: 
+  945:       sellerName:
+  946:         market.seller,
+  947:       categoryName:
+  948:         "",
+  949: 
+  950:       imageUrl:
+  951:         market.imageUrl,
+  952: 
+  953:       reviewSamples:
+  954:         0,
+  955:       reviews:
+  956:         [],
+  957: 
+  958:       sourceUrl:
+  959:         market.url,
+  960:       reviewSourceUrl:
+  961:         market.url,
+  962: 
+  963:       detailStatus:
+  964:         "partial-market",
+  965:     },
+  966:   };
+  967: }
+  968: 
+  969: export async function GET(
+  970:   request: Request,
+  971: ) {
+  972:   try {
+  973:     const requestUrl =
+  974:       new URL(
+  975:         request.url,
+  976:       );
+  977: 
+  978:     const captureId =
+  979:       (
+  980:         requestUrl.searchParams.get(
+  981:           "captureId",
+  982:         ) ?? ""
+  983:       ).trim();
+  984: 
+  985:     if (!captureId) {
+  986:       return NextResponse.json(
+  987:         {
+  988:           success: false,
+  989:           message:
+  990:             "captureId가 필요합니다.",
+  991:         },
+  992:         {
+  993:           status: 400,
+  994:         },
+  995:       );
+
+===== LINE 2022 =====
+ 1997: 
+ 1998:             reason,
+ 1999:           },
+ 2000:         };
+ 2001:       }
+ 2002: 
+ 2003:       if (
+ 2004:         marketBudgetFallback
+ 2005:       ) {
+ 2006:         console.log(
+ 2007:           `[ENRICH ${position}] 예산 근접 fallback 후보`,
+ 2008:           `목록가 ${market.price.toLocaleString(
+ 2009:             "ko-KR",
+ 2010:           )}원`,
+ 2011:         );
+ 2012:       }
+ 2013: 
+ 2014:       /*
+ 2015:         같은 모델의 네이버 판매처를 다시 검색해
+ 2016:         역할을 분리한다.
+ 2017: 
+ 2018:         canonicalSource:
+ 2019:           공식 Brand 상품 URL
+ 2020:           → 제품 식별 / 스펙 / 대표 이미지용
+ 2021: 
+ 2022:         reviewSource:
+ 2023:           동일 모델/구성 후보 중 리뷰 수가 가장 많은 판매처
+ 2024:           → 현재는 "어느 판매처 리뷰를 써야 하는지"만 선택한다.
+ 2025:           → 실제 리뷰 텍스트는 아직 detail.topReviews를 유지한다.
+ 2026: 
+ 2027:         purchaseSource:
+ 2028:           동일 모델/구성 후보 중 최저가 판매처
+ 2029:           → 최종 구매 버튼용 후보.
+ 2030:       */
+ 2031:       let offerSearch:
+ 2032:         Awaited<
+ 2033:           ReturnType<
+ 2034:             typeof searchProductOffers
+ 2035:           >
+ 2036:         > | null =
+ 2037:         null;
+ 2038: 
+ 2039:       try {
+ 2040:         offerSearch =
+ 2041:           await searchProductOffers(
+ 2042:             detail.title ||
+ 2043:               market.name,
+ 2044:           );
+ 2045:       } catch (error) {
+ 2046:         console.warn(
+ 2047:           `[ENRICH ${position}] 판매처 재검색 warning`,
+ 2048:           error,
+ 2049:         );
+ 2050:       }
+ 2051: 
+ 2052:       const selectedReviewSource =
+ 2053:         offerSearch?.reviewSource;
+ 2054: 
+ 2055:       const selectedPurchaseSource =
+ 2056:         offerSearch?.purchaseSource;
+ 2057: 
+
+===== LINE 2052 =====
+ 2027:         purchaseSource:
+ 2028:           동일 모델/구성 후보 중 최저가 판매처
+ 2029:           → 최종 구매 버튼용 후보.
+ 2030:       */
+ 2031:       let offerSearch:
+ 2032:         Awaited<
+ 2033:           ReturnType<
+ 2034:             typeof searchProductOffers
+ 2035:           >
+ 2036:         > | null =
+ 2037:         null;
+ 2038: 
+ 2039:       try {
+ 2040:         offerSearch =
+ 2041:           await searchProductOffers(
+ 2042:             detail.title ||
+ 2043:               market.name,
+ 2044:           );
+ 2045:       } catch (error) {
+ 2046:         console.warn(
+ 2047:           `[ENRICH ${position}] 판매처 재검색 warning`,
+ 2048:           error,
+ 2049:         );
+ 2050:       }
+ 2051: 
+ 2052:       const selectedReviewSource =
+ 2053:         offerSearch?.reviewSource;
+ 2054: 
+ 2055:       const selectedPurchaseSource =
+ 2056:         offerSearch?.purchaseSource;
+ 2057: 
+ 2058:       const finalProductId =
+ 2059:         canonicalSourceType ===
+ 2060:           "naver-brand"
+ 2061:           ? String(
+ 2062:               detail.productId,
+ 2063:             )
+ 2064:           : "";
+ 2065: 
+ 2066:       /*
+ 2067:         실제 리뷰 본문은 reviewSource에서 가져오는 것을 원칙으로 한다.
+ 2068: 
+ 2069:         단, reviewSource의 실제 네이버 상품번호가 canonicalSource와
+ 2070:         같다면 같은 상품 페이지이므로 Bright Data를 한 번 더 호출하지 않고
+ 2071:         이미 수집한 detail.topReviews를 그대로 재사용한다.
+ 2072: 
+ 2073:         상품번호가 다를 때만 reviewSource.resolvedUrl을 Bright Data로
+ 2074:         추가 수집한다. 실패하면 자동으로 canonical 리뷰로 fallback 한다.
+ 2075:       */
+ 2076:       let reviewDetail:
+ 2077:         NaverProductDetail =
+ 2078:         detail;
+ 2079: 
+ 2080:       let reviewTextSource:
+ 2081:         | "selected-source"
+ 2082:         | "canonical-reuse"
+ 2083:         | "canonical-fallback" =
+ 2084:         "canonical-fallback";
+ 2085: 
+ 2086:       let reviewSourceUrl =
+ 2087:         detail.url;
+
+===== LINE 2053 =====
+ 2028:           동일 모델/구성 후보 중 최저가 판매처
+ 2029:           → 최종 구매 버튼용 후보.
+ 2030:       */
+ 2031:       let offerSearch:
+ 2032:         Awaited<
+ 2033:           ReturnType<
+ 2034:             typeof searchProductOffers
+ 2035:           >
+ 2036:         > | null =
+ 2037:         null;
+ 2038: 
+ 2039:       try {
+ 2040:         offerSearch =
+ 2041:           await searchProductOffers(
+ 2042:             detail.title ||
+ 2043:               market.name,
+ 2044:           );
+ 2045:       } catch (error) {
+ 2046:         console.warn(
+ 2047:           `[ENRICH ${position}] 판매처 재검색 warning`,
+ 2048:           error,
+ 2049:         );
+ 2050:       }
+ 2051: 
+ 2052:       const selectedReviewSource =
+ 2053:         offerSearch?.reviewSource;
+ 2054: 
+ 2055:       const selectedPurchaseSource =
+ 2056:         offerSearch?.purchaseSource;
+ 2057: 
+ 2058:       const finalProductId =
+ 2059:         canonicalSourceType ===
+ 2060:           "naver-brand"
+ 2061:           ? String(
+ 2062:               detail.productId,
+ 2063:             )
+ 2064:           : "";
+ 2065: 
+ 2066:       /*
+ 2067:         실제 리뷰 본문은 reviewSource에서 가져오는 것을 원칙으로 한다.
+ 2068: 
+ 2069:         단, reviewSource의 실제 네이버 상품번호가 canonicalSource와
+ 2070:         같다면 같은 상품 페이지이므로 Bright Data를 한 번 더 호출하지 않고
+ 2071:         이미 수집한 detail.topReviews를 그대로 재사용한다.
+ 2072: 
+ 2073:         상품번호가 다를 때만 reviewSource.resolvedUrl을 Bright Data로
+ 2074:         추가 수집한다. 실패하면 자동으로 canonical 리뷰로 fallback 한다.
+ 2075:       */
+ 2076:       let reviewDetail:
+ 2077:         NaverProductDetail =
+ 2078:         detail;
+ 2079: 
+ 2080:       let reviewTextSource:
+ 2081:         | "selected-source"
+ 2082:         | "canonical-reuse"
+ 2083:         | "canonical-fallback" =
+ 2084:         "canonical-fallback";
+ 2085: 
+ 2086:       let reviewSourceUrl =
+ 2087:         detail.url;
+ 2088: 
+
+===== LINE 2067 =====
+ 2042:             detail.title ||
+ 2043:               market.name,
+ 2044:           );
+ 2045:       } catch (error) {
+ 2046:         console.warn(
+ 2047:           `[ENRICH ${position}] 판매처 재검색 warning`,
+ 2048:           error,
+ 2049:         );
+ 2050:       }
+ 2051: 
+ 2052:       const selectedReviewSource =
+ 2053:         offerSearch?.reviewSource;
+ 2054: 
+ 2055:       const selectedPurchaseSource =
+ 2056:         offerSearch?.purchaseSource;
+ 2057: 
+ 2058:       const finalProductId =
+ 2059:         canonicalSourceType ===
+ 2060:           "naver-brand"
+ 2061:           ? String(
+ 2062:               detail.productId,
+ 2063:             )
+ 2064:           : "";
+ 2065: 
+ 2066:       /*
+ 2067:         실제 리뷰 본문은 reviewSource에서 가져오는 것을 원칙으로 한다.
+ 2068: 
+ 2069:         단, reviewSource의 실제 네이버 상품번호가 canonicalSource와
+ 2070:         같다면 같은 상품 페이지이므로 Bright Data를 한 번 더 호출하지 않고
+ 2071:         이미 수집한 detail.topReviews를 그대로 재사용한다.
+ 2072: 
+ 2073:         상품번호가 다를 때만 reviewSource.resolvedUrl을 Bright Data로
+ 2074:         추가 수집한다. 실패하면 자동으로 canonical 리뷰로 fallback 한다.
+ 2075:       */
+ 2076:       let reviewDetail:
+ 2077:         NaverProductDetail =
+ 2078:         detail;
+ 2079: 
+ 2080:       let reviewTextSource:
+ 2081:         | "selected-source"
+ 2082:         | "canonical-reuse"
+ 2083:         | "canonical-fallback" =
+ 2084:         "canonical-fallback";
+ 2085: 
+ 2086:       let reviewSourceUrl =
+ 2087:         detail.url;
+ 2088: 
+ 2089:       let extraReviewBrightDataCalls =
+ 2090:         0;
+ 2091: 
+ 2092:       if (
+ 2093:         selectedReviewSource?.resolvedUrl &&
+ 2094:         selectedReviewSource.sourceType ===
+ 2095:           "naver-store"
+ 2096:       ) {
+ 2097:         const selectedReviewProductId =
+ 2098:           extractMarketProductId(
+ 2099:             selectedReviewSource.resolvedUrl,
+ 2100:           );
+ 2101: 
+ 2102:         if (
+
+===== LINE 2069 =====
+ 2044:           );
+ 2045:       } catch (error) {
+ 2046:         console.warn(
+ 2047:           `[ENRICH ${position}] 판매처 재검색 warning`,
+ 2048:           error,
+ 2049:         );
+ 2050:       }
+ 2051: 
+ 2052:       const selectedReviewSource =
+ 2053:         offerSearch?.reviewSource;
+ 2054: 
+ 2055:       const selectedPurchaseSource =
+ 2056:         offerSearch?.purchaseSource;
+ 2057: 
+ 2058:       const finalProductId =
+ 2059:         canonicalSourceType ===
+ 2060:           "naver-brand"
+ 2061:           ? String(
+ 2062:               detail.productId,
+ 2063:             )
+ 2064:           : "";
+ 2065: 
+ 2066:       /*
+ 2067:         실제 리뷰 본문은 reviewSource에서 가져오는 것을 원칙으로 한다.
+ 2068: 
+ 2069:         단, reviewSource의 실제 네이버 상품번호가 canonicalSource와
+ 2070:         같다면 같은 상품 페이지이므로 Bright Data를 한 번 더 호출하지 않고
+ 2071:         이미 수집한 detail.topReviews를 그대로 재사용한다.
+ 2072: 
+ 2073:         상품번호가 다를 때만 reviewSource.resolvedUrl을 Bright Data로
+ 2074:         추가 수집한다. 실패하면 자동으로 canonical 리뷰로 fallback 한다.
+ 2075:       */
+ 2076:       let reviewDetail:
+ 2077:         NaverProductDetail =
+ 2078:         detail;
+ 2079: 
+ 2080:       let reviewTextSource:
+ 2081:         | "selected-source"
+ 2082:         | "canonical-reuse"
+ 2083:         | "canonical-fallback" =
+ 2084:         "canonical-fallback";
+ 2085: 
+ 2086:       let reviewSourceUrl =
+ 2087:         detail.url;
+ 2088: 
+ 2089:       let extraReviewBrightDataCalls =
+ 2090:         0;
+ 2091: 
+ 2092:       if (
+ 2093:         selectedReviewSource?.resolvedUrl &&
+ 2094:         selectedReviewSource.sourceType ===
+ 2095:           "naver-store"
+ 2096:       ) {
+ 2097:         const selectedReviewProductId =
+ 2098:           extractMarketProductId(
+ 2099:             selectedReviewSource.resolvedUrl,
+ 2100:           );
+ 2101: 
+ 2102:         if (
+ 2103:           selectedReviewProductId &&
+ 2104:           selectedReviewProductId ===
+
+===== LINE 2073 =====
+ 2048:           error,
+ 2049:         );
+ 2050:       }
+ 2051: 
+ 2052:       const selectedReviewSource =
+ 2053:         offerSearch?.reviewSource;
+ 2054: 
+ 2055:       const selectedPurchaseSource =
+ 2056:         offerSearch?.purchaseSource;
+ 2057: 
+ 2058:       const finalProductId =
+ 2059:         canonicalSourceType ===
+ 2060:           "naver-brand"
+ 2061:           ? String(
+ 2062:               detail.productId,
+ 2063:             )
+ 2064:           : "";
+ 2065: 
+ 2066:       /*
+ 2067:         실제 리뷰 본문은 reviewSource에서 가져오는 것을 원칙으로 한다.
+ 2068: 
+ 2069:         단, reviewSource의 실제 네이버 상품번호가 canonicalSource와
+ 2070:         같다면 같은 상품 페이지이므로 Bright Data를 한 번 더 호출하지 않고
+ 2071:         이미 수집한 detail.topReviews를 그대로 재사용한다.
+ 2072: 
+ 2073:         상품번호가 다를 때만 reviewSource.resolvedUrl을 Bright Data로
+ 2074:         추가 수집한다. 실패하면 자동으로 canonical 리뷰로 fallback 한다.
+ 2075:       */
+ 2076:       let reviewDetail:
+ 2077:         NaverProductDetail =
+ 2078:         detail;
+ 2079: 
+ 2080:       let reviewTextSource:
+ 2081:         | "selected-source"
+ 2082:         | "canonical-reuse"
+ 2083:         | "canonical-fallback" =
+ 2084:         "canonical-fallback";
+ 2085: 
+ 2086:       let reviewSourceUrl =
+ 2087:         detail.url;
+ 2088: 
+ 2089:       let extraReviewBrightDataCalls =
+ 2090:         0;
+ 2091: 
+ 2092:       if (
+ 2093:         selectedReviewSource?.resolvedUrl &&
+ 2094:         selectedReviewSource.sourceType ===
+ 2095:           "naver-store"
+ 2096:       ) {
+ 2097:         const selectedReviewProductId =
+ 2098:           extractMarketProductId(
+ 2099:             selectedReviewSource.resolvedUrl,
+ 2100:           );
+ 2101: 
+ 2102:         if (
+ 2103:           selectedReviewProductId &&
+ 2104:           selectedReviewProductId ===
+ 2105:             finalProductId
+ 2106:         ) {
+ 2107:           reviewDetail =
+ 2108:             detail;
+
+===== LINE 2086 =====
+ 2061:           ? String(
+ 2062:               detail.productId,
+ 2063:             )
+ 2064:           : "";
+ 2065: 
+ 2066:       /*
+ 2067:         실제 리뷰 본문은 reviewSource에서 가져오는 것을 원칙으로 한다.
+ 2068: 
+ 2069:         단, reviewSource의 실제 네이버 상품번호가 canonicalSource와
+ 2070:         같다면 같은 상품 페이지이므로 Bright Data를 한 번 더 호출하지 않고
+ 2071:         이미 수집한 detail.topReviews를 그대로 재사용한다.
+ 2072: 
+ 2073:         상품번호가 다를 때만 reviewSource.resolvedUrl을 Bright Data로
+ 2074:         추가 수집한다. 실패하면 자동으로 canonical 리뷰로 fallback 한다.
+ 2075:       */
+ 2076:       let reviewDetail:
+ 2077:         NaverProductDetail =
+ 2078:         detail;
+ 2079: 
+ 2080:       let reviewTextSource:
+ 2081:         | "selected-source"
+ 2082:         | "canonical-reuse"
+ 2083:         | "canonical-fallback" =
+ 2084:         "canonical-fallback";
+ 2085: 
+ 2086:       let reviewSourceUrl =
+ 2087:         detail.url;
+ 2088: 
+ 2089:       let extraReviewBrightDataCalls =
+ 2090:         0;
+ 2091: 
+ 2092:       if (
+ 2093:         selectedReviewSource?.resolvedUrl &&
+ 2094:         selectedReviewSource.sourceType ===
+ 2095:           "naver-store"
+ 2096:       ) {
+ 2097:         const selectedReviewProductId =
+ 2098:           extractMarketProductId(
+ 2099:             selectedReviewSource.resolvedUrl,
+ 2100:           );
+ 2101: 
+ 2102:         if (
+ 2103:           selectedReviewProductId &&
+ 2104:           selectedReviewProductId ===
+ 2105:             finalProductId
+ 2106:         ) {
+ 2107:           reviewDetail =
+ 2108:             detail;
+ 2109: 
+ 2110:           reviewSourceUrl =
+ 2111:             selectedReviewSource.resolvedUrl;
+ 2112: 
+ 2113:           reviewTextSource =
+ 2114:             "canonical-reuse";
+ 2115: 
+ 2116:           console.log(
+ 2117:             `[ENRICH ${position}] 리뷰소스 canonical 재사용`,
+ 2118:             selectedReviewProductId,
+ 2119:           );
+ 2120:         } else {
+ 2121:           let collectedReviewDetail:
+
+===== LINE 2093 =====
+ 2068: 
+ 2069:         단, reviewSource의 실제 네이버 상품번호가 canonicalSource와
+ 2070:         같다면 같은 상품 페이지이므로 Bright Data를 한 번 더 호출하지 않고
+ 2071:         이미 수집한 detail.topReviews를 그대로 재사용한다.
+ 2072: 
+ 2073:         상품번호가 다를 때만 reviewSource.resolvedUrl을 Bright Data로
+ 2074:         추가 수집한다. 실패하면 자동으로 canonical 리뷰로 fallback 한다.
+ 2075:       */
+ 2076:       let reviewDetail:
+ 2077:         NaverProductDetail =
+ 2078:         detail;
+ 2079: 
+ 2080:       let reviewTextSource:
+ 2081:         | "selected-source"
+ 2082:         | "canonical-reuse"
+ 2083:         | "canonical-fallback" =
+ 2084:         "canonical-fallback";
+ 2085: 
+ 2086:       let reviewSourceUrl =
+ 2087:         detail.url;
+ 2088: 
+ 2089:       let extraReviewBrightDataCalls =
+ 2090:         0;
+ 2091: 
+ 2092:       if (
+ 2093:         selectedReviewSource?.resolvedUrl &&
+ 2094:         selectedReviewSource.sourceType ===
+ 2095:           "naver-store"
+ 2096:       ) {
+ 2097:         const selectedReviewProductId =
+ 2098:           extractMarketProductId(
+ 2099:             selectedReviewSource.resolvedUrl,
+ 2100:           );
+ 2101: 
+ 2102:         if (
+ 2103:           selectedReviewProductId &&
+ 2104:           selectedReviewProductId ===
+ 2105:             finalProductId
+ 2106:         ) {
+ 2107:           reviewDetail =
+ 2108:             detail;
+ 2109: 
+ 2110:           reviewSourceUrl =
+ 2111:             selectedReviewSource.resolvedUrl;
+ 2112: 
+ 2113:           reviewTextSource =
+ 2114:             "canonical-reuse";
+ 2115: 
+ 2116:           console.log(
+ 2117:             `[ENRICH ${position}] 리뷰소스 canonical 재사용`,
+ 2118:             selectedReviewProductId,
+ 2119:           );
+ 2120:         } else {
+ 2121:           let collectedReviewDetail:
+ 2122:             NaverProductDetail | null =
+ 2123:             null;
+ 2124: 
+ 2125:           if (
+ 2126:             selectedReviewProductId
+ 2127:           ) {
+ 2128:             collectedReviewDetail =
+
+===== LINE 2094 =====
+ 2069:         단, reviewSource의 실제 네이버 상품번호가 canonicalSource와
+ 2070:         같다면 같은 상품 페이지이므로 Bright Data를 한 번 더 호출하지 않고
+ 2071:         이미 수집한 detail.topReviews를 그대로 재사용한다.
+ 2072: 
+ 2073:         상품번호가 다를 때만 reviewSource.resolvedUrl을 Bright Data로
+ 2074:         추가 수집한다. 실패하면 자동으로 canonical 리뷰로 fallback 한다.
+ 2075:       */
+ 2076:       let reviewDetail:
+ 2077:         NaverProductDetail =
+ 2078:         detail;
+ 2079: 
+ 2080:       let reviewTextSource:
+ 2081:         | "selected-source"
+ 2082:         | "canonical-reuse"
+ 2083:         | "canonical-fallback" =
+ 2084:         "canonical-fallback";
+ 2085: 
+ 2086:       let reviewSourceUrl =
+ 2087:         detail.url;
+ 2088: 
+ 2089:       let extraReviewBrightDataCalls =
+ 2090:         0;
+ 2091: 
+ 2092:       if (
+ 2093:         selectedReviewSource?.resolvedUrl &&
+ 2094:         selectedReviewSource.sourceType ===
+ 2095:           "naver-store"
+ 2096:       ) {
+ 2097:         const selectedReviewProductId =
+ 2098:           extractMarketProductId(
+ 2099:             selectedReviewSource.resolvedUrl,
+ 2100:           );
+ 2101: 
+ 2102:         if (
+ 2103:           selectedReviewProductId &&
+ 2104:           selectedReviewProductId ===
+ 2105:             finalProductId
+ 2106:         ) {
+ 2107:           reviewDetail =
+ 2108:             detail;
+ 2109: 
+ 2110:           reviewSourceUrl =
+ 2111:             selectedReviewSource.resolvedUrl;
+ 2112: 
+ 2113:           reviewTextSource =
+ 2114:             "canonical-reuse";
+ 2115: 
+ 2116:           console.log(
+ 2117:             `[ENRICH ${position}] 리뷰소스 canonical 재사용`,
+ 2118:             selectedReviewProductId,
+ 2119:           );
+ 2120:         } else {
+ 2121:           let collectedReviewDetail:
+ 2122:             NaverProductDetail | null =
+ 2123:             null;
+ 2124: 
+ 2125:           if (
+ 2126:             selectedReviewProductId
+ 2127:           ) {
+ 2128:             collectedReviewDetail =
+ 2129:               await getCachedProductDetail(
+
+===== LINE 2099 =====
+ 2074:         추가 수집한다. 실패하면 자동으로 canonical 리뷰로 fallback 한다.
+ 2075:       */
+ 2076:       let reviewDetail:
+ 2077:         NaverProductDetail =
+ 2078:         detail;
+ 2079: 
+ 2080:       let reviewTextSource:
+ 2081:         | "selected-source"
+ 2082:         | "canonical-reuse"
+ 2083:         | "canonical-fallback" =
+ 2084:         "canonical-fallback";
+ 2085: 
+ 2086:       let reviewSourceUrl =
+ 2087:         detail.url;
+ 2088: 
+ 2089:       let extraReviewBrightDataCalls =
+ 2090:         0;
+ 2091: 
+ 2092:       if (
+ 2093:         selectedReviewSource?.resolvedUrl &&
+ 2094:         selectedReviewSource.sourceType ===
+ 2095:           "naver-store"
+ 2096:       ) {
+ 2097:         const selectedReviewProductId =
+ 2098:           extractMarketProductId(
+ 2099:             selectedReviewSource.resolvedUrl,
+ 2100:           );
+ 2101: 
+ 2102:         if (
+ 2103:           selectedReviewProductId &&
+ 2104:           selectedReviewProductId ===
+ 2105:             finalProductId
+ 2106:         ) {
+ 2107:           reviewDetail =
+ 2108:             detail;
+ 2109: 
+ 2110:           reviewSourceUrl =
+ 2111:             selectedReviewSource.resolvedUrl;
+ 2112: 
+ 2113:           reviewTextSource =
+ 2114:             "canonical-reuse";
+ 2115: 
+ 2116:           console.log(
+ 2117:             `[ENRICH ${position}] 리뷰소스 canonical 재사용`,
+ 2118:             selectedReviewProductId,
+ 2119:           );
+ 2120:         } else {
+ 2121:           let collectedReviewDetail:
+ 2122:             NaverProductDetail | null =
+ 2123:             null;
+ 2124: 
+ 2125:           if (
+ 2126:             selectedReviewProductId
+ 2127:           ) {
+ 2128:             collectedReviewDetail =
+ 2129:               await getCachedProductDetail(
+ 2130:                 selectedReviewProductId,
+ 2131:               );
+ 2132:           }
+ 2133: 
+ 2134:           if (
+
+===== LINE 2110 =====
+ 2085: 
+ 2086:       let reviewSourceUrl =
+ 2087:         detail.url;
+ 2088: 
+ 2089:       let extraReviewBrightDataCalls =
+ 2090:         0;
+ 2091: 
+ 2092:       if (
+ 2093:         selectedReviewSource?.resolvedUrl &&
+ 2094:         selectedReviewSource.sourceType ===
+ 2095:           "naver-store"
+ 2096:       ) {
+ 2097:         const selectedReviewProductId =
+ 2098:           extractMarketProductId(
+ 2099:             selectedReviewSource.resolvedUrl,
+ 2100:           );
+ 2101: 
+ 2102:         if (
+ 2103:           selectedReviewProductId &&
+ 2104:           selectedReviewProductId ===
+ 2105:             finalProductId
+ 2106:         ) {
+ 2107:           reviewDetail =
+ 2108:             detail;
+ 2109: 
+ 2110:           reviewSourceUrl =
+ 2111:             selectedReviewSource.resolvedUrl;
+ 2112: 
+ 2113:           reviewTextSource =
+ 2114:             "canonical-reuse";
+ 2115: 
+ 2116:           console.log(
+ 2117:             `[ENRICH ${position}] 리뷰소스 canonical 재사용`,
+ 2118:             selectedReviewProductId,
+ 2119:           );
+ 2120:         } else {
+ 2121:           let collectedReviewDetail:
+ 2122:             NaverProductDetail | null =
+ 2123:             null;
+ 2124: 
+ 2125:           if (
+ 2126:             selectedReviewProductId
+ 2127:           ) {
+ 2128:             collectedReviewDetail =
+ 2129:               await getCachedProductDetail(
+ 2130:                 selectedReviewProductId,
+ 2131:               );
+ 2132:           }
+ 2133: 
+ 2134:           if (
+ 2135:             collectedReviewDetail
+ 2136:           ) {
+ 2137:             reviewDetail =
+ 2138:               collectedReviewDetail;
+ 2139: 
+ 2140:             reviewSourceUrl =
+ 2141:               selectedReviewSource.resolvedUrl;
+ 2142: 
+ 2143:             reviewTextSource =
+ 2144:               "selected-source";
+ 2145: 
+
+===== LINE 2111 =====
+ 2086:       let reviewSourceUrl =
+ 2087:         detail.url;
+ 2088: 
+ 2089:       let extraReviewBrightDataCalls =
+ 2090:         0;
+ 2091: 
+ 2092:       if (
+ 2093:         selectedReviewSource?.resolvedUrl &&
+ 2094:         selectedReviewSource.sourceType ===
+ 2095:           "naver-store"
+ 2096:       ) {
+ 2097:         const selectedReviewProductId =
+ 2098:           extractMarketProductId(
+ 2099:             selectedReviewSource.resolvedUrl,
+ 2100:           );
+ 2101: 
+ 2102:         if (
+ 2103:           selectedReviewProductId &&
+ 2104:           selectedReviewProductId ===
+ 2105:             finalProductId
+ 2106:         ) {
+ 2107:           reviewDetail =
+ 2108:             detail;
+ 2109: 
+ 2110:           reviewSourceUrl =
+ 2111:             selectedReviewSource.resolvedUrl;
+ 2112: 
+ 2113:           reviewTextSource =
+ 2114:             "canonical-reuse";
+ 2115: 
+ 2116:           console.log(
+ 2117:             `[ENRICH ${position}] 리뷰소스 canonical 재사용`,
+ 2118:             selectedReviewProductId,
+ 2119:           );
+ 2120:         } else {
+ 2121:           let collectedReviewDetail:
+ 2122:             NaverProductDetail | null =
+ 2123:             null;
+ 2124: 
+ 2125:           if (
+ 2126:             selectedReviewProductId
+ 2127:           ) {
+ 2128:             collectedReviewDetail =
+ 2129:               await getCachedProductDetail(
+ 2130:                 selectedReviewProductId,
+ 2131:               );
+ 2132:           }
+ 2133: 
+ 2134:           if (
+ 2135:             collectedReviewDetail
+ 2136:           ) {
+ 2137:             reviewDetail =
+ 2138:               collectedReviewDetail;
+ 2139: 
+ 2140:             reviewSourceUrl =
+ 2141:               selectedReviewSource.resolvedUrl;
+ 2142: 
+ 2143:             reviewTextSource =
+ 2144:               "selected-source";
+ 2145: 
+ 2146:             console.log(
+
+===== LINE 2140 =====
+ 2115: 
+ 2116:           console.log(
+ 2117:             `[ENRICH ${position}] 리뷰소스 canonical 재사용`,
+ 2118:             selectedReviewProductId,
+ 2119:           );
+ 2120:         } else {
+ 2121:           let collectedReviewDetail:
+ 2122:             NaverProductDetail | null =
+ 2123:             null;
+ 2124: 
+ 2125:           if (
+ 2126:             selectedReviewProductId
+ 2127:           ) {
+ 2128:             collectedReviewDetail =
+ 2129:               await getCachedProductDetail(
+ 2130:                 selectedReviewProductId,
+ 2131:               );
+ 2132:           }
+ 2133: 
+ 2134:           if (
+ 2135:             collectedReviewDetail
+ 2136:           ) {
+ 2137:             reviewDetail =
+ 2138:               collectedReviewDetail;
+ 2139: 
+ 2140:             reviewSourceUrl =
+ 2141:               selectedReviewSource.resolvedUrl;
+ 2142: 
+ 2143:             reviewTextSource =
+ 2144:               "selected-source";
+ 2145: 
+ 2146:             console.log(
+ 2147:               `[ENRICH ${position}] 리뷰소스 DB 캐시 사용`,
+ 2148:               selectedReviewProductId,
+ 2149:             );
+ 2150:           } else {
+ 2151:             try {
+ 2152:               console.log(
+ 2153:                 `[ENRICH ${position}] 리뷰소스 Bright Data 시작`,
+ 2154:                 selectedReviewSource.resolvedUrl,
+ 2155:               );
+ 2156: 
+ 2157:               const collected =
+ 2158:                 await collectNaverProduct(
+ 2159:                   selectedReviewSource.resolvedUrl,
+ 2160:                 );
+ 2161: 
+ 2162:               if (
+ 2163:                 collected.topReviews.length >=
+ 2164:                 5
+ 2165:               ) {
+ 2166:                 reviewDetail =
+ 2167:                   collected;
+ 2168: 
+ 2169:                 reviewSourceUrl =
+ 2170:                   selectedReviewSource.resolvedUrl;
+ 2171: 
+ 2172:                 reviewTextSource =
+ 2173:                   "selected-source";
+ 2174: 
+ 2175:                 extraReviewBrightDataCalls =
+
+===== LINE 2141 =====
+ 2116:           console.log(
+ 2117:             `[ENRICH ${position}] 리뷰소스 canonical 재사용`,
+ 2118:             selectedReviewProductId,
+ 2119:           );
+ 2120:         } else {
+ 2121:           let collectedReviewDetail:
+ 2122:             NaverProductDetail | null =
+ 2123:             null;
+ 2124: 
+ 2125:           if (
+ 2126:             selectedReviewProductId
+ 2127:           ) {
+ 2128:             collectedReviewDetail =
+ 2129:               await getCachedProductDetail(
+ 2130:                 selectedReviewProductId,
+ 2131:               );
+ 2132:           }
+ 2133: 
+ 2134:           if (
+ 2135:             collectedReviewDetail
+ 2136:           ) {
+ 2137:             reviewDetail =
+ 2138:               collectedReviewDetail;
+ 2139: 
+ 2140:             reviewSourceUrl =
+ 2141:               selectedReviewSource.resolvedUrl;
+ 2142: 
+ 2143:             reviewTextSource =
+ 2144:               "selected-source";
+ 2145: 
+ 2146:             console.log(
+ 2147:               `[ENRICH ${position}] 리뷰소스 DB 캐시 사용`,
+ 2148:               selectedReviewProductId,
+ 2149:             );
+ 2150:           } else {
+ 2151:             try {
+ 2152:               console.log(
+ 2153:                 `[ENRICH ${position}] 리뷰소스 Bright Data 시작`,
+ 2154:                 selectedReviewSource.resolvedUrl,
+ 2155:               );
+ 2156: 
+ 2157:               const collected =
+ 2158:                 await collectNaverProduct(
+ 2159:                   selectedReviewSource.resolvedUrl,
+ 2160:                 );
+ 2161: 
+ 2162:               if (
+ 2163:                 collected.topReviews.length >=
+ 2164:                 5
+ 2165:               ) {
+ 2166:                 reviewDetail =
+ 2167:                   collected;
+ 2168: 
+ 2169:                 reviewSourceUrl =
+ 2170:                   selectedReviewSource.resolvedUrl;
+ 2171: 
+ 2172:                 reviewTextSource =
+ 2173:                   "selected-source";
+ 2174: 
+ 2175:                 extraReviewBrightDataCalls =
+ 2176:                   1;
+
+===== LINE 2154 =====
+ 2129:               await getCachedProductDetail(
+ 2130:                 selectedReviewProductId,
+ 2131:               );
+ 2132:           }
+ 2133: 
+ 2134:           if (
+ 2135:             collectedReviewDetail
+ 2136:           ) {
+ 2137:             reviewDetail =
+ 2138:               collectedReviewDetail;
+ 2139: 
+ 2140:             reviewSourceUrl =
+ 2141:               selectedReviewSource.resolvedUrl;
+ 2142: 
+ 2143:             reviewTextSource =
+ 2144:               "selected-source";
+ 2145: 
+ 2146:             console.log(
+ 2147:               `[ENRICH ${position}] 리뷰소스 DB 캐시 사용`,
+ 2148:               selectedReviewProductId,
+ 2149:             );
+ 2150:           } else {
+ 2151:             try {
+ 2152:               console.log(
+ 2153:                 `[ENRICH ${position}] 리뷰소스 Bright Data 시작`,
+ 2154:                 selectedReviewSource.resolvedUrl,
+ 2155:               );
+ 2156: 
+ 2157:               const collected =
+ 2158:                 await collectNaverProduct(
+ 2159:                   selectedReviewSource.resolvedUrl,
+ 2160:                 );
+ 2161: 
+ 2162:               if (
+ 2163:                 collected.topReviews.length >=
+ 2164:                 5
+ 2165:               ) {
+ 2166:                 reviewDetail =
+ 2167:                   collected;
+ 2168: 
+ 2169:                 reviewSourceUrl =
+ 2170:                   selectedReviewSource.resolvedUrl;
+ 2171: 
+ 2172:                 reviewTextSource =
+ 2173:                   "selected-source";
+ 2174: 
+ 2175:                 extraReviewBrightDataCalls =
+ 2176:                   1;
+ 2177: 
+ 2178:                 console.log(
+ 2179:                   `[ENRICH ${position}] 리뷰소스 Bright Data 완료`,
+ 2180:                   collected.topReviews.length,
+ 2181:                 );
+ 2182:               } else {
+ 2183:                 console.warn(
+ 2184:                   `[ENRICH ${position}] 리뷰소스 샘플 부족 → canonical fallback`,
+ 2185:                   collected.topReviews.length,
+ 2186:                 );
+ 2187:               }
+ 2188:             } catch (error) {
+ 2189:               console.warn(
+
+===== LINE 2159 =====
+ 2134:           if (
+ 2135:             collectedReviewDetail
+ 2136:           ) {
+ 2137:             reviewDetail =
+ 2138:               collectedReviewDetail;
+ 2139: 
+ 2140:             reviewSourceUrl =
+ 2141:               selectedReviewSource.resolvedUrl;
+ 2142: 
+ 2143:             reviewTextSource =
+ 2144:               "selected-source";
+ 2145: 
+ 2146:             console.log(
+ 2147:               `[ENRICH ${position}] 리뷰소스 DB 캐시 사용`,
+ 2148:               selectedReviewProductId,
+ 2149:             );
+ 2150:           } else {
+ 2151:             try {
+ 2152:               console.log(
+ 2153:                 `[ENRICH ${position}] 리뷰소스 Bright Data 시작`,
+ 2154:                 selectedReviewSource.resolvedUrl,
+ 2155:               );
+ 2156: 
+ 2157:               const collected =
+ 2158:                 await collectNaverProduct(
+ 2159:                   selectedReviewSource.resolvedUrl,
+ 2160:                 );
+ 2161: 
+ 2162:               if (
+ 2163:                 collected.topReviews.length >=
+ 2164:                 5
+ 2165:               ) {
+ 2166:                 reviewDetail =
+ 2167:                   collected;
+ 2168: 
+ 2169:                 reviewSourceUrl =
+ 2170:                   selectedReviewSource.resolvedUrl;
+ 2171: 
+ 2172:                 reviewTextSource =
+ 2173:                   "selected-source";
+ 2174: 
+ 2175:                 extraReviewBrightDataCalls =
+ 2176:                   1;
+ 2177: 
+ 2178:                 console.log(
+ 2179:                   `[ENRICH ${position}] 리뷰소스 Bright Data 완료`,
+ 2180:                   collected.topReviews.length,
+ 2181:                 );
+ 2182:               } else {
+ 2183:                 console.warn(
+ 2184:                   `[ENRICH ${position}] 리뷰소스 샘플 부족 → canonical fallback`,
+ 2185:                   collected.topReviews.length,
+ 2186:                 );
+ 2187:               }
+ 2188:             } catch (error) {
+ 2189:               console.warn(
+ 2190:                 `[ENRICH ${position}] 리뷰소스 Bright Data 실패 → canonical fallback`,
+ 2191:                 error,
+ 2192:               );
+ 2193:             }
+ 2194:           }
+
+===== LINE 2169 =====
+ 2144:               "selected-source";
+ 2145: 
+ 2146:             console.log(
+ 2147:               `[ENRICH ${position}] 리뷰소스 DB 캐시 사용`,
+ 2148:               selectedReviewProductId,
+ 2149:             );
+ 2150:           } else {
+ 2151:             try {
+ 2152:               console.log(
+ 2153:                 `[ENRICH ${position}] 리뷰소스 Bright Data 시작`,
+ 2154:                 selectedReviewSource.resolvedUrl,
+ 2155:               );
+ 2156: 
+ 2157:               const collected =
+ 2158:                 await collectNaverProduct(
+ 2159:                   selectedReviewSource.resolvedUrl,
+ 2160:                 );
+ 2161: 
+ 2162:               if (
+ 2163:                 collected.topReviews.length >=
+ 2164:                 5
+ 2165:               ) {
+ 2166:                 reviewDetail =
+ 2167:                   collected;
+ 2168: 
+ 2169:                 reviewSourceUrl =
+ 2170:                   selectedReviewSource.resolvedUrl;
+ 2171: 
+ 2172:                 reviewTextSource =
+ 2173:                   "selected-source";
+ 2174: 
+ 2175:                 extraReviewBrightDataCalls =
+ 2176:                   1;
+ 2177: 
+ 2178:                 console.log(
+ 2179:                   `[ENRICH ${position}] 리뷰소스 Bright Data 완료`,
+ 2180:                   collected.topReviews.length,
+ 2181:                 );
+ 2182:               } else {
+ 2183:                 console.warn(
+ 2184:                   `[ENRICH ${position}] 리뷰소스 샘플 부족 → canonical fallback`,
+ 2185:                   collected.topReviews.length,
+ 2186:                 );
+ 2187:               }
+ 2188:             } catch (error) {
+ 2189:               console.warn(
+ 2190:                 `[ENRICH ${position}] 리뷰소스 Bright Data 실패 → canonical fallback`,
+ 2191:                 error,
+ 2192:               );
+ 2193:             }
+ 2194:           }
+ 2195:         }
+ 2196:       }
+ 2197: 
+ 2198:       console.log(
+ 2199:         `[ENRICH ${position}] 검증 통과`,
+ 2200:         `${Math.round(
+ 2201:           (
+ 2202:             Date.now() -
+ 2203:             startedAt
+ 2204:           ) /
+
+===== LINE 2170 =====
+ 2145: 
+ 2146:             console.log(
+ 2147:               `[ENRICH ${position}] 리뷰소스 DB 캐시 사용`,
+ 2148:               selectedReviewProductId,
+ 2149:             );
+ 2150:           } else {
+ 2151:             try {
+ 2152:               console.log(
+ 2153:                 `[ENRICH ${position}] 리뷰소스 Bright Data 시작`,
+ 2154:                 selectedReviewSource.resolvedUrl,
+ 2155:               );
+ 2156: 
+ 2157:               const collected =
+ 2158:                 await collectNaverProduct(
+ 2159:                   selectedReviewSource.resolvedUrl,
+ 2160:                 );
+ 2161: 
+ 2162:               if (
+ 2163:                 collected.topReviews.length >=
+ 2164:                 5
+ 2165:               ) {
+ 2166:                 reviewDetail =
+ 2167:                   collected;
+ 2168: 
+ 2169:                 reviewSourceUrl =
+ 2170:                   selectedReviewSource.resolvedUrl;
+ 2171: 
+ 2172:                 reviewTextSource =
+ 2173:                   "selected-source";
+ 2174: 
+ 2175:                 extraReviewBrightDataCalls =
+ 2176:                   1;
+ 2177: 
+ 2178:                 console.log(
+ 2179:                   `[ENRICH ${position}] 리뷰소스 Bright Data 완료`,
+ 2180:                   collected.topReviews.length,
+ 2181:                 );
+ 2182:               } else {
+ 2183:                 console.warn(
+ 2184:                   `[ENRICH ${position}] 리뷰소스 샘플 부족 → canonical fallback`,
+ 2185:                   collected.topReviews.length,
+ 2186:                 );
+ 2187:               }
+ 2188:             } catch (error) {
+ 2189:               console.warn(
+ 2190:                 `[ENRICH ${position}] 리뷰소스 Bright Data 실패 → canonical fallback`,
+ 2191:                 error,
+ 2192:               );
+ 2193:             }
+ 2194:           }
+ 2195:         }
+ 2196:       }
+ 2197: 
+ 2198:       console.log(
+ 2199:         `[ENRICH ${position}] 검증 통과`,
+ 2200:         `${Math.round(
+ 2201:           (
+ 2202:             Date.now() -
+ 2203:             startedAt
+ 2204:           ) /
+ 2205:             1000,
+
+===== LINE 2259 =====
+ 2234:           extraReviewBrightDataCalls,
+ 2235: 
+ 2236:         candidate: {
+ 2237:           position,
+ 2238: 
+ 2239:           canonicalSource: {
+ 2240:             productId:
+ 2241:               finalProductId,
+ 2242: 
+ 2243:             brandName:
+ 2244:               resolvedBrandName ||
+ 2245:               detail.brand,
+ 2246: 
+ 2247:             brandSite:
+ 2248:               resolvedBrandSite,
+ 2249: 
+ 2250:             url:
+ 2251:               resolvedUrl,
+ 2252: 
+ 2253:             sourceType:
+ 2254:               canonicalSourceType,
+ 2255: 
+ 2256:             identityKey,
+ 2257:           },
+ 2258: 
+ 2259:           reviewSource:
+ 2260:             selectedReviewSource
+ 2261:               ? {
+ 2262:                   productName:
+ 2263:                     selectedReviewSource.name,
+ 2264: 
+ 2265:                   seller:
+ 2266:                     selectedReviewSource.brand,
+ 2267: 
+ 2268:                   price:
+ 2269:                     selectedReviewSource.price,
+ 2270: 
+ 2271:                   reviewCount:
+ 2272:                     selectedReviewSource.reviewCount,
+ 2273: 
+ 2274:                   rating:
+ 2275:                     selectedReviewSource.rating,
+ 2276: 
+ 2277:                   url:
+ 2278:                     selectedReviewSource.url,
+ 2279: 
+ 2280:                   resolvedUrl:
+ 2281:                     selectedReviewSource.resolvedUrl,
+ 2282: 
+ 2283:                   sourceType:
+ 2284:                     selectedReviewSource.sourceType,
+ 2285: 
+ 2286:                   isIndividualSeller:
+ 2287:                     selectedReviewSource.isIndividualSeller,
+ 2288: 
+ 2289:                   matchScore:
+ 2290:                     selectedReviewSource.matchScore,
+ 2291: 
+ 2292:                   reviewTextSource,
+ 2293: 
+ 2294:                   status:
+
+===== LINE 2260 =====
+ 2235: 
+ 2236:         candidate: {
+ 2237:           position,
+ 2238: 
+ 2239:           canonicalSource: {
+ 2240:             productId:
+ 2241:               finalProductId,
+ 2242: 
+ 2243:             brandName:
+ 2244:               resolvedBrandName ||
+ 2245:               detail.brand,
+ 2246: 
+ 2247:             brandSite:
+ 2248:               resolvedBrandSite,
+ 2249: 
+ 2250:             url:
+ 2251:               resolvedUrl,
+ 2252: 
+ 2253:             sourceType:
+ 2254:               canonicalSourceType,
+ 2255: 
+ 2256:             identityKey,
+ 2257:           },
+ 2258: 
+ 2259:           reviewSource:
+ 2260:             selectedReviewSource
+ 2261:               ? {
+ 2262:                   productName:
+ 2263:                     selectedReviewSource.name,
+ 2264: 
+ 2265:                   seller:
+ 2266:                     selectedReviewSource.brand,
+ 2267: 
+ 2268:                   price:
+ 2269:                     selectedReviewSource.price,
+ 2270: 
+ 2271:                   reviewCount:
+ 2272:                     selectedReviewSource.reviewCount,
+ 2273: 
+ 2274:                   rating:
+ 2275:                     selectedReviewSource.rating,
+ 2276: 
+ 2277:                   url:
+ 2278:                     selectedReviewSource.url,
+ 2279: 
+ 2280:                   resolvedUrl:
+ 2281:                     selectedReviewSource.resolvedUrl,
+ 2282: 
+ 2283:                   sourceType:
+ 2284:                     selectedReviewSource.sourceType,
+ 2285: 
+ 2286:                   isIndividualSeller:
+ 2287:                     selectedReviewSource.isIndividualSeller,
+ 2288: 
+ 2289:                   matchScore:
+ 2290:                     selectedReviewSource.matchScore,
+ 2291: 
+ 2292:                   reviewTextSource,
+ 2293: 
+ 2294:                   status:
+ 2295:                     "selected" as const,
+
+===== LINE 2263 =====
+ 2238: 
+ 2239:           canonicalSource: {
+ 2240:             productId:
+ 2241:               finalProductId,
+ 2242: 
+ 2243:             brandName:
+ 2244:               resolvedBrandName ||
+ 2245:               detail.brand,
+ 2246: 
+ 2247:             brandSite:
+ 2248:               resolvedBrandSite,
+ 2249: 
+ 2250:             url:
+ 2251:               resolvedUrl,
+ 2252: 
+ 2253:             sourceType:
+ 2254:               canonicalSourceType,
+ 2255: 
+ 2256:             identityKey,
+ 2257:           },
+ 2258: 
+ 2259:           reviewSource:
+ 2260:             selectedReviewSource
+ 2261:               ? {
+ 2262:                   productName:
+ 2263:                     selectedReviewSource.name,
+ 2264: 
+ 2265:                   seller:
+ 2266:                     selectedReviewSource.brand,
+ 2267: 
+ 2268:                   price:
+ 2269:                     selectedReviewSource.price,
+ 2270: 
+ 2271:                   reviewCount:
+ 2272:                     selectedReviewSource.reviewCount,
+ 2273: 
+ 2274:                   rating:
+ 2275:                     selectedReviewSource.rating,
+ 2276: 
+ 2277:                   url:
+ 2278:                     selectedReviewSource.url,
+ 2279: 
+ 2280:                   resolvedUrl:
+ 2281:                     selectedReviewSource.resolvedUrl,
+ 2282: 
+ 2283:                   sourceType:
+ 2284:                     selectedReviewSource.sourceType,
+ 2285: 
+ 2286:                   isIndividualSeller:
+ 2287:                     selectedReviewSource.isIndividualSeller,
+ 2288: 
+ 2289:                   matchScore:
+ 2290:                     selectedReviewSource.matchScore,
+ 2291: 
+ 2292:                   reviewTextSource,
+ 2293: 
+ 2294:                   status:
+ 2295:                     "selected" as const,
+ 2296:                 }
+ 2297:               : {
+ 2298:                   productName:
+
+===== LINE 2266 =====
+ 2241:               finalProductId,
+ 2242: 
+ 2243:             brandName:
+ 2244:               resolvedBrandName ||
+ 2245:               detail.brand,
+ 2246: 
+ 2247:             brandSite:
+ 2248:               resolvedBrandSite,
+ 2249: 
+ 2250:             url:
+ 2251:               resolvedUrl,
+ 2252: 
+ 2253:             sourceType:
+ 2254:               canonicalSourceType,
+ 2255: 
+ 2256:             identityKey,
+ 2257:           },
+ 2258: 
+ 2259:           reviewSource:
+ 2260:             selectedReviewSource
+ 2261:               ? {
+ 2262:                   productName:
+ 2263:                     selectedReviewSource.name,
+ 2264: 
+ 2265:                   seller:
+ 2266:                     selectedReviewSource.brand,
+ 2267: 
+ 2268:                   price:
+ 2269:                     selectedReviewSource.price,
+ 2270: 
+ 2271:                   reviewCount:
+ 2272:                     selectedReviewSource.reviewCount,
+ 2273: 
+ 2274:                   rating:
+ 2275:                     selectedReviewSource.rating,
+ 2276: 
+ 2277:                   url:
+ 2278:                     selectedReviewSource.url,
+ 2279: 
+ 2280:                   resolvedUrl:
+ 2281:                     selectedReviewSource.resolvedUrl,
+ 2282: 
+ 2283:                   sourceType:
+ 2284:                     selectedReviewSource.sourceType,
+ 2285: 
+ 2286:                   isIndividualSeller:
+ 2287:                     selectedReviewSource.isIndividualSeller,
+ 2288: 
+ 2289:                   matchScore:
+ 2290:                     selectedReviewSource.matchScore,
+ 2291: 
+ 2292:                   reviewTextSource,
+ 2293: 
+ 2294:                   status:
+ 2295:                     "selected" as const,
+ 2296:                 }
+ 2297:               : {
+ 2298:                   productName:
+ 2299:                     detail.title,
+ 2300: 
+ 2301:                   seller:
+
+===== LINE 2269 =====
+ 2244:               resolvedBrandName ||
+ 2245:               detail.brand,
+ 2246: 
+ 2247:             brandSite:
+ 2248:               resolvedBrandSite,
+ 2249: 
+ 2250:             url:
+ 2251:               resolvedUrl,
+ 2252: 
+ 2253:             sourceType:
+ 2254:               canonicalSourceType,
+ 2255: 
+ 2256:             identityKey,
+ 2257:           },
+ 2258: 
+ 2259:           reviewSource:
+ 2260:             selectedReviewSource
+ 2261:               ? {
+ 2262:                   productName:
+ 2263:                     selectedReviewSource.name,
+ 2264: 
+ 2265:                   seller:
+ 2266:                     selectedReviewSource.brand,
+ 2267: 
+ 2268:                   price:
+ 2269:                     selectedReviewSource.price,
+ 2270: 
+ 2271:                   reviewCount:
+ 2272:                     selectedReviewSource.reviewCount,
+ 2273: 
+ 2274:                   rating:
+ 2275:                     selectedReviewSource.rating,
+ 2276: 
+ 2277:                   url:
+ 2278:                     selectedReviewSource.url,
+ 2279: 
+ 2280:                   resolvedUrl:
+ 2281:                     selectedReviewSource.resolvedUrl,
+ 2282: 
+ 2283:                   sourceType:
+ 2284:                     selectedReviewSource.sourceType,
+ 2285: 
+ 2286:                   isIndividualSeller:
+ 2287:                     selectedReviewSource.isIndividualSeller,
+ 2288: 
+ 2289:                   matchScore:
+ 2290:                     selectedReviewSource.matchScore,
+ 2291: 
+ 2292:                   reviewTextSource,
+ 2293: 
+ 2294:                   status:
+ 2295:                     "selected" as const,
+ 2296:                 }
+ 2297:               : {
+ 2298:                   productName:
+ 2299:                     detail.title,
+ 2300: 
+ 2301:                   seller:
+ 2302:                     detail.sellerName,
+ 2303: 
+ 2304:                   price:
+
+===== LINE 2272 =====
+ 2247:             brandSite:
+ 2248:               resolvedBrandSite,
+ 2249: 
+ 2250:             url:
+ 2251:               resolvedUrl,
+ 2252: 
+ 2253:             sourceType:
+ 2254:               canonicalSourceType,
+ 2255: 
+ 2256:             identityKey,
+ 2257:           },
+ 2258: 
+ 2259:           reviewSource:
+ 2260:             selectedReviewSource
+ 2261:               ? {
+ 2262:                   productName:
+ 2263:                     selectedReviewSource.name,
+ 2264: 
+ 2265:                   seller:
+ 2266:                     selectedReviewSource.brand,
+ 2267: 
+ 2268:                   price:
+ 2269:                     selectedReviewSource.price,
+ 2270: 
+ 2271:                   reviewCount:
+ 2272:                     selectedReviewSource.reviewCount,
+ 2273: 
+ 2274:                   rating:
+ 2275:                     selectedReviewSource.rating,
+ 2276: 
+ 2277:                   url:
+ 2278:                     selectedReviewSource.url,
+ 2279: 
+ 2280:                   resolvedUrl:
+ 2281:                     selectedReviewSource.resolvedUrl,
+ 2282: 
+ 2283:                   sourceType:
+ 2284:                     selectedReviewSource.sourceType,
+ 2285: 
+ 2286:                   isIndividualSeller:
+ 2287:                     selectedReviewSource.isIndividualSeller,
+ 2288: 
+ 2289:                   matchScore:
+ 2290:                     selectedReviewSource.matchScore,
+ 2291: 
+ 2292:                   reviewTextSource,
+ 2293: 
+ 2294:                   status:
+ 2295:                     "selected" as const,
+ 2296:                 }
+ 2297:               : {
+ 2298:                   productName:
+ 2299:                     detail.title,
+ 2300: 
+ 2301:                   seller:
+ 2302:                     detail.sellerName,
+ 2303: 
+ 2304:                   price:
+ 2305:                     detail.finalPrice,
+ 2306: 
+ 2307:                   reviewCount:
+
+===== LINE 2275 =====
+ 2250:             url:
+ 2251:               resolvedUrl,
+ 2252: 
+ 2253:             sourceType:
+ 2254:               canonicalSourceType,
+ 2255: 
+ 2256:             identityKey,
+ 2257:           },
+ 2258: 
+ 2259:           reviewSource:
+ 2260:             selectedReviewSource
+ 2261:               ? {
+ 2262:                   productName:
+ 2263:                     selectedReviewSource.name,
+ 2264: 
+ 2265:                   seller:
+ 2266:                     selectedReviewSource.brand,
+ 2267: 
+ 2268:                   price:
+ 2269:                     selectedReviewSource.price,
+ 2270: 
+ 2271:                   reviewCount:
+ 2272:                     selectedReviewSource.reviewCount,
+ 2273: 
+ 2274:                   rating:
+ 2275:                     selectedReviewSource.rating,
+ 2276: 
+ 2277:                   url:
+ 2278:                     selectedReviewSource.url,
+ 2279: 
+ 2280:                   resolvedUrl:
+ 2281:                     selectedReviewSource.resolvedUrl,
+ 2282: 
+ 2283:                   sourceType:
+ 2284:                     selectedReviewSource.sourceType,
+ 2285: 
+ 2286:                   isIndividualSeller:
+ 2287:                     selectedReviewSource.isIndividualSeller,
+ 2288: 
+ 2289:                   matchScore:
+ 2290:                     selectedReviewSource.matchScore,
+ 2291: 
+ 2292:                   reviewTextSource,
+ 2293: 
+ 2294:                   status:
+ 2295:                     "selected" as const,
+ 2296:                 }
+ 2297:               : {
+ 2298:                   productName:
+ 2299:                     detail.title,
+ 2300: 
+ 2301:                   seller:
+ 2302:                     detail.sellerName,
+ 2303: 
+ 2304:                   price:
+ 2305:                     detail.finalPrice,
+ 2306: 
+ 2307:                   reviewCount:
+ 2308:                     detail.totalReviews,
+ 2309: 
+ 2310:                   rating:
+
+===== LINE 2278 =====
+ 2253:             sourceType:
+ 2254:               canonicalSourceType,
+ 2255: 
+ 2256:             identityKey,
+ 2257:           },
+ 2258: 
+ 2259:           reviewSource:
+ 2260:             selectedReviewSource
+ 2261:               ? {
+ 2262:                   productName:
+ 2263:                     selectedReviewSource.name,
+ 2264: 
+ 2265:                   seller:
+ 2266:                     selectedReviewSource.brand,
+ 2267: 
+ 2268:                   price:
+ 2269:                     selectedReviewSource.price,
+ 2270: 
+ 2271:                   reviewCount:
+ 2272:                     selectedReviewSource.reviewCount,
+ 2273: 
+ 2274:                   rating:
+ 2275:                     selectedReviewSource.rating,
+ 2276: 
+ 2277:                   url:
+ 2278:                     selectedReviewSource.url,
+ 2279: 
+ 2280:                   resolvedUrl:
+ 2281:                     selectedReviewSource.resolvedUrl,
+ 2282: 
+ 2283:                   sourceType:
+ 2284:                     selectedReviewSource.sourceType,
+ 2285: 
+ 2286:                   isIndividualSeller:
+ 2287:                     selectedReviewSource.isIndividualSeller,
+ 2288: 
+ 2289:                   matchScore:
+ 2290:                     selectedReviewSource.matchScore,
+ 2291: 
+ 2292:                   reviewTextSource,
+ 2293: 
+ 2294:                   status:
+ 2295:                     "selected" as const,
+ 2296:                 }
+ 2297:               : {
+ 2298:                   productName:
+ 2299:                     detail.title,
+ 2300: 
+ 2301:                   seller:
+ 2302:                     detail.sellerName,
+ 2303: 
+ 2304:                   price:
+ 2305:                     detail.finalPrice,
+ 2306: 
+ 2307:                   reviewCount:
+ 2308:                     detail.totalReviews,
+ 2309: 
+ 2310:                   rating:
+ 2311:                     detail.averageRating ??
+ 2312:                     0,
+ 2313: 
+
+===== LINE 2281 =====
+ 2256:             identityKey,
+ 2257:           },
+ 2258: 
+ 2259:           reviewSource:
+ 2260:             selectedReviewSource
+ 2261:               ? {
+ 2262:                   productName:
+ 2263:                     selectedReviewSource.name,
+ 2264: 
+ 2265:                   seller:
+ 2266:                     selectedReviewSource.brand,
+ 2267: 
+ 2268:                   price:
+ 2269:                     selectedReviewSource.price,
+ 2270: 
+ 2271:                   reviewCount:
+ 2272:                     selectedReviewSource.reviewCount,
+ 2273: 
+ 2274:                   rating:
+ 2275:                     selectedReviewSource.rating,
+ 2276: 
+ 2277:                   url:
+ 2278:                     selectedReviewSource.url,
+ 2279: 
+ 2280:                   resolvedUrl:
+ 2281:                     selectedReviewSource.resolvedUrl,
+ 2282: 
+ 2283:                   sourceType:
+ 2284:                     selectedReviewSource.sourceType,
+ 2285: 
+ 2286:                   isIndividualSeller:
+ 2287:                     selectedReviewSource.isIndividualSeller,
+ 2288: 
+ 2289:                   matchScore:
+ 2290:                     selectedReviewSource.matchScore,
+ 2291: 
+ 2292:                   reviewTextSource,
+ 2293: 
+ 2294:                   status:
+ 2295:                     "selected" as const,
+ 2296:                 }
+ 2297:               : {
+ 2298:                   productName:
+ 2299:                     detail.title,
+ 2300: 
+ 2301:                   seller:
+ 2302:                     detail.sellerName,
+ 2303: 
+ 2304:                   price:
+ 2305:                     detail.finalPrice,
+ 2306: 
+ 2307:                   reviewCount:
+ 2308:                     detail.totalReviews,
+ 2309: 
+ 2310:                   rating:
+ 2311:                     detail.averageRating ??
+ 2312:                     0,
+ 2313: 
+ 2314:                   url:
+ 2315:                     resolvedUrl,
+ 2316: 
+
+===== LINE 2284 =====
+ 2259:           reviewSource:
+ 2260:             selectedReviewSource
+ 2261:               ? {
+ 2262:                   productName:
+ 2263:                     selectedReviewSource.name,
+ 2264: 
+ 2265:                   seller:
+ 2266:                     selectedReviewSource.brand,
+ 2267: 
+ 2268:                   price:
+ 2269:                     selectedReviewSource.price,
+ 2270: 
+ 2271:                   reviewCount:
+ 2272:                     selectedReviewSource.reviewCount,
+ 2273: 
+ 2274:                   rating:
+ 2275:                     selectedReviewSource.rating,
+ 2276: 
+ 2277:                   url:
+ 2278:                     selectedReviewSource.url,
+ 2279: 
+ 2280:                   resolvedUrl:
+ 2281:                     selectedReviewSource.resolvedUrl,
+ 2282: 
+ 2283:                   sourceType:
+ 2284:                     selectedReviewSource.sourceType,
+ 2285: 
+ 2286:                   isIndividualSeller:
+ 2287:                     selectedReviewSource.isIndividualSeller,
+ 2288: 
+ 2289:                   matchScore:
+ 2290:                     selectedReviewSource.matchScore,
+ 2291: 
+ 2292:                   reviewTextSource,
+ 2293: 
+ 2294:                   status:
+ 2295:                     "selected" as const,
+ 2296:                 }
+ 2297:               : {
+ 2298:                   productName:
+ 2299:                     detail.title,
+ 2300: 
+ 2301:                   seller:
+ 2302:                     detail.sellerName,
+ 2303: 
+ 2304:                   price:
+ 2305:                     detail.finalPrice,
+ 2306: 
+ 2307:                   reviewCount:
+ 2308:                     detail.totalReviews,
+ 2309: 
+ 2310:                   rating:
+ 2311:                     detail.averageRating ??
+ 2312:                     0,
+ 2313: 
+ 2314:                   url:
+ 2315:                     resolvedUrl,
+ 2316: 
+ 2317:                   resolvedUrl:
+ 2318:                     resolvedUrl,
+ 2319: 
+
+===== LINE 2287 =====
+ 2262:                   productName:
+ 2263:                     selectedReviewSource.name,
+ 2264: 
+ 2265:                   seller:
+ 2266:                     selectedReviewSource.brand,
+ 2267: 
+ 2268:                   price:
+ 2269:                     selectedReviewSource.price,
+ 2270: 
+ 2271:                   reviewCount:
+ 2272:                     selectedReviewSource.reviewCount,
+ 2273: 
+ 2274:                   rating:
+ 2275:                     selectedReviewSource.rating,
+ 2276: 
+ 2277:                   url:
+ 2278:                     selectedReviewSource.url,
+ 2279: 
+ 2280:                   resolvedUrl:
+ 2281:                     selectedReviewSource.resolvedUrl,
+ 2282: 
+ 2283:                   sourceType:
+ 2284:                     selectedReviewSource.sourceType,
+ 2285: 
+ 2286:                   isIndividualSeller:
+ 2287:                     selectedReviewSource.isIndividualSeller,
+ 2288: 
+ 2289:                   matchScore:
+ 2290:                     selectedReviewSource.matchScore,
+ 2291: 
+ 2292:                   reviewTextSource,
+ 2293: 
+ 2294:                   status:
+ 2295:                     "selected" as const,
+ 2296:                 }
+ 2297:               : {
+ 2298:                   productName:
+ 2299:                     detail.title,
+ 2300: 
+ 2301:                   seller:
+ 2302:                     detail.sellerName,
+ 2303: 
+ 2304:                   price:
+ 2305:                     detail.finalPrice,
+ 2306: 
+ 2307:                   reviewCount:
+ 2308:                     detail.totalReviews,
+ 2309: 
+ 2310:                   rating:
+ 2311:                     detail.averageRating ??
+ 2312:                     0,
+ 2313: 
+ 2314:                   url:
+ 2315:                     resolvedUrl,
+ 2316: 
+ 2317:                   resolvedUrl:
+ 2318:                     resolvedUrl,
+ 2319: 
+ 2320:                   sourceType:
+ 2321:                     canonicalSourceType ===
+ 2322:                       "manufacturer"
+
+===== LINE 2290 =====
+ 2265:                   seller:
+ 2266:                     selectedReviewSource.brand,
+ 2267: 
+ 2268:                   price:
+ 2269:                     selectedReviewSource.price,
+ 2270: 
+ 2271:                   reviewCount:
+ 2272:                     selectedReviewSource.reviewCount,
+ 2273: 
+ 2274:                   rating:
+ 2275:                     selectedReviewSource.rating,
+ 2276: 
+ 2277:                   url:
+ 2278:                     selectedReviewSource.url,
+ 2279: 
+ 2280:                   resolvedUrl:
+ 2281:                     selectedReviewSource.resolvedUrl,
+ 2282: 
+ 2283:                   sourceType:
+ 2284:                     selectedReviewSource.sourceType,
+ 2285: 
+ 2286:                   isIndividualSeller:
+ 2287:                     selectedReviewSource.isIndividualSeller,
+ 2288: 
+ 2289:                   matchScore:
+ 2290:                     selectedReviewSource.matchScore,
+ 2291: 
+ 2292:                   reviewTextSource,
+ 2293: 
+ 2294:                   status:
+ 2295:                     "selected" as const,
+ 2296:                 }
+ 2297:               : {
+ 2298:                   productName:
+ 2299:                     detail.title,
+ 2300: 
+ 2301:                   seller:
+ 2302:                     detail.sellerName,
+ 2303: 
+ 2304:                   price:
+ 2305:                     detail.finalPrice,
+ 2306: 
+ 2307:                   reviewCount:
+ 2308:                     detail.totalReviews,
+ 2309: 
+ 2310:                   rating:
+ 2311:                     detail.averageRating ??
+ 2312:                     0,
+ 2313: 
+ 2314:                   url:
+ 2315:                     resolvedUrl,
+ 2316: 
+ 2317:                   resolvedUrl:
+ 2318:                     resolvedUrl,
+ 2319: 
+ 2320:                   sourceType:
+ 2321:                     canonicalSourceType ===
+ 2322:                       "manufacturer"
+ 2323:                       ? "external-store" as const
+ 2324:                       : "naver-store" as const,
+ 2325: 
+
+===== LINE 2501 =====
+ 2476: 
+ 2477:             reviewCount:
+ 2478:               reviewDetail.totalReviews,
+ 2479: 
+ 2480:             rating:
+ 2481:               reviewDetail.averageRating,
+ 2482: 
+ 2483:             sellerName:
+ 2484:               detail.sellerName,
+ 2485: 
+ 2486:             categoryName:
+ 2487:               detail.categoryName,
+ 2488: 
+ 2489:             imageUrl:
+ 2490:               detail.imageUrl,
+ 2491: 
+ 2492:             reviewSamples:
+ 2493:               reviewDetail.topReviews.length,
+ 2494: 
+ 2495:             reviews:
+ 2496:               reviewDetail.topReviews,
+ 2497: 
+ 2498:             sourceUrl:
+ 2499:               detail.url,
+ 2500: 
+ 2501:             reviewSourceUrl,
+ 2502: 
+ 2503:             detailStatus:
+ 2504:               "full",
+ 2505:           },
+ 2506:         },
+ 2507:       };
+ 2508:     }
+ 2509: 
+ 2510:     /*
+ 2511:       3개씩 병렬 처리.
+ 2512: 
+ 2513:       한 묶음이 끝날 때마다 결과를 반영하고,
+ 2514:       최종 5개가 확보되면 다음 묶음은 시작하지 않는다.
+ 2515:     */
+ 2516:     for (
+ 2517:       let start = 0;
+ 2518:       start <
+ 2519:       marketCandidates.length;
+ 2520:       start +=
+ 2521:         BATCH_SIZE
+ 2522:     ) {
+ 2523:       if (
+ 2524:         finalCandidates.length >=
+ 2525:         TARGET_COUNT
+ 2526:       ) {
+ 2527:         break;
+ 2528:       }
+ 2529: 
+ 2530:       const batch =
+ 2531:         marketCandidates.slice(
+ 2532:           start,
+ 2533:           start +
+ 2534:             BATCH_SIZE,
+ 2535:         );
+ 2536: 
+
+############################################################
+PATTERN: reviewTextSource
+MATCHES: 8
+############################################################
+
+===== LINE 143 =====
+  118:     brandSite: string;
+  119:     url: string;
+  120: 
+  121:     sourceType?:
+  122:       | "naver-brand"
+  123:       | "manufacturer";
+  124: 
+  125:     identityKey?: string;
+  126:   };
+  127: 
+  128:   reviewSource: {
+  129:     productName: string;
+  130:     seller: string;
+  131:     price: number;
+  132:     reviewCount: number;
+  133:     rating: number;
+  134:     url: string;
+  135:     resolvedUrl: string;
+  136:     sourceType:
+  137:       | "naver-store"
+  138:       | "external-store"
+  139:       | "naver-aggregate"
+  140:       | "unknown";
+  141:     isIndividualSeller: boolean;
+  142:     matchScore: number;
+  143:     reviewTextSource:
+  144:       | "selected-source"
+  145:       | "canonical-reuse"
+  146:       | "canonical-fallback";
+  147:     status:
+  148:       | "selected"
+  149:       | "fallback-canonical";
+  150:   };
+  151: 
+  152:   purchaseSource: {
+  153:     productName: string;
+  154:     seller: string;
+  155:     price: number;
+  156:     reviewCount: number;
+  157:     rating: number;
+  158:     url: string;
+  159:     resolvedUrl: string;
+  160:     sourceType:
+  161:       | "naver-store"
+  162:       | "external-store"
+  163:       | "naver-aggregate"
+  164:       | "unknown";
+  165:     isIndividualSeller: boolean;
+  166:     matchScore: number;
+  167:     status:
+  168:       | "selected"
+  169:       | "fallback-market";
+  170:   };
+  171: 
+  172:   market: {
+  173:     productName: string;
+  174:     seller: string;
+  175:     listedPrice: number;
+  176:     reviewCount: number;
+  177:     rating: number;
+  178:     imageUrl: string;
+
+===== LINE 860 =====
+  835:       url:
+  836:         market.url,
+  837:     },
+  838: 
+  839:     reviewSource: {
+  840:       productName:
+  841:         market.name,
+  842:       seller:
+  843:         market.seller,
+  844:       price:
+  845:         market.price,
+  846:       reviewCount:
+  847:         market.reviewCount,
+  848:       rating:
+  849:         market.rating,
+  850:       url:
+  851:         market.url,
+  852:       resolvedUrl:
+  853:         market.url,
+  854:       sourceType:
+  855:         "naver-aggregate",
+  856:       isIndividualSeller:
+  857:         false,
+  858:       matchScore:
+  859:         0,
+  860:       reviewTextSource:
+  861:         "canonical-fallback",
+  862:       status:
+  863:         "fallback-canonical",
+  864:     },
+  865: 
+  866:     purchaseSource: {
+  867:       productName:
+  868:         market.name,
+  869:       seller:
+  870:         market.seller,
+  871:       price:
+  872:         market.price,
+  873:       reviewCount:
+  874:         market.reviewCount,
+  875:       rating:
+  876:         market.rating,
+  877:       url:
+  878:         market.url,
+  879:       resolvedUrl:
+  880:         market.url,
+  881:       sourceType:
+  882:         "naver-aggregate",
+  883:       isIndividualSeller:
+  884:         false,
+  885:       matchScore:
+  886:         0,
+  887:       status:
+  888:         "fallback-market",
+  889:     },
+  890: 
+  891:     market: {
+  892:       productName:
+  893:         market.name,
+  894:       seller:
+  895:         market.seller,
+
+===== LINE 2080 =====
+ 2055:       const selectedPurchaseSource =
+ 2056:         offerSearch?.purchaseSource;
+ 2057: 
+ 2058:       const finalProductId =
+ 2059:         canonicalSourceType ===
+ 2060:           "naver-brand"
+ 2061:           ? String(
+ 2062:               detail.productId,
+ 2063:             )
+ 2064:           : "";
+ 2065: 
+ 2066:       /*
+ 2067:         실제 리뷰 본문은 reviewSource에서 가져오는 것을 원칙으로 한다.
+ 2068: 
+ 2069:         단, reviewSource의 실제 네이버 상품번호가 canonicalSource와
+ 2070:         같다면 같은 상품 페이지이므로 Bright Data를 한 번 더 호출하지 않고
+ 2071:         이미 수집한 detail.topReviews를 그대로 재사용한다.
+ 2072: 
+ 2073:         상품번호가 다를 때만 reviewSource.resolvedUrl을 Bright Data로
+ 2074:         추가 수집한다. 실패하면 자동으로 canonical 리뷰로 fallback 한다.
+ 2075:       */
+ 2076:       let reviewDetail:
+ 2077:         NaverProductDetail =
+ 2078:         detail;
+ 2079: 
+ 2080:       let reviewTextSource:
+ 2081:         | "selected-source"
+ 2082:         | "canonical-reuse"
+ 2083:         | "canonical-fallback" =
+ 2084:         "canonical-fallback";
+ 2085: 
+ 2086:       let reviewSourceUrl =
+ 2087:         detail.url;
+ 2088: 
+ 2089:       let extraReviewBrightDataCalls =
+ 2090:         0;
+ 2091: 
+ 2092:       if (
+ 2093:         selectedReviewSource?.resolvedUrl &&
+ 2094:         selectedReviewSource.sourceType ===
+ 2095:           "naver-store"
+ 2096:       ) {
+ 2097:         const selectedReviewProductId =
+ 2098:           extractMarketProductId(
+ 2099:             selectedReviewSource.resolvedUrl,
+ 2100:           );
+ 2101: 
+ 2102:         if (
+ 2103:           selectedReviewProductId &&
+ 2104:           selectedReviewProductId ===
+ 2105:             finalProductId
+ 2106:         ) {
+ 2107:           reviewDetail =
+ 2108:             detail;
+ 2109: 
+ 2110:           reviewSourceUrl =
+ 2111:             selectedReviewSource.resolvedUrl;
+ 2112: 
+ 2113:           reviewTextSource =
+ 2114:             "canonical-reuse";
+ 2115: 
+
+===== LINE 2113 =====
+ 2088: 
+ 2089:       let extraReviewBrightDataCalls =
+ 2090:         0;
+ 2091: 
+ 2092:       if (
+ 2093:         selectedReviewSource?.resolvedUrl &&
+ 2094:         selectedReviewSource.sourceType ===
+ 2095:           "naver-store"
+ 2096:       ) {
+ 2097:         const selectedReviewProductId =
+ 2098:           extractMarketProductId(
+ 2099:             selectedReviewSource.resolvedUrl,
+ 2100:           );
+ 2101: 
+ 2102:         if (
+ 2103:           selectedReviewProductId &&
+ 2104:           selectedReviewProductId ===
+ 2105:             finalProductId
+ 2106:         ) {
+ 2107:           reviewDetail =
+ 2108:             detail;
+ 2109: 
+ 2110:           reviewSourceUrl =
+ 2111:             selectedReviewSource.resolvedUrl;
+ 2112: 
+ 2113:           reviewTextSource =
+ 2114:             "canonical-reuse";
+ 2115: 
+ 2116:           console.log(
+ 2117:             `[ENRICH ${position}] 리뷰소스 canonical 재사용`,
+ 2118:             selectedReviewProductId,
+ 2119:           );
+ 2120:         } else {
+ 2121:           let collectedReviewDetail:
+ 2122:             NaverProductDetail | null =
+ 2123:             null;
+ 2124: 
+ 2125:           if (
+ 2126:             selectedReviewProductId
+ 2127:           ) {
+ 2128:             collectedReviewDetail =
+ 2129:               await getCachedProductDetail(
+ 2130:                 selectedReviewProductId,
+ 2131:               );
+ 2132:           }
+ 2133: 
+ 2134:           if (
+ 2135:             collectedReviewDetail
+ 2136:           ) {
+ 2137:             reviewDetail =
+ 2138:               collectedReviewDetail;
+ 2139: 
+ 2140:             reviewSourceUrl =
+ 2141:               selectedReviewSource.resolvedUrl;
+ 2142: 
+ 2143:             reviewTextSource =
+ 2144:               "selected-source";
+ 2145: 
+ 2146:             console.log(
+ 2147:               `[ENRICH ${position}] 리뷰소스 DB 캐시 사용`,
+ 2148:               selectedReviewProductId,
+
+===== LINE 2143 =====
+ 2118:             selectedReviewProductId,
+ 2119:           );
+ 2120:         } else {
+ 2121:           let collectedReviewDetail:
+ 2122:             NaverProductDetail | null =
+ 2123:             null;
+ 2124: 
+ 2125:           if (
+ 2126:             selectedReviewProductId
+ 2127:           ) {
+ 2128:             collectedReviewDetail =
+ 2129:               await getCachedProductDetail(
+ 2130:                 selectedReviewProductId,
+ 2131:               );
+ 2132:           }
+ 2133: 
+ 2134:           if (
+ 2135:             collectedReviewDetail
+ 2136:           ) {
+ 2137:             reviewDetail =
+ 2138:               collectedReviewDetail;
+ 2139: 
+ 2140:             reviewSourceUrl =
+ 2141:               selectedReviewSource.resolvedUrl;
+ 2142: 
+ 2143:             reviewTextSource =
+ 2144:               "selected-source";
+ 2145: 
+ 2146:             console.log(
+ 2147:               `[ENRICH ${position}] 리뷰소스 DB 캐시 사용`,
+ 2148:               selectedReviewProductId,
+ 2149:             );
+ 2150:           } else {
+ 2151:             try {
+ 2152:               console.log(
+ 2153:                 `[ENRICH ${position}] 리뷰소스 Bright Data 시작`,
+ 2154:                 selectedReviewSource.resolvedUrl,
+ 2155:               );
+ 2156: 
+ 2157:               const collected =
+ 2158:                 await collectNaverProduct(
+ 2159:                   selectedReviewSource.resolvedUrl,
+ 2160:                 );
+ 2161: 
+ 2162:               if (
+ 2163:                 collected.topReviews.length >=
+ 2164:                 5
+ 2165:               ) {
+ 2166:                 reviewDetail =
+ 2167:                   collected;
+ 2168: 
+ 2169:                 reviewSourceUrl =
+ 2170:                   selectedReviewSource.resolvedUrl;
+ 2171: 
+ 2172:                 reviewTextSource =
+ 2173:                   "selected-source";
+ 2174: 
+ 2175:                 extraReviewBrightDataCalls =
+ 2176:                   1;
+ 2177: 
+ 2178:                 console.log(
+
+===== LINE 2172 =====
+ 2147:               `[ENRICH ${position}] 리뷰소스 DB 캐시 사용`,
+ 2148:               selectedReviewProductId,
+ 2149:             );
+ 2150:           } else {
+ 2151:             try {
+ 2152:               console.log(
+ 2153:                 `[ENRICH ${position}] 리뷰소스 Bright Data 시작`,
+ 2154:                 selectedReviewSource.resolvedUrl,
+ 2155:               );
+ 2156: 
+ 2157:               const collected =
+ 2158:                 await collectNaverProduct(
+ 2159:                   selectedReviewSource.resolvedUrl,
+ 2160:                 );
+ 2161: 
+ 2162:               if (
+ 2163:                 collected.topReviews.length >=
+ 2164:                 5
+ 2165:               ) {
+ 2166:                 reviewDetail =
+ 2167:                   collected;
+ 2168: 
+ 2169:                 reviewSourceUrl =
+ 2170:                   selectedReviewSource.resolvedUrl;
+ 2171: 
+ 2172:                 reviewTextSource =
+ 2173:                   "selected-source";
+ 2174: 
+ 2175:                 extraReviewBrightDataCalls =
+ 2176:                   1;
+ 2177: 
+ 2178:                 console.log(
+ 2179:                   `[ENRICH ${position}] 리뷰소스 Bright Data 완료`,
+ 2180:                   collected.topReviews.length,
+ 2181:                 );
+ 2182:               } else {
+ 2183:                 console.warn(
+ 2184:                   `[ENRICH ${position}] 리뷰소스 샘플 부족 → canonical fallback`,
+ 2185:                   collected.topReviews.length,
+ 2186:                 );
+ 2187:               }
+ 2188:             } catch (error) {
+ 2189:               console.warn(
+ 2190:                 `[ENRICH ${position}] 리뷰소스 Bright Data 실패 → canonical fallback`,
+ 2191:                 error,
+ 2192:               );
+ 2193:             }
+ 2194:           }
+ 2195:         }
+ 2196:       }
+ 2197: 
+ 2198:       console.log(
+ 2199:         `[ENRICH ${position}] 검증 통과`,
+ 2200:         `${Math.round(
+ 2201:           (
+ 2202:             Date.now() -
+ 2203:             startedAt
+ 2204:           ) /
+ 2205:             1000,
+ 2206:         )}초`,
+ 2207:         detail.title,
+
+===== LINE 2292 =====
+ 2267: 
+ 2268:                   price:
+ 2269:                     selectedReviewSource.price,
+ 2270: 
+ 2271:                   reviewCount:
+ 2272:                     selectedReviewSource.reviewCount,
+ 2273: 
+ 2274:                   rating:
+ 2275:                     selectedReviewSource.rating,
+ 2276: 
+ 2277:                   url:
+ 2278:                     selectedReviewSource.url,
+ 2279: 
+ 2280:                   resolvedUrl:
+ 2281:                     selectedReviewSource.resolvedUrl,
+ 2282: 
+ 2283:                   sourceType:
+ 2284:                     selectedReviewSource.sourceType,
+ 2285: 
+ 2286:                   isIndividualSeller:
+ 2287:                     selectedReviewSource.isIndividualSeller,
+ 2288: 
+ 2289:                   matchScore:
+ 2290:                     selectedReviewSource.matchScore,
+ 2291: 
+ 2292:                   reviewTextSource,
+ 2293: 
+ 2294:                   status:
+ 2295:                     "selected" as const,
+ 2296:                 }
+ 2297:               : {
+ 2298:                   productName:
+ 2299:                     detail.title,
+ 2300: 
+ 2301:                   seller:
+ 2302:                     detail.sellerName,
+ 2303: 
+ 2304:                   price:
+ 2305:                     detail.finalPrice,
+ 2306: 
+ 2307:                   reviewCount:
+ 2308:                     detail.totalReviews,
+ 2309: 
+ 2310:                   rating:
+ 2311:                     detail.averageRating ??
+ 2312:                     0,
+ 2313: 
+ 2314:                   url:
+ 2315:                     resolvedUrl,
+ 2316: 
+ 2317:                   resolvedUrl:
+ 2318:                     resolvedUrl,
+ 2319: 
+ 2320:                   sourceType:
+ 2321:                     canonicalSourceType ===
+ 2322:                       "manufacturer"
+ 2323:                       ? "external-store" as const
+ 2324:                       : "naver-store" as const,
+ 2325: 
+ 2326:                   isIndividualSeller:
+ 2327:                     true,
+
+===== LINE 2332 =====
+ 2307:                   reviewCount:
+ 2308:                     detail.totalReviews,
+ 2309: 
+ 2310:                   rating:
+ 2311:                     detail.averageRating ??
+ 2312:                     0,
+ 2313: 
+ 2314:                   url:
+ 2315:                     resolvedUrl,
+ 2316: 
+ 2317:                   resolvedUrl:
+ 2318:                     resolvedUrl,
+ 2319: 
+ 2320:                   sourceType:
+ 2321:                     canonicalSourceType ===
+ 2322:                       "manufacturer"
+ 2323:                       ? "external-store" as const
+ 2324:                       : "naver-store" as const,
+ 2325: 
+ 2326:                   isIndividualSeller:
+ 2327:                     true,
+ 2328: 
+ 2329:                   matchScore:
+ 2330:                     0,
+ 2331: 
+ 2332:                   reviewTextSource:
+ 2333:                     "canonical-fallback" as const,
+ 2334: 
+ 2335:                   status:
+ 2336:                     "fallback-canonical" as const,
+ 2337:                 },
+ 2338: 
+ 2339:           purchaseSource:
+ 2340:             selectedPurchaseSource
+ 2341:               ? {
+ 2342:                   productName:
+ 2343:                     selectedPurchaseSource.name,
+ 2344: 
+ 2345:                   seller:
+ 2346:                     selectedPurchaseSource.brand,
+ 2347: 
+ 2348:                   price:
+ 2349:                     selectedPurchaseSource.price,
+ 2350: 
+ 2351:                   reviewCount:
+ 2352:                     selectedPurchaseSource.reviewCount,
+ 2353: 
+ 2354:                   rating:
+ 2355:                     selectedPurchaseSource.rating,
+ 2356: 
+ 2357:                   url:
+ 2358:                     selectedPurchaseSource.url,
+ 2359: 
+ 2360:                   resolvedUrl:
+ 2361:                     selectedPurchaseSource.resolvedUrl,
+ 2362: 
+ 2363:                   sourceType:
+ 2364:                     selectedPurchaseSource.sourceType,
+ 2365: 
+ 2366:                   isIndividualSeller:
+ 2367:                     selectedPurchaseSource.isIndividualSeller,

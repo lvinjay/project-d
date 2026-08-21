@@ -1,0 +1,79 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "//www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="//www.w3.org/1999/xhtml" xml:lang="ko" lang="ko">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=3.0, user-scalable=yes"/>
+    <title>카페24</title>
+    <style>
+        html,body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family:"Noto Sans KR",'맑은 고딕',Dotum,"돋움",arial,verdana,sans-serif;
+        }
+        #header {
+            position: absolute;
+            top: 2px;
+            left: 24px;
+            z-index: 5;
+        }
+        #header img{
+            width: 112px;
+        }
+        #wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            height: 100%;
+            background: #F4F9FF;
+        }
+
+        .mWarn h2 {margin: 32px 0 8px; font-size: 24px; font-style: normal; font-weight: 700; line-height: 34px;  color: #1B1E26;}
+        .mWarn .txtDesc {font-size: 14px; font-style: normal; font-weight: 400; line-height: 20px; color: #1B1E26; margin: 0 0 32px; }
+        .mButton [class*=btn] { display: inline-block; height: 48px; line-height: 48px; font-size: 14px; font-weight: 700; padding: 0px 16px; border-radius: 4px;  box-shadow: 0px 1px 0px 0px rgba(0, 0, 0, 0.08); box-sizing: border-box; text-decoration: none;  }
+        .mButton .btnNormal { background: #FFF; color: #2B2B2B; border: 1px solid #BDBDBD;  }
+        .mButton .btnEm { background: #1A54F5; color: #F2F2F2; border: 1px solid #0940D7;  }
+        .mWarn img {width: 132px;}
+
+        @media (min-width:768px) and (max-width:1079px) {
+            .mWarn h2 {margin: 20px 0 8px; font-size: 24px; line-height: 34px; color: #1B1E26;}
+        }
+        @media (max-width:767px) {
+            #header img{width: 78px;}
+            .mWarn img {width: 110px;}
+            .mWarn h2 {margin: 16px 0; font-size: 20px; line-height: 28px; color: #1B1E26;}
+            .mWarn .txtDesc {font-size: 13px; line-height: 20px; color: #1B1E26; margin: 0 0 24px; }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="wrap">
+        <div id="header">
+            <h1><a href="https://www.cafe24.com"><img src="https://m-img.cafe24.com/images/template/ec/logo_cafe24_global_new.svg" alt="cafe24"></a></h1>
+        </div>
+        <div id="content">
+            <div class="mWarn">
+                <div class="inner">
+                    <img src="//img.echosting.cafe24.com/ec/image_admin/img_404.png" alt="404">
+                    <h2>다시 한번 확인해주세요!</h2>
+                    <p class="txtDesc">
+                        접근하신 주소의 페이지는<br>
+                        사라졌거나 다른 페이지로 변경되었어요.<br>
+                        주소를 다시 확인해주세요.
+                    </p>
+                    <div class="mButton">
+                        <a href="javascript:history.back();" class="btnNormal">이전 페이지로 가기</a>
+                        <a href="/" class="btnEm">메인 페이지로 가기</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</body>
+
+</html>

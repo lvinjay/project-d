@@ -1,0 +1,15 @@
+﻿
+  lib\brightDataProduct.ts:190:    );
+  lib\brightDataProduct.ts:191:
+  lib\brightDataProduct.ts:192:  const triggerText =
+> lib\brightDataProduct.ts:193:    await triggerResponse.text
+();
+  lib\brightDataProduct.ts:194:
+  lib\brightDataProduct.ts:195:  if (!triggerResponse.ok) {
+  lib\brightDataProduct.ts:196:    throw new Error(
+  lib\brightDataProduct.ts:197:      `Bright Data 실행 실패 (${tr
+iggerResponse.status}): ${triggerText}`,
+  lib\brightDataProduct.ts:198:    );
+  lib\brightDataProduct.ts:199:  }
+
+

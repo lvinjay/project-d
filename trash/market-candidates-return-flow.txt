@@ -1,0 +1,328 @@
+﻿
+> app\api\market-candidates\route.ts:1:import { NextResponse 
+} from "next/server";
+  app\api\market-candidates\route.ts:2:import {
+  app\api\market-candidates\route.ts:3:  searchMarketProducts
+,
+  app\api\market-candidates\route.ts:4:} from "../../../lib/m
+arketSearch";
+  app\api\market-candidates\route.ts:5:
+  app\api\market-candidates\route.ts:6:export const runtime =
+ "nodejs";
+  app\api\market-candidates\route.ts:7:export const dynamic =
+ "force-dynamic";
+  app\api\market-candidates\route.ts:8:
+  app\api\market-candidates\route.ts:9:export async function 
+GET(
+  app\api\market-candidates\route.ts:10:  request: Request,
+  app\api\market-candidates\route.ts:11:) {
+  app\api\market-candidates\route.ts:12:  try {
+  app\api\market-candidates\route.ts:13:    const {
+  app\api\market-candidates\route.ts:14:      searchParams,
+  app\api\market-candidates\route.ts:15:    } = new URL(
+  app\api\market-candidates\route.ts:16:      request.url,
+  app\api\market-candidates\route.ts:17:    );
+  app\api\market-candidates\route.ts:18:
+  app\api\market-candidates\route.ts:19:    const category =
+  app\api\market-candidates\route.ts:20:      (
+  app\api\market-candidates\route.ts:21:        searchParams.
+get("category") ??
+  app\api\market-candidates\route.ts:22:        ""
+  app\api\market-candidates\route.ts:23:      ).trim();
+  app\api\market-candidates\route.ts:24:
+  app\api\market-candidates\route.ts:25:    if (!category) {
+> app\api\market-candidates\route.ts:26:      return NextResp
+onse.json(
+  app\api\market-candidates\route.ts:27:        {
+  app\api\market-candidates\route.ts:28:          success: fa
+lse,
+  app\api\market-candidates\route.ts:29:          message:
+  app\api\market-candidates\route.ts:30:            "검색할 상품군을
+ 입력하세요.",
+> app\api\market-candidates\route.ts:31:          count: 0,
+> app\api\market-candidates\route.ts:32:          candidates:
+ [],
+  app\api\market-candidates\route.ts:33:        },
+  app\api\market-candidates\route.ts:34:        {
+  app\api\market-candidates\route.ts:35:          status: 400
+,
+  app\api\market-candidates\route.ts:36:        },
+  app\api\market-candidates\route.ts:37:      );
+  app\api\market-candidates\route.ts:38:    }
+  app\api\market-candidates\route.ts:39:
+  app\api\market-candidates\route.ts:40:    const products =
+  app\api\market-candidates\route.ts:41:      await searchMar
+ketProducts(
+  app\api\market-candidates\route.ts:42:        category,
+  app\api\market-candidates\route.ts:43:      );
+  app\api\market-candidates\route.ts:44:
+  app\api\market-candidates\route.ts:45:    /*
+  app\api\market-candidates\route.ts:46:      현재 단계의 점수는
+  app\api\market-candidates\route.ts:47:      '대표제품 최종 선정점수'가
+ 아니다.
+  app\api\market-candidates\route.ts:48:
+  app\api\market-candidates\route.ts:49:      검색 직후 후보를 보기 쉽게
+ 정렬하기 위한
+  app\api\market-candidates\route.ts:50:      1차 참고점수만 계산한다.
+  app\api\market-candidates\route.ts:51:
+  app\api\market-candidates\route.ts:52:      이후:
+  app\api\market-candidates\route.ts:53:      - 시장 인기/인지도
+  app\api\market-candidates\route.ts:54:      - 리뷰 신뢰도
+  app\api\market-candidates\route.ts:55:      - 제품 경쟁력
+  app\api\market-candidates\route.ts:56:      - 가격 경쟁력
+  app\api\market-candidates\route.ts:57:      - 정보 충실도
+  app\api\market-candidates\route.ts:58:      - 판매 안정성
+  app\api\market-candidates\route.ts:59:
+  app\api\market-candidates\route.ts:60:      6개 기준의 실제 선정 로직
+을 별도로 붙인다.
+  app\api\market-candidates\route.ts:61:    */
+  app\api\market-candidates\route.ts:62:    const maximumRevi
+ews =
+  app\api\market-candidates\route.ts:63:      Math.max(
+  app\api\market-candidates\route.ts:64:        1,
+  app\api\market-candidates\route.ts:65:        ...products.m
+ap(
+  app\api\market-candidates\route.ts:66:          (product) =
+>
+> app\api\market-candidates\route.ts:67:            product.r
+eviewCount,
+  app\api\market-candidates\route.ts:68:        ),
+  app\api\market-candidates\route.ts:69:      );
+  app\api\market-candidates\route.ts:70:
+> app\api\market-candidates\route.ts:71:    const candidates 
+=
+  app\api\market-candidates\route.ts:72:      products
+  app\api\market-candidates\route.ts:73:        .map(
+  app\api\market-candidates\route.ts:74:          (
+  app\api\market-candidates\route.ts:75:            product,
+  app\api\market-candidates\route.ts:76:            index,
+  app\api\market-candidates\route.ts:77:          ) => {
+  app\api\market-candidates\route.ts:78:            const rev
+iewScore =
+  app\api\market-candidates\route.ts:79:              Math.mi
+n(
+  app\api\market-candidates\route.ts:80:                100,
+  app\api\market-candidates\route.ts:81:                (
+> app\api\market-candidates\route.ts:82:                  pro
+duct.reviewCount /
+  app\api\market-candidates\route.ts:83:                  max
+imumReviews
+  app\api\market-candidates\route.ts:84:                ) *
+  app\api\market-candidates\route.ts:85:                  100
+,
+  app\api\market-candidates\route.ts:86:              );
+  app\api\market-candidates\route.ts:87:
+  app\api\market-candidates\route.ts:88:            const rat
+ingScore =
+  app\api\market-candidates\route.ts:89:              product
+.rating > 0
+  app\api\market-candidates\route.ts:90:                ? Mat
+h.min(
+  app\api\market-candidates\route.ts:91:                    1
+00,
+  app\api\market-candidates\route.ts:92:                    (
+  app\api\market-candidates\route.ts:93:                     
+ product.rating /
+  app\api\market-candidates\route.ts:94:                     
+ 5
+  app\api\market-candidates\route.ts:95:                    )
+ *
+  app\api\market-candidates\route.ts:96:                     
+ 100,
+  app\api\market-candidates\route.ts:97:                  )
+  app\api\market-candidates\route.ts:98:                : 0;
+  app\api\market-candidates\route.ts:99:
+  app\api\market-candidates\route.ts:100:            const da
+taScore =
+  app\api\market-candidates\route.ts:101:              [
+  app\api\market-candidates\route.ts:102:                prod
+uct.name,
+  app\api\market-candidates\route.ts:103:                prod
+uct.price > 0,
+  app\api\market-candidates\route.ts:104:                prod
+uct.image,
+  app\api\market-candidates\route.ts:105:                prod
+uct.url,
+> app\api\market-candidates\route.ts:106:                prod
+uct.reviewCount >
+  app\api\market-candidates\route.ts:107:                  0,
+  app\api\market-candidates\route.ts:108:                prod
+uct.rating > 0,
+  app\api\market-candidates\route.ts:109:              ].filt
+er(Boolean)
+  app\api\market-candidates\route.ts:110:                .len
+gth /
+  app\api\market-candidates\route.ts:111:              6 *
+  app\api\market-candidates\route.ts:112:              100;
+  app\api\market-candidates\route.ts:113:
+  app\api\market-candidates\route.ts:114:            const se
+archExposureScore =
+  app\api\market-candidates\route.ts:115:              Math.m
+ax(
+  app\api\market-candidates\route.ts:116:                20,
+  app\api\market-candidates\route.ts:117:                100 
+-
+  app\api\market-candidates\route.ts:118:                  in
+dex * 8,
+  app\api\market-candidates\route.ts:119:              );
+  app\api\market-candidates\route.ts:120:
+  app\api\market-candidates\route.ts:121:            const pr
+eliminaryScore =
+  app\api\market-candidates\route.ts:122:              Math.r
+ound(
+  app\api\market-candidates\route.ts:123:                (
+  app\api\market-candidates\route.ts:124:                  se
+archExposureScore *
+  app\api\market-candidates\route.ts:125:                    
+0.35 +
+  app\api\market-candidates\route.ts:126:                  re
+viewScore *
+  app\api\market-candidates\route.ts:127:                    
+0.35 +
+  app\api\market-candidates\route.ts:128:                  ra
+tingScore *
+  app\api\market-candidates\route.ts:129:                    
+0.2 +
+  app\api\market-candidates\route.ts:130:                  da
+taScore *
+  app\api\market-candidates\route.ts:131:                    
+0.1
+  app\api\market-candidates\route.ts:132:                ) *
+  app\api\market-candidates\route.ts:133:                  10
+,
+  app\api\market-candidates\route.ts:134:              ) / 10
+;
+  app\api\market-candidates\route.ts:135:
+> app\api\market-candidates\route.ts:136:            return {
+  app\api\market-candidates\route.ts:137:              id:
+  app\api\market-candidates\route.ts:138:                `can
+didate-${index + 1}`,
+  app\api\market-candidates\route.ts:139:
+  app\api\market-candidates\route.ts:140:              search
+Position:
+  app\api\market-candidates\route.ts:141:                inde
+x + 1,
+  app\api\market-candidates\route.ts:142:
+  app\api\market-candidates\route.ts:143:              produc
+tName:
+  app\api\market-candidates\route.ts:144:                prod
+uct.name,
+  app\api\market-candidates\route.ts:145:
+  app\api\market-candidates\route.ts:146:              seller
+:
+  app\api\market-candidates\route.ts:147:                prod
+uct.brand,
+  app\api\market-candidates\route.ts:148:
+  app\api\market-candidates\route.ts:149:              price:
+  app\api\market-candidates\route.ts:150:                prod
+uct.price,
+  app\api\market-candidates\route.ts:151:
+  app\api\market-candidates\route.ts:152:              imageU
+rl:
+  app\api\market-candidates\route.ts:153:                prod
+uct.image,
+  app\api\market-candidates\route.ts:154:
+  app\api\market-candidates\route.ts:155:              source
+Url:
+  app\api\market-candidates\route.ts:156:                prod
+uct.url,
+  app\api\market-candidates\route.ts:157:
+> app\api\market-candidates\route.ts:158:              review
+Count:
+> app\api\market-candidates\route.ts:159:                prod
+uct.reviewCount,
+  app\api\market-candidates\route.ts:160:
+  app\api\market-candidates\route.ts:161:              rating
+:
+  app\api\market-candidates\route.ts:162:                prod
+uct.rating,
+  app\api\market-candidates\route.ts:163:
+  app\api\market-candidates\route.ts:164:              prelim
+inaryScore,
+  app\api\market-candidates\route.ts:165:
+  app\api\market-candidates\route.ts:166:              prelim
+inaryReason: [
+> app\api\market-candidates\route.ts:167:                prod
+uct.reviewCount >
+  app\api\market-candidates\route.ts:168:                0
+> app\api\market-candidates\route.ts:169:                  ? 
+`리뷰 ${product.reviewCount.toLocaleString(
+  app\api\market-candidates\route.ts:170:                    
+  "ko-KR",
+  app\api\market-candidates\route.ts:171:                    
+)}개`
+  app\api\market-candidates\route.ts:172:                  : 
+"리뷰 정보 없음",
+  app\api\market-candidates\route.ts:173:
+  app\api\market-candidates\route.ts:174:                prod
+uct.rating > 0
+  app\api\market-candidates\route.ts:175:                  ? 
+`평점 ${product.rating}`
+  app\api\market-candidates\route.ts:176:                  : 
+"평점 정보 없음",
+  app\api\market-candidates\route.ts:177:
+  app\api\market-candidates\route.ts:178:                prod
+uct.price > 0
+  app\api\market-candidates\route.ts:179:                  ? 
+`가격 ${product.price.toLocaleString(
+  app\api\market-candidates\route.ts:180:                    
+  "ko-KR",
+  app\api\market-candidates\route.ts:181:                    
+)}원`
+  app\api\market-candidates\route.ts:182:                  : 
+"가격 정보 없음",
+  app\api\market-candidates\route.ts:183:              ],
+  app\api\market-candidates\route.ts:184:            };
+  app\api\market-candidates\route.ts:185:          },
+  app\api\market-candidates\route.ts:186:        )
+  app\api\market-candidates\route.ts:187:        .sort(
+  app\api\market-candidates\route.ts:188:          (a, b) =>
+  app\api\market-candidates\route.ts:189:            b.prelim
+inaryScore -
+  app\api\market-candidates\route.ts:190:            a.prelim
+inaryScore,
+  app\api\market-candidates\route.ts:191:        );
+  app\api\market-candidates\route.ts:192:
+> app\api\market-candidates\route.ts:193:    return NextRespo
+nse.json({
+  app\api\market-candidates\route.ts:194:      success: true,
+  app\api\market-candidates\route.ts:195:      category,
+> app\api\market-candidates\route.ts:196:      count:
+> app\api\market-candidates\route.ts:197:        candidates.l
+ength,
+> app\api\market-candidates\route.ts:198:      candidates,
+  app\api\market-candidates\route.ts:199:      message:
+> app\api\market-candidates\route.ts:200:        `"${category
+}" 후보 ${candidates.length}개를 검색했습니다.`,
+  app\api\market-candidates\route.ts:201:    });
+  app\api\market-candidates\route.ts:202:  } catch (error) {
+  app\api\market-candidates\route.ts:203:    console.error(
+> app\api\market-candidates\route.ts:204:      "Market candid
+ates API error:",
+  app\api\market-candidates\route.ts:205:      error,
+  app\api\market-candidates\route.ts:206:    );
+  app\api\market-candidates\route.ts:207:
+> app\api\market-candidates\route.ts:208:    return NextRespo
+nse.json(
+  app\api\market-candidates\route.ts:209:      {
+  app\api\market-candidates\route.ts:210:        success: fal
+se,
+> app\api\market-candidates\route.ts:211:        count: 0,
+> app\api\market-candidates\route.ts:212:        candidates: 
+[],
+  app\api\market-candidates\route.ts:213:        message:
+  app\api\market-candidates\route.ts:214:          error inst
+anceof Error
+  app\api\market-candidates\route.ts:215:            ? error.
+message
+  app\api\market-candidates\route.ts:216:            : "시장 후보
+상품 검색 중 오류가 발생했습니다.",
+  app\api\market-candidates\route.ts:217:      },
+  app\api\market-candidates\route.ts:218:      {
+  app\api\market-candidates\route.ts:219:        status: 500,
+  app\api\market-candidates\route.ts:220:      },
+  app\api\market-candidates\route.ts:221:    );
+  app\api\market-candidates\route.ts:222:  }
+  app\api\market-candidates\route.ts:223:}
+
+

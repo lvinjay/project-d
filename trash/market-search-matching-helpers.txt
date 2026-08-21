@@ -1,0 +1,2116 @@
+﻿
+############################################################
+PATTERN: getModelTokens
+MATCHES: 3
+############################################################
+
+===== LINE 157 =====
+  117:     !normalizedName ||
+  118:     normalizedName ===
+  119:       normalizedKeyword
+  120:   ) {
+  121:     return false;
+  122:   }
+  123: 
+  124:   const banned =
+  125:     /호환|소모품|부품|필터|먼지봉투|먼지백|물걸레\s*(패드|포|천|리필)|브러시|브러쉬|배터리|충전기|세정제|액세서리/i;
+  126: 
+  127:   return !banned.test(name);
+  128: }
+  129: 
+  130: function normalizedMatchText(
+  131:   value: string,
+  132: ) {
+  133:   return value
+  134:     .toLowerCase()
+  135:     .replace(
+  136:       /[^a-z0-9가-힣]+/g,
+  137:       " ",
+  138:     )
+  139:     .replace(
+  140:       /\s+/g,
+  141:       " ",
+  142:     )
+  143:     .trim();
+  144: }
+  145: 
+  146: function compactToken(
+  147:   value: string,
+  148: ) {
+  149:   return value
+  150:     .toLowerCase()
+  151:     .replace(
+  152:       /[^a-z0-9가-힣]/g,
+  153:       "",
+  154:     );
+  155: }
+  156: 
+  157: function getModelTokens(
+  158:   productName: string,
+  159: ) {
+  160:   const tokens =
+  161:     normalizedMatchText(
+  162:       productName,
+  163:     )
+  164:       .split(" ")
+  165:       .filter(Boolean);
+  166: 
+  167:   const ignored =
+  168:     new Set([
+  169:       "로봇청소기",
+  170:       "청소기",
+  171:       "로봇",
+  172:       "올인원",
+  173:       "자동",
+  174:       "무선",
+  175:       "스마트",
+  176:       "화이트",
+  177:       "블랙",
+  178:       "실버",
+  179:       "그레이",
+  180:       "베이지",
+  181:       "단품",
+  182:       "정품",
+  183:       "공식",
+  184:       "물걸레",
+  185:       "진공",
+  186:       "바닥",
+  187:       "걸레",
+  188:       "흡입",
+  189:       "세척",
+  190:     ]);
+  191: 
+  192:   const result:
+  193:     string[] = [];
+  194: 
+  195:   for (
+  196:     let index = 0;
+  197:     index < tokens.length;
+  198:     index++
+  199:   ) {
+  200:     const token =
+  201:       tokens[index];
+  202: 
+  203:     if (
+  204:       ignored.has(token) ||
+  205:       token.length < 2
+  206:     ) {
+  207:       continue;
+  208:     }
+  209: 
+  210:     /*
+  211:       모델명의 핵심은 보통 숫자가 포함된 토큰
+  212:       (X60, P70, S10, N95TWU 등)이다.
+  213:     */
+  214:     if (/\d/.test(token)) {
+  215:       result.push(token);
+  216: 
+  217:       /*
+  218:         X60 Ultra / P70 Pro / S10 MaxV처럼
+  219:         모델번호 바로 뒤 영문 서브모델도 함께 사용한다.
+  220:       */
+  221:       const next =
+  222:         tokens[index + 1];
+  223: 
+  224:       if (
+  225:         next &&
+  226:         /^[a-z][a-z0-9_-]*$/i.test(
+  227:           next,
+  228:         ) &&
+  229:         !ignored.has(next)
+  230:       ) {
+  231:         result.push(next);
+  232:       }
+  233:     }
+  234:   }
+  235: 
+  236:   /*
+  237:     X60 Ultra와 X60ULTRA가 동시에 들어있는 제목처럼
+
+===== LINE 394 =====
+  354:       offerDirect
+  355:     )
+  356:   ) {
+  357:     return true;
+  358:   }
+  359: 
+  360:   return false;
+  361: }
+  362: 
+  363: function offerMatchScore(
+  364:   targetName: string,
+  365:   offerName: string,
+  366: ) {
+  367:   const targetText =
+  368:     normalizedMatchText(
+  369:       targetName,
+  370:     );
+  371: 
+  372:   const offerText =
+  373:     normalizedMatchText(
+  374:       offerName,
+  375:     );
+  376: 
+  377:   if (
+  378:     !targetText ||
+  379:     !offerText
+  380:   ) {
+  381:     return 0;
+  382:   }
+  383: 
+  384:   if (
+  385:     hasConflictingVariant(
+  386:       targetName,
+  387:       offerName,
+  388:     )
+  389:   ) {
+  390:     return 0;
+  391:   }
+  392: 
+  393:   const modelTokens =
+  394:     getModelTokens(
+  395:       targetName,
+  396:     );
+  397: 
+  398:   if (modelTokens.length === 0) {
+  399:     return 0;
+  400:   }
+  401: 
+  402:   let matched = 0;
+  403: 
+  404:   for (
+  405:     const token of modelTokens
+  406:   ) {
+  407:     const compact =
+  408:       compactToken(token);
+  409: 
+  410:     const offerCompact =
+  411:       compactToken(
+  412:         offerText,
+  413:       );
+  414: 
+  415:     if (
+  416:       compact &&
+  417:       offerCompact.includes(
+  418:         compact,
+  419:       )
+  420:     ) {
+  421:       matched++;
+  422:     }
+  423:   }
+  424: 
+  425:   /*
+  426:     모델 핵심 토큰을 하나도 못 맞추면
+  427:     동일 제품 판매처 후보로 보지 않는다.
+  428:   */
+  429:   if (matched === 0) {
+  430:     return 0;
+  431:   }
+  432: 
+  433:   const ratio =
+  434:     matched /
+  435:     modelTokens.length;
+  436: 
+  437:   let score =
+  438:     ratio * 100;
+  439: 
+  440:   const variants =
+  441:     getVariantTokens(
+  442:       targetName,
+  443:     );
+  444: 
+  445:   for (
+  446:     const variant of variants
+  447:   ) {
+  448:     if (
+  449:       offerText.includes(
+  450:         variant,
+  451:       )
+  452:     ) {
+  453:       score += 5;
+  454:     }
+  455:   }
+  456: 
+  457:   /*
+  458:     완전히 같은 정규화 상품명은 강하게 우대.
+  459:   */
+  460:   if (
+  461:     targetText ===
+  462:     offerText
+  463:   ) {
+  464:     score += 20;
+  465:   }
+  466: 
+  467:   return score;
+  468: }
+  469: 
+  470: function extractOfferProductId(
+  471:   value: string,
+  472: ) {
+  473:   try {
+  474:     const url =
+
+===== LINE 860 =====
+  820:   return uniqueProducts;
+  821: }
+  822: 
+  823: /*
+  824:   특정 모델의 네이버 판매처들을 다시 검색한다.
+  825: 
+  826:   역할:
+  827:   - reviewSource: 동일 모델/구성 후보 중 리뷰 수가 가장 많은 결과
+  828:   - purchaseSource: 동일 모델/구성 후보 중 최저가
+  829:     (동가이면 리뷰 수가 많은 결과 우선)
+  830: 
+  831:   주의:
+  832:   이 함수는 '판매처 후보 선택'까지만 담당한다.
+  833:   실제 리뷰 상세수집 가능 여부와 구매링크 최종 검증은
+  834:   이후 단계에서 별도로 확인한다.
+  835: */
+  836: export async function searchProductOffers(
+  837:   productName: string,
+  838: ): Promise<ProductOfferSearchResult> {
+  839:   const normalizedName =
+  840:     productName.trim();
+  841: 
+  842:   if (!normalizedName) {
+  843:     return {
+  844:       offers: [],
+  845:       reviewSource: null,
+  846:       purchaseSource: null,
+  847:     };
+  848:   }
+  849: 
+  850:   const apiKey =
+  851:     process.env.SERPAPI_API_KEY;
+  852: 
+  853:   if (!apiKey) {
+  854:     throw new Error(
+  855:       "SERPAPI_API_KEY가 설정되지 않았습니다.",
+  856:     );
+  857:   }
+  858: 
+  859:   const modelTokens =
+  860:     getModelTokens(
+  861:       normalizedName,
+  862:     );
+  863: 
+  864:   /*
+  865:     너무 긴 원본 상품명 대신
+  866:     브랜드/모델 핵심을 우선 검색한다.
+  867:     모델 토큰이 없으면 원본 제목을 사용한다.
+  868:   */
+  869:   const firstToken =
+  870:     normalizedMatchText(
+  871:       normalizedName,
+  872:     )
+  873:       .split(" ")
+  874:       .filter(Boolean)[0] ??
+  875:     "";
+  876: 
+  877:   const compactQuery =
+  878:     [
+  879:       firstToken,
+  880:       ...modelTokens,
+  881:     ]
+  882:       .filter(Boolean)
+  883:       .join(" ")
+  884:       .trim();
+  885: 
+  886:   const queries =
+  887:     [
+  888:       compactQuery,
+  889:       normalizedName,
+  890:     ]
+  891:       .filter(Boolean)
+  892:       .filter(
+  893:         (
+  894:           query,
+  895:           index,
+  896:           array,
+  897:         ) =>
+  898:           array.indexOf(query) ===
+  899:           index,
+  900:       );
+  901: 
+  902:   const offers:
+  903:     ProductOffer[] = [];
+  904: 
+  905:   const seen =
+  906:     new Set<string>();
+  907: 
+  908:   for (const query of queries) {
+  909:     const rawResults =
+  910:       await searchNaverShopping(
+  911:         query,
+  912:         apiKey,
+  913:       );
+  914: 
+  915:     for (
+  916:       const item of rawResults
+  917:     ) {
+  918:       const name =
+  919:         normalizeText(
+  920:           item.title,
+  921:         );
+  922: 
+  923:       const url =
+  924:         normalizeText(
+  925:           item.link,
+  926:         );
+  927: 
+  928:       const price =
+  929:         normalizeNumber(
+  930:           item.price,
+  931:         );
+  932: 
+  933:       if (
+  934:         !name ||
+  935:         !url ||
+  936:         price <= 0 ||
+  937:         isBadOfferTitle(name)
+  938:       ) {
+  939:         continue;
+  940:       }
+
+############################################################
+PATTERN: offerMatchScore
+MATCHES: 2
+############################################################
+
+===== LINE 363 =====
+  323:         target.includes(b) &&
+  324:         offer.includes(a)
+  325:       )
+  326:     ) {
+  327:       return true;
+  328:     }
+  329:   }
+  330: 
+  331:   /*
+  332:     직배수형과 물통형은 같은 모델명이어도
+  333:     구매 구성이 다를 수 있으므로 충돌로 본다.
+  334:   */
+  335:   const targetDirect =
+  336:     target.includes("직배수");
+  337: 
+  338:   const offerDirect =
+  339:     offer.includes("직배수");
+  340: 
+  341:   const targetTank =
+  342:     target.includes("물통형");
+  343: 
+  344:   const offerTank =
+  345:     offer.includes("물통형");
+  346: 
+  347:   if (
+  348:     (
+  349:       targetDirect &&
+  350:       offerTank
+  351:     ) ||
+  352:     (
+  353:       targetTank &&
+  354:       offerDirect
+  355:     )
+  356:   ) {
+  357:     return true;
+  358:   }
+  359: 
+  360:   return false;
+  361: }
+  362: 
+  363: function offerMatchScore(
+  364:   targetName: string,
+  365:   offerName: string,
+  366: ) {
+  367:   const targetText =
+  368:     normalizedMatchText(
+  369:       targetName,
+  370:     );
+  371: 
+  372:   const offerText =
+  373:     normalizedMatchText(
+  374:       offerName,
+  375:     );
+  376: 
+  377:   if (
+  378:     !targetText ||
+  379:     !offerText
+  380:   ) {
+  381:     return 0;
+  382:   }
+  383: 
+  384:   if (
+  385:     hasConflictingVariant(
+  386:       targetName,
+  387:       offerName,
+  388:     )
+  389:   ) {
+  390:     return 0;
+  391:   }
+  392: 
+  393:   const modelTokens =
+  394:     getModelTokens(
+  395:       targetName,
+  396:     );
+  397: 
+  398:   if (modelTokens.length === 0) {
+  399:     return 0;
+  400:   }
+  401: 
+  402:   let matched = 0;
+  403: 
+  404:   for (
+  405:     const token of modelTokens
+  406:   ) {
+  407:     const compact =
+  408:       compactToken(token);
+  409: 
+  410:     const offerCompact =
+  411:       compactToken(
+  412:         offerText,
+  413:       );
+  414: 
+  415:     if (
+  416:       compact &&
+  417:       offerCompact.includes(
+  418:         compact,
+  419:       )
+  420:     ) {
+  421:       matched++;
+  422:     }
+  423:   }
+  424: 
+  425:   /*
+  426:     모델 핵심 토큰을 하나도 못 맞추면
+  427:     동일 제품 판매처 후보로 보지 않는다.
+  428:   */
+  429:   if (matched === 0) {
+  430:     return 0;
+  431:   }
+  432: 
+  433:   const ratio =
+  434:     matched /
+  435:     modelTokens.length;
+  436: 
+  437:   let score =
+  438:     ratio * 100;
+  439: 
+  440:   const variants =
+  441:     getVariantTokens(
+  442:       targetName,
+  443:     );
+
+===== LINE 943 =====
+  903:     ProductOffer[] = [];
+  904: 
+  905:   const seen =
+  906:     new Set<string>();
+  907: 
+  908:   for (const query of queries) {
+  909:     const rawResults =
+  910:       await searchNaverShopping(
+  911:         query,
+  912:         apiKey,
+  913:       );
+  914: 
+  915:     for (
+  916:       const item of rawResults
+  917:     ) {
+  918:       const name =
+  919:         normalizeText(
+  920:           item.title,
+  921:         );
+  922: 
+  923:       const url =
+  924:         normalizeText(
+  925:           item.link,
+  926:         );
+  927: 
+  928:       const price =
+  929:         normalizeNumber(
+  930:           item.price,
+  931:         );
+  932: 
+  933:       if (
+  934:         !name ||
+  935:         !url ||
+  936:         price <= 0 ||
+  937:         isBadOfferTitle(name)
+  938:       ) {
+  939:         continue;
+  940:       }
+  941: 
+  942:       const matchScore =
+  943:         offerMatchScore(
+  944:           normalizedName,
+  945:           name,
+  946:         );
+  947: 
+  948:       /*
+  949:         모델 핵심 토큰 대부분이 맞는 후보만 사용한다.
+  950:         50점 미만은 다른 모델일 가능성이 높아 제외한다.
+  951:       */
+  952:       if (matchScore < 50) {
+  953:         continue;
+  954:       }
+  955: 
+  956:       const seller =
+  957:         normalizeText(
+  958:           item.stores,
+  959:         ) ||
+  960:         "판매처 미확인";
+  961: 
+  962:       const resolvedUrl =
+  963:         await resolveAderUrl(
+  964:           url,
+  965:         );
+  966: 
+  967:       const sourceType =
+  968:         getOfferSourceType(
+  969:           seller,
+  970:           url,
+  971:           resolvedUrl,
+  972:         );
+  973: 
+  974:       const offer:
+  975:         ProductOffer = {
+  976:           name,
+  977: 
+  978:           brand:
+  979:             seller,
+  980: 
+  981:           price,
+  982: 
+  983:           image:
+  984:             normalizeText(
+  985:               item.thumbnail,
+  986:             ),
+  987: 
+  988:           url,
+  989: 
+  990:           reviewCount:
+  991:             Math.round(
+  992:               normalizeNumber(
+  993:                 item.reviews,
+  994:               ),
+  995:             ),
+  996: 
+  997:           rating:
+  998:             normalizeNumber(
+  999:               item.rating,
+ 1000:             ),
+ 1001: 
+ 1002:           matchScore,
+ 1003: 
+ 1004:           resolvedUrl,
+ 1005: 
+ 1006:           sourceType,
+ 1007: 
+ 1008:           isIndividualSeller:
+ 1009:             isIndividualSellerName(
+ 1010:               seller,
+ 1011:             ) &&
+ 1012:             sourceType !==
+ 1013:               "naver-aggregate",
+ 1014:         };
+ 1015: 
+ 1016:       const offerProductId =
+ 1017:         extractOfferProductId(
+ 1018:           offer.url,
+ 1019:         );
+ 1020: 
+ 1021:       /*
+ 1022:         같은 네이버 상품이 검색어만 달라져
+ 1023:         query/t/h 추적값 때문에 여러 번 들어오는 것을 막는다.
+
+############################################################
+PATTERN: isIndividualSellerName
+MATCHES: 2
+############################################################
+
+===== LINE 590 =====
+  550: 
+  551: async function resolveAderUrl(
+  552:   value: string,
+  553: ) {
+  554:   if (
+  555:     !value.includes(
+  556:       "ader.naver.com",
+  557:     )
+  558:   ) {
+  559:     return value;
+  560:   }
+  561: 
+  562:   try {
+  563:     const response =
+  564:       await fetch(
+  565:         value,
+  566:         {
+  567:           redirect: "manual",
+  568:           headers: {
+  569:             "User-Agent":
+  570:               "Mozilla/5.0",
+  571:           },
+  572:           cache: "no-store",
+  573:         },
+  574:       );
+  575: 
+  576:     const location =
+  577:       response.headers
+  578:         .get("location")
+  579:         ?.trim();
+  580: 
+  581:     return (
+  582:       location ||
+  583:       value
+  584:     );
+  585:   } catch {
+  586:     return value;
+  587:   }
+  588: }
+  589: 
+  590: function isIndividualSellerName(
+  591:   seller: string,
+  592: ) {
+  593:   const text =
+  594:     seller.trim();
+  595: 
+  596:   if (!text) {
+  597:     return false;
+  598:   }
+  599: 
+  600:   if (
+  601:     /^판매처\s*\d+$/i.test(
+  602:       text,
+  603:     )
+  604:   ) {
+  605:     return false;
+  606:   }
+  607: 
+  608:   if (
+  609:     /^포인트\s*최대/i.test(
+  610:       text,
+  611:     )
+  612:   ) {
+  613:     return false;
+  614:   }
+  615: 
+  616:   if (
+  617:     text ===
+  618:     "판매처 미확인"
+  619:   ) {
+  620:     return false;
+  621:   }
+  622: 
+  623:   return true;
+  624: }
+  625: 
+  626: function isBadOfferTitle(
+  627:   name: string,
+  628: ) {
+  629:   const banned =
+  630:     /호환|소모품|부품|필터|먼지봉투|먼지백|물걸레\s*(패드|포|천|리필)|브러시|브러쉬|배터리|충전기|세정제|액세서리|악세사리|리퍼|중고|해외직구/i;
+  631: 
+  632:   return banned.test(name);
+  633: }
+  634: 
+  635: async function searchNaverShopping(
+  636:   query: string,
+  637:   apiKey: string,
+  638: ) {
+  639:   const params =
+  640:     new URLSearchParams({
+  641:       engine: "naver",
+  642:       query,
+  643:       where: "nexearch",
+  644:       output: "json",
+  645:       api_key: apiKey,
+  646:     });
+  647: 
+  648:   const response =
+  649:     await fetch(
+  650:       `https://serpapi.com/search?${params.toString()}`,
+  651:       {
+  652:         cache: "no-store",
+  653:       },
+  654:     );
+  655: 
+  656:   const data =
+  657:     (await response.json()) as
+  658:       SerpApiResponse;
+  659: 
+  660:   if (
+  661:     !response.ok ||
+  662:     data.error
+  663:   ) {
+  664:     throw new Error(
+  665:       data.error ??
+  666:         `상품 검색에 실패했습니다. (${response.status})`,
+  667:     );
+  668:   }
+  669: 
+  670:   return Array.isArray(
+
+===== LINE 1009 =====
+  969:           seller,
+  970:           url,
+  971:           resolvedUrl,
+  972:         );
+  973: 
+  974:       const offer:
+  975:         ProductOffer = {
+  976:           name,
+  977: 
+  978:           brand:
+  979:             seller,
+  980: 
+  981:           price,
+  982: 
+  983:           image:
+  984:             normalizeText(
+  985:               item.thumbnail,
+  986:             ),
+  987: 
+  988:           url,
+  989: 
+  990:           reviewCount:
+  991:             Math.round(
+  992:               normalizeNumber(
+  993:                 item.reviews,
+  994:               ),
+  995:             ),
+  996: 
+  997:           rating:
+  998:             normalizeNumber(
+  999:               item.rating,
+ 1000:             ),
+ 1001: 
+ 1002:           matchScore,
+ 1003: 
+ 1004:           resolvedUrl,
+ 1005: 
+ 1006:           sourceType,
+ 1007: 
+ 1008:           isIndividualSeller:
+ 1009:             isIndividualSellerName(
+ 1010:               seller,
+ 1011:             ) &&
+ 1012:             sourceType !==
+ 1013:               "naver-aggregate",
+ 1014:         };
+ 1015: 
+ 1016:       const offerProductId =
+ 1017:         extractOfferProductId(
+ 1018:           offer.url,
+ 1019:         );
+ 1020: 
+ 1021:       /*
+ 1022:         같은 네이버 상품이 검색어만 달라져
+ 1023:         query/t/h 추적값 때문에 여러 번 들어오는 것을 막는다.
+ 1024: 
+ 1025:         nv_mid가 있으면 그것을 가장 강한 중복키로 사용하고,
+ 1026:         nv_mid가 없는 광고/기타 링크만
+ 1027:         상품명 + 판매처 + 가격 조합으로 fallback 한다.
+ 1028:       */
+ 1029:       const fallbackKey =
+ 1030:         [
+ 1031:           "fallback",
+ 1032:           compactToken(
+ 1033:             offer.name,
+ 1034:           ),
+ 1035:           compactToken(
+ 1036:             offer.brand,
+ 1037:           ),
+ 1038:           offer.price,
+ 1039:         ].join("|");
+ 1040: 
+ 1041:       const primaryKey =
+ 1042:         offerProductId
+ 1043:           ? `nv_mid:${offerProductId}`
+ 1044:           : fallbackKey;
+ 1045: 
+ 1046:       /*
+ 1047:         같은 상품이 한 검색에서는 cr3(nv_mid 포함),
+ 1048:         다른 검색에서는 ader(광고 URL)로 노출될 수 있다.
+ 1049: 
+ 1050:         따라서 nv_mid가 있는 상품도
+ 1051:         상품명 + 판매처 + 가격 fallback key를 함께 등록해
+ 1052:         cr3/ader 중복을 서로 잡아낸다.
+ 1053:       */
+ 1054:       if (
+ 1055:         seen.has(primaryKey) ||
+ 1056:         seen.has(fallbackKey)
+ 1057:       ) {
+ 1058:         continue;
+ 1059:       }
+ 1060: 
+ 1061:       seen.add(primaryKey);
+ 1062:       seen.add(fallbackKey);
+ 1063:       offers.push(offer);
+ 1064:     }
+ 1065:   }
+ 1066: 
+ 1067:   offers.sort(
+ 1068:     (a, b) => {
+ 1069:       if (
+ 1070:         b.matchScore !==
+ 1071:         a.matchScore
+ 1072:       ) {
+ 1073:         return (
+ 1074:           b.matchScore -
+ 1075:           a.matchScore
+ 1076:         );
+ 1077:       }
+ 1078: 
+ 1079:       if (
+ 1080:         b.reviewCount !==
+ 1081:         a.reviewCount
+ 1082:       ) {
+ 1083:         return (
+ 1084:           b.reviewCount -
+ 1085:           a.reviewCount
+ 1086:         );
+ 1087:       }
+ 1088: 
+ 1089:       return (
+
+############################################################
+PATTERN: normalizedMatchText
+MATCHES: 8
+############################################################
+
+===== LINE 130 =====
+   90: ) {
+   91:   return [
+   92:     product.name
+   93:       .toLowerCase()
+   94:       .replace(/\s+/g, ""),
+   95:     product.brand
+   96:       .toLowerCase()
+   97:       .replace(/\s+/g, ""),
+   98:     product.price,
+   99:   ].join("|");
+  100: }
+  101: 
+  102: function isUsefulProductName(
+  103:   name: string,
+  104:   keyword: string,
+  105: ) {
+  106:   const normalizedName =
+  107:     name
+  108:       .toLowerCase()
+  109:       .replace(/\s+/g, "");
+  110: 
+  111:   const normalizedKeyword =
+  112:     keyword
+  113:       .toLowerCase()
+  114:       .replace(/\s+/g, "");
+  115: 
+  116:   if (
+  117:     !normalizedName ||
+  118:     normalizedName ===
+  119:       normalizedKeyword
+  120:   ) {
+  121:     return false;
+  122:   }
+  123: 
+  124:   const banned =
+  125:     /호환|소모품|부품|필터|먼지봉투|먼지백|물걸레\s*(패드|포|천|리필)|브러시|브러쉬|배터리|충전기|세정제|액세서리/i;
+  126: 
+  127:   return !banned.test(name);
+  128: }
+  129: 
+  130: function normalizedMatchText(
+  131:   value: string,
+  132: ) {
+  133:   return value
+  134:     .toLowerCase()
+  135:     .replace(
+  136:       /[^a-z0-9가-힣]+/g,
+  137:       " ",
+  138:     )
+  139:     .replace(
+  140:       /\s+/g,
+  141:       " ",
+  142:     )
+  143:     .trim();
+  144: }
+  145: 
+  146: function compactToken(
+  147:   value: string,
+  148: ) {
+  149:   return value
+  150:     .toLowerCase()
+  151:     .replace(
+  152:       /[^a-z0-9가-힣]/g,
+  153:       "",
+  154:     );
+  155: }
+  156: 
+  157: function getModelTokens(
+  158:   productName: string,
+  159: ) {
+  160:   const tokens =
+  161:     normalizedMatchText(
+  162:       productName,
+  163:     )
+  164:       .split(" ")
+  165:       .filter(Boolean);
+  166: 
+  167:   const ignored =
+  168:     new Set([
+  169:       "로봇청소기",
+  170:       "청소기",
+  171:       "로봇",
+  172:       "올인원",
+  173:       "자동",
+  174:       "무선",
+  175:       "스마트",
+  176:       "화이트",
+  177:       "블랙",
+  178:       "실버",
+  179:       "그레이",
+  180:       "베이지",
+  181:       "단품",
+  182:       "정품",
+  183:       "공식",
+  184:       "물걸레",
+  185:       "진공",
+  186:       "바닥",
+  187:       "걸레",
+  188:       "흡입",
+  189:       "세척",
+  190:     ]);
+  191: 
+  192:   const result:
+  193:     string[] = [];
+  194: 
+  195:   for (
+  196:     let index = 0;
+  197:     index < tokens.length;
+  198:     index++
+  199:   ) {
+  200:     const token =
+  201:       tokens[index];
+  202: 
+  203:     if (
+  204:       ignored.has(token) ||
+  205:       token.length < 2
+  206:     ) {
+  207:       continue;
+  208:     }
+  209: 
+  210:     /*
+
+===== LINE 161 =====
+  121:     return false;
+  122:   }
+  123: 
+  124:   const banned =
+  125:     /호환|소모품|부품|필터|먼지봉투|먼지백|물걸레\s*(패드|포|천|리필)|브러시|브러쉬|배터리|충전기|세정제|액세서리/i;
+  126: 
+  127:   return !banned.test(name);
+  128: }
+  129: 
+  130: function normalizedMatchText(
+  131:   value: string,
+  132: ) {
+  133:   return value
+  134:     .toLowerCase()
+  135:     .replace(
+  136:       /[^a-z0-9가-힣]+/g,
+  137:       " ",
+  138:     )
+  139:     .replace(
+  140:       /\s+/g,
+  141:       " ",
+  142:     )
+  143:     .trim();
+  144: }
+  145: 
+  146: function compactToken(
+  147:   value: string,
+  148: ) {
+  149:   return value
+  150:     .toLowerCase()
+  151:     .replace(
+  152:       /[^a-z0-9가-힣]/g,
+  153:       "",
+  154:     );
+  155: }
+  156: 
+  157: function getModelTokens(
+  158:   productName: string,
+  159: ) {
+  160:   const tokens =
+  161:     normalizedMatchText(
+  162:       productName,
+  163:     )
+  164:       .split(" ")
+  165:       .filter(Boolean);
+  166: 
+  167:   const ignored =
+  168:     new Set([
+  169:       "로봇청소기",
+  170:       "청소기",
+  171:       "로봇",
+  172:       "올인원",
+  173:       "자동",
+  174:       "무선",
+  175:       "스마트",
+  176:       "화이트",
+  177:       "블랙",
+  178:       "실버",
+  179:       "그레이",
+  180:       "베이지",
+  181:       "단품",
+  182:       "정품",
+  183:       "공식",
+  184:       "물걸레",
+  185:       "진공",
+  186:       "바닥",
+  187:       "걸레",
+  188:       "흡입",
+  189:       "세척",
+  190:     ]);
+  191: 
+  192:   const result:
+  193:     string[] = [];
+  194: 
+  195:   for (
+  196:     let index = 0;
+  197:     index < tokens.length;
+  198:     index++
+  199:   ) {
+  200:     const token =
+  201:       tokens[index];
+  202: 
+  203:     if (
+  204:       ignored.has(token) ||
+  205:       token.length < 2
+  206:     ) {
+  207:       continue;
+  208:     }
+  209: 
+  210:     /*
+  211:       모델명의 핵심은 보통 숫자가 포함된 토큰
+  212:       (X60, P70, S10, N95TWU 등)이다.
+  213:     */
+  214:     if (/\d/.test(token)) {
+  215:       result.push(token);
+  216: 
+  217:       /*
+  218:         X60 Ultra / P70 Pro / S10 MaxV처럼
+  219:         모델번호 바로 뒤 영문 서브모델도 함께 사용한다.
+  220:       */
+  221:       const next =
+  222:         tokens[index + 1];
+  223: 
+  224:       if (
+  225:         next &&
+  226:         /^[a-z][a-z0-9_-]*$/i.test(
+  227:           next,
+  228:         ) &&
+  229:         !ignored.has(next)
+  230:       ) {
+  231:         result.push(next);
+  232:       }
+  233:     }
+  234:   }
+  235: 
+  236:   /*
+  237:     X60 Ultra와 X60ULTRA가 동시에 들어있는 제목처럼
+  238:     같은 의미의 중복 토큰을 제거한다.
+  239:   */
+  240:   const unique:
+  241:     string[] = [];
+
+===== LINE 268 =====
+  228:         ) &&
+  229:         !ignored.has(next)
+  230:       ) {
+  231:         result.push(next);
+  232:       }
+  233:     }
+  234:   }
+  235: 
+  236:   /*
+  237:     X60 Ultra와 X60ULTRA가 동시에 들어있는 제목처럼
+  238:     같은 의미의 중복 토큰을 제거한다.
+  239:   */
+  240:   const unique:
+  241:     string[] = [];
+  242: 
+  243:   for (const token of result) {
+  244:     const compact =
+  245:       compactToken(token);
+  246: 
+  247:     if (
+  248:       !compact ||
+  249:       unique.some(
+  250:         (existing) =>
+  251:           compactToken(existing) ===
+  252:           compact,
+  253:       )
+  254:     ) {
+  255:       continue;
+  256:     }
+  257: 
+  258:     unique.push(token);
+  259:   }
+  260: 
+  261:   return unique.slice(0, 4);
+  262: }
+  263: 
+  264: function getVariantTokens(
+  265:   productName: string,
+  266: ) {
+  267:   const text =
+  268:     normalizedMatchText(
+  269:       productName,
+  270:     );
+  271: 
+  272:   const variants = [
+  273:     "화이트",
+  274:     "블랙",
+  275:     "실버",
+  276:     "그레이",
+  277:     "베이지",
+  278:     "직배수",
+  279:     "직배수형",
+  280:     "물통형",
+  281:     "스팀",
+  282:   ];
+  283: 
+  284:   return variants.filter(
+  285:     (variant) =>
+  286:       text.includes(variant),
+  287:   );
+  288: }
+  289: 
+  290: function hasConflictingVariant(
+  291:   targetName: string,
+  292:   offerName: string,
+  293: ) {
+  294:   const target =
+  295:     normalizedMatchText(
+  296:       targetName,
+  297:     );
+  298: 
+  299:   const offer =
+  300:     normalizedMatchText(
+  301:       offerName,
+  302:     );
+  303: 
+  304:   const colorGroups = [
+  305:     ["화이트", "블랙"],
+  306:     ["화이트", "실버"],
+  307:     ["화이트", "그레이"],
+  308:     ["화이트", "베이지"],
+  309:     ["블랙", "실버"],
+  310:     ["블랙", "그레이"],
+  311:     ["블랙", "베이지"],
+  312:   ];
+  313: 
+  314:   for (
+  315:     const [a, b] of colorGroups
+  316:   ) {
+  317:     if (
+  318:       (
+  319:         target.includes(a) &&
+  320:         offer.includes(b)
+  321:       ) ||
+  322:       (
+  323:         target.includes(b) &&
+  324:         offer.includes(a)
+  325:       )
+  326:     ) {
+  327:       return true;
+  328:     }
+  329:   }
+  330: 
+  331:   /*
+  332:     직배수형과 물통형은 같은 모델명이어도
+  333:     구매 구성이 다를 수 있으므로 충돌로 본다.
+  334:   */
+  335:   const targetDirect =
+  336:     target.includes("직배수");
+  337: 
+  338:   const offerDirect =
+  339:     offer.includes("직배수");
+  340: 
+  341:   const targetTank =
+  342:     target.includes("물통형");
+  343: 
+  344:   const offerTank =
+  345:     offer.includes("물통형");
+  346: 
+  347:   if (
+  348:     (
+
+===== LINE 295 =====
+  255:       continue;
+  256:     }
+  257: 
+  258:     unique.push(token);
+  259:   }
+  260: 
+  261:   return unique.slice(0, 4);
+  262: }
+  263: 
+  264: function getVariantTokens(
+  265:   productName: string,
+  266: ) {
+  267:   const text =
+  268:     normalizedMatchText(
+  269:       productName,
+  270:     );
+  271: 
+  272:   const variants = [
+  273:     "화이트",
+  274:     "블랙",
+  275:     "실버",
+  276:     "그레이",
+  277:     "베이지",
+  278:     "직배수",
+  279:     "직배수형",
+  280:     "물통형",
+  281:     "스팀",
+  282:   ];
+  283: 
+  284:   return variants.filter(
+  285:     (variant) =>
+  286:       text.includes(variant),
+  287:   );
+  288: }
+  289: 
+  290: function hasConflictingVariant(
+  291:   targetName: string,
+  292:   offerName: string,
+  293: ) {
+  294:   const target =
+  295:     normalizedMatchText(
+  296:       targetName,
+  297:     );
+  298: 
+  299:   const offer =
+  300:     normalizedMatchText(
+  301:       offerName,
+  302:     );
+  303: 
+  304:   const colorGroups = [
+  305:     ["화이트", "블랙"],
+  306:     ["화이트", "실버"],
+  307:     ["화이트", "그레이"],
+  308:     ["화이트", "베이지"],
+  309:     ["블랙", "실버"],
+  310:     ["블랙", "그레이"],
+  311:     ["블랙", "베이지"],
+  312:   ];
+  313: 
+  314:   for (
+  315:     const [a, b] of colorGroups
+  316:   ) {
+  317:     if (
+  318:       (
+  319:         target.includes(a) &&
+  320:         offer.includes(b)
+  321:       ) ||
+  322:       (
+  323:         target.includes(b) &&
+  324:         offer.includes(a)
+  325:       )
+  326:     ) {
+  327:       return true;
+  328:     }
+  329:   }
+  330: 
+  331:   /*
+  332:     직배수형과 물통형은 같은 모델명이어도
+  333:     구매 구성이 다를 수 있으므로 충돌로 본다.
+  334:   */
+  335:   const targetDirect =
+  336:     target.includes("직배수");
+  337: 
+  338:   const offerDirect =
+  339:     offer.includes("직배수");
+  340: 
+  341:   const targetTank =
+  342:     target.includes("물통형");
+  343: 
+  344:   const offerTank =
+  345:     offer.includes("물통형");
+  346: 
+  347:   if (
+  348:     (
+  349:       targetDirect &&
+  350:       offerTank
+  351:     ) ||
+  352:     (
+  353:       targetTank &&
+  354:       offerDirect
+  355:     )
+  356:   ) {
+  357:     return true;
+  358:   }
+  359: 
+  360:   return false;
+  361: }
+  362: 
+  363: function offerMatchScore(
+  364:   targetName: string,
+  365:   offerName: string,
+  366: ) {
+  367:   const targetText =
+  368:     normalizedMatchText(
+  369:       targetName,
+  370:     );
+  371: 
+  372:   const offerText =
+  373:     normalizedMatchText(
+  374:       offerName,
+  375:     );
+
+===== LINE 300 =====
+  260: 
+  261:   return unique.slice(0, 4);
+  262: }
+  263: 
+  264: function getVariantTokens(
+  265:   productName: string,
+  266: ) {
+  267:   const text =
+  268:     normalizedMatchText(
+  269:       productName,
+  270:     );
+  271: 
+  272:   const variants = [
+  273:     "화이트",
+  274:     "블랙",
+  275:     "실버",
+  276:     "그레이",
+  277:     "베이지",
+  278:     "직배수",
+  279:     "직배수형",
+  280:     "물통형",
+  281:     "스팀",
+  282:   ];
+  283: 
+  284:   return variants.filter(
+  285:     (variant) =>
+  286:       text.includes(variant),
+  287:   );
+  288: }
+  289: 
+  290: function hasConflictingVariant(
+  291:   targetName: string,
+  292:   offerName: string,
+  293: ) {
+  294:   const target =
+  295:     normalizedMatchText(
+  296:       targetName,
+  297:     );
+  298: 
+  299:   const offer =
+  300:     normalizedMatchText(
+  301:       offerName,
+  302:     );
+  303: 
+  304:   const colorGroups = [
+  305:     ["화이트", "블랙"],
+  306:     ["화이트", "실버"],
+  307:     ["화이트", "그레이"],
+  308:     ["화이트", "베이지"],
+  309:     ["블랙", "실버"],
+  310:     ["블랙", "그레이"],
+  311:     ["블랙", "베이지"],
+  312:   ];
+  313: 
+  314:   for (
+  315:     const [a, b] of colorGroups
+  316:   ) {
+  317:     if (
+  318:       (
+  319:         target.includes(a) &&
+  320:         offer.includes(b)
+  321:       ) ||
+  322:       (
+  323:         target.includes(b) &&
+  324:         offer.includes(a)
+  325:       )
+  326:     ) {
+  327:       return true;
+  328:     }
+  329:   }
+  330: 
+  331:   /*
+  332:     직배수형과 물통형은 같은 모델명이어도
+  333:     구매 구성이 다를 수 있으므로 충돌로 본다.
+  334:   */
+  335:   const targetDirect =
+  336:     target.includes("직배수");
+  337: 
+  338:   const offerDirect =
+  339:     offer.includes("직배수");
+  340: 
+  341:   const targetTank =
+  342:     target.includes("물통형");
+  343: 
+  344:   const offerTank =
+  345:     offer.includes("물통형");
+  346: 
+  347:   if (
+  348:     (
+  349:       targetDirect &&
+  350:       offerTank
+  351:     ) ||
+  352:     (
+  353:       targetTank &&
+  354:       offerDirect
+  355:     )
+  356:   ) {
+  357:     return true;
+  358:   }
+  359: 
+  360:   return false;
+  361: }
+  362: 
+  363: function offerMatchScore(
+  364:   targetName: string,
+  365:   offerName: string,
+  366: ) {
+  367:   const targetText =
+  368:     normalizedMatchText(
+  369:       targetName,
+  370:     );
+  371: 
+  372:   const offerText =
+  373:     normalizedMatchText(
+  374:       offerName,
+  375:     );
+  376: 
+  377:   if (
+  378:     !targetText ||
+  379:     !offerText
+  380:   ) {
+
+===== LINE 368 =====
+  328:     }
+  329:   }
+  330: 
+  331:   /*
+  332:     직배수형과 물통형은 같은 모델명이어도
+  333:     구매 구성이 다를 수 있으므로 충돌로 본다.
+  334:   */
+  335:   const targetDirect =
+  336:     target.includes("직배수");
+  337: 
+  338:   const offerDirect =
+  339:     offer.includes("직배수");
+  340: 
+  341:   const targetTank =
+  342:     target.includes("물통형");
+  343: 
+  344:   const offerTank =
+  345:     offer.includes("물통형");
+  346: 
+  347:   if (
+  348:     (
+  349:       targetDirect &&
+  350:       offerTank
+  351:     ) ||
+  352:     (
+  353:       targetTank &&
+  354:       offerDirect
+  355:     )
+  356:   ) {
+  357:     return true;
+  358:   }
+  359: 
+  360:   return false;
+  361: }
+  362: 
+  363: function offerMatchScore(
+  364:   targetName: string,
+  365:   offerName: string,
+  366: ) {
+  367:   const targetText =
+  368:     normalizedMatchText(
+  369:       targetName,
+  370:     );
+  371: 
+  372:   const offerText =
+  373:     normalizedMatchText(
+  374:       offerName,
+  375:     );
+  376: 
+  377:   if (
+  378:     !targetText ||
+  379:     !offerText
+  380:   ) {
+  381:     return 0;
+  382:   }
+  383: 
+  384:   if (
+  385:     hasConflictingVariant(
+  386:       targetName,
+  387:       offerName,
+  388:     )
+  389:   ) {
+  390:     return 0;
+  391:   }
+  392: 
+  393:   const modelTokens =
+  394:     getModelTokens(
+  395:       targetName,
+  396:     );
+  397: 
+  398:   if (modelTokens.length === 0) {
+  399:     return 0;
+  400:   }
+  401: 
+  402:   let matched = 0;
+  403: 
+  404:   for (
+  405:     const token of modelTokens
+  406:   ) {
+  407:     const compact =
+  408:       compactToken(token);
+  409: 
+  410:     const offerCompact =
+  411:       compactToken(
+  412:         offerText,
+  413:       );
+  414: 
+  415:     if (
+  416:       compact &&
+  417:       offerCompact.includes(
+  418:         compact,
+  419:       )
+  420:     ) {
+  421:       matched++;
+  422:     }
+  423:   }
+  424: 
+  425:   /*
+  426:     모델 핵심 토큰을 하나도 못 맞추면
+  427:     동일 제품 판매처 후보로 보지 않는다.
+  428:   */
+  429:   if (matched === 0) {
+  430:     return 0;
+  431:   }
+  432: 
+  433:   const ratio =
+  434:     matched /
+  435:     modelTokens.length;
+  436: 
+  437:   let score =
+  438:     ratio * 100;
+  439: 
+  440:   const variants =
+  441:     getVariantTokens(
+  442:       targetName,
+  443:     );
+  444: 
+  445:   for (
+  446:     const variant of variants
+  447:   ) {
+  448:     if (
+
+===== LINE 373 =====
+  333:     구매 구성이 다를 수 있으므로 충돌로 본다.
+  334:   */
+  335:   const targetDirect =
+  336:     target.includes("직배수");
+  337: 
+  338:   const offerDirect =
+  339:     offer.includes("직배수");
+  340: 
+  341:   const targetTank =
+  342:     target.includes("물통형");
+  343: 
+  344:   const offerTank =
+  345:     offer.includes("물통형");
+  346: 
+  347:   if (
+  348:     (
+  349:       targetDirect &&
+  350:       offerTank
+  351:     ) ||
+  352:     (
+  353:       targetTank &&
+  354:       offerDirect
+  355:     )
+  356:   ) {
+  357:     return true;
+  358:   }
+  359: 
+  360:   return false;
+  361: }
+  362: 
+  363: function offerMatchScore(
+  364:   targetName: string,
+  365:   offerName: string,
+  366: ) {
+  367:   const targetText =
+  368:     normalizedMatchText(
+  369:       targetName,
+  370:     );
+  371: 
+  372:   const offerText =
+  373:     normalizedMatchText(
+  374:       offerName,
+  375:     );
+  376: 
+  377:   if (
+  378:     !targetText ||
+  379:     !offerText
+  380:   ) {
+  381:     return 0;
+  382:   }
+  383: 
+  384:   if (
+  385:     hasConflictingVariant(
+  386:       targetName,
+  387:       offerName,
+  388:     )
+  389:   ) {
+  390:     return 0;
+  391:   }
+  392: 
+  393:   const modelTokens =
+  394:     getModelTokens(
+  395:       targetName,
+  396:     );
+  397: 
+  398:   if (modelTokens.length === 0) {
+  399:     return 0;
+  400:   }
+  401: 
+  402:   let matched = 0;
+  403: 
+  404:   for (
+  405:     const token of modelTokens
+  406:   ) {
+  407:     const compact =
+  408:       compactToken(token);
+  409: 
+  410:     const offerCompact =
+  411:       compactToken(
+  412:         offerText,
+  413:       );
+  414: 
+  415:     if (
+  416:       compact &&
+  417:       offerCompact.includes(
+  418:         compact,
+  419:       )
+  420:     ) {
+  421:       matched++;
+  422:     }
+  423:   }
+  424: 
+  425:   /*
+  426:     모델 핵심 토큰을 하나도 못 맞추면
+  427:     동일 제품 판매처 후보로 보지 않는다.
+  428:   */
+  429:   if (matched === 0) {
+  430:     return 0;
+  431:   }
+  432: 
+  433:   const ratio =
+  434:     matched /
+  435:     modelTokens.length;
+  436: 
+  437:   let score =
+  438:     ratio * 100;
+  439: 
+  440:   const variants =
+  441:     getVariantTokens(
+  442:       targetName,
+  443:     );
+  444: 
+  445:   for (
+  446:     const variant of variants
+  447:   ) {
+  448:     if (
+  449:       offerText.includes(
+  450:         variant,
+  451:       )
+  452:     ) {
+  453:       score += 5;
+
+===== LINE 870 =====
+  830: 
+  831:   주의:
+  832:   이 함수는 '판매처 후보 선택'까지만 담당한다.
+  833:   실제 리뷰 상세수집 가능 여부와 구매링크 최종 검증은
+  834:   이후 단계에서 별도로 확인한다.
+  835: */
+  836: export async function searchProductOffers(
+  837:   productName: string,
+  838: ): Promise<ProductOfferSearchResult> {
+  839:   const normalizedName =
+  840:     productName.trim();
+  841: 
+  842:   if (!normalizedName) {
+  843:     return {
+  844:       offers: [],
+  845:       reviewSource: null,
+  846:       purchaseSource: null,
+  847:     };
+  848:   }
+  849: 
+  850:   const apiKey =
+  851:     process.env.SERPAPI_API_KEY;
+  852: 
+  853:   if (!apiKey) {
+  854:     throw new Error(
+  855:       "SERPAPI_API_KEY가 설정되지 않았습니다.",
+  856:     );
+  857:   }
+  858: 
+  859:   const modelTokens =
+  860:     getModelTokens(
+  861:       normalizedName,
+  862:     );
+  863: 
+  864:   /*
+  865:     너무 긴 원본 상품명 대신
+  866:     브랜드/모델 핵심을 우선 검색한다.
+  867:     모델 토큰이 없으면 원본 제목을 사용한다.
+  868:   */
+  869:   const firstToken =
+  870:     normalizedMatchText(
+  871:       normalizedName,
+  872:     )
+  873:       .split(" ")
+  874:       .filter(Boolean)[0] ??
+  875:     "";
+  876: 
+  877:   const compactQuery =
+  878:     [
+  879:       firstToken,
+  880:       ...modelTokens,
+  881:     ]
+  882:       .filter(Boolean)
+  883:       .join(" ")
+  884:       .trim();
+  885: 
+  886:   const queries =
+  887:     [
+  888:       compactQuery,
+  889:       normalizedName,
+  890:     ]
+  891:       .filter(Boolean)
+  892:       .filter(
+  893:         (
+  894:           query,
+  895:           index,
+  896:           array,
+  897:         ) =>
+  898:           array.indexOf(query) ===
+  899:           index,
+  900:       );
+  901: 
+  902:   const offers:
+  903:     ProductOffer[] = [];
+  904: 
+  905:   const seen =
+  906:     new Set<string>();
+  907: 
+  908:   for (const query of queries) {
+  909:     const rawResults =
+  910:       await searchNaverShopping(
+  911:         query,
+  912:         apiKey,
+  913:       );
+  914: 
+  915:     for (
+  916:       const item of rawResults
+  917:     ) {
+  918:       const name =
+  919:         normalizeText(
+  920:           item.title,
+  921:         );
+  922: 
+  923:       const url =
+  924:         normalizeText(
+  925:           item.link,
+  926:         );
+  927: 
+  928:       const price =
+  929:         normalizeNumber(
+  930:           item.price,
+  931:         );
+  932: 
+  933:       if (
+  934:         !name ||
+  935:         !url ||
+  936:         price <= 0 ||
+  937:         isBadOfferTitle(name)
+  938:       ) {
+  939:         continue;
+  940:       }
+  941: 
+  942:       const matchScore =
+  943:         offerMatchScore(
+  944:           normalizedName,
+  945:           name,
+  946:         );
+  947: 
+  948:       /*
+  949:         모델 핵심 토큰 대부분이 맞는 후보만 사용한다.
+  950:         50점 미만은 다른 모델일 가능성이 높아 제외한다.
+
+############################################################
+PATTERN: compactQuery
+MATCHES: 2
+############################################################
+
+===== LINE 877 =====
+  837:   productName: string,
+  838: ): Promise<ProductOfferSearchResult> {
+  839:   const normalizedName =
+  840:     productName.trim();
+  841: 
+  842:   if (!normalizedName) {
+  843:     return {
+  844:       offers: [],
+  845:       reviewSource: null,
+  846:       purchaseSource: null,
+  847:     };
+  848:   }
+  849: 
+  850:   const apiKey =
+  851:     process.env.SERPAPI_API_KEY;
+  852: 
+  853:   if (!apiKey) {
+  854:     throw new Error(
+  855:       "SERPAPI_API_KEY가 설정되지 않았습니다.",
+  856:     );
+  857:   }
+  858: 
+  859:   const modelTokens =
+  860:     getModelTokens(
+  861:       normalizedName,
+  862:     );
+  863: 
+  864:   /*
+  865:     너무 긴 원본 상품명 대신
+  866:     브랜드/모델 핵심을 우선 검색한다.
+  867:     모델 토큰이 없으면 원본 제목을 사용한다.
+  868:   */
+  869:   const firstToken =
+  870:     normalizedMatchText(
+  871:       normalizedName,
+  872:     )
+  873:       .split(" ")
+  874:       .filter(Boolean)[0] ??
+  875:     "";
+  876: 
+  877:   const compactQuery =
+  878:     [
+  879:       firstToken,
+  880:       ...modelTokens,
+  881:     ]
+  882:       .filter(Boolean)
+  883:       .join(" ")
+  884:       .trim();
+  885: 
+  886:   const queries =
+  887:     [
+  888:       compactQuery,
+  889:       normalizedName,
+  890:     ]
+  891:       .filter(Boolean)
+  892:       .filter(
+  893:         (
+  894:           query,
+  895:           index,
+  896:           array,
+  897:         ) =>
+  898:           array.indexOf(query) ===
+  899:           index,
+  900:       );
+  901: 
+  902:   const offers:
+  903:     ProductOffer[] = [];
+  904: 
+  905:   const seen =
+  906:     new Set<string>();
+  907: 
+  908:   for (const query of queries) {
+  909:     const rawResults =
+  910:       await searchNaverShopping(
+  911:         query,
+  912:         apiKey,
+  913:       );
+  914: 
+  915:     for (
+  916:       const item of rawResults
+  917:     ) {
+  918:       const name =
+  919:         normalizeText(
+  920:           item.title,
+  921:         );
+  922: 
+  923:       const url =
+  924:         normalizeText(
+  925:           item.link,
+  926:         );
+  927: 
+  928:       const price =
+  929:         normalizeNumber(
+  930:           item.price,
+  931:         );
+  932: 
+  933:       if (
+  934:         !name ||
+  935:         !url ||
+  936:         price <= 0 ||
+  937:         isBadOfferTitle(name)
+  938:       ) {
+  939:         continue;
+  940:       }
+  941: 
+  942:       const matchScore =
+  943:         offerMatchScore(
+  944:           normalizedName,
+  945:           name,
+  946:         );
+  947: 
+  948:       /*
+  949:         모델 핵심 토큰 대부분이 맞는 후보만 사용한다.
+  950:         50점 미만은 다른 모델일 가능성이 높아 제외한다.
+  951:       */
+  952:       if (matchScore < 50) {
+  953:         continue;
+  954:       }
+  955: 
+  956:       const seller =
+  957:         normalizeText(
+
+===== LINE 888 =====
+  848:   }
+  849: 
+  850:   const apiKey =
+  851:     process.env.SERPAPI_API_KEY;
+  852: 
+  853:   if (!apiKey) {
+  854:     throw new Error(
+  855:       "SERPAPI_API_KEY가 설정되지 않았습니다.",
+  856:     );
+  857:   }
+  858: 
+  859:   const modelTokens =
+  860:     getModelTokens(
+  861:       normalizedName,
+  862:     );
+  863: 
+  864:   /*
+  865:     너무 긴 원본 상품명 대신
+  866:     브랜드/모델 핵심을 우선 검색한다.
+  867:     모델 토큰이 없으면 원본 제목을 사용한다.
+  868:   */
+  869:   const firstToken =
+  870:     normalizedMatchText(
+  871:       normalizedName,
+  872:     )
+  873:       .split(" ")
+  874:       .filter(Boolean)[0] ??
+  875:     "";
+  876: 
+  877:   const compactQuery =
+  878:     [
+  879:       firstToken,
+  880:       ...modelTokens,
+  881:     ]
+  882:       .filter(Boolean)
+  883:       .join(" ")
+  884:       .trim();
+  885: 
+  886:   const queries =
+  887:     [
+  888:       compactQuery,
+  889:       normalizedName,
+  890:     ]
+  891:       .filter(Boolean)
+  892:       .filter(
+  893:         (
+  894:           query,
+  895:           index,
+  896:           array,
+  897:         ) =>
+  898:           array.indexOf(query) ===
+  899:           index,
+  900:       );
+  901: 
+  902:   const offers:
+  903:     ProductOffer[] = [];
+  904: 
+  905:   const seen =
+  906:     new Set<string>();
+  907: 
+  908:   for (const query of queries) {
+  909:     const rawResults =
+  910:       await searchNaverShopping(
+  911:         query,
+  912:         apiKey,
+  913:       );
+  914: 
+  915:     for (
+  916:       const item of rawResults
+  917:     ) {
+  918:       const name =
+  919:         normalizeText(
+  920:           item.title,
+  921:         );
+  922: 
+  923:       const url =
+  924:         normalizeText(
+  925:           item.link,
+  926:         );
+  927: 
+  928:       const price =
+  929:         normalizeNumber(
+  930:           item.price,
+  931:         );
+  932: 
+  933:       if (
+  934:         !name ||
+  935:         !url ||
+  936:         price <= 0 ||
+  937:         isBadOfferTitle(name)
+  938:       ) {
+  939:         continue;
+  940:       }
+  941: 
+  942:       const matchScore =
+  943:         offerMatchScore(
+  944:           normalizedName,
+  945:           name,
+  946:         );
+  947: 
+  948:       /*
+  949:         모델 핵심 토큰 대부분이 맞는 후보만 사용한다.
+  950:         50점 미만은 다른 모델일 가능성이 높아 제외한다.
+  951:       */
+  952:       if (matchScore < 50) {
+  953:         continue;
+  954:       }
+  955: 
+  956:       const seller =
+  957:         normalizeText(
+  958:           item.stores,
+  959:         ) ||
+  960:         "판매처 미확인";
+  961: 
+  962:       const resolvedUrl =
+  963:         await resolveAderUrl(
+  964:           url,
+  965:         );
+  966: 
+  967:       const sourceType =
+  968:         getOfferSourceType(

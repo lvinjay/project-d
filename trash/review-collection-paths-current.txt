@@ -1,0 +1,3484 @@
+﻿
+============================================================
+TARGET: .\app\api\naver-capture
+PATTERN: review
+MATCHES: 4
+============================================================
+
+C:\Projects\frontend\app\api\naver-capture\route.ts:18
+  seller: string;
+  url: string;
+  imageUrl: string;
+  price: number;
+  reviewCount: number;
+  rating: number;
+};
+
+type CaptureData = {
+  category: string;
+  minBudget: number;
+  maxBudget: number;
+  products: CapturedProduct[];
+
+C:\Projects\frontend\app\api\naver-capture\route.ts:37
+  seller?: unknown;
+  url?: unknown;
+  imageUrl?: unknown;
+  price?: unknown;
+  reviewCount?: unknown;
+  rating?: unknown;
+};
+
+declare global {
+  var projectDNaverCaptures:
+    Map<string, CaptureData>
+    | undefined;
+}
+
+C:\Projects\frontend\app\api\naver-capture\route.ts:157
+              number(
+                raw.price,
+              ),
+
+            reviewCount:
+              number(
+                raw.reviewCount,
+              ),
+
+            rating:
+              number(
+                raw.rating,
+              ),
+
+C:\Projects\frontend\app\api\naver-capture\route.ts:159
+              ),
+
+            reviewCount:
+              number(
+                raw.reviewCount,
+              ),
+
+            rating:
+              number(
+                raw.rating,
+              ),
+          }),
+        )
+
+============================================================
+TARGET: .\app\api\naver-capture
+PATTERN: reviewCount
+MATCHES: 4
+============================================================
+
+C:\Projects\frontend\app\api\naver-capture\route.ts:18
+  seller: string;
+  url: string;
+  imageUrl: string;
+  price: number;
+  reviewCount: number;
+  rating: number;
+};
+
+type CaptureData = {
+  category: string;
+  minBudget: number;
+  maxBudget: number;
+  products: CapturedProduct[];
+
+C:\Projects\frontend\app\api\naver-capture\route.ts:37
+  seller?: unknown;
+  url?: unknown;
+  imageUrl?: unknown;
+  price?: unknown;
+  reviewCount?: unknown;
+  rating?: unknown;
+};
+
+declare global {
+  var projectDNaverCaptures:
+    Map<string, CaptureData>
+    | undefined;
+}
+
+C:\Projects\frontend\app\api\naver-capture\route.ts:157
+              number(
+                raw.price,
+              ),
+
+            reviewCount:
+              number(
+                raw.reviewCount,
+              ),
+
+            rating:
+              number(
+                raw.rating,
+              ),
+
+C:\Projects\frontend\app\api\naver-capture\route.ts:159
+              ),
+
+            reviewCount:
+              number(
+                raw.reviewCount,
+              ),
+
+            rating:
+              number(
+                raw.rating,
+              ),
+          }),
+        )
+
+============================================================
+TARGET: .\app\api\naver-product-detail
+PATTERN: collectNaverProduct
+MATCHES: 2
+============================================================
+
+C:\Projects\frontend\app\api\naver-product-detail\route.ts:6
+  NextResponse,
+} from "next/server";
+
+import {
+  collectNaverProduct,
+} from "../../../lib/brightDataProduct";
+
+export const runtime =
+  "nodejs";
+
+export const dynamic =
+  "force-dynamic";
+
+
+C:\Projects\frontend\app\api\naver-product-detail\route.ts:45
+      );
+    }
+
+    const product =
+      await collectNaverProduct(
+        url,
+      );
+
+    return NextResponse.json({
+      success: true,
+      product,
+    });
+  } catch (error) {
+
+============================================================
+TARGET: .\app\api\analyze-reviews
+PATTERN: review
+MATCHES: 36
+============================================================
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:16
+
+export const dynamic =
+  "force-dynamic";
+
+type ReviewCollectionStats = {
+  total: number;
+  ranking: number;
+  latest: number;
+  lowScore: number;
+};
+
+type ReviewAnalysisRequest = {
+  productName?: string;
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:23
+  latest: number;
+  lowScore: number;
+};
+
+type ReviewAnalysisRequest = {
+  productName?: string;
+  category?: string;
+  reviews?: string[];
+  collectionStats?: unknown;
+};
+
+type DynamicCriterion = {
+  key?: string;
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:26
+
+type ReviewAnalysisRequest = {
+  productName?: string;
+  category?: string;
+  reviews?: string[];
+  collectionStats?: unknown;
+};
+
+type DynamicCriterion = {
+  key?: string;
+  label?: string;
+  shortDescription?: string;
+  helpText?: string;
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:39
+  sourceType?: string;
+};
+
+type CriterionEvidence = {
+  reviewEvidenceCount: number;
+  summary: string;
+};
+
+function extractJson(
+  text: string,
+) {
+  const cleaned =
+    text
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:102
+
+function normalizeCollectionStats(
+  value: unknown,
+  fallbackTotal: number,
+): ReviewCollectionStats {
+  const row =
+    value &&
+    typeof value ===
+      "object" &&
+    !Array.isArray(value)
+      ? (
+          value as Record<
+            string,
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:169
+
+function normalizeCriterionEvidence(
+  raw: unknown,
+  criterionKeys: string[],
+  reviewCount: number,
+) {
+  const row =
+    raw &&
+    typeof raw ===
+      "object" &&
+    !Array.isArray(raw)
+      ? (
+          raw as Record<
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:211
+        : {};
+
+    const rawCount =
+      Number(
+        item.reviewEvidenceCount,
+      );
+
+    const reviewEvidenceCount =
+      Number.isFinite(
+        rawCount,
+      ) &&
+      rawCount >= 0
+        ? Math.min(
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:214
+      Number(
+        item.reviewEvidenceCount,
+      );
+
+    const reviewEvidenceCount =
+      Number.isFinite(
+        rawCount,
+      ) &&
+      rawCount >= 0
+        ? Math.min(
+            reviewCount,
+            Math.round(
+              rawCount,
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:220
+        rawCount,
+      ) &&
+      rawCount >= 0
+        ? Math.min(
+            reviewCount,
+            Math.round(
+              rawCount,
+            ),
+          )
+        : 0;
+
+    const summary =
+      typeof item.summary ===
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:234
+        ? item.summary.trim()
+        : "";
+
+    result[key] = {
+      reviewEvidenceCount,
+
+      summary:
+        summary ||
+        (
+          reviewEvidenceCount >
+          0
+            ? "관련 구매기준에 대한 실제 사용 리뷰 근거가 확인되었습니다."
+            : "현재 수집된 리뷰만으로는 이 구매기준을 직접 판단할 근거가 부족합니다."
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:239
+
+      summary:
+        summary ||
+        (
+          reviewEvidenceCount >
+          0
+            ? "관련 구매기준에 대한 실제 사용 리뷰 근거가 확인되었습니다."
+            : "현재 수집된 리뷰만으로는 이 구매기준을 직접 판단할 근거가 부족합니다."
+        ),
+    };
+  }
+
+  return result;
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:353
+
+    const body =
+      (
+        await request.json()
+      ) as ReviewAnalysisRequest;
+
+    const productName =
+      typeof body.productName ===
+        "string"
+        ? body.productName.trim()
+        : "";
+
+    const category =
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:367
+        "string"
+        ? body.category.trim()
+        : "";
+
+    const reviews =
+      Array.isArray(
+        body.reviews,
+      )
+        ? body.reviews
+            .filter(
+              (
+                review,
+              ): review is string =>
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:369
+        : "";
+
+    const reviews =
+      Array.isArray(
+        body.reviews,
+      )
+        ? body.reviews
+            .filter(
+              (
+                review,
+              ): review is string =>
+                typeof review ===
+                  "string" &&
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:371
+    const reviews =
+      Array.isArray(
+        body.reviews,
+      )
+        ? body.reviews
+            .filter(
+              (
+                review,
+              ): review is string =>
+                typeof review ===
+                  "string" &&
+                review.trim()
+                  .length > 0,
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:374
+      )
+        ? body.reviews
+            .filter(
+              (
+                review,
+              ): review is string =>
+                typeof review ===
+                  "string" &&
+                review.trim()
+                  .length > 0,
+            )
+            .map(
+              (review) =>
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:375
+        ? body.reviews
+            .filter(
+              (
+                review,
+              ): review is string =>
+                typeof review ===
+                  "string" &&
+                review.trim()
+                  .length > 0,
+            )
+            .map(
+              (review) =>
+                review.trim(),
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:376
+            .filter(
+              (
+                review,
+              ): review is string =>
+                typeof review ===
+                  "string" &&
+                review.trim()
+                  .length > 0,
+            )
+            .map(
+              (review) =>
+                review.trim(),
+            )
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:378
+                review,
+              ): review is string =>
+                typeof review ===
+                  "string" &&
+                review.trim()
+                  .length > 0,
+            )
+            .map(
+              (review) =>
+                review.trim(),
+            )
+            .slice(
+              0,
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:382
+                review.trim()
+                  .length > 0,
+            )
+            .map(
+              (review) =>
+                review.trim(),
+            )
+            .slice(
+              0,
+              200,
+            )
+        : [];
+
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:383
+                  .length > 0,
+            )
+            .map(
+              (review) =>
+                review.trim(),
+            )
+            .slice(
+              0,
+              200,
+            )
+        : [];
+
+    const collectionStats =
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:394
+
+    const collectionStats =
+      normalizeCollectionStats(
+        body.collectionStats,
+        reviews.length,
+      );
+
+    if (!productName) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "상품명이 필요합니다.",
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:424
+      );
+    }
+
+    if (
+      reviews.length === 0
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "분석할 리뷰가 없습니다.",
+        },
+        {
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:554
+상품명:
+${productName}
+
+분석 대상 리뷰 수:
+${reviews.length}
+
+현재 이 카테고리의 핵심 구매기준:
+${JSON.stringify(
+  dynamicCriteria,
+  null,
+  2,
+)}
+
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:564
+  2,
+)}
+
+분석 대상 실제 리뷰:
+${reviews
+  .map(
+    (
+      review,
+      index,
+    ) =>
+      `${index + 1}. ${review}`,
+  )
+  .join("\n")}
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:567
+분석 대상 실제 리뷰:
+${reviews
+  .map(
+    (
+      review,
+      index,
+    ) =>
+      `${index + 1}. ${review}`,
+  )
+  .join("\n")}
+
+분석 원칙:
+
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:570
+    (
+      review,
+      index,
+    ) =>
+      `${index + 1}. ${review}`,
+  )
+  .join("\n")}
+
+분석 원칙:
+
+1. 반드시 제공된 리뷰 내용만 근거로 판단하세요.
+2. 리뷰에 없는 제품 사양이나 성능을 추측하지 마세요.
+3. 배송, 포장, 단순 구매 만족처럼 제품 성능과 직접 관계없는 내용은 약하게 반영하세요.
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:607
+반드시 아래 JSON 구조로 반환하세요.
+
+{
+  "productName": "${productName}",
+  "reviewCount": ${reviews.length},
+  "summary": "전체 리뷰를 종합한 2~3문장 요약",
+  "positivePoints": [
+    {
+      "topic": "장점 항목",
+      "summary": "반복적으로 확인된 실제 장점",
+      "evidenceCount": 2
+    }
+  ],
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:633
+  "notFor": [
+    "이 제품이 잘 맞지 않는 사용자"
+  ],
+  "confidenceScore": 0,
+  "reviewQuality": {
+    "highInformationReviews": 0,
+    "lowInformationReviews": 0,
+    "promotionalStyleReviews": 0
+  },
+  "criterionEvidence": {
+    "${criterionKeys[0]}": {
+      "reviewEvidenceCount": 0,
+      "summary": "해당 구매기준에 대한 리뷰 근거 요약"
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:634
+    "이 제품이 잘 맞지 않는 사용자"
+  ],
+  "confidenceScore": 0,
+  "reviewQuality": {
+    "highInformationReviews": 0,
+    "lowInformationReviews": 0,
+    "promotionalStyleReviews": 0
+  },
+  "criterionEvidence": {
+    "${criterionKeys[0]}": {
+      "reviewEvidenceCount": 0,
+      "summary": "해당 구매기준에 대한 리뷰 근거 요약"
+    }
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:635
+  ],
+  "confidenceScore": 0,
+  "reviewQuality": {
+    "highInformationReviews": 0,
+    "lowInformationReviews": 0,
+    "promotionalStyleReviews": 0
+  },
+  "criterionEvidence": {
+    "${criterionKeys[0]}": {
+      "reviewEvidenceCount": 0,
+      "summary": "해당 구매기준에 대한 리뷰 근거 요약"
+    }
+  },
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:636
+  "confidenceScore": 0,
+  "reviewQuality": {
+    "highInformationReviews": 0,
+    "lowInformationReviews": 0,
+    "promotionalStyleReviews": 0
+  },
+  "criterionEvidence": {
+    "${criterionKeys[0]}": {
+      "reviewEvidenceCount": 0,
+      "summary": "해당 구매기준에 대한 리뷰 근거 요약"
+    }
+  },
+  "criterionScores": {
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:640
+    "promotionalStyleReviews": 0
+  },
+  "criterionEvidence": {
+    "${criterionKeys[0]}": {
+      "reviewEvidenceCount": 0,
+      "summary": "해당 구매기준에 대한 리뷰 근거 요약"
+    }
+  },
+  "criterionScores": {
+    "${criterionKeys[0]}": null
+  },
+  "criterionReasons": {
+    "${criterionKeys[0]}": "점수 또는 null의 이유"
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:706
+        criterionEvidence:
+          normalizeCriterionEvidence(
+            parsed.criterionEvidence,
+            criterionKeys,
+            reviews.length,
+          ),
+
+        collectionStats,
+      };
+
+      return NextResponse.json({
+        success: true,
+        analysis,
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:718
+        analysis,
+      });
+    } catch {
+      console.error(
+        "Review analysis JSON parsing failed:",
+        outputText,
+      );
+
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "AI 리뷰 분석 결과를 JSON으로 해석하지 못했습니다.",
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:737
+      );
+    }
+  } catch (error) {
+    console.error(
+      "Review analysis API error:",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        success: false,
+        message:
+          error instanceof Error
+
+============================================================
+TARGET: .\app\api\analyze-reviews
+PATTERN: reviews
+MATCHES: 13
+============================================================
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:26
+
+type ReviewAnalysisRequest = {
+  productName?: string;
+  category?: string;
+  reviews?: string[];
+  collectionStats?: unknown;
+};
+
+type DynamicCriterion = {
+  key?: string;
+  label?: string;
+  shortDescription?: string;
+  helpText?: string;
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:367
+        "string"
+        ? body.category.trim()
+        : "";
+
+    const reviews =
+      Array.isArray(
+        body.reviews,
+      )
+        ? body.reviews
+            .filter(
+              (
+                review,
+              ): review is string =>
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:369
+        : "";
+
+    const reviews =
+      Array.isArray(
+        body.reviews,
+      )
+        ? body.reviews
+            .filter(
+              (
+                review,
+              ): review is string =>
+                typeof review ===
+                  "string" &&
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:371
+    const reviews =
+      Array.isArray(
+        body.reviews,
+      )
+        ? body.reviews
+            .filter(
+              (
+                review,
+              ): review is string =>
+                typeof review ===
+                  "string" &&
+                review.trim()
+                  .length > 0,
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:394
+
+    const collectionStats =
+      normalizeCollectionStats(
+        body.collectionStats,
+        reviews.length,
+      );
+
+    if (!productName) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "상품명이 필요합니다.",
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:424
+      );
+    }
+
+    if (
+      reviews.length === 0
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "분석할 리뷰가 없습니다.",
+        },
+        {
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:554
+상품명:
+${productName}
+
+분석 대상 리뷰 수:
+${reviews.length}
+
+현재 이 카테고리의 핵심 구매기준:
+${JSON.stringify(
+  dynamicCriteria,
+  null,
+  2,
+)}
+
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:564
+  2,
+)}
+
+분석 대상 실제 리뷰:
+${reviews
+  .map(
+    (
+      review,
+      index,
+    ) =>
+      `${index + 1}. ${review}`,
+  )
+  .join("\n")}
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:607
+반드시 아래 JSON 구조로 반환하세요.
+
+{
+  "productName": "${productName}",
+  "reviewCount": ${reviews.length},
+  "summary": "전체 리뷰를 종합한 2~3문장 요약",
+  "positivePoints": [
+    {
+      "topic": "장점 항목",
+      "summary": "반복적으로 확인된 실제 장점",
+      "evidenceCount": 2
+    }
+  ],
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:634
+    "이 제품이 잘 맞지 않는 사용자"
+  ],
+  "confidenceScore": 0,
+  "reviewQuality": {
+    "highInformationReviews": 0,
+    "lowInformationReviews": 0,
+    "promotionalStyleReviews": 0
+  },
+  "criterionEvidence": {
+    "${criterionKeys[0]}": {
+      "reviewEvidenceCount": 0,
+      "summary": "해당 구매기준에 대한 리뷰 근거 요약"
+    }
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:635
+  ],
+  "confidenceScore": 0,
+  "reviewQuality": {
+    "highInformationReviews": 0,
+    "lowInformationReviews": 0,
+    "promotionalStyleReviews": 0
+  },
+  "criterionEvidence": {
+    "${criterionKeys[0]}": {
+      "reviewEvidenceCount": 0,
+      "summary": "해당 구매기준에 대한 리뷰 근거 요약"
+    }
+  },
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:636
+  "confidenceScore": 0,
+  "reviewQuality": {
+    "highInformationReviews": 0,
+    "lowInformationReviews": 0,
+    "promotionalStyleReviews": 0
+  },
+  "criterionEvidence": {
+    "${criterionKeys[0]}": {
+      "reviewEvidenceCount": 0,
+      "summary": "해당 구매기준에 대한 리뷰 근거 요약"
+    }
+  },
+  "criterionScores": {
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:706
+        criterionEvidence:
+          normalizeCriterionEvidence(
+            parsed.criterionEvidence,
+            criterionKeys,
+            reviews.length,
+          ),
+
+        collectionStats,
+      };
+
+      return NextResponse.json({
+        success: true,
+        analysis,
+
+============================================================
+TARGET: .\app\api\analyze-reviews
+PATTERN: reviewCount
+MATCHES: 3
+============================================================
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:169
+
+function normalizeCriterionEvidence(
+  raw: unknown,
+  criterionKeys: string[],
+  reviewCount: number,
+) {
+  const row =
+    raw &&
+    typeof raw ===
+      "object" &&
+    !Array.isArray(raw)
+      ? (
+          raw as Record<
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:220
+        rawCount,
+      ) &&
+      rawCount >= 0
+        ? Math.min(
+            reviewCount,
+            Math.round(
+              rawCount,
+            ),
+          )
+        : 0;
+
+    const summary =
+      typeof item.summary ===
+
+C:\Projects\frontend\app\api\analyze-reviews\route.ts:607
+반드시 아래 JSON 구조로 반환하세요.
+
+{
+  "productName": "${productName}",
+  "reviewCount": ${reviews.length},
+  "summary": "전체 리뷰를 종합한 2~3문장 요약",
+  "positivePoints": [
+    {
+      "topic": "장점 항목",
+      "summary": "반복적으로 확인된 실제 장점",
+      "evidenceCount": 2
+    }
+  ],
+
+============================================================
+TARGET: .\lib
+PATTERN: review
+MATCHES: 75
+============================================================
+
+C:\Projects\frontend\lib\brightDataProduct.ts:9
+  type?: string;
+  value?: string;
+};
+
+type BrightDataReview = {
+  rating?: number;
+  rating_date?: string;
+  review?: string;
+  helpful_count?: number | null;
+};
+
+type BrightDataRawProduct = {
+  url?: string;
+
+C:\Projects\frontend\lib\brightDataProduct.ts:12
+
+type BrightDataReview = {
+  rating?: number;
+  rating_date?: string;
+  review?: string;
+  helpful_count?: number | null;
+};
+
+type BrightDataRawProduct = {
+  url?: string;
+  product_id?: string;
+  title?: string;
+  original_price?: string | number;
+
+C:\Projects\frontend\lib\brightDataProduct.ts:29
+  images?: {
+    link?: string;
+  }[];
+
+  total_reviews?: number;
+  average_rating?: number | null;
+
+  sold_out?: boolean;
+
+  sellers?: {
+    seller_name?: string;
+    final_price?: number;
+    seller_link?: string;
+
+C:\Projects\frontend\lib\brightDataProduct.ts:42
+  }[];
+
+  product_information?: BrightDataProductInformation[];
+
+  top_reviews?: BrightDataReview[];
+
+  category_name?: string;
+};
+
+export type NormalizedNaverProduct = {
+  url: string;
+  productId: string;
+
+
+C:\Projects\frontend\lib\brightDataProduct.ts:61
+  currency: string;
+
+  imageUrl: string;
+
+  totalReviews: number;
+  averageRating: number | null;
+
+  soldOut: boolean;
+
+  sellerName: string;
+
+  sellers: {
+    sellerName: string;
+
+C:\Projects\frontend\lib\brightDataProduct.ts:84
+  modelName: string;
+
+  categoryName: string;
+
+  topReviews: {
+    rating: number;
+    date: string;
+    text: string;
+    helpfulCount: number;
+  }[];
+};
+
+function numberValue(
+
+C:\Projects\frontend\lib\brightDataProduct.ts:376
+          raw.images?.[0]
+            ?.link ??
+          "",
+
+        totalReviews:
+          Number(
+            raw.total_reviews ??
+              0,
+          ),
+
+        averageRating:
+          typeof raw.average_rating ===
+          "number"
+
+C:\Projects\frontend\lib\brightDataProduct.ts:378
+          "",
+
+        totalReviews:
+          Number(
+            raw.total_reviews ??
+              0,
+          ),
+
+        averageRating:
+          typeof raw.average_rating ===
+          "number"
+            ? raw.average_rating
+            : null,
+
+C:\Projects\frontend\lib\brightDataProduct.ts:439
+        categoryName:
+          raw.category_name ??
+          "",
+
+        topReviews:
+          Array.isArray(
+            raw.top_reviews,
+          )
+            ? raw.top_reviews
+                .slice(0, 20)
+                .map(
+                  (review) => ({
+                    rating:
+
+C:\Projects\frontend\lib\brightDataProduct.ts:441
+          "",
+
+        topReviews:
+          Array.isArray(
+            raw.top_reviews,
+          )
+            ? raw.top_reviews
+                .slice(0, 20)
+                .map(
+                  (review) => ({
+                    rating:
+                      Number(
+                        review.rating ??
+
+C:\Projects\frontend\lib\brightDataProduct.ts:443
+        topReviews:
+          Array.isArray(
+            raw.top_reviews,
+          )
+            ? raw.top_reviews
+                .slice(0, 20)
+                .map(
+                  (review) => ({
+                    rating:
+                      Number(
+                        review.rating ??
+                          0,
+                      ),
+
+C:\Projects\frontend\lib\brightDataProduct.ts:446
+          )
+            ? raw.top_reviews
+                .slice(0, 20)
+                .map(
+                  (review) => ({
+                    rating:
+                      Number(
+                        review.rating ??
+                          0,
+                      ),
+
+                    date:
+                      review.rating_date ??
+
+C:\Projects\frontend\lib\brightDataProduct.ts:449
+                .map(
+                  (review) => ({
+                    rating:
+                      Number(
+                        review.rating ??
+                          0,
+                      ),
+
+                    date:
+                      review.rating_date ??
+                      "",
+
+                    text:
+
+C:\Projects\frontend\lib\brightDataProduct.ts:454
+                          0,
+                      ),
+
+                    date:
+                      review.rating_date ??
+                      "",
+
+                    text:
+                      review.review ??
+                      "",
+
+                    helpfulCount:
+                      Number(
+
+C:\Projects\frontend\lib\brightDataProduct.ts:458
+                      review.rating_date ??
+                      "",
+
+                    text:
+                      review.review ??
+                      "",
+
+                    helpfulCount:
+                      Number(
+                        review.helpful_count ??
+                          0,
+                      ),
+                  }),
+
+C:\Projects\frontend\lib\brightDataProduct.ts:463
+                      "",
+
+                    helpfulCount:
+                      Number(
+                        review.helpful_count ??
+                          0,
+                      ),
+                  }),
+                )
+            : [],
+      };
+    }
+
+
+C:\Projects\frontend\lib\marketRanking.ts:4
+import { calculateMarketScore as calculateBaseMarketScore } from "./marketScore";
+import type { MarketCandidate, Product } from "./types";
+
+function normalizeReviewCount(
+  reviewCount: number,
+  maximumReviewCount: number,
+) {
+  if (maximumReviewCount <= 0) {
+    return 0;
+  }
+
+  return Math.min(
+
+C:\Projects\frontend\lib\marketRanking.ts:5
+import { calculateMarketScore as calculateBaseMarketScore } from "./marketScore";
+import type { MarketCandidate, Product } from "./types";
+
+function normalizeReviewCount(
+  reviewCount: number,
+  maximumReviewCount: number,
+) {
+  if (maximumReviewCount <= 0) {
+    return 0;
+  }
+
+  return Math.min(
+    100,
+
+C:\Projects\frontend\lib\marketRanking.ts:6
+import type { MarketCandidate, Product } from "./types";
+
+function normalizeReviewCount(
+  reviewCount: number,
+  maximumReviewCount: number,
+) {
+  if (maximumReviewCount <= 0) {
+    return 0;
+  }
+
+  return Math.min(
+    100,
+    (reviewCount / maximumReviewCount) * 100,
+
+C:\Projects\frontend\lib\marketRanking.ts:8
+function normalizeReviewCount(
+  reviewCount: number,
+  maximumReviewCount: number,
+) {
+  if (maximumReviewCount <= 0) {
+    return 0;
+  }
+
+  return Math.min(
+    100,
+    (reviewCount / maximumReviewCount) * 100,
+  );
+}
+
+C:\Projects\frontend\lib\marketRanking.ts:14
+  }
+
+  return Math.min(
+    100,
+    (reviewCount / maximumReviewCount) * 100,
+  );
+}
+
+export function calculateProductMarketScore(
+  product: Product,
+  maximumReviewCount: number,
+): MarketCandidate {
+  const reviewCountScore = normalizeReviewCount(
+
+C:\Projects\frontend\lib\marketRanking.ts:20
+}
+
+export function calculateProductMarketScore(
+  product: Product,
+  maximumReviewCount: number,
+): MarketCandidate {
+  const reviewCountScore = normalizeReviewCount(
+    product.reviewCount,
+    maximumReviewCount,
+  );
+
+  const scoreResult = calculateBaseMarketScore({
+    salesScore: product.salesRankScore,
+
+C:\Projects\frontend\lib\marketRanking.ts:22
+export function calculateProductMarketScore(
+  product: Product,
+  maximumReviewCount: number,
+): MarketCandidate {
+  const reviewCountScore = normalizeReviewCount(
+    product.reviewCount,
+    maximumReviewCount,
+  );
+
+  const scoreResult = calculateBaseMarketScore({
+    salesScore: product.salesRankScore,
+    reviewCountScore,
+    reviewRatingScore: product.reviewScore,
+
+C:\Projects\frontend\lib\marketRanking.ts:23
+  product: Product,
+  maximumReviewCount: number,
+): MarketCandidate {
+  const reviewCountScore = normalizeReviewCount(
+    product.reviewCount,
+    maximumReviewCount,
+  );
+
+  const scoreResult = calculateBaseMarketScore({
+    salesScore: product.salesRankScore,
+    reviewCountScore,
+    reviewRatingScore: product.reviewScore,
+    brandTrustScore: product.brandTrustScore,
+
+C:\Projects\frontend\lib\marketRanking.ts:24
+  maximumReviewCount: number,
+): MarketCandidate {
+  const reviewCountScore = normalizeReviewCount(
+    product.reviewCount,
+    maximumReviewCount,
+  );
+
+  const scoreResult = calculateBaseMarketScore({
+    salesScore: product.salesRankScore,
+    reviewCountScore,
+    reviewRatingScore: product.reviewScore,
+    brandTrustScore: product.brandTrustScore,
+    searchInterestScore: product.popularityScore,
+
+C:\Projects\frontend\lib\marketRanking.ts:29
+  );
+
+  const scoreResult = calculateBaseMarketScore({
+    salesScore: product.salesRankScore,
+    reviewCountScore,
+    reviewRatingScore: product.reviewScore,
+    brandTrustScore: product.brandTrustScore,
+    searchInterestScore: product.popularityScore,
+    recencyScore: product.recencyScore,
+  });
+
+  const marketReasons: string[] = [];
+
+
+C:\Projects\frontend\lib\marketRanking.ts:30
+
+  const scoreResult = calculateBaseMarketScore({
+    salesScore: product.salesRankScore,
+    reviewCountScore,
+    reviewRatingScore: product.reviewScore,
+    brandTrustScore: product.brandTrustScore,
+    searchInterestScore: product.popularityScore,
+    recencyScore: product.recencyScore,
+  });
+
+  const marketReasons: string[] = [];
+
+  if (product.salesRankScore >= 85) {
+
+C:\Projects\frontend\lib\marketRanking.ts:44
+      "판매 지표가 우수한 시장 인기 제품",
+    );
+  }
+
+  if (product.reviewCount >= 1000) {
+    marketReasons.push(
+      "누적 리뷰가 많아 평가 신뢰도가 높은 제품",
+    );
+  } else if (product.reviewCount >= 500) {
+    marketReasons.push(
+      "충분한 실사용 리뷰가 축적된 제품",
+    );
+  }
+
+C:\Projects\frontend\lib\marketRanking.ts:48
+  if (product.reviewCount >= 1000) {
+    marketReasons.push(
+      "누적 리뷰가 많아 평가 신뢰도가 높은 제품",
+    );
+  } else if (product.reviewCount >= 500) {
+    marketReasons.push(
+      "충분한 실사용 리뷰가 축적된 제품",
+    );
+  }
+
+  if (product.reviewScore >= 88) {
+    marketReasons.push(
+      "실사용자 만족도가 높은 제품",
+
+C:\Projects\frontend\lib\marketRanking.ts:54
+      "충분한 실사용 리뷰가 축적된 제품",
+    );
+  }
+
+  if (product.reviewScore >= 88) {
+    marketReasons.push(
+      "실사용자 만족도가 높은 제품",
+    );
+  }
+
+  if (product.brandTrustScore >= 85) {
+    marketReasons.push(
+      "브랜드와 고객지원 신뢰도가 높은 제품",
+
+C:\Projects\frontend\lib\marketRanking.ts:125
+        .includes(normalizedCategory);
+    },
+  );
+
+  const maximumReviewCount = Math.max(
+    1,
+    ...categoryProducts.map(
+      (product) => product.reviewCount,
+    ),
+  );
+
+  return categoryProducts
+    .map((product) =>
+
+C:\Projects\frontend\lib\marketRanking.ts:128
+
+  const maximumReviewCount = Math.max(
+    1,
+    ...categoryProducts.map(
+      (product) => product.reviewCount,
+    ),
+  );
+
+  return categoryProducts
+    .map((product) =>
+      calculateProductMarketScore(
+        product,
+        maximumReviewCount,
+
+C:\Projects\frontend\lib\marketRanking.ts:136
+  return categoryProducts
+    .map((product) =>
+      calculateProductMarketScore(
+        product,
+        maximumReviewCount,
+      ),
+    )
+    .sort((a, b) => {
+      if (b.marketScore !== a.marketScore) {
+        return b.marketScore - a.marketScore;
+      }
+
+      if (
+
+C:\Projects\frontend\lib\marketRanking.ts:154
+          a.availabilityScore
+        );
+      }
+
+      return b.reviewCount - a.reviewCount;
+    })
+    .slice(0, limit);
+}
+
+C:\Projects\frontend\lib\marketScore.ts:3
+export type MarketScoreInput = {
+  salesScore: number;
+  reviewCountScore: number;
+  reviewRatingScore: number;
+  brandTrustScore: number;
+  searchInterestScore: number;
+  recencyScore: number;
+};
+
+export type MarketScoreResult = {
+  totalScore: number;
+
+C:\Projects\frontend\lib\marketScore.ts:4
+export type MarketScoreInput = {
+  salesScore: number;
+  reviewCountScore: number;
+  reviewRatingScore: number;
+  brandTrustScore: number;
+  searchInterestScore: number;
+  recencyScore: number;
+};
+
+export type MarketScoreResult = {
+  totalScore: number;
+  breakdown: {
+
+C:\Projects\frontend\lib\marketScore.ts:14
+export type MarketScoreResult = {
+  totalScore: number;
+  breakdown: {
+    sales: number;
+    reviewCount: number;
+    reviewRating: number;
+    brandTrust: number;
+    searchInterest: number;
+    recency: number;
+  };
+};
+
+function clampScore(value: number) {
+
+C:\Projects\frontend\lib\marketScore.ts:15
+  totalScore: number;
+  breakdown: {
+    sales: number;
+    reviewCount: number;
+    reviewRating: number;
+    brandTrust: number;
+    searchInterest: number;
+    recency: number;
+  };
+};
+
+function clampScore(value: number) {
+  return Math.max(0, Math.min(100, value));
+
+C:\Projects\frontend\lib\marketScore.ts:30
+export function calculateMarketScore(
+  input: MarketScoreInput,
+): MarketScoreResult {
+  const sales = clampScore(input.salesScore) * 0.3;
+  const reviewCount =
+    clampScore(input.reviewCountScore) * 0.25;
+  const reviewRating =
+    clampScore(input.reviewRatingScore) * 0.2;
+  const brandTrust =
+    clampScore(input.brandTrustScore) * 0.1;
+  const searchInterest =
+    clampScore(input.searchInterestScore) * 0.1;
+  const recency =
+
+C:\Projects\frontend\lib\marketScore.ts:31
+  input: MarketScoreInput,
+): MarketScoreResult {
+  const sales = clampScore(input.salesScore) * 0.3;
+  const reviewCount =
+    clampScore(input.reviewCountScore) * 0.25;
+  const reviewRating =
+    clampScore(input.reviewRatingScore) * 0.2;
+  const brandTrust =
+    clampScore(input.brandTrustScore) * 0.1;
+  const searchInterest =
+    clampScore(input.searchInterestScore) * 0.1;
+  const recency =
+    clampScore(input.recencyScore) * 0.05;
+
+C:\Projects\frontend\lib\marketScore.ts:32
+): MarketScoreResult {
+  const sales = clampScore(input.salesScore) * 0.3;
+  const reviewCount =
+    clampScore(input.reviewCountScore) * 0.25;
+  const reviewRating =
+    clampScore(input.reviewRatingScore) * 0.2;
+  const brandTrust =
+    clampScore(input.brandTrustScore) * 0.1;
+  const searchInterest =
+    clampScore(input.searchInterestScore) * 0.1;
+  const recency =
+    clampScore(input.recencyScore) * 0.05;
+
+
+C:\Projects\frontend\lib\marketScore.ts:33
+  const sales = clampScore(input.salesScore) * 0.3;
+  const reviewCount =
+    clampScore(input.reviewCountScore) * 0.25;
+  const reviewRating =
+    clampScore(input.reviewRatingScore) * 0.2;
+  const brandTrust =
+    clampScore(input.brandTrustScore) * 0.1;
+  const searchInterest =
+    clampScore(input.searchInterestScore) * 0.1;
+  const recency =
+    clampScore(input.recencyScore) * 0.05;
+
+  const totalScore =
+
+C:\Projects\frontend\lib\marketScore.ts:43
+    clampScore(input.recencyScore) * 0.05;
+
+  const totalScore =
+    sales +
+    reviewCount +
+    reviewRating +
+    brandTrust +
+    searchInterest +
+    recency;
+
+  return {
+    totalScore: Math.round(totalScore * 10) / 10,
+    breakdown: {
+
+C:\Projects\frontend\lib\marketScore.ts:44
+
+  const totalScore =
+    sales +
+    reviewCount +
+    reviewRating +
+    brandTrust +
+    searchInterest +
+    recency;
+
+  return {
+    totalScore: Math.round(totalScore * 10) / 10,
+    breakdown: {
+      sales: Math.round(sales * 10) / 10,
+
+C:\Projects\frontend\lib\marketScore.ts:53
+  return {
+    totalScore: Math.round(totalScore * 10) / 10,
+    breakdown: {
+      sales: Math.round(sales * 10) / 10,
+      reviewCount: Math.round(reviewCount * 10) / 10,
+      reviewRating: Math.round(reviewRating * 10) / 10,
+      brandTrust: Math.round(brandTrust * 10) / 10,
+      searchInterest: Math.round(searchInterest * 10) / 10,
+      recency: Math.round(recency * 10) / 10,
+    },
+  };
+}
+
+C:\Projects\frontend\lib\marketScore.ts:54
+    totalScore: Math.round(totalScore * 10) / 10,
+    breakdown: {
+      sales: Math.round(sales * 10) / 10,
+      reviewCount: Math.round(reviewCount * 10) / 10,
+      reviewRating: Math.round(reviewRating * 10) / 10,
+      brandTrust: Math.round(brandTrust * 10) / 10,
+      searchInterest: Math.round(searchInterest * 10) / 10,
+      recency: Math.round(recency * 10) / 10,
+    },
+  };
+}
+
+C:\Projects\frontend\lib\marketSearch.ts:7
+  brand: string;
+  price: number;
+  image: string;
+  url: string;
+  reviewCount: number;
+  rating: number;
+};
+
+export type ProductOffer = MarketSearchResult & {
+  matchScore: number;
+
+  /*
+    네이버 광고(ader) 링크처럼 실제 판매처로
+
+C:\Projects\frontend\lib\marketSearch.ts:31
+};
+
+export type ProductOfferSearchResult = {
+  offers: ProductOffer[];
+  reviewSource: ProductOffer | null;
+  purchaseSource: ProductOffer | null;
+};
+
+type SerpApiShoppingResult = {
+  position?: number;
+  title?: string;
+  price?: number | string;
+  rating?: number | string;
+
+C:\Projects\frontend\lib\marketSearch.ts:40
+  position?: number;
+  title?: string;
+  price?: number | string;
+  rating?: number | string;
+  reviews?: number | string;
+  stores?: string;
+  link?: string;
+  thumbnail?: string;
+};
+
+type SerpApiResponse = {
+  error?: string;
+  shopping_results?: SerpApiShoppingResult[];
+
+C:\Projects\frontend\lib\marketSearch.ts:829
+            ),
+
+          url,
+
+          reviewCount:
+            Math.round(
+              normalizeNumber(
+                item.reviews,
+              ),
+            ),
+
+          rating:
+            normalizeNumber(
+
+C:\Projects\frontend\lib\marketSearch.ts:832
+
+          reviewCount:
+            Math.round(
+              normalizeNumber(
+                item.reviews,
+              ),
+            ),
+
+          rating:
+            normalizeNumber(
+              item.rating,
+            ),
+        };
+
+C:\Projects\frontend\lib\marketSearch.ts:873
+/*
+  특정 모델의 네이버 판매처들을 다시 검색한다.
+
+  역할:
+  - reviewSource: 동일 모델/구성 후보 중 리뷰 수가 가장 많은 결과
+  - purchaseSource: 동일 모델/구성 후보 중 최저가
+    (동가이면 리뷰 수가 많은 결과 우선)
+
+  주의:
+  이 함수는 '판매처 후보 선택'까지만 담당한다.
+  실제 리뷰 상세수집 가능 여부와 구매링크 최종 검증은
+  이후 단계에서 별도로 확인한다.
+*/
+
+C:\Projects\frontend\lib\marketSearch.ts:891
+
+  if (!normalizedName) {
+    return {
+      offers: [],
+      reviewSource: null,
+      purchaseSource: null,
+    };
+  }
+
+  const apiKey =
+    process.env.SERPAPI_API_KEY;
+
+  if (!apiKey) {
+
+C:\Projects\frontend\lib\marketSearch.ts:1036
+            ),
+
+          url,
+
+          reviewCount:
+            Math.round(
+              normalizeNumber(
+                item.reviews,
+              ),
+            ),
+
+          rating:
+            normalizeNumber(
+
+C:\Projects\frontend\lib\marketSearch.ts:1039
+
+          reviewCount:
+            Math.round(
+              normalizeNumber(
+                item.reviews,
+              ),
+            ),
+
+          rating:
+            normalizeNumber(
+              item.rating,
+            ),
+
+
+C:\Projects\frontend\lib\marketSearch.ts:1126
+        );
+      }
+
+      if (
+        b.reviewCount !==
+        a.reviewCount
+      ) {
+        return (
+          b.reviewCount -
+          a.reviewCount
+        );
+      }
+
+
+C:\Projects\frontend\lib\marketSearch.ts:1127
+      }
+
+      if (
+        b.reviewCount !==
+        a.reviewCount
+      ) {
+        return (
+          b.reviewCount -
+          a.reviewCount
+        );
+      }
+
+      return (
+
+C:\Projects\frontend\lib\marketSearch.ts:1130
+        b.reviewCount !==
+        a.reviewCount
+      ) {
+        return (
+          b.reviewCount -
+          a.reviewCount
+        );
+      }
+
+      return (
+        a.price -
+        b.price
+      );
+
+C:\Projects\frontend\lib\marketSearch.ts:1131
+        a.reviewCount
+      ) {
+        return (
+          b.reviewCount -
+          a.reviewCount
+        );
+      }
+
+      return (
+        a.price -
+        b.price
+      );
+    },
+
+C:\Projects\frontend\lib\marketSearch.ts:1152
+
+    "판매처 18" 같은 네이버 가격비교 묶음상품의
+    리뷰 수는 개별 판매처 리뷰 수로 취급하지 않는다.
+  */
+  const reviewSource =
+    [...offers]
+      .filter(
+        (offer) =>
+          offer.reviewCount > 0 &&
+          offer.isIndividualSeller &&
+          offer.sourceType ===
+            "naver-store",
+      )
+
+C:\Projects\frontend\lib\marketSearch.ts:1156
+  const reviewSource =
+    [...offers]
+      .filter(
+        (offer) =>
+          offer.reviewCount > 0 &&
+          offer.isIndividualSeller &&
+          offer.sourceType ===
+            "naver-store",
+      )
+      .sort(
+        (a, b) => {
+          if (
+            b.reviewCount !==
+
+C:\Projects\frontend\lib\marketSearch.ts:1164
+      )
+      .sort(
+        (a, b) => {
+          if (
+            b.reviewCount !==
+            a.reviewCount
+          ) {
+            return (
+              b.reviewCount -
+              a.reviewCount
+            );
+          }
+
+
+C:\Projects\frontend\lib\marketSearch.ts:1165
+      .sort(
+        (a, b) => {
+          if (
+            b.reviewCount !==
+            a.reviewCount
+          ) {
+            return (
+              b.reviewCount -
+              a.reviewCount
+            );
+          }
+
+          if (
+
+C:\Projects\frontend\lib\marketSearch.ts:1168
+            b.reviewCount !==
+            a.reviewCount
+          ) {
+            return (
+              b.reviewCount -
+              a.reviewCount
+            );
+          }
+
+          if (
+            b.rating !==
+            a.rating
+          ) {
+
+C:\Projects\frontend\lib\marketSearch.ts:1169
+            a.reviewCount
+          ) {
+            return (
+              b.reviewCount -
+              a.reviewCount
+            );
+          }
+
+          if (
+            b.rating !==
+            a.rating
+          ) {
+            return (
+
+C:\Projects\frontend\lib\marketSearch.ts:1223
+            );
+          }
+
+          if (
+            b.reviewCount !==
+            a.reviewCount
+          ) {
+            return (
+              b.reviewCount -
+              a.reviewCount
+            );
+          }
+
+
+C:\Projects\frontend\lib\marketSearch.ts:1224
+          }
+
+          if (
+            b.reviewCount !==
+            a.reviewCount
+          ) {
+            return (
+              b.reviewCount -
+              a.reviewCount
+            );
+          }
+
+          return (
+
+C:\Projects\frontend\lib\marketSearch.ts:1227
+            b.reviewCount !==
+            a.reviewCount
+          ) {
+            return (
+              b.reviewCount -
+              a.reviewCount
+            );
+          }
+
+          return (
+            b.matchScore -
+            a.matchScore
+          );
+
+C:\Projects\frontend\lib\marketSearch.ts:1228
+            a.reviewCount
+          ) {
+            return (
+              b.reviewCount -
+              a.reviewCount
+            );
+          }
+
+          return (
+            b.matchScore -
+            a.matchScore
+          );
+        },
+
+C:\Projects\frontend\lib\marketSearch.ts:1242
+    null;
+
+  return {
+    offers,
+    reviewSource,
+    purchaseSource,
+  };
+}
+
+
+C:\Projects\frontend\lib\recommendation.ts:40
+        const overRate = (product.price - options.budget) / options.budget;
+        budgetScore = Math.max(0, 100 - overRate * 120);
+      }
+
+      const score = weightedScore * 0.72 + budgetScore * 0.18 + product.reviewScore * 0.1;
+
+      const reasons: string[] = [];
+      const cautions: string[] = [];
+
+      const rankedCriteria = (Object.entries(weights) as [Criterion, number][])
+        .sort((a, b) => b[1] - a[1]);
+
+      for (const [criterion] of rankedCriteria) {
+
+C:\Projects\frontend\lib\resolveNaverBrandProductUrl.ts:35
+    link?: string;
+    stores?: string;
+    price?: number | string;
+    rating?: number | string;
+    reviews?: number | string;
+  }[];
+};
+
+type SerpApiResponse =
+  SerpApiResult & {
+    error?: string;
+  };
+
+
+C:\Projects\frontend\lib\types.ts:17
+  portability: number;
+  battery: number;
+  afterService: number;
+
+  reviewScore: number;
+  reviewCount: number;
+
+  suitableFor: string[];
+  pros: string[];
+  cons: string[];
+  reviewEvidence: string[];
+
+  /**
+
+C:\Projects\frontend\lib\types.ts:18
+  battery: number;
+  afterService: number;
+
+  reviewScore: number;
+  reviewCount: number;
+
+  suitableFor: string[];
+  pros: string[];
+  cons: string[];
+  reviewEvidence: string[];
+
+  /**
+   * 시장 대표 제품 선정용 지표
+
+C:\Projects\frontend\lib\types.ts:23
+
+  suitableFor: string[];
+  pros: string[];
+  cons: string[];
+  reviewEvidence: string[];
+
+  /**
+   * 시장 대표 제품 선정용 지표
+   * 각 점수는 0~100점 기준
+   */
+  popularityScore: number;
+  brandTrustScore: number;
+  salesRankScore: number;
+
+============================================================
+TARGET: .\lib
+PATTERN: reviews
+MATCHES: 22
+============================================================
+
+C:\Projects\frontend\lib\brightDataProduct.ts:29
+  images?: {
+    link?: string;
+  }[];
+
+  total_reviews?: number;
+  average_rating?: number | null;
+
+  sold_out?: boolean;
+
+  sellers?: {
+    seller_name?: string;
+    final_price?: number;
+    seller_link?: string;
+
+C:\Projects\frontend\lib\brightDataProduct.ts:42
+  }[];
+
+  product_information?: BrightDataProductInformation[];
+
+  top_reviews?: BrightDataReview[];
+
+  category_name?: string;
+};
+
+export type NormalizedNaverProduct = {
+  url: string;
+  productId: string;
+
+
+C:\Projects\frontend\lib\brightDataProduct.ts:61
+  currency: string;
+
+  imageUrl: string;
+
+  totalReviews: number;
+  averageRating: number | null;
+
+  soldOut: boolean;
+
+  sellerName: string;
+
+  sellers: {
+    sellerName: string;
+
+C:\Projects\frontend\lib\brightDataProduct.ts:84
+  modelName: string;
+
+  categoryName: string;
+
+  topReviews: {
+    rating: number;
+    date: string;
+    text: string;
+    helpfulCount: number;
+  }[];
+};
+
+function numberValue(
+
+C:\Projects\frontend\lib\brightDataProduct.ts:376
+          raw.images?.[0]
+            ?.link ??
+          "",
+
+        totalReviews:
+          Number(
+            raw.total_reviews ??
+              0,
+          ),
+
+        averageRating:
+          typeof raw.average_rating ===
+          "number"
+
+C:\Projects\frontend\lib\brightDataProduct.ts:378
+          "",
+
+        totalReviews:
+          Number(
+            raw.total_reviews ??
+              0,
+          ),
+
+        averageRating:
+          typeof raw.average_rating ===
+          "number"
+            ? raw.average_rating
+            : null,
+
+C:\Projects\frontend\lib\brightDataProduct.ts:439
+        categoryName:
+          raw.category_name ??
+          "",
+
+        topReviews:
+          Array.isArray(
+            raw.top_reviews,
+          )
+            ? raw.top_reviews
+                .slice(0, 20)
+                .map(
+                  (review) => ({
+                    rating:
+
+C:\Projects\frontend\lib\brightDataProduct.ts:441
+          "",
+
+        topReviews:
+          Array.isArray(
+            raw.top_reviews,
+          )
+            ? raw.top_reviews
+                .slice(0, 20)
+                .map(
+                  (review) => ({
+                    rating:
+                      Number(
+                        review.rating ??
+
+C:\Projects\frontend\lib\brightDataProduct.ts:443
+        topReviews:
+          Array.isArray(
+            raw.top_reviews,
+          )
+            ? raw.top_reviews
+                .slice(0, 20)
+                .map(
+                  (review) => ({
+                    rating:
+                      Number(
+                        review.rating ??
+                          0,
+                      ),
+
+C:\Projects\frontend\lib\marketRanking.ts:30
+
+  const scoreResult = calculateBaseMarketScore({
+    salesScore: product.salesRankScore,
+    reviewCountScore,
+    reviewRatingScore: product.reviewScore,
+    brandTrustScore: product.brandTrustScore,
+    searchInterestScore: product.popularityScore,
+    recencyScore: product.recencyScore,
+  });
+
+  const marketReasons: string[] = [];
+
+  if (product.salesRankScore >= 85) {
+
+C:\Projects\frontend\lib\marketRanking.ts:54
+      "충분한 실사용 리뷰가 축적된 제품",
+    );
+  }
+
+  if (product.reviewScore >= 88) {
+    marketReasons.push(
+      "실사용자 만족도가 높은 제품",
+    );
+  }
+
+  if (product.brandTrustScore >= 85) {
+    marketReasons.push(
+      "브랜드와 고객지원 신뢰도가 높은 제품",
+
+C:\Projects\frontend\lib\marketSearch.ts:31
+};
+
+export type ProductOfferSearchResult = {
+  offers: ProductOffer[];
+  reviewSource: ProductOffer | null;
+  purchaseSource: ProductOffer | null;
+};
+
+type SerpApiShoppingResult = {
+  position?: number;
+  title?: string;
+  price?: number | string;
+  rating?: number | string;
+
+C:\Projects\frontend\lib\marketSearch.ts:40
+  position?: number;
+  title?: string;
+  price?: number | string;
+  rating?: number | string;
+  reviews?: number | string;
+  stores?: string;
+  link?: string;
+  thumbnail?: string;
+};
+
+type SerpApiResponse = {
+  error?: string;
+  shopping_results?: SerpApiShoppingResult[];
+
+C:\Projects\frontend\lib\marketSearch.ts:832
+
+          reviewCount:
+            Math.round(
+              normalizeNumber(
+                item.reviews,
+              ),
+            ),
+
+          rating:
+            normalizeNumber(
+              item.rating,
+            ),
+        };
+
+C:\Projects\frontend\lib\marketSearch.ts:873
+/*
+  특정 모델의 네이버 판매처들을 다시 검색한다.
+
+  역할:
+  - reviewSource: 동일 모델/구성 후보 중 리뷰 수가 가장 많은 결과
+  - purchaseSource: 동일 모델/구성 후보 중 최저가
+    (동가이면 리뷰 수가 많은 결과 우선)
+
+  주의:
+  이 함수는 '판매처 후보 선택'까지만 담당한다.
+  실제 리뷰 상세수집 가능 여부와 구매링크 최종 검증은
+  이후 단계에서 별도로 확인한다.
+*/
+
+C:\Projects\frontend\lib\marketSearch.ts:891
+
+  if (!normalizedName) {
+    return {
+      offers: [],
+      reviewSource: null,
+      purchaseSource: null,
+    };
+  }
+
+  const apiKey =
+    process.env.SERPAPI_API_KEY;
+
+  if (!apiKey) {
+
+C:\Projects\frontend\lib\marketSearch.ts:1039
+
+          reviewCount:
+            Math.round(
+              normalizeNumber(
+                item.reviews,
+              ),
+            ),
+
+          rating:
+            normalizeNumber(
+              item.rating,
+            ),
+
+
+C:\Projects\frontend\lib\marketSearch.ts:1152
+
+    "판매처 18" 같은 네이버 가격비교 묶음상품의
+    리뷰 수는 개별 판매처 리뷰 수로 취급하지 않는다.
+  */
+  const reviewSource =
+    [...offers]
+      .filter(
+        (offer) =>
+          offer.reviewCount > 0 &&
+          offer.isIndividualSeller &&
+          offer.sourceType ===
+            "naver-store",
+      )
+
+C:\Projects\frontend\lib\marketSearch.ts:1242
+    null;
+
+  return {
+    offers,
+    reviewSource,
+    purchaseSource,
+  };
+}
+
+
+C:\Projects\frontend\lib\recommendation.ts:40
+        const overRate = (product.price - options.budget) / options.budget;
+        budgetScore = Math.max(0, 100 - overRate * 120);
+      }
+
+      const score = weightedScore * 0.72 + budgetScore * 0.18 + product.reviewScore * 0.1;
+
+      const reasons: string[] = [];
+      const cautions: string[] = [];
+
+      const rankedCriteria = (Object.entries(weights) as [Criterion, number][])
+        .sort((a, b) => b[1] - a[1]);
+
+      for (const [criterion] of rankedCriteria) {
+
+C:\Projects\frontend\lib\resolveNaverBrandProductUrl.ts:35
+    link?: string;
+    stores?: string;
+    price?: number | string;
+    rating?: number | string;
+    reviews?: number | string;
+  }[];
+};
+
+type SerpApiResponse =
+  SerpApiResult & {
+    error?: string;
+  };
+
+
+C:\Projects\frontend\lib\types.ts:17
+  portability: number;
+  battery: number;
+  afterService: number;
+
+  reviewScore: number;
+  reviewCount: number;
+
+  suitableFor: string[];
+  pros: string[];
+  cons: string[];
+  reviewEvidence: string[];
+
+  /**
+
+============================================================
+TARGET: .\lib
+PATTERN: top_reviews
+MATCHES: 3
+============================================================
+
+C:\Projects\frontend\lib\brightDataProduct.ts:42
+  }[];
+
+  product_information?: BrightDataProductInformation[];
+
+  top_reviews?: BrightDataReview[];
+
+  category_name?: string;
+};
+
+export type NormalizedNaverProduct = {
+  url: string;
+  productId: string;
+
+
+C:\Projects\frontend\lib\brightDataProduct.ts:441
+          "",
+
+        topReviews:
+          Array.isArray(
+            raw.top_reviews,
+          )
+            ? raw.top_reviews
+                .slice(0, 20)
+                .map(
+                  (review) => ({
+                    rating:
+                      Number(
+                        review.rating ??
+
+C:\Projects\frontend\lib\brightDataProduct.ts:443
+        topReviews:
+          Array.isArray(
+            raw.top_reviews,
+          )
+            ? raw.top_reviews
+                .slice(0, 20)
+                .map(
+                  (review) => ({
+                    rating:
+                      Number(
+                        review.rating ??
+                          0,
+                      ),
+
+============================================================
+TARGET: .\lib
+PATTERN: smartstore
+MATCHES: 8
+============================================================
+
+C:\Projects\frontend\lib\marketSearch.ts:526
+    target.includes(
+      "brand.naver.com",
+    ) ||
+    target.includes(
+      "smartstore.naver.com",
+    )
+  ) {
+    return "naver-store";
+  }
+
+  if (
+    target.includes(
+      "cr3.shopping.naver.com",
+
+C:\Projects\frontend\lib\marketSearch.ts:563
+    return value;
+  }
+
+  /*
+    Naver ader 광고 링크는 SmartStore/Brand 상품까지
+    여러 번 redirect될 수 있다.
+
+    한 번의 Location만 읽으면 중간 Naver URL에서 멈춰
+    실제 공식 판매처를 naver-store로 판정하지 못할 수 있다.
+
+    최대 5단계까지만 따라가며,
+    SmartStore/Brand URL을 확인하는 즉시 추가 요청 없이 반환한다.
+  */
+
+C:\Projects\frontend\lib\marketSearch.ts:570
+    한 번의 Location만 읽으면 중간 Naver URL에서 멈춰
+    실제 공식 판매처를 naver-store로 판정하지 못할 수 있다.
+
+    최대 5단계까지만 따라가며,
+    SmartStore/Brand URL을 확인하는 즉시 추가 요청 없이 반환한다.
+  */
+  let currentUrl = value;
+
+  try {
+    for (
+      let redirectCount = 0;
+      redirectCount < 5;
+      redirectCount++
+
+C:\Projects\frontend\lib\marketSearch.ts:618
+      }
+
+      if (
+        nextUrl.includes(
+          "smartstore.naver.com",
+        ) &&
+        !nextUrl.includes(
+          "/main/products/",
+        )
+      ) {
+        return nextUrl;
+      }
+
+
+C:\Projects\frontend\lib\marketSearch.ts:1145
+
+  /*
+    리뷰 소스는:
+    1. 실제 개별 판매처명이어야 하고
+    2. 실제 URL이 네이버 SmartStore/Brand로 확인되어
+       현재 Bright Data Naver 수집기로 리뷰 본문을
+       가져올 수 있는 후보만 사용한다.
+
+    "판매처 18" 같은 네이버 가격비교 묶음상품의
+    리뷰 수는 개별 판매처 리뷰 수로 취급하지 않는다.
+  */
+  const reviewSource =
+    [...offers]
+
+C:\Projects\frontend\lib\resolveNaverBrandProductUrl.ts:465
+function getProductId(
+  productUrl: string,
+) {
+  /*
+    1. smartstore / brand 상품 URL
+
+    예:
+    /products/10775617216
+    /main/products/10775617216
+  */
+  const pathMatch =
+    productUrl.match(
+      /\/(?:main\/)?products\/(\d+)/,
+
+C:\Projects\frontend\lib\resolveNaverBrandProductUrl.ts:630
+  productUrl: string,
+  productName: string,
+) {
+  /*
+    direct smartstore/brand URL이면
+    여기서 상품번호가 바로 잡힌다.
+
+    ader/cr3 같은 중간 URL이면
+    productId는 빈 문자열로 시작하고,
+    아래 SerpApi 공식상품 검색에서
+    실제 productId를 다시 확보한다.
+  */
+  const inputProductId =
+
+C:\Projects\frontend\lib\resolveNaverBrandProductUrl.ts:674
+        ])
+      : null;
+
+  /*
+    direct smartstore/brand URL처럼
+    신뢰 가능한 productId가 이미 있으면
+    기존 학습 매핑을 즉시 재사용한다.
+  */
+  if (
+    inputProductId &&
+    learnedBrandMapping?.brandSite
+  ) {
+    return {
+
+============================================================
+TARGET: .\lib
+PATTERN: naver.com
+MATCHES: 19
+============================================================
+
+C:\Projects\frontend\lib\buildResolverSearchPlan.ts:167
+  steps.push({
+    type: "naver",
+
+    query:
+      `${cleanedName} brand.naver.com`,
+
+    label:
+      "product-name",
+  });
+
+  /*
+    3. 브랜드스토어 한정 검색.
+
+
+C:\Projects\frontend\lib\buildResolverSearchPlan.ts:181
+       해당 slug를 직접 사용한다.
+
+       예:
+       everybot
+       -> site:brand.naver.com/everybot TS450
+  */
+  if (initialBrandCandidate) {
+    const shortModel =
+      getStrongSearchModelTokens(
+        modelTokens,
+      ).join(" ");
+
+    const brandSlug =
+
+C:\Projects\frontend\lib\buildResolverSearchPlan.ts:196
+      );
+
+    const query =
+      brandSlug
+        ? `site:brand.naver.com/${brandSlug} ${shortModel}`
+        : `site:brand.naver.com ${initialBrandCandidate} ${shortModel}`;
+
+    steps.push({
+      type: "naver",
+      query,
+      label:
+        "brand-site",
+    });
+
+C:\Projects\frontend\lib\buildResolverSearchPlan.ts:197
+
+    const query =
+      brandSlug
+        ? `site:brand.naver.com/${brandSlug} ${shortModel}`
+        : `site:brand.naver.com ${initialBrandCandidate} ${shortModel}`;
+
+    steps.push({
+      type: "naver",
+      query,
+      label:
+        "brand-site",
+    });
+  }
+
+C:\Projects\frontend\lib\buildResolverSearchPlan.ts:261
+      type:
+        "google-broad",
+
+      query:
+        `"${googleQuery}" "brand.naver.com"`,
+
+      label:
+        "google-broad",
+    });
+  }
+
+  return steps;
+}
+
+C:\Projects\frontend\lib\buildResolverSearchPlan.ts:285
+    => 최대 3회
+
+    미학습 브랜드
+    - 기본 Naver
+    - 일반 brand.naver.com 검색
+    - 브랜드/모델 Naver
+    - Google broad
+    => 최대 4회
+  */
+  return learnedBrandSite
+    ? 3
+    : 4;
+}
+
+C:\Projects\frontend\lib\canonicalProductSource.ts:19
+
+  /*
+    공식 브랜드/제조사 사이트의 루트.
+    예:
+    https://brand.naver.com/everybot
+    https://www.everybotmall.com
+  */
+  officialSite: string;
+
+  brandName?: string;
+
+  title?: string;
+};
+
+C:\Projects\frontend\lib\marketSearch.ts:523
+  }
+
+  if (
+    target.includes(
+      "brand.naver.com",
+    ) ||
+    target.includes(
+      "smartstore.naver.com",
+    )
+  ) {
+    return "naver-store";
+  }
+
+
+C:\Projects\frontend\lib\marketSearch.ts:526
+    target.includes(
+      "brand.naver.com",
+    ) ||
+    target.includes(
+      "smartstore.naver.com",
+    )
+  ) {
+    return "naver-store";
+  }
+
+  if (
+    target.includes(
+      "cr3.shopping.naver.com",
+
+C:\Projects\frontend\lib\marketSearch.ts:534
+  }
+
+  if (
+    target.includes(
+      "cr3.shopping.naver.com",
+    )
+  ) {
+    return "naver-aggregate";
+  }
+
+  if (
+    /^https?:\/\//i.test(
+      target,
+
+C:\Projects\frontend\lib\marketSearch.ts:556
+  value: string,
+) {
+  if (
+    !value.includes(
+      "ader.naver.com",
+    )
+  ) {
+    return value;
+  }
+
+  /*
+    Naver ader 광고 링크는 SmartStore/Brand 상품까지
+    여러 번 redirect될 수 있다.
+
+C:\Projects\frontend\lib\marketSearch.ts:610
+        ).toString();
+
+      if (
+        nextUrl.includes(
+          "brand.naver.com",
+        )
+      ) {
+        return nextUrl;
+      }
+
+      if (
+        nextUrl.includes(
+          "smartstore.naver.com",
+
+C:\Projects\frontend\lib\marketSearch.ts:618
+      }
+
+      if (
+        nextUrl.includes(
+          "smartstore.naver.com",
+        ) &&
+        !nextUrl.includes(
+          "/main/products/",
+        )
+      ) {
+        return nextUrl;
+      }
+
+
+C:\Projects\frontend\lib\resolveNaverBrandProductUrl.ts:68
+    return "";
+  }
+
+  return (
+    "https://brand.naver.com/" +
+    match[1]
+  );
+}
+
+function normalizeCanonicalProductUrl(
+  value: unknown,
+) {
+  const text =
+
+C:\Projects\frontend\lib\resolveNaverBrandProductUrl.ts:90
+    return null;
+  }
+
+  const brandSite =
+    `https://brand.naver.com/${match[1]}`;
+
+  const productId =
+    match[2];
+
+  return {
+    productId,
+    brandSite,
+    canonicalUrl:
+
+C:\Projects\frontend\lib\resolveNaverBrandProductUrl.ts:483
+
+  /*
+    2. 네이버 쇼핑 bridge / 광고 URL의 nv_mid는
+    네이버 쇼핑 상품번호이지
+    brand.naver.com의 실제 productId가 아니다.
+
+    따라서 nv_mid를 공식 상품번호로 반환하지 않는다.
+
+    bridge URL은 빈 문자열을 반환해
+    아래 Resolver 검색 단계에서
+    실제 brand.naver.com 상품 URL과
+    실제 productId를 찾도록 한다.
+  */
+
+C:\Projects\frontend\lib\resolveNaverBrandProductUrl.ts:489
+    따라서 nv_mid를 공식 상품번호로 반환하지 않는다.
+
+    bridge URL은 빈 문자열을 반환해
+    아래 Resolver 검색 단계에서
+    실제 brand.naver.com 상품 URL과
+    실제 productId를 찾도록 한다.
+  */
+  return "";
+}
+
+function cleanProductName(
+  value: string,
+) {
+
+C:\Projects\frontend\lib\resolveNaverBrandProductUrl.ts:1201
+    triedQueries,
+
+    reason:
+      inputProductId
+        ? "brand.naver.com 공식 상품 URL을 찾지 못했습니다."
+        : "중간 네이버 URL에서 공식 상품번호와 brand.naver.com 상품 URL을 확인하지 못했습니다.",
+  };
+}
+
+
+
+
+
+
+C:\Projects\frontend\lib\resolveNaverBrandProductUrl.ts:1202
+
+    reason:
+      inputProductId
+        ? "brand.naver.com 공식 상품 URL을 찾지 못했습니다."
+        : "중간 네이버 URL에서 공식 상품번호와 brand.naver.com 상품 URL을 확인하지 못했습니다.",
+  };
+}
+
+
+
+
+
+
+
+============================================================
+TARGET: .\lib
+PATTERN: collectNaverProduct
+MATCHES: 1
+============================================================
+
+C:\Projects\frontend\lib\brightDataProduct.ts:136
+      setTimeout(resolve, ms),
+  );
+}
+
+export async function collectNaverProduct(
+  productUrl: string,
+): Promise<NormalizedNaverProduct> {
+  const apiKey =
+    process.env.BRIGHTDATA_API_KEY;
+
+  if (!apiKey) {
+    throw new Error(
+      "BRIGHTDATA_API_KEY가 설정되지 않았습니다.",
+
+============================================================
+TARGET: .\lib
+PATTERN: reviewCount
+MATCHES: 39
+============================================================
+
+C:\Projects\frontend\lib\marketRanking.ts:4
+import { calculateMarketScore as calculateBaseMarketScore } from "./marketScore";
+import type { MarketCandidate, Product } from "./types";
+
+function normalizeReviewCount(
+  reviewCount: number,
+  maximumReviewCount: number,
+) {
+  if (maximumReviewCount <= 0) {
+    return 0;
+  }
+
+  return Math.min(
+
+C:\Projects\frontend\lib\marketRanking.ts:5
+import { calculateMarketScore as calculateBaseMarketScore } from "./marketScore";
+import type { MarketCandidate, Product } from "./types";
+
+function normalizeReviewCount(
+  reviewCount: number,
+  maximumReviewCount: number,
+) {
+  if (maximumReviewCount <= 0) {
+    return 0;
+  }
+
+  return Math.min(
+    100,
+
+C:\Projects\frontend\lib\marketRanking.ts:6
+import type { MarketCandidate, Product } from "./types";
+
+function normalizeReviewCount(
+  reviewCount: number,
+  maximumReviewCount: number,
+) {
+  if (maximumReviewCount <= 0) {
+    return 0;
+  }
+
+  return Math.min(
+    100,
+    (reviewCount / maximumReviewCount) * 100,
+
+C:\Projects\frontend\lib\marketRanking.ts:8
+function normalizeReviewCount(
+  reviewCount: number,
+  maximumReviewCount: number,
+) {
+  if (maximumReviewCount <= 0) {
+    return 0;
+  }
+
+  return Math.min(
+    100,
+    (reviewCount / maximumReviewCount) * 100,
+  );
+}
+
+C:\Projects\frontend\lib\marketRanking.ts:14
+  }
+
+  return Math.min(
+    100,
+    (reviewCount / maximumReviewCount) * 100,
+  );
+}
+
+export function calculateProductMarketScore(
+  product: Product,
+  maximumReviewCount: number,
+): MarketCandidate {
+  const reviewCountScore = normalizeReviewCount(
+
+C:\Projects\frontend\lib\marketRanking.ts:20
+}
+
+export function calculateProductMarketScore(
+  product: Product,
+  maximumReviewCount: number,
+): MarketCandidate {
+  const reviewCountScore = normalizeReviewCount(
+    product.reviewCount,
+    maximumReviewCount,
+  );
+
+  const scoreResult = calculateBaseMarketScore({
+    salesScore: product.salesRankScore,
+
+C:\Projects\frontend\lib\marketRanking.ts:22
+export function calculateProductMarketScore(
+  product: Product,
+  maximumReviewCount: number,
+): MarketCandidate {
+  const reviewCountScore = normalizeReviewCount(
+    product.reviewCount,
+    maximumReviewCount,
+  );
+
+  const scoreResult = calculateBaseMarketScore({
+    salesScore: product.salesRankScore,
+    reviewCountScore,
+    reviewRatingScore: product.reviewScore,
+
+C:\Projects\frontend\lib\marketRanking.ts:23
+  product: Product,
+  maximumReviewCount: number,
+): MarketCandidate {
+  const reviewCountScore = normalizeReviewCount(
+    product.reviewCount,
+    maximumReviewCount,
+  );
+
+  const scoreResult = calculateBaseMarketScore({
+    salesScore: product.salesRankScore,
+    reviewCountScore,
+    reviewRatingScore: product.reviewScore,
+    brandTrustScore: product.brandTrustScore,
+
+C:\Projects\frontend\lib\marketRanking.ts:24
+  maximumReviewCount: number,
+): MarketCandidate {
+  const reviewCountScore = normalizeReviewCount(
+    product.reviewCount,
+    maximumReviewCount,
+  );
+
+  const scoreResult = calculateBaseMarketScore({
+    salesScore: product.salesRankScore,
+    reviewCountScore,
+    reviewRatingScore: product.reviewScore,
+    brandTrustScore: product.brandTrustScore,
+    searchInterestScore: product.popularityScore,
+
+C:\Projects\frontend\lib\marketRanking.ts:29
+  );
+
+  const scoreResult = calculateBaseMarketScore({
+    salesScore: product.salesRankScore,
+    reviewCountScore,
+    reviewRatingScore: product.reviewScore,
+    brandTrustScore: product.brandTrustScore,
+    searchInterestScore: product.popularityScore,
+    recencyScore: product.recencyScore,
+  });
+
+  const marketReasons: string[] = [];
+
+
+C:\Projects\frontend\lib\marketRanking.ts:44
+      "판매 지표가 우수한 시장 인기 제품",
+    );
+  }
+
+  if (product.reviewCount >= 1000) {
+    marketReasons.push(
+      "누적 리뷰가 많아 평가 신뢰도가 높은 제품",
+    );
+  } else if (product.reviewCount >= 500) {
+    marketReasons.push(
+      "충분한 실사용 리뷰가 축적된 제품",
+    );
+  }
+
+C:\Projects\frontend\lib\marketRanking.ts:48
+  if (product.reviewCount >= 1000) {
+    marketReasons.push(
+      "누적 리뷰가 많아 평가 신뢰도가 높은 제품",
+    );
+  } else if (product.reviewCount >= 500) {
+    marketReasons.push(
+      "충분한 실사용 리뷰가 축적된 제품",
+    );
+  }
+
+  if (product.reviewScore >= 88) {
+    marketReasons.push(
+      "실사용자 만족도가 높은 제품",
+
+C:\Projects\frontend\lib\marketRanking.ts:125
+        .includes(normalizedCategory);
+    },
+  );
+
+  const maximumReviewCount = Math.max(
+    1,
+    ...categoryProducts.map(
+      (product) => product.reviewCount,
+    ),
+  );
+
+  return categoryProducts
+    .map((product) =>
+
+C:\Projects\frontend\lib\marketRanking.ts:128
+
+  const maximumReviewCount = Math.max(
+    1,
+    ...categoryProducts.map(
+      (product) => product.reviewCount,
+    ),
+  );
+
+  return categoryProducts
+    .map((product) =>
+      calculateProductMarketScore(
+        product,
+        maximumReviewCount,
+
+C:\Projects\frontend\lib\marketRanking.ts:136
+  return categoryProducts
+    .map((product) =>
+      calculateProductMarketScore(
+        product,
+        maximumReviewCount,
+      ),
+    )
+    .sort((a, b) => {
+      if (b.marketScore !== a.marketScore) {
+        return b.marketScore - a.marketScore;
+      }
+
+      if (
+
+C:\Projects\frontend\lib\marketRanking.ts:154
+          a.availabilityScore
+        );
+      }
+
+      return b.reviewCount - a.reviewCount;
+    })
+    .slice(0, limit);
+}
+
+C:\Projects\frontend\lib\marketScore.ts:3
+export type MarketScoreInput = {
+  salesScore: number;
+  reviewCountScore: number;
+  reviewRatingScore: number;
+  brandTrustScore: number;
+  searchInterestScore: number;
+  recencyScore: number;
+};
+
+export type MarketScoreResult = {
+  totalScore: number;
+
+C:\Projects\frontend\lib\marketScore.ts:14
+export type MarketScoreResult = {
+  totalScore: number;
+  breakdown: {
+    sales: number;
+    reviewCount: number;
+    reviewRating: number;
+    brandTrust: number;
+    searchInterest: number;
+    recency: number;
+  };
+};
+
+function clampScore(value: number) {
+
+C:\Projects\frontend\lib\marketScore.ts:30
+export function calculateMarketScore(
+  input: MarketScoreInput,
+): MarketScoreResult {
+  const sales = clampScore(input.salesScore) * 0.3;
+  const reviewCount =
+    clampScore(input.reviewCountScore) * 0.25;
+  const reviewRating =
+    clampScore(input.reviewRatingScore) * 0.2;
+  const brandTrust =
+    clampScore(input.brandTrustScore) * 0.1;
+  const searchInterest =
+    clampScore(input.searchInterestScore) * 0.1;
+  const recency =
+
+C:\Projects\frontend\lib\marketScore.ts:31
+  input: MarketScoreInput,
+): MarketScoreResult {
+  const sales = clampScore(input.salesScore) * 0.3;
+  const reviewCount =
+    clampScore(input.reviewCountScore) * 0.25;
+  const reviewRating =
+    clampScore(input.reviewRatingScore) * 0.2;
+  const brandTrust =
+    clampScore(input.brandTrustScore) * 0.1;
+  const searchInterest =
+    clampScore(input.searchInterestScore) * 0.1;
+  const recency =
+    clampScore(input.recencyScore) * 0.05;
+
+C:\Projects\frontend\lib\marketScore.ts:43
+    clampScore(input.recencyScore) * 0.05;
+
+  const totalScore =
+    sales +
+    reviewCount +
+    reviewRating +
+    brandTrust +
+    searchInterest +
+    recency;
+
+  return {
+    totalScore: Math.round(totalScore * 10) / 10,
+    breakdown: {
+
+C:\Projects\frontend\lib\marketScore.ts:53
+  return {
+    totalScore: Math.round(totalScore * 10) / 10,
+    breakdown: {
+      sales: Math.round(sales * 10) / 10,
+      reviewCount: Math.round(reviewCount * 10) / 10,
+      reviewRating: Math.round(reviewRating * 10) / 10,
+      brandTrust: Math.round(brandTrust * 10) / 10,
+      searchInterest: Math.round(searchInterest * 10) / 10,
+      recency: Math.round(recency * 10) / 10,
+    },
+  };
+}
+
+C:\Projects\frontend\lib\marketSearch.ts:7
+  brand: string;
+  price: number;
+  image: string;
+  url: string;
+  reviewCount: number;
+  rating: number;
+};
+
+export type ProductOffer = MarketSearchResult & {
+  matchScore: number;
+
+  /*
+    네이버 광고(ader) 링크처럼 실제 판매처로
+
+C:\Projects\frontend\lib\marketSearch.ts:829
+            ),
+
+          url,
+
+          reviewCount:
+            Math.round(
+              normalizeNumber(
+                item.reviews,
+              ),
+            ),
+
+          rating:
+            normalizeNumber(
+
+C:\Projects\frontend\lib\marketSearch.ts:1036
+            ),
+
+          url,
+
+          reviewCount:
+            Math.round(
+              normalizeNumber(
+                item.reviews,
+              ),
+            ),
+
+          rating:
+            normalizeNumber(
+
+C:\Projects\frontend\lib\marketSearch.ts:1126
+        );
+      }
+
+      if (
+        b.reviewCount !==
+        a.reviewCount
+      ) {
+        return (
+          b.reviewCount -
+          a.reviewCount
+        );
+      }
+
+
+C:\Projects\frontend\lib\marketSearch.ts:1127
+      }
+
+      if (
+        b.reviewCount !==
+        a.reviewCount
+      ) {
+        return (
+          b.reviewCount -
+          a.reviewCount
+        );
+      }
+
+      return (
+
+C:\Projects\frontend\lib\marketSearch.ts:1130
+        b.reviewCount !==
+        a.reviewCount
+      ) {
+        return (
+          b.reviewCount -
+          a.reviewCount
+        );
+      }
+
+      return (
+        a.price -
+        b.price
+      );
+
+C:\Projects\frontend\lib\marketSearch.ts:1131
+        a.reviewCount
+      ) {
+        return (
+          b.reviewCount -
+          a.reviewCount
+        );
+      }
+
+      return (
+        a.price -
+        b.price
+      );
+    },
+
+C:\Projects\frontend\lib\marketSearch.ts:1156
+  const reviewSource =
+    [...offers]
+      .filter(
+        (offer) =>
+          offer.reviewCount > 0 &&
+          offer.isIndividualSeller &&
+          offer.sourceType ===
+            "naver-store",
+      )
+      .sort(
+        (a, b) => {
+          if (
+            b.reviewCount !==
+
+C:\Projects\frontend\lib\marketSearch.ts:1164
+      )
+      .sort(
+        (a, b) => {
+          if (
+            b.reviewCount !==
+            a.reviewCount
+          ) {
+            return (
+              b.reviewCount -
+              a.reviewCount
+            );
+          }
+
+
+C:\Projects\frontend\lib\marketSearch.ts:1165
+      .sort(
+        (a, b) => {
+          if (
+            b.reviewCount !==
+            a.reviewCount
+          ) {
+            return (
+              b.reviewCount -
+              a.reviewCount
+            );
+          }
+
+          if (
+
+C:\Projects\frontend\lib\marketSearch.ts:1168
+            b.reviewCount !==
+            a.reviewCount
+          ) {
+            return (
+              b.reviewCount -
+              a.reviewCount
+            );
+          }
+
+          if (
+            b.rating !==
+            a.rating
+          ) {
+
+C:\Projects\frontend\lib\marketSearch.ts:1169
+            a.reviewCount
+          ) {
+            return (
+              b.reviewCount -
+              a.reviewCount
+            );
+          }
+
+          if (
+            b.rating !==
+            a.rating
+          ) {
+            return (
+
+C:\Projects\frontend\lib\marketSearch.ts:1223
+            );
+          }
+
+          if (
+            b.reviewCount !==
+            a.reviewCount
+          ) {
+            return (
+              b.reviewCount -
+              a.reviewCount
+            );
+          }
+
+
+C:\Projects\frontend\lib\marketSearch.ts:1224
+          }
+
+          if (
+            b.reviewCount !==
+            a.reviewCount
+          ) {
+            return (
+              b.reviewCount -
+              a.reviewCount
+            );
+          }
+
+          return (
+
+C:\Projects\frontend\lib\marketSearch.ts:1227
+            b.reviewCount !==
+            a.reviewCount
+          ) {
+            return (
+              b.reviewCount -
+              a.reviewCount
+            );
+          }
+
+          return (
+            b.matchScore -
+            a.matchScore
+          );
+
+C:\Projects\frontend\lib\marketSearch.ts:1228
+            a.reviewCount
+          ) {
+            return (
+              b.reviewCount -
+              a.reviewCount
+            );
+          }
+
+          return (
+            b.matchScore -
+            a.matchScore
+          );
+        },
+
+C:\Projects\frontend\lib\types.ts:18
+  battery: number;
+  afterService: number;
+
+  reviewScore: number;
+  reviewCount: number;
+
+  suitableFor: string[];
+  pros: string[];
+  cons: string[];
+  reviewEvidence: string[];
+
+  /**
+   * 시장 대표 제품 선정용 지표

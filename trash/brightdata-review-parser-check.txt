@@ -1,0 +1,1224 @@
+﻿
+========================================
+PATTERN: collectNaverProduct
+MATCHES: 1
+========================================
+
+===== LINE 136 =====
+  101:         "",
+  102:       ),
+  103:     );
+  104: 
+  105:   return Number.isFinite(parsed)
+  106:     ? parsed
+  107:     : 0;
+  108: }
+  109: 
+  110: function getProductInfo(
+  111:   items:
+  112:     | BrightDataProductInformation[]
+  113:     | undefined,
+  114:   key: string,
+  115: ) {
+  116:   if (!Array.isArray(items)) {
+  117:     return "";
+  118:   }
+  119: 
+  120:   return (
+  121:     items.find(
+  122:       (item) =>
+  123:         item.type?.trim() ===
+  124:         key,
+  125:     )?.value?.trim() ?? ""
+  126:   );
+  127: }
+  128: 
+  129: function sleep(ms: number) {
+  130:   return new Promise(
+  131:     (resolve) =>
+  132:       setTimeout(resolve, ms),
+  133:   );
+  134: }
+  135: 
+  136: export async function collectNaverProduct(
+  137:   productUrl: string,
+  138: ): Promise<NormalizedNaverProduct> {
+  139:   const apiKey =
+  140:     process.env.BRIGHTDATA_API_KEY;
+  141: 
+  142:   if (!apiKey) {
+  143:     throw new Error(
+  144:       "BRIGHTDATA_API_KEY가 설정되지 않았습니다.",
+  145:     );
+  146:   }
+  147: 
+  148:   const normalizedUrl =
+  149:     productUrl.trim();
+  150: 
+  151:   if (!normalizedUrl) {
+  152:     throw new Error(
+  153:       "상품 URL이 없습니다.",
+  154:     );
+  155:   }
+  156: 
+  157:   const triggerUrl =
+  158:     new URL(
+  159:       "https://api.brightdata.com/datasets/v3/trigger",
+  160:     );
+  161: 
+  162:   triggerUrl.searchParams.set(
+  163:     "dataset_id",
+  164:     DATASET_ID,
+  165:   );
+  166: 
+  167:   triggerUrl.searchParams.set(
+  168:     "include_errors",
+  169:     "true",
+  170:   );
+  171: 
+  172:   const triggerResponse =
+  173:     await fetch(
+  174:       triggerUrl.toString(),
+  175:       {
+  176:         method: "POST",
+  177:         headers: {
+  178:           Authorization:
+  179:             `Bearer ${apiKey}`,
+  180:           "Content-Type":
+  181:             "application/json",
+  182:         },
+  183:         body: JSON.stringify([
+  184:           {
+  185:             url: normalizedUrl,
+  186:           },
+  187:         ]),
+  188:         cache: "no-store",
+  189:       },
+  190:     );
+  191: 
+  192:   const triggerText =
+  193:     await triggerResponse.text();
+  194: 
+  195:   if (!triggerResponse.ok) {
+  196:     throw new Error(
+  197:       `Bright Data 실행 실패 (${triggerResponse.status}): ${triggerText}`,
+  198:     );
+  199:   }
+  200: 
+  201:   const trigger =
+  202:     JSON.parse(
+  203:       triggerText,
+  204:     ) as {
+  205:       snapshot_id?: string;
+  206:     };
+
+========================================
+PATTERN: topReviews
+MATCHES: 2
+========================================
+
+===== LINE 84 =====
+   49:   productId: string;
+   50: 
+   51:   title: string;
+   52: 
+   53:   originalPrice: number;
+   54:   finalPrice: number;
+   55:   discountRate: number;
+   56: 
+   57:   currency: string;
+   58: 
+   59:   imageUrl: string;
+   60: 
+   61:   totalReviews: number;
+   62:   averageRating: number | null;
+   63: 
+   64:   soldOut: boolean;
+   65: 
+   66:   sellerName: string;
+   67: 
+   68:   sellers: {
+   69:     sellerName: string;
+   70:     finalPrice: number;
+   71:     sellerLink: string;
+   72:   }[];
+   73: 
+   74:   purchaseSeller: string;
+   75:   purchasePrice: number;
+   76:   purchaseUrl: string;
+   77: 
+   78:   brand: string;
+   79:   manufacturer: string;
+   80:   modelName: string;
+   81: 
+   82:   categoryName: string;
+   83: 
+   84:   topReviews: {
+   85:     rating: number;
+   86:     date: string;
+   87:     text: string;
+   88:     helpfulCount: number;
+   89:   }[];
+   90: };
+   91: 
+   92: function numberValue(
+   93:   value: unknown,
+   94: ) {
+   95:   const parsed =
+   96:     Number(
+   97:       String(
+   98:         value ?? "",
+   99:       ).replace(
+  100:         /[^\d.]/g,
+  101:         "",
+  102:       ),
+  103:     );
+  104: 
+  105:   return Number.isFinite(parsed)
+  106:     ? parsed
+  107:     : 0;
+  108: }
+  109: 
+  110: function getProductInfo(
+  111:   items:
+  112:     | BrightDataProductInformation[]
+  113:     | undefined,
+  114:   key: string,
+  115: ) {
+  116:   if (!Array.isArray(items)) {
+  117:     return "";
+  118:   }
+  119: 
+  120:   return (
+  121:     items.find(
+  122:       (item) =>
+  123:         item.type?.trim() ===
+  124:         key,
+  125:     )?.value?.trim() ?? ""
+  126:   );
+  127: }
+  128: 
+  129: function sleep(ms: number) {
+  130:   return new Promise(
+  131:     (resolve) =>
+  132:       setTimeout(resolve, ms),
+  133:   );
+  134: }
+  135: 
+  136: export async function collectNaverProduct(
+  137:   productUrl: string,
+  138: ): Promise<NormalizedNaverProduct> {
+  139:   const apiKey =
+  140:     process.env.BRIGHTDATA_API_KEY;
+  141: 
+  142:   if (!apiKey) {
+  143:     throw new Error(
+  144:       "BRIGHTDATA_API_KEY가 설정되지 않았습니다.",
+  145:     );
+  146:   }
+  147: 
+  148:   const normalizedUrl =
+  149:     productUrl.trim();
+  150: 
+  151:   if (!normalizedUrl) {
+  152:     throw new Error(
+  153:       "상품 URL이 없습니다.",
+  154:     );
+
+===== LINE 439 =====
+  404:             ?.sellerName ??
+  405:           "",
+  406: 
+  407:         purchasePrice:
+  408:           cheapestSeller
+  409:             ?.finalPrice ??
+  410:           0,
+  411: 
+  412:         purchaseUrl:
+  413:           cheapestSeller
+  414:             ?.sellerLink ??
+  415:           "",
+  416: 
+  417:         manufacturer:
+  418:           getProductInfo(
+  419:             raw.product_information,
+  420:             "제조사",
+  421:           ),
+  422: 
+  423:         brand:
+  424:           getProductInfo(
+  425:             raw.product_information,
+  426:             "브랜드",
+  427:           ),
+  428: 
+  429:         modelName:
+  430:           getProductInfo(
+  431:             raw.product_information,
+  432:             "모델명",
+  433:           ),
+  434: 
+  435:         categoryName:
+  436:           raw.category_name ??
+  437:           "",
+  438: 
+  439:         topReviews:
+  440:           Array.isArray(
+  441:             raw.top_reviews,
+  442:           )
+  443:             ? raw.top_reviews
+  444:                 .slice(0, 20)
+  445:                 .map(
+  446:                   (review) => ({
+  447:                     rating:
+  448:                       Number(
+  449:                         review.rating ??
+  450:                           0,
+  451:                       ),
+  452: 
+  453:                     date:
+  454:                       review.rating_date ??
+  455:                       "",
+  456: 
+  457:                     text:
+  458:                       review.review ??
+  459:                       "",
+  460: 
+  461:                     helpfulCount:
+  462:                       Number(
+  463:                         review.helpful_count ??
+  464:                           0,
+  465:                       ),
+  466:                   }),
+  467:                 )
+  468:             : [],
+  469:       };
+  470:     }
+  471: 
+  472:     if (
+  473:       progress.status ===
+  474:       "failed"
+  475:     ) {
+  476:       throw new Error(
+  477:         `Bright Data 상품 수집 실패 (records=${progress.records ?? 0}, errors=${progress.errors ?? 0})`,
+  478:       );
+  479:     }
+  480: 
+  481:     await sleep(5000);
+  482:   }
+  483: 
+  484:   throw new Error(
+  485:     "Bright Data 상품 수집이 제한 시간 안에 완료되지 않았습니다.",
+  486:   );
+  487: }
+  488: 
+
+========================================
+PATTERN: reviews
+MATCHES: 9
+========================================
+
+===== LINE 29 =====
+    1: const DATASET_ID =
+    2:   "gd_m9qqjxxr1hab7okefj";
+    3: 
+    4: type BrightDataProductInformation = {
+    5:   type?: string;
+    6:   value?: string;
+    7: };
+    8: 
+    9: type BrightDataReview = {
+   10:   rating?: number;
+   11:   rating_date?: string;
+   12:   review?: string;
+   13:   helpful_count?: number | null;
+   14: };
+   15: 
+   16: type BrightDataRawProduct = {
+   17:   url?: string;
+   18:   product_id?: string;
+   19:   title?: string;
+   20:   original_price?: string | number;
+   21:   final_price?: string | number;
+   22:   discount_rate?: number;
+   23:   currency?: string;
+   24: 
+   25:   images?: {
+   26:     link?: string;
+   27:   }[];
+   28: 
+   29:   total_reviews?: number;
+   30:   average_rating?: number | null;
+   31: 
+   32:   sold_out?: boolean;
+   33: 
+   34:   sellers?: {
+   35:     seller_name?: string;
+   36:     final_price?: number;
+   37:     seller_link?: string;
+   38:   }[];
+   39: 
+   40:   product_information?: BrightDataProductInformation[];
+   41: 
+   42:   top_reviews?: BrightDataReview[];
+   43: 
+   44:   category_name?: string;
+   45: };
+   46: 
+   47: export type NormalizedNaverProduct = {
+   48:   url: string;
+   49:   productId: string;
+   50: 
+   51:   title: string;
+   52: 
+   53:   originalPrice: number;
+   54:   finalPrice: number;
+   55:   discountRate: number;
+   56: 
+   57:   currency: string;
+   58: 
+   59:   imageUrl: string;
+   60: 
+   61:   totalReviews: number;
+   62:   averageRating: number | null;
+   63: 
+   64:   soldOut: boolean;
+   65: 
+   66:   sellerName: string;
+   67: 
+   68:   sellers: {
+   69:     sellerName: string;
+   70:     finalPrice: number;
+   71:     sellerLink: string;
+   72:   }[];
+   73: 
+   74:   purchaseSeller: string;
+   75:   purchasePrice: number;
+   76:   purchaseUrl: string;
+   77: 
+   78:   brand: string;
+   79:   manufacturer: string;
+   80:   modelName: string;
+   81: 
+   82:   categoryName: string;
+   83: 
+   84:   topReviews: {
+   85:     rating: number;
+   86:     date: string;
+   87:     text: string;
+   88:     helpfulCount: number;
+   89:   }[];
+   90: };
+   91: 
+   92: function numberValue(
+   93:   value: unknown,
+   94: ) {
+   95:   const parsed =
+   96:     Number(
+   97:       String(
+   98:         value ?? "",
+   99:       ).replace(
+
+===== LINE 42 =====
+    7: };
+    8: 
+    9: type BrightDataReview = {
+   10:   rating?: number;
+   11:   rating_date?: string;
+   12:   review?: string;
+   13:   helpful_count?: number | null;
+   14: };
+   15: 
+   16: type BrightDataRawProduct = {
+   17:   url?: string;
+   18:   product_id?: string;
+   19:   title?: string;
+   20:   original_price?: string | number;
+   21:   final_price?: string | number;
+   22:   discount_rate?: number;
+   23:   currency?: string;
+   24: 
+   25:   images?: {
+   26:     link?: string;
+   27:   }[];
+   28: 
+   29:   total_reviews?: number;
+   30:   average_rating?: number | null;
+   31: 
+   32:   sold_out?: boolean;
+   33: 
+   34:   sellers?: {
+   35:     seller_name?: string;
+   36:     final_price?: number;
+   37:     seller_link?: string;
+   38:   }[];
+   39: 
+   40:   product_information?: BrightDataProductInformation[];
+   41: 
+   42:   top_reviews?: BrightDataReview[];
+   43: 
+   44:   category_name?: string;
+   45: };
+   46: 
+   47: export type NormalizedNaverProduct = {
+   48:   url: string;
+   49:   productId: string;
+   50: 
+   51:   title: string;
+   52: 
+   53:   originalPrice: number;
+   54:   finalPrice: number;
+   55:   discountRate: number;
+   56: 
+   57:   currency: string;
+   58: 
+   59:   imageUrl: string;
+   60: 
+   61:   totalReviews: number;
+   62:   averageRating: number | null;
+   63: 
+   64:   soldOut: boolean;
+   65: 
+   66:   sellerName: string;
+   67: 
+   68:   sellers: {
+   69:     sellerName: string;
+   70:     finalPrice: number;
+   71:     sellerLink: string;
+   72:   }[];
+   73: 
+   74:   purchaseSeller: string;
+   75:   purchasePrice: number;
+   76:   purchaseUrl: string;
+   77: 
+   78:   brand: string;
+   79:   manufacturer: string;
+   80:   modelName: string;
+   81: 
+   82:   categoryName: string;
+   83: 
+   84:   topReviews: {
+   85:     rating: number;
+   86:     date: string;
+   87:     text: string;
+   88:     helpfulCount: number;
+   89:   }[];
+   90: };
+   91: 
+   92: function numberValue(
+   93:   value: unknown,
+   94: ) {
+   95:   const parsed =
+   96:     Number(
+   97:       String(
+   98:         value ?? "",
+   99:       ).replace(
+  100:         /[^\d.]/g,
+  101:         "",
+  102:       ),
+  103:     );
+  104: 
+  105:   return Number.isFinite(parsed)
+  106:     ? parsed
+  107:     : 0;
+  108: }
+  109: 
+  110: function getProductInfo(
+  111:   items:
+  112:     | BrightDataProductInformation[]
+
+===== LINE 61 =====
+   26:     link?: string;
+   27:   }[];
+   28: 
+   29:   total_reviews?: number;
+   30:   average_rating?: number | null;
+   31: 
+   32:   sold_out?: boolean;
+   33: 
+   34:   sellers?: {
+   35:     seller_name?: string;
+   36:     final_price?: number;
+   37:     seller_link?: string;
+   38:   }[];
+   39: 
+   40:   product_information?: BrightDataProductInformation[];
+   41: 
+   42:   top_reviews?: BrightDataReview[];
+   43: 
+   44:   category_name?: string;
+   45: };
+   46: 
+   47: export type NormalizedNaverProduct = {
+   48:   url: string;
+   49:   productId: string;
+   50: 
+   51:   title: string;
+   52: 
+   53:   originalPrice: number;
+   54:   finalPrice: number;
+   55:   discountRate: number;
+   56: 
+   57:   currency: string;
+   58: 
+   59:   imageUrl: string;
+   60: 
+   61:   totalReviews: number;
+   62:   averageRating: number | null;
+   63: 
+   64:   soldOut: boolean;
+   65: 
+   66:   sellerName: string;
+   67: 
+   68:   sellers: {
+   69:     sellerName: string;
+   70:     finalPrice: number;
+   71:     sellerLink: string;
+   72:   }[];
+   73: 
+   74:   purchaseSeller: string;
+   75:   purchasePrice: number;
+   76:   purchaseUrl: string;
+   77: 
+   78:   brand: string;
+   79:   manufacturer: string;
+   80:   modelName: string;
+   81: 
+   82:   categoryName: string;
+   83: 
+   84:   topReviews: {
+   85:     rating: number;
+   86:     date: string;
+   87:     text: string;
+   88:     helpfulCount: number;
+   89:   }[];
+   90: };
+   91: 
+   92: function numberValue(
+   93:   value: unknown,
+   94: ) {
+   95:   const parsed =
+   96:     Number(
+   97:       String(
+   98:         value ?? "",
+   99:       ).replace(
+  100:         /[^\d.]/g,
+  101:         "",
+  102:       ),
+  103:     );
+  104: 
+  105:   return Number.isFinite(parsed)
+  106:     ? parsed
+  107:     : 0;
+  108: }
+  109: 
+  110: function getProductInfo(
+  111:   items:
+  112:     | BrightDataProductInformation[]
+  113:     | undefined,
+  114:   key: string,
+  115: ) {
+  116:   if (!Array.isArray(items)) {
+  117:     return "";
+  118:   }
+  119: 
+  120:   return (
+  121:     items.find(
+  122:       (item) =>
+  123:         item.type?.trim() ===
+  124:         key,
+  125:     )?.value?.trim() ?? ""
+  126:   );
+  127: }
+  128: 
+  129: function sleep(ms: number) {
+  130:   return new Promise(
+  131:     (resolve) =>
+
+===== LINE 84 =====
+   49:   productId: string;
+   50: 
+   51:   title: string;
+   52: 
+   53:   originalPrice: number;
+   54:   finalPrice: number;
+   55:   discountRate: number;
+   56: 
+   57:   currency: string;
+   58: 
+   59:   imageUrl: string;
+   60: 
+   61:   totalReviews: number;
+   62:   averageRating: number | null;
+   63: 
+   64:   soldOut: boolean;
+   65: 
+   66:   sellerName: string;
+   67: 
+   68:   sellers: {
+   69:     sellerName: string;
+   70:     finalPrice: number;
+   71:     sellerLink: string;
+   72:   }[];
+   73: 
+   74:   purchaseSeller: string;
+   75:   purchasePrice: number;
+   76:   purchaseUrl: string;
+   77: 
+   78:   brand: string;
+   79:   manufacturer: string;
+   80:   modelName: string;
+   81: 
+   82:   categoryName: string;
+   83: 
+   84:   topReviews: {
+   85:     rating: number;
+   86:     date: string;
+   87:     text: string;
+   88:     helpfulCount: number;
+   89:   }[];
+   90: };
+   91: 
+   92: function numberValue(
+   93:   value: unknown,
+   94: ) {
+   95:   const parsed =
+   96:     Number(
+   97:       String(
+   98:         value ?? "",
+   99:       ).replace(
+  100:         /[^\d.]/g,
+  101:         "",
+  102:       ),
+  103:     );
+  104: 
+  105:   return Number.isFinite(parsed)
+  106:     ? parsed
+  107:     : 0;
+  108: }
+  109: 
+  110: function getProductInfo(
+  111:   items:
+  112:     | BrightDataProductInformation[]
+  113:     | undefined,
+  114:   key: string,
+  115: ) {
+  116:   if (!Array.isArray(items)) {
+  117:     return "";
+  118:   }
+  119: 
+  120:   return (
+  121:     items.find(
+  122:       (item) =>
+  123:         item.type?.trim() ===
+  124:         key,
+  125:     )?.value?.trim() ?? ""
+  126:   );
+  127: }
+  128: 
+  129: function sleep(ms: number) {
+  130:   return new Promise(
+  131:     (resolve) =>
+  132:       setTimeout(resolve, ms),
+  133:   );
+  134: }
+  135: 
+  136: export async function collectNaverProduct(
+  137:   productUrl: string,
+  138: ): Promise<NormalizedNaverProduct> {
+  139:   const apiKey =
+  140:     process.env.BRIGHTDATA_API_KEY;
+  141: 
+  142:   if (!apiKey) {
+  143:     throw new Error(
+  144:       "BRIGHTDATA_API_KEY가 설정되지 않았습니다.",
+  145:     );
+  146:   }
+  147: 
+  148:   const normalizedUrl =
+  149:     productUrl.trim();
+  150: 
+  151:   if (!normalizedUrl) {
+  152:     throw new Error(
+  153:       "상품 URL이 없습니다.",
+  154:     );
+
+===== LINE 376 =====
+  341:         url:
+  342:           raw.url ??
+  343:           normalizedUrl,
+  344: 
+  345:         productId:
+  346:           raw.product_id ??
+  347:           "",
+  348: 
+  349:         title:
+  350:           raw.title ??
+  351:           "",
+  352: 
+  353:         /*
+  354:           사용자에게 보여줄 기본 가격은
+  355:           반드시 finalPrice를 사용한다.
+  356:         */
+  357:         originalPrice,
+  358: 
+  359:         finalPrice,
+  360: 
+  361:         discountRate:
+  362:           Number(
+  363:             raw.discount_rate ??
+  364:               0,
+  365:           ),
+  366: 
+  367:         currency:
+  368:           raw.currency ??
+  369:           "KRW",
+  370: 
+  371:         imageUrl:
+  372:           raw.images?.[0]
+  373:             ?.link ??
+  374:           "",
+  375: 
+  376:         totalReviews:
+  377:           Number(
+  378:             raw.total_reviews ??
+  379:               0,
+  380:           ),
+  381: 
+  382:         averageRating:
+  383:           typeof raw.average_rating ===
+  384:           "number"
+  385:             ? raw.average_rating
+  386:             : null,
+  387: 
+  388:         soldOut:
+  389:           Boolean(
+  390:             raw.sold_out,
+  391:           ),
+  392: 
+  393:         sellerName:
+  394:           cheapestSeller
+  395:             ?.sellerName ??
+  396:           raw.sellers?.[0]
+  397:             ?.seller_name ??
+  398:           "",
+  399: 
+  400:         sellers,
+  401: 
+  402:         purchaseSeller:
+  403:           cheapestSeller
+  404:             ?.sellerName ??
+  405:           "",
+  406: 
+  407:         purchasePrice:
+  408:           cheapestSeller
+  409:             ?.finalPrice ??
+  410:           0,
+  411: 
+  412:         purchaseUrl:
+  413:           cheapestSeller
+  414:             ?.sellerLink ??
+  415:           "",
+  416: 
+  417:         manufacturer:
+  418:           getProductInfo(
+  419:             raw.product_information,
+  420:             "제조사",
+  421:           ),
+  422: 
+  423:         brand:
+  424:           getProductInfo(
+  425:             raw.product_information,
+  426:             "브랜드",
+  427:           ),
+  428: 
+  429:         modelName:
+  430:           getProductInfo(
+  431:             raw.product_information,
+  432:             "모델명",
+  433:           ),
+  434: 
+  435:         categoryName:
+  436:           raw.category_name ??
+  437:           "",
+  438: 
+  439:         topReviews:
+  440:           Array.isArray(
+  441:             raw.top_reviews,
+  442:           )
+  443:             ? raw.top_reviews
+  444:                 .slice(0, 20)
+  445:                 .map(
+  446:                   (review) => ({
+
+===== LINE 378 =====
+  343:           normalizedUrl,
+  344: 
+  345:         productId:
+  346:           raw.product_id ??
+  347:           "",
+  348: 
+  349:         title:
+  350:           raw.title ??
+  351:           "",
+  352: 
+  353:         /*
+  354:           사용자에게 보여줄 기본 가격은
+  355:           반드시 finalPrice를 사용한다.
+  356:         */
+  357:         originalPrice,
+  358: 
+  359:         finalPrice,
+  360: 
+  361:         discountRate:
+  362:           Number(
+  363:             raw.discount_rate ??
+  364:               0,
+  365:           ),
+  366: 
+  367:         currency:
+  368:           raw.currency ??
+  369:           "KRW",
+  370: 
+  371:         imageUrl:
+  372:           raw.images?.[0]
+  373:             ?.link ??
+  374:           "",
+  375: 
+  376:         totalReviews:
+  377:           Number(
+  378:             raw.total_reviews ??
+  379:               0,
+  380:           ),
+  381: 
+  382:         averageRating:
+  383:           typeof raw.average_rating ===
+  384:           "number"
+  385:             ? raw.average_rating
+  386:             : null,
+  387: 
+  388:         soldOut:
+  389:           Boolean(
+  390:             raw.sold_out,
+  391:           ),
+  392: 
+  393:         sellerName:
+  394:           cheapestSeller
+  395:             ?.sellerName ??
+  396:           raw.sellers?.[0]
+  397:             ?.seller_name ??
+  398:           "",
+  399: 
+  400:         sellers,
+  401: 
+  402:         purchaseSeller:
+  403:           cheapestSeller
+  404:             ?.sellerName ??
+  405:           "",
+  406: 
+  407:         purchasePrice:
+  408:           cheapestSeller
+  409:             ?.finalPrice ??
+  410:           0,
+  411: 
+  412:         purchaseUrl:
+  413:           cheapestSeller
+  414:             ?.sellerLink ??
+  415:           "",
+  416: 
+  417:         manufacturer:
+  418:           getProductInfo(
+  419:             raw.product_information,
+  420:             "제조사",
+  421:           ),
+  422: 
+  423:         brand:
+  424:           getProductInfo(
+  425:             raw.product_information,
+  426:             "브랜드",
+  427:           ),
+  428: 
+  429:         modelName:
+  430:           getProductInfo(
+  431:             raw.product_information,
+  432:             "모델명",
+  433:           ),
+  434: 
+  435:         categoryName:
+  436:           raw.category_name ??
+  437:           "",
+  438: 
+  439:         topReviews:
+  440:           Array.isArray(
+  441:             raw.top_reviews,
+  442:           )
+  443:             ? raw.top_reviews
+  444:                 .slice(0, 20)
+  445:                 .map(
+  446:                   (review) => ({
+  447:                     rating:
+  448:                       Number(
+
+===== LINE 439 =====
+  404:             ?.sellerName ??
+  405:           "",
+  406: 
+  407:         purchasePrice:
+  408:           cheapestSeller
+  409:             ?.finalPrice ??
+  410:           0,
+  411: 
+  412:         purchaseUrl:
+  413:           cheapestSeller
+  414:             ?.sellerLink ??
+  415:           "",
+  416: 
+  417:         manufacturer:
+  418:           getProductInfo(
+  419:             raw.product_information,
+  420:             "제조사",
+  421:           ),
+  422: 
+  423:         brand:
+  424:           getProductInfo(
+  425:             raw.product_information,
+  426:             "브랜드",
+  427:           ),
+  428: 
+  429:         modelName:
+  430:           getProductInfo(
+  431:             raw.product_information,
+  432:             "모델명",
+  433:           ),
+  434: 
+  435:         categoryName:
+  436:           raw.category_name ??
+  437:           "",
+  438: 
+  439:         topReviews:
+  440:           Array.isArray(
+  441:             raw.top_reviews,
+  442:           )
+  443:             ? raw.top_reviews
+  444:                 .slice(0, 20)
+  445:                 .map(
+  446:                   (review) => ({
+  447:                     rating:
+  448:                       Number(
+  449:                         review.rating ??
+  450:                           0,
+  451:                       ),
+  452: 
+  453:                     date:
+  454:                       review.rating_date ??
+  455:                       "",
+  456: 
+  457:                     text:
+  458:                       review.review ??
+  459:                       "",
+  460: 
+  461:                     helpfulCount:
+  462:                       Number(
+  463:                         review.helpful_count ??
+  464:                           0,
+  465:                       ),
+  466:                   }),
+  467:                 )
+  468:             : [],
+  469:       };
+  470:     }
+  471: 
+  472:     if (
+  473:       progress.status ===
+  474:       "failed"
+  475:     ) {
+  476:       throw new Error(
+  477:         `Bright Data 상품 수집 실패 (records=${progress.records ?? 0}, errors=${progress.errors ?? 0})`,
+  478:       );
+  479:     }
+  480: 
+  481:     await sleep(5000);
+  482:   }
+  483: 
+  484:   throw new Error(
+  485:     "Bright Data 상품 수집이 제한 시간 안에 완료되지 않았습니다.",
+  486:   );
+  487: }
+  488: 
+
+===== LINE 441 =====
+  406: 
+  407:         purchasePrice:
+  408:           cheapestSeller
+  409:             ?.finalPrice ??
+  410:           0,
+  411: 
+  412:         purchaseUrl:
+  413:           cheapestSeller
+  414:             ?.sellerLink ??
+  415:           "",
+  416: 
+  417:         manufacturer:
+  418:           getProductInfo(
+  419:             raw.product_information,
+  420:             "제조사",
+  421:           ),
+  422: 
+  423:         brand:
+  424:           getProductInfo(
+  425:             raw.product_information,
+  426:             "브랜드",
+  427:           ),
+  428: 
+  429:         modelName:
+  430:           getProductInfo(
+  431:             raw.product_information,
+  432:             "모델명",
+  433:           ),
+  434: 
+  435:         categoryName:
+  436:           raw.category_name ??
+  437:           "",
+  438: 
+  439:         topReviews:
+  440:           Array.isArray(
+  441:             raw.top_reviews,
+  442:           )
+  443:             ? raw.top_reviews
+  444:                 .slice(0, 20)
+  445:                 .map(
+  446:                   (review) => ({
+  447:                     rating:
+  448:                       Number(
+  449:                         review.rating ??
+  450:                           0,
+  451:                       ),
+  452: 
+  453:                     date:
+  454:                       review.rating_date ??
+  455:                       "",
+  456: 
+  457:                     text:
+  458:                       review.review ??
+  459:                       "",
+  460: 
+  461:                     helpfulCount:
+  462:                       Number(
+  463:                         review.helpful_count ??
+  464:                           0,
+  465:                       ),
+  466:                   }),
+  467:                 )
+  468:             : [],
+  469:       };
+  470:     }
+  471: 
+  472:     if (
+  473:       progress.status ===
+  474:       "failed"
+  475:     ) {
+  476:       throw new Error(
+  477:         `Bright Data 상품 수집 실패 (records=${progress.records ?? 0}, errors=${progress.errors ?? 0})`,
+  478:       );
+  479:     }
+  480: 
+  481:     await sleep(5000);
+  482:   }
+  483: 
+  484:   throw new Error(
+  485:     "Bright Data 상품 수집이 제한 시간 안에 완료되지 않았습니다.",
+  486:   );
+  487: }
+  488: 
+
+===== LINE 443 =====
+  408:           cheapestSeller
+  409:             ?.finalPrice ??
+  410:           0,
+  411: 
+  412:         purchaseUrl:
+  413:           cheapestSeller
+  414:             ?.sellerLink ??
+  415:           "",
+  416: 
+  417:         manufacturer:
+  418:           getProductInfo(
+  419:             raw.product_information,
+  420:             "제조사",
+  421:           ),
+  422: 
+  423:         brand:
+  424:           getProductInfo(
+  425:             raw.product_information,
+  426:             "브랜드",
+  427:           ),
+  428: 
+  429:         modelName:
+  430:           getProductInfo(
+  431:             raw.product_information,
+  432:             "모델명",
+  433:           ),
+  434: 
+  435:         categoryName:
+  436:           raw.category_name ??
+  437:           "",
+  438: 
+  439:         topReviews:
+  440:           Array.isArray(
+  441:             raw.top_reviews,
+  442:           )
+  443:             ? raw.top_reviews
+  444:                 .slice(0, 20)
+  445:                 .map(
+  446:                   (review) => ({
+  447:                     rating:
+  448:                       Number(
+  449:                         review.rating ??
+  450:                           0,
+  451:                       ),
+  452: 
+  453:                     date:
+  454:                       review.rating_date ??
+  455:                       "",
+  456: 
+  457:                     text:
+  458:                       review.review ??
+  459:                       "",
+  460: 
+  461:                     helpfulCount:
+  462:                       Number(
+  463:                         review.helpful_count ??
+  464:                           0,
+  465:                       ),
+  466:                   }),
+  467:                 )
+  468:             : [],
+  469:       };
+  470:     }
+  471: 
+  472:     if (
+  473:       progress.status ===
+  474:       "failed"
+  475:     ) {
+  476:       throw new Error(
+  477:         `Bright Data 상품 수집 실패 (records=${progress.records ?? 0}, errors=${progress.errors ?? 0})`,
+  478:       );
+  479:     }
+  480: 
+  481:     await sleep(5000);
+  482:   }
+  483: 
+  484:   throw new Error(
+  485:     "Bright Data 상품 수집이 제한 시간 안에 완료되지 않았습니다.",
+  486:   );
+  487: }
+  488: 
+
+========================================
+PATTERN: smartstore
+MATCHES: 0
+========================================
+
+========================================
+PATTERN: products/
+MATCHES: 0
+========================================

@@ -1,0 +1,1318 @@
+﻿
+  app\api\market-candidates-enriched\route.ts:99:    brandSit
+e: string;
+  app\api\market-candidates-enriched\route.ts:100:    url: st
+ring;
+  app\api\market-candidates-enriched\route.ts:101:  };
+  app\api\market-candidates-enriched\route.ts:102:
+  app\api\market-candidates-enriched\route.ts:103:  reviewSou
+rce: {
+> app\api\market-candidates-enriched\route.ts:104:    product
+Name: string;
+  app\api\market-candidates-enriched\route.ts:105:    seller:
+ string;
+  app\api\market-candidates-enriched\route.ts:106:    price: 
+number;
+  app\api\market-candidates-enriched\route.ts:107:    reviewC
+ount: number;
+  app\api\market-candidates-enriched\route.ts:108:    rating:
+ number;
+  app\api\market-candidates-enriched\route.ts:109:    url: st
+ring;
+  app\api\market-candidates-enriched\route.ts:110:    resolve
+dUrl: string;
+  app\api\market-candidates-enriched\route.ts:111:    sourceT
+ype:
+  app\api\market-candidates-enriched\route.ts:112:      | "na
+ver-store"
+  app\api\market-candidates-enriched\route.ts:113:      | "ex
+ternal-store"
+  app\api\market-candidates-enriched\route.ts:114:      | "na
+ver-aggregate"
+  app\api\market-candidates-enriched\route.ts:115:      | "un
+known";
+  app\api\market-candidates-enriched\route.ts:116:    isIndiv
+idualSeller: boolean;
+> app\api\market-candidates-enriched\route.ts:117:    matchSc
+ore: number;
+  app\api\market-candidates-enriched\route.ts:118:    reviewT
+extSource:
+  app\api\market-candidates-enriched\route.ts:119:      | "se
+lected-source"
+  app\api\market-candidates-enriched\route.ts:120:      | "ca
+nonical-reuse"
+  app\api\market-candidates-enriched\route.ts:121:      | "ca
+nonical-fallback";
+  app\api\market-candidates-enriched\route.ts:122:    status:
+  app\api\market-candidates-enriched\route.ts:123:      | "se
+lected"
+  app\api\market-candidates-enriched\route.ts:124:      | "fa
+llback-canonical";
+  app\api\market-candidates-enriched\route.ts:125:  };
+  app\api\market-candidates-enriched\route.ts:126:
+  app\api\market-candidates-enriched\route.ts:127:  purchaseS
+ource: {
+> app\api\market-candidates-enriched\route.ts:128:    product
+Name: string;
+  app\api\market-candidates-enriched\route.ts:129:    seller:
+ string;
+  app\api\market-candidates-enriched\route.ts:130:    price: 
+number;
+  app\api\market-candidates-enriched\route.ts:131:    reviewC
+ount: number;
+  app\api\market-candidates-enriched\route.ts:132:    rating:
+ number;
+  app\api\market-candidates-enriched\route.ts:133:    url: st
+ring;
+  app\api\market-candidates-enriched\route.ts:134:    resolve
+dUrl: string;
+  app\api\market-candidates-enriched\route.ts:135:    sourceT
+ype:
+  app\api\market-candidates-enriched\route.ts:136:      | "na
+ver-store"
+  app\api\market-candidates-enriched\route.ts:137:      | "ex
+ternal-store"
+  app\api\market-candidates-enriched\route.ts:138:      | "na
+ver-aggregate"
+  app\api\market-candidates-enriched\route.ts:139:      | "un
+known";
+  app\api\market-candidates-enriched\route.ts:140:    isIndiv
+idualSeller: boolean;
+> app\api\market-candidates-enriched\route.ts:141:    matchSc
+ore: number;
+  app\api\market-candidates-enriched\route.ts:142:    status:
+  app\api\market-candidates-enriched\route.ts:143:      | "se
+lected"
+  app\api\market-candidates-enriched\route.ts:144:      | "fa
+llback-market";
+  app\api\market-candidates-enriched\route.ts:145:  };
+  app\api\market-candidates-enriched\route.ts:146:
+  app\api\market-candidates-enriched\route.ts:147:  market: {
+> app\api\market-candidates-enriched\route.ts:148:    product
+Name: string;
+  app\api\market-candidates-enriched\route.ts:149:    seller:
+ string;
+  app\api\market-candidates-enriched\route.ts:150:    listedP
+rice: number;
+  app\api\market-candidates-enriched\route.ts:151:    reviewC
+ount: number;
+  app\api\market-candidates-enriched\route.ts:152:    rating:
+ number;
+  app\api\market-candidates-enriched\route.ts:153:    imageUr
+l: string;
+  app\api\market-candidates-enriched\route.ts:154:    sourceU
+rl: string;
+  app\api\market-candidates-enriched\route.ts:155:  };
+  app\api\market-candidates-enriched\route.ts:156:
+  app\api\market-candidates-enriched\route.ts:157:  resolutio
+n: {
+  app\api\market-candidates-enriched\route.ts:158:    product
+Id: string;
+  app\api\market-candidates-enriched\route.ts:161:    canonic
+alUrl: string;
+  app\api\market-candidates-enriched\route.ts:162:  };
+  app\api\market-candidates-enriched\route.ts:163:
+  app\api\market-candidates-enriched\route.ts:164:  detail: {
+  app\api\market-candidates-enriched\route.ts:165:    product
+Id: string;
+> app\api\market-candidates-enriched\route.ts:166:    product
+Name: string;
+  app\api\market-candidates-enriched\route.ts:167:    brand: 
+string;
+  app\api\market-candidates-enriched\route.ts:168:    manufac
+turer: string;
+> app\api\market-candidates-enriched\route.ts:169:    modelNa
+me: string;
+  app\api\market-candidates-enriched\route.ts:170:
+  app\api\market-candidates-enriched\route.ts:171:    origina
+lPrice: number;
+  app\api\market-candidates-enriched\route.ts:172:    finalPr
+ice: number;
+  app\api\market-candidates-enriched\route.ts:173:    discoun
+tRate: number;
+  app\api\market-candidates-enriched\route.ts:174:
+  app\api\market-candidates-enriched\route.ts:175:    reviewC
+ount: number;
+  app\api\market-candidates-enriched\route.ts:176:    rating:
+ number | null;
+  app\api\market-candidates-enriched\route.ts:177:
+  app\api\market-candidates-enriched\route.ts:178:    sellerN
+ame: string;
+  app\api\market-candidates-enriched\route.ts:179:    categor
+yName: string;
+  app\api\market-candidates-enriched\route.ts:199:
+  app\api\market-candidates-enriched\route.ts:200:    sourceU
+rl: string;
+  app\api\market-candidates-enriched\route.ts:201:    reviewS
+ourceUrl: string;
+  app\api\market-candidates-enriched\route.ts:202:
+  app\api\market-candidates-enriched\route.ts:203:    detailS
+tatus:
+> app\api\market-candidates-enriched\route.ts:204:      | "fu
+ll"
+> app\api\market-candidates-enriched\route.ts:205:      | "pa
+rtial-market";
+  app\api\market-candidates-enriched\route.ts:206:  };
+  app\api\market-candidates-enriched\route.ts:207:};
+  app\api\market-candidates-enriched\route.ts:208:
+  app\api\market-candidates-enriched\route.ts:209:type Proces
+sSuccess = {
+  app\api\market-candidates-enriched\route.ts:210:  success: 
+true;
+  app\api\market-candidates-enriched\route.ts:211:
+  app\api\market-candidates-enriched\route.ts:212:  position:
+ number;
+  app\api\market-candidates-enriched\route.ts:213:
+  app\api\market-candidates-enriched\route.ts:214:  productId
+: string;
+  app\api\market-candidates-enriched\route.ts:215:
+  app\api\market-candidates-enriched\route.ts:375:    /[?&]pr
+oductNo=(\d+)/i,
+  app\api\market-candidates-enriched\route.ts:376:    /[?&]pr
+oductId=(\d+)/i,
+  app\api\market-candidates-enriched\route.ts:377:  ];
+  app\api\market-candidates-enriched\route.ts:378:
+  app\api\market-candidates-enriched\route.ts:379:  for (cons
+t pattern of patterns) {
+> app\api\market-candidates-enriched\route.ts:380:    const m
+atch =
+> app\api\market-candidates-enriched\route.ts:381:      decod
+ed.match(pattern);
+  app\api\market-candidates-enriched\route.ts:382:
+> app\api\market-candidates-enriched\route.ts:383:    if (mat
+ch?.[1]) {
+> app\api\market-candidates-enriched\route.ts:384:      retur
+n match[1];
+  app\api\market-candidates-enriched\route.ts:385:    }
+  app\api\market-candidates-enriched\route.ts:386:  }
+  app\api\market-candidates-enriched\route.ts:387:
+  app\api\market-candidates-enriched\route.ts:388:  return ""
+;
+  app\api\market-candidates-enriched\route.ts:389:}
+  app\api\market-candidates-enriched\route.ts:390:
+  app\api\market-candidates-enriched\route.ts:391:/*
+  app\api\market-candidates-enriched\route.ts:392:  상품명만으로 중복
+을 판단해야 할 때는
+  app\api\market-candidates-enriched\route.ts:393:  기존 0.78 기
+준을 사용하지 않는다.
+  app\api\market-candidates-enriched\route.ts:394:
+  app\api\market-candidates-enriched\route.ts:395:  서로 다른 모델이
+ 많은 카테고리에서
+  app\api\market-candidates-enriched\route.ts:396:  공통 설명어 때문
+에 오탐되는 것을 막기 위해
+  app\api\market-candidates-enriched\route.ts:397:  정규화된 상품명이
+ 사실상 동일한 경우만
+  app\api\market-candidates-enriched\route.ts:398:  중복으로 처리한다
+.
+  app\api\market-candidates-enriched\route.ts:399:*/
+> app\api\market-candidates-enriched\route.ts:400:function is
+SameMarketProductName(
+  app\api\market-candidates-enriched\route.ts:401:  a: string
+,
+  app\api\market-candidates-enriched\route.ts:402:  b: string
+,
+  app\api\market-candidates-enriched\route.ts:403:) {
+  app\api\market-candidates-enriched\route.ts:404:  const cle
+anA =
+  app\api\market-candidates-enriched\route.ts:405:    cleanNa
+me(a);
+  app\api\market-candidates-enriched\route.ts:406:
+  app\api\market-candidates-enriched\route.ts:407:  const cle
+anB =
+  app\api\market-candidates-enriched\route.ts:408:    cleanNa
+me(b);
+  app\api\market-candidates-enriched\route.ts:409:
+  app\api\market-candidates-enriched\route.ts:410:  if (
+  app\api\market-candidates-enriched\route.ts:498:
+  app\api\market-candidates-enriched\route.ts:499:          /
+*
+  app\api\market-candidates-enriched\route.ts:500:           
+ 상품번호를 확보하지 못한 경우에만
+  app\api\market-candidates-enriched\route.ts:501:           
+ 상품명 기반의 보수적인 fallback을 쓴다.
+  app\api\market-candidates-enriched\route.ts:502:          *
+/
+> app\api\market-candidates-enriched\route.ts:503:          r
+eturn isSameMarketProductName(
+  app\api\market-candidates-enriched\route.ts:504:           
+ product.name,
+  app\api\market-candidates-enriched\route.ts:505:           
+ existing.name,
+  app\api\market-candidates-enriched\route.ts:506:          )
+;
+  app\api\market-candidates-enriched\route.ts:507:        },
+  app\api\market-candidates-enriched\route.ts:508:      );
+  app\api\market-candidates-enriched\route.ts:509:
+  app\api\market-candidates-enriched\route.ts:510:    if (!du
+plicate) {
+  app\api\market-candidates-enriched\route.ts:511:      resul
+t.push(
+  app\api\market-candidates-enriched\route.ts:512:        pro
+duct,
+  app\api\market-candidates-enriched\route.ts:513:      );
+  app\api\market-candidates-enriched\route.ts:639:      Strin
+g(
+  app\api\market-candidates-enriched\route.ts:640:        det
+ail.productId ??
+  app\api\market-candidates-enriched\route.ts:641:          p
+roductId,
+  app\api\market-candidates-enriched\route.ts:642:      ),
+  app\api\market-candidates-enriched\route.ts:643:
+> app\api\market-candidates-enriched\route.ts:644:    title:
+  app\api\market-candidates-enriched\route.ts:645:      Strin
+g(
+> app\api\market-candidates-enriched\route.ts:646:        det
+ail.productName ??
+  app\api\market-candidates-enriched\route.ts:647:          "
+",
+  app\api\market-candidates-enriched\route.ts:648:      ),
+  app\api\market-candidates-enriched\route.ts:649:
+  app\api\market-candidates-enriched\route.ts:650:    brand:
+  app\api\market-candidates-enriched\route.ts:651:      Strin
+g(
+  app\api\market-candidates-enriched\route.ts:652:        det
+ail.brand ??
+  app\api\market-candidates-enriched\route.ts:653:          "
+",
+  app\api\market-candidates-enriched\route.ts:654:      ),
+  app\api\market-candidates-enriched\route.ts:655:
+  app\api\market-candidates-enriched\route.ts:656:    manufac
+turer:
+  app\api\market-candidates-enriched\route.ts:657:      Strin
+g(
+  app\api\market-candidates-enriched\route.ts:658:        det
+ail.manufacturer ??
+  app\api\market-candidates-enriched\route.ts:659:          "
+",
+  app\api\market-candidates-enriched\route.ts:660:      ),
+  app\api\market-candidates-enriched\route.ts:661:
+> app\api\market-candidates-enriched\route.ts:662:    modelNa
+me:
+  app\api\market-candidates-enriched\route.ts:663:      Strin
+g(
+> app\api\market-candidates-enriched\route.ts:664:        det
+ail.modelName ??
+  app\api\market-candidates-enriched\route.ts:665:          "
+",
+  app\api\market-candidates-enriched\route.ts:666:      ),
+  app\api\market-candidates-enriched\route.ts:667:
+  app\api\market-candidates-enriched\route.ts:668:    origina
+lPrice:
+  app\api\market-candidates-enriched\route.ts:669:      Numbe
+r(
+  app\api\market-candidates-enriched\route.ts:670:        pri
+ce.originalPrice ??
+  app\api\market-candidates-enriched\route.ts:671:          0
+,
+  app\api\market-candidates-enriched\route.ts:672:      ),
+  app\api\market-candidates-enriched\route.ts:673:
+  app\api\market-candidates-enriched\route.ts:674:    finalPr
+ice,
+  app\api\market-candidates-enriched\route.ts:730:) {
+  app\api\market-candidates-enriched\route.ts:731:  try {
+  app\api\market-candidates-enriched\route.ts:732:    const u
+rl =
+  app\api\market-candidates-enriched\route.ts:733:      new U
+RL(value);
+  app\api\market-candidates-enriched\route.ts:734:
+> app\api\market-candidates-enriched\route.ts:735:    const m
+atch =
+> app\api\market-candidates-enriched\route.ts:736:      url.p
+athname.match(
+  app\api\market-candidates-enriched\route.ts:737:        /\/
+products\/(\d+)/i,
+  app\api\market-candidates-enriched\route.ts:738:      );
+  app\api\market-candidates-enriched\route.ts:739:
+> app\api\market-candidates-enriched\route.ts:740:    if (!ma
+tch?.[1]) {
+  app\api\market-candidates-enriched\route.ts:741:      retur
+n null;
+  app\api\market-candidates-enriched\route.ts:742:    }
+  app\api\market-candidates-enriched\route.ts:743:
+  app\api\market-candidates-enriched\route.ts:744:    if (
+  app\api\market-candidates-enriched\route.ts:745:      url.h
+ostname ===
+  app\api\market-candidates-enriched\route.ts:746:      "bran
+d.naver.com"
+  app\api\market-candidates-enriched\route.ts:747:    ) {
+  app\api\market-candidates-enriched\route.ts:748:      retur
+n {
+  app\api\market-candidates-enriched\route.ts:749:        typ
+e:
+  app\api\market-candidates-enriched\route.ts:750:          "
+brand" as const,
+  app\api\market-candidates-enriched\route.ts:751:
+  app\api\market-candidates-enriched\route.ts:752:        pro
+ductId:
+> app\api\market-candidates-enriched\route.ts:753:          m
+atch[1],
+  app\api\market-candidates-enriched\route.ts:754:
+  app\api\market-candidates-enriched\route.ts:755:        can
+onicalUrl:
+  app\api\market-candidates-enriched\route.ts:756:          `
+${url.origin}${url.pathname}`,
+  app\api\market-candidates-enriched\route.ts:757:      };
+  app\api\market-candidates-enriched\route.ts:758:    }
+  app\api\market-candidates-enriched\route.ts:759:
+  app\api\market-candidates-enriched\route.ts:760:    if (
+  app\api\market-candidates-enriched\route.ts:761:      url.h
+ostname ===
+  app\api\market-candidates-enriched\route.ts:762:      "smar
+tstore.naver.com"
+  app\api\market-candidates-enriched\route.ts:763:    ) {
+  app\api\market-candidates-enriched\route.ts:764:      retur
+n {
+  app\api\market-candidates-enriched\route.ts:765:        typ
+e:
+  app\api\market-candidates-enriched\route.ts:766:          "
+smartstore" as const,
+  app\api\market-candidates-enriched\route.ts:767:
+  app\api\market-candidates-enriched\route.ts:768:        pro
+ductId:
+> app\api\market-candidates-enriched\route.ts:769:          m
+atch[1],
+  app\api\market-candidates-enriched\route.ts:770:
+  app\api\market-candidates-enriched\route.ts:771:        can
+onicalUrl:
+  app\api\market-candidates-enriched\route.ts:772:          `
+${url.origin}${url.pathname}`,
+  app\api\market-candidates-enriched\route.ts:773:      };
+  app\api\market-candidates-enriched\route.ts:774:    }
+  app\api\market-candidates-enriched\route.ts:775:
+  app\api\market-candidates-enriched\route.ts:776:    return 
+null;
+  app\api\market-candidates-enriched\route.ts:777:  } catch {
+  app\api\market-candidates-enriched\route.ts:778:    return 
+null;
+  app\api\market-candidates-enriched\route.ts:779:  }
+  app\api\market-candidates-enriched\route.ts:780:}
+  app\api\market-candidates-enriched\route.ts:781:
+  app\api\market-candidates-enriched\route.ts:782:
+> app\api\market-candidates-enriched\route.ts:783:function cr
+eatePartialMarketCandidate(
+  app\api\market-candidates-enriched\route.ts:784:  market: C
+apturedProduct,
+  app\api\market-candidates-enriched\route.ts:785:  position:
+ number,
+  app\api\market-candidates-enriched\route.ts:786:): FinalCan
+didate {
+  app\api\market-candidates-enriched\route.ts:787:  const fal
+lbackProductId =
+  app\api\market-candidates-enriched\route.ts:788:    extract
+MarketProductId(
+  app\api\market-candidates-enriched\route.ts:789:      marke
+t.url,
+  app\api\market-candidates-enriched\route.ts:790:    );
+  app\api\market-candidates-enriched\route.ts:791:
+  app\api\market-candidates-enriched\route.ts:792:  return {
+  app\api\market-candidates-enriched\route.ts:793:    positio
+n,
+  app\api\market-candidates-enriched\route.ts:802:      url:
+  app\api\market-candidates-enriched\route.ts:803:        mar
+ket.url,
+  app\api\market-candidates-enriched\route.ts:804:    },
+  app\api\market-candidates-enriched\route.ts:805:
+  app\api\market-candidates-enriched\route.ts:806:    reviewS
+ource: {
+> app\api\market-candidates-enriched\route.ts:807:      produ
+ctName:
+  app\api\market-candidates-enriched\route.ts:808:        mar
+ket.name,
+  app\api\market-candidates-enriched\route.ts:809:      selle
+r:
+  app\api\market-candidates-enriched\route.ts:810:        mar
+ket.seller,
+  app\api\market-candidates-enriched\route.ts:811:      price
+:
+  app\api\market-candidates-enriched\route.ts:812:        mar
+ket.price,
+  app\api\market-candidates-enriched\route.ts:813:      revie
+wCount:
+  app\api\market-candidates-enriched\route.ts:814:        mar
+ket.reviewCount,
+  app\api\market-candidates-enriched\route.ts:815:      ratin
+g:
+  app\api\market-candidates-enriched\route.ts:816:        mar
+ket.rating,
+  app\api\market-candidates-enriched\route.ts:817:      url:
+  app\api\market-candidates-enriched\route.ts:820:        mar
+ket.url,
+  app\api\market-candidates-enriched\route.ts:821:      sourc
+eType:
+  app\api\market-candidates-enriched\route.ts:822:        "na
+ver-aggregate",
+  app\api\market-candidates-enriched\route.ts:823:      isInd
+ividualSeller:
+  app\api\market-candidates-enriched\route.ts:824:        fal
+se,
+> app\api\market-candidates-enriched\route.ts:825:      match
+Score:
+  app\api\market-candidates-enriched\route.ts:826:        0,
+  app\api\market-candidates-enriched\route.ts:827:      revie
+wTextSource:
+  app\api\market-candidates-enriched\route.ts:828:        "ca
+nonical-fallback",
+  app\api\market-candidates-enriched\route.ts:829:      statu
+s:
+  app\api\market-candidates-enriched\route.ts:830:        "fa
+llback-canonical",
+  app\api\market-candidates-enriched\route.ts:831:    },
+  app\api\market-candidates-enriched\route.ts:832:
+  app\api\market-candidates-enriched\route.ts:833:    purchas
+eSource: {
+> app\api\market-candidates-enriched\route.ts:834:      produ
+ctName:
+  app\api\market-candidates-enriched\route.ts:835:        mar
+ket.name,
+  app\api\market-candidates-enriched\route.ts:836:      selle
+r:
+  app\api\market-candidates-enriched\route.ts:837:        mar
+ket.seller,
+  app\api\market-candidates-enriched\route.ts:838:      price
+:
+  app\api\market-candidates-enriched\route.ts:839:        mar
+ket.price,
+  app\api\market-candidates-enriched\route.ts:840:      revie
+wCount:
+  app\api\market-candidates-enriched\route.ts:841:        mar
+ket.reviewCount,
+  app\api\market-candidates-enriched\route.ts:842:      ratin
+g:
+  app\api\market-candidates-enriched\route.ts:843:        mar
+ket.rating,
+  app\api\market-candidates-enriched\route.ts:844:      url:
+  app\api\market-candidates-enriched\route.ts:847:        mar
+ket.url,
+  app\api\market-candidates-enriched\route.ts:848:      sourc
+eType:
+  app\api\market-candidates-enriched\route.ts:849:        "na
+ver-aggregate",
+  app\api\market-candidates-enriched\route.ts:850:      isInd
+ividualSeller:
+  app\api\market-candidates-enriched\route.ts:851:        fal
+se,
+> app\api\market-candidates-enriched\route.ts:852:      match
+Score:
+  app\api\market-candidates-enriched\route.ts:853:        0,
+  app\api\market-candidates-enriched\route.ts:854:      statu
+s:
+  app\api\market-candidates-enriched\route.ts:855:        "fa
+llback-market",
+  app\api\market-candidates-enriched\route.ts:856:    },
+  app\api\market-candidates-enriched\route.ts:857:
+  app\api\market-candidates-enriched\route.ts:858:    market:
+ {
+> app\api\market-candidates-enriched\route.ts:859:      produ
+ctName:
+  app\api\market-candidates-enriched\route.ts:860:        mar
+ket.name,
+  app\api\market-candidates-enriched\route.ts:861:      selle
+r:
+  app\api\market-candidates-enriched\route.ts:862:        mar
+ket.seller,
+  app\api\market-candidates-enriched\route.ts:863:      liste
+dPrice:
+  app\api\market-candidates-enriched\route.ts:864:        mar
+ket.price,
+  app\api\market-candidates-enriched\route.ts:865:      revie
+wCount:
+  app\api\market-candidates-enriched\route.ts:866:        mar
+ket.reviewCount,
+  app\api\market-candidates-enriched\route.ts:867:      ratin
+g:
+  app\api\market-candidates-enriched\route.ts:868:        mar
+ket.rating,
+  app\api\market-candidates-enriched\route.ts:869:      image
+Url:
+  app\api\market-candidates-enriched\route.ts:884:    },
+  app\api\market-candidates-enriched\route.ts:885:
+  app\api\market-candidates-enriched\route.ts:886:    detail:
+ {
+  app\api\market-candidates-enriched\route.ts:887:      produ
+ctId:
+  app\api\market-candidates-enriched\route.ts:888:        fal
+lbackProductId,
+> app\api\market-candidates-enriched\route.ts:889:      produ
+ctName:
+  app\api\market-candidates-enriched\route.ts:890:        mar
+ket.name,
+  app\api\market-candidates-enriched\route.ts:891:      brand
+:
+  app\api\market-candidates-enriched\route.ts:892:        "",
+  app\api\market-candidates-enriched\route.ts:893:      manuf
+acturer:
+  app\api\market-candidates-enriched\route.ts:894:        "",
+> app\api\market-candidates-enriched\route.ts:895:      model
+Name:
+  app\api\market-candidates-enriched\route.ts:896:        "",
+  app\api\market-candidates-enriched\route.ts:897:
+  app\api\market-candidates-enriched\route.ts:898:      origi
+nalPrice:
+  app\api\market-candidates-enriched\route.ts:899:        mar
+ket.price,
+  app\api\market-candidates-enriched\route.ts:900:      final
+Price:
+  app\api\market-candidates-enriched\route.ts:901:        mar
+ket.price,
+  app\api\market-candidates-enriched\route.ts:902:      disco
+untRate:
+  app\api\market-candidates-enriched\route.ts:903:        0,
+  app\api\market-candidates-enriched\route.ts:904:
+  app\api\market-candidates-enriched\route.ts:905:      revie
+wCount:
+  app\api\market-candidates-enriched\route.ts:926:        mar
+ket.url,
+  app\api\market-candidates-enriched\route.ts:927:      revie
+wSourceUrl:
+  app\api\market-candidates-enriched\route.ts:928:        mar
+ket.url,
+  app\api\market-candidates-enriched\route.ts:929:
+  app\api\market-candidates-enriched\route.ts:930:      detai
+lStatus:
+> app\api\market-candidates-enriched\route.ts:931:        "pa
+rtial-market",
+  app\api\market-candidates-enriched\route.ts:932:    },
+  app\api\market-candidates-enriched\route.ts:933:  };
+  app\api\market-candidates-enriched\route.ts:934:}
+  app\api\market-candidates-enriched\route.ts:935:
+  app\api\market-candidates-enriched\route.ts:936:export asyn
+c function GET(
+  app\api\market-candidates-enriched\route.ts:937:  request: 
+Request,
+  app\api\market-candidates-enriched\route.ts:938:) {
+  app\api\market-candidates-enriched\route.ts:939:  try {
+  app\api\market-candidates-enriched\route.ts:940:    const r
+equestUrl =
+  app\api\market-candidates-enriched\route.ts:941:      new U
+RL(
+  app\api\market-candidates-enriched\route.ts:1160:
+  app\api\market-candidates-enriched\route.ts:1161:    const 
+finalCandidates:
+  app\api\market-candidates-enriched\route.ts:1162:      Fina
+lCandidate[] = [];
+  app\api\market-candidates-enriched\route.ts:1163:
+  app\api\market-candidates-enriched\route.ts:1164:    /*
+> app\api\market-candidates-enriched\route.ts:1165:      URL/
+상세 확보에 실패한 partial 후보는
+  app\api\market-candidates-enriched\route.ts:1166:      즉시 최
+종 5개 자리를 차지시키지 않는다.
+  app\api\market-candidates-enriched\route.ts:1167:
+> app\api\market-candidates-enriched\route.ts:1168:      먼저 가
+능한 한 full 후보를 끝까지 확보하고,
+  app\api\market-candidates-enriched\route.ts:1169:      그래도 
+5개가 부족할 때만 시장 순서대로
+> app\api\market-candidates-enriched\route.ts:1170:      part
+ial 후보를 보충한다.
+  app\api\market-candidates-enriched\route.ts:1171:    */
+> app\api\market-candidates-enriched\route.ts:1172:    const 
+partialCandidates:
+  app\api\market-candidates-enriched\route.ts:1173:      Fina
+lCandidate[] = [];
+  app\api\market-candidates-enriched\route.ts:1174:
+  app\api\market-candidates-enriched\route.ts:1175:    const 
+failures:
+  app\api\market-candidates-enriched\route.ts:1176:      Fail
+ureItem[] = [];
+  app\api\market-candidates-enriched\route.ts:1177:
+  app\api\market-candidates-enriched\route.ts:1178:    const 
+seenProductIds =
+  app\api\market-candidates-enriched\route.ts:1179:      new 
+Set<string>();
+  app\api\market-candidates-enriched\route.ts:1180:
+  app\api\market-candidates-enriched\route.ts:1181:    let re
+solverAttempts = 0;
+  app\api\market-candidates-enriched\route.ts:1182:
+  app\api\market-candidates-enriched\route.ts:1291:          
+  const reason =
+  app\api\market-candidates-enriched\route.ts:1292:          
+    resolved.reason ??
+  app\api\market-candidates-enriched\route.ts:1293:          
+    "공식 Brand 상품 URL을 찾지 못했습니다.";
+  app\api\market-candidates-enriched\route.ts:1294:
+  app\api\market-candidates-enriched\route.ts:1295:          
+  console.log(
+> app\api\market-candidates-enriched\route.ts:1296:          
+    `[ENRICH ${position}] partial 유지(resolve 실패)`,
+  app\api\market-candidates-enriched\route.ts:1297:          
+    reason,
+  app\api\market-candidates-enriched\route.ts:1298:          
+  );
+  app\api\market-candidates-enriched\route.ts:1299:
+  app\api\market-candidates-enriched\route.ts:1300:          
+  return {
+  app\api\market-candidates-enriched\route.ts:1301:          
+    success: true,
+  app\api\market-candidates-enriched\route.ts:1302:
+  app\api\market-candidates-enriched\route.ts:1303:          
+    position,
+  app\api\market-candidates-enriched\route.ts:1304:
+  app\api\market-candidates-enriched\route.ts:1305:          
+    productId:
+  app\api\market-candidates-enriched\route.ts:1306:          
+      extractMarketProductId(
+  app\api\market-candidates-enriched\route.ts:1307:          
+        market.url,
+  app\api\market-candidates-enriched\route.ts:1308:          
+      ) ||
+> app\api\market-candidates-enriched\route.ts:1309:          
+      `partial-${position}`,
+  app\api\market-candidates-enriched\route.ts:1310:
+  app\api\market-candidates-enriched\route.ts:1311:          
+    resolverAttempts:
+  app\api\market-candidates-enriched\route.ts:1312:          
+      candidateResolverAttempts,
+  app\api\market-candidates-enriched\route.ts:1313:
+  app\api\market-candidates-enriched\route.ts:1314:          
+    brightDataCalls: 0,
+  app\api\market-candidates-enriched\route.ts:1315:
+  app\api\market-candidates-enriched\route.ts:1316:          
+    candidate:
+> app\api\market-candidates-enriched\route.ts:1317:          
+      createPartialMarketCandidate(
+  app\api\market-candidates-enriched\route.ts:1318:          
+        market,
+  app\api\market-candidates-enriched\route.ts:1319:          
+        position,
+  app\api\market-candidates-enriched\route.ts:1320:          
+      ),
+  app\api\market-candidates-enriched\route.ts:1321:          
+  };
+  app\api\market-candidates-enriched\route.ts:1322:          
+}
+  app\api\market-candidates-enriched\route.ts:1323:
+  app\api\market-candidates-enriched\route.ts:1324:          
+/*
+  app\api\market-candidates-enriched\route.ts:1325:          
+  SmartStore 상품번호와
+  app\api\market-candidates-enriched\route.ts:1326:          
+  resolver가 찾은 Brand 상품번호가 다르면
+  app\api\market-candidates-enriched\route.ts:1327:          
+  잘못 연결된 공식상품일 가능성이 있으므로 차단.
+  app\api\market-candidates-enriched\route.ts:1385:          
+  error instanceof Error
+  app\api\market-candidates-enriched\route.ts:1386:          
+    ? error.message
+  app\api\market-candidates-enriched\route.ts:1387:          
+    : "URL resolver 오류";
+  app\api\market-candidates-enriched\route.ts:1388:
+  app\api\market-candidates-enriched\route.ts:1389:          
+console.log(
+> app\api\market-candidates-enriched\route.ts:1390:          
+  `[ENRICH ${position}] partial 유지(resolve 오류)`,
+  app\api\market-candidates-enriched\route.ts:1391:          
+  reason,
+  app\api\market-candidates-enriched\route.ts:1392:          
+);
+  app\api\market-candidates-enriched\route.ts:1393:
+  app\api\market-candidates-enriched\route.ts:1394:          
+return {
+  app\api\market-candidates-enriched\route.ts:1395:          
+  success: true,
+  app\api\market-candidates-enriched\route.ts:1396:
+  app\api\market-candidates-enriched\route.ts:1397:          
+  position,
+  app\api\market-candidates-enriched\route.ts:1398:
+  app\api\market-candidates-enriched\route.ts:1399:          
+  productId:
+  app\api\market-candidates-enriched\route.ts:1400:          
+    extractMarketProductId(
+  app\api\market-candidates-enriched\route.ts:1401:          
+      market.url,
+  app\api\market-candidates-enriched\route.ts:1402:          
+    ) ||
+> app\api\market-candidates-enriched\route.ts:1403:          
+    `partial-${position}`,
+  app\api\market-candidates-enriched\route.ts:1404:
+  app\api\market-candidates-enriched\route.ts:1405:          
+  resolverAttempts:
+  app\api\market-candidates-enriched\route.ts:1406:          
+    candidateResolverAttempts,
+  app\api\market-candidates-enriched\route.ts:1407:
+  app\api\market-candidates-enriched\route.ts:1408:          
+  brightDataCalls: 0,
+  app\api\market-candidates-enriched\route.ts:1409:
+  app\api\market-candidates-enriched\route.ts:1410:          
+  candidate:
+> app\api\market-candidates-enriched\route.ts:1411:          
+    createPartialMarketCandidate(
+  app\api\market-candidates-enriched\route.ts:1412:          
+      market,
+  app\api\market-candidates-enriched\route.ts:1413:          
+      position,
+  app\api\market-candidates-enriched\route.ts:1414:          
+    ),
+  app\api\market-candidates-enriched\route.ts:1415:          
+};
+  app\api\market-candidates-enriched\route.ts:1416:        }
+  app\api\market-candidates-enriched\route.ts:1417:      }
+  app\api\market-candidates-enriched\route.ts:1418:
+  app\api\market-candidates-enriched\route.ts:1419:      /*
+  app\api\market-candidates-enriched\route.ts:1420:        이전
+ 배치에서 이미 확보된 상품이면
+  app\api\market-candidates-enriched\route.ts:1421:        Br
+ight Data 호출 전에 차단.
+  app\api\market-candidates-enriched\route.ts:1572:      cons
+t usable =
+  app\api\market-candidates-enriched\route.ts:1573:        Bo
+olean(
+  app\api\market-candidates-enriched\route.ts:1574:          
+detail.productId,
+  app\api\market-candidates-enriched\route.ts:1575:        ) 
+&&
+  app\api\market-candidates-enriched\route.ts:1576:        Bo
+olean(
+> app\api\market-candidates-enriched\route.ts:1577:          
+detail.title,
+  app\api\market-candidates-enriched\route.ts:1578:        ) 
+&&
+  app\api\market-candidates-enriched\route.ts:1579:        de
+tail.finalPrice >
+  app\api\market-candidates-enriched\route.ts:1580:          
+0;
+  app\api\market-candidates-enriched\route.ts:1581:
+  app\api\market-candidates-enriched\route.ts:1582:      if (
+!usable) {
+  app\api\market-candidates-enriched\route.ts:1583:        co
+nst reason =
+  app\api\market-candidates-enriched\route.ts:1584:          
+"상세수집은 완료됐지만 필수 상품정보가 없습니다.";
+  app\api\market-candidates-enriched\route.ts:1585:
+  app\api\market-candidates-enriched\route.ts:1586:        co
+nsole.log(
+  app\api\market-candidates-enriched\route.ts:1587:          
+`[ENRICH ${position}] 탈락(validation)`,
+  app\api\market-candidates-enriched\route.ts:1748:        nu
+ll;
+  app\api\market-candidates-enriched\route.ts:1749:
+  app\api\market-candidates-enriched\route.ts:1750:      try 
+{
+  app\api\market-candidates-enriched\route.ts:1751:        of
+ferSearch =
+  app\api\market-candidates-enriched\route.ts:1752:          
+await searchProductOffers(
+> app\api\market-candidates-enriched\route.ts:1753:          
+  detail.title ||
+  app\api\market-candidates-enriched\route.ts:1754:          
+    market.name,
+  app\api\market-candidates-enriched\route.ts:1755:          
+);
+  app\api\market-candidates-enriched\route.ts:1756:      } ca
+tch (error) {
+  app\api\market-candidates-enriched\route.ts:1757:        co
+nsole.warn(
+  app\api\market-candidates-enriched\route.ts:1758:          
+`[ENRICH ${position}] 판매처 재검색 warning`,
+  app\api\market-candidates-enriched\route.ts:1759:          
+error,
+  app\api\market-candidates-enriched\route.ts:1760:        );
+  app\api\market-candidates-enriched\route.ts:1761:      }
+  app\api\market-candidates-enriched\route.ts:1762:
+  app\api\market-candidates-enriched\route.ts:1763:      cons
+t selectedReviewSource =
+  app\api\market-candidates-enriched\route.ts:1910:          
+  Date.now() -
+  app\api\market-candidates-enriched\route.ts:1911:          
+  startedAt
+  app\api\market-candidates-enriched\route.ts:1912:          
+) /
+  app\api\market-candidates-enriched\route.ts:1913:          
+  1000,
+  app\api\market-candidates-enriched\route.ts:1914:        )}
+초`,
+> app\api\market-candidates-enriched\route.ts:1915:        de
+tail.title,
+  app\api\market-candidates-enriched\route.ts:1916:      );
+  app\api\market-candidates-enriched\route.ts:1917:
+  app\api\market-candidates-enriched\route.ts:1918:      retu
+rn {
+  app\api\market-candidates-enriched\route.ts:1919:        su
+ccess: true,
+  app\api\market-candidates-enriched\route.ts:1920:
+  app\api\market-candidates-enriched\route.ts:1921:        po
+sition,
+  app\api\market-candidates-enriched\route.ts:1922:
+  app\api\market-candidates-enriched\route.ts:1923:        pr
+oductId:
+  app\api\market-candidates-enriched\route.ts:1924:          
+finalProductId,
+  app\api\market-candidates-enriched\route.ts:1925:
+  app\api\market-candidates-enriched\route.ts:1953:          
+},
+  app\api\market-candidates-enriched\route.ts:1954:
+  app\api\market-candidates-enriched\route.ts:1955:          
+reviewSource:
+  app\api\market-candidates-enriched\route.ts:1956:          
+  selectedReviewSource
+  app\api\market-candidates-enriched\route.ts:1957:          
+    ? {
+> app\api\market-candidates-enriched\route.ts:1958:          
+        productName:
+  app\api\market-candidates-enriched\route.ts:1959:          
+          selectedReviewSource.name,
+  app\api\market-candidates-enriched\route.ts:1960:
+  app\api\market-candidates-enriched\route.ts:1961:          
+        seller:
+  app\api\market-candidates-enriched\route.ts:1962:          
+          selectedReviewSource.brand,
+  app\api\market-candidates-enriched\route.ts:1963:
+  app\api\market-candidates-enriched\route.ts:1964:          
+        price:
+  app\api\market-candidates-enriched\route.ts:1965:          
+          selectedReviewSource.price,
+  app\api\market-candidates-enriched\route.ts:1966:
+  app\api\market-candidates-enriched\route.ts:1967:          
+        reviewCount:
+  app\api\market-candidates-enriched\route.ts:1968:          
+          selectedReviewSource.reviewCount,
+  app\api\market-candidates-enriched\route.ts:1980:          
+          selectedReviewSource.sourceType,
+  app\api\market-candidates-enriched\route.ts:1981:
+  app\api\market-candidates-enriched\route.ts:1982:          
+        isIndividualSeller:
+  app\api\market-candidates-enriched\route.ts:1983:          
+          selectedReviewSource.isIndividualSeller,
+  app\api\market-candidates-enriched\route.ts:1984:
+> app\api\market-candidates-enriched\route.ts:1985:          
+        matchScore:
+> app\api\market-candidates-enriched\route.ts:1986:          
+          selectedReviewSource.matchScore,
+  app\api\market-candidates-enriched\route.ts:1987:
+  app\api\market-candidates-enriched\route.ts:1988:          
+        reviewTextSource,
+  app\api\market-candidates-enriched\route.ts:1989:
+  app\api\market-candidates-enriched\route.ts:1990:          
+        status:
+  app\api\market-candidates-enriched\route.ts:1991:          
+          "selected" as const,
+  app\api\market-candidates-enriched\route.ts:1992:          
+      }
+  app\api\market-candidates-enriched\route.ts:1993:          
+    : {
+> app\api\market-candidates-enriched\route.ts:1994:          
+        productName:
+> app\api\market-candidates-enriched\route.ts:1995:          
+          detail.title,
+  app\api\market-candidates-enriched\route.ts:1996:
+  app\api\market-candidates-enriched\route.ts:1997:          
+        seller:
+  app\api\market-candidates-enriched\route.ts:1998:          
+          detail.sellerName,
+  app\api\market-candidates-enriched\route.ts:1999:
+  app\api\market-candidates-enriched\route.ts:2000:          
+        price:
+  app\api\market-candidates-enriched\route.ts:2001:          
+          detail.finalPrice,
+  app\api\market-candidates-enriched\route.ts:2002:
+  app\api\market-candidates-enriched\route.ts:2003:          
+        reviewCount:
+  app\api\market-candidates-enriched\route.ts:2004:          
+          detail.totalReviews,
+  app\api\market-candidates-enriched\route.ts:2005:
+  app\api\market-candidates-enriched\route.ts:2017:          
+          "naver-store" as const,
+  app\api\market-candidates-enriched\route.ts:2018:
+  app\api\market-candidates-enriched\route.ts:2019:          
+        isIndividualSeller:
+  app\api\market-candidates-enriched\route.ts:2020:          
+          true,
+  app\api\market-candidates-enriched\route.ts:2021:
+> app\api\market-candidates-enriched\route.ts:2022:          
+        matchScore:
+  app\api\market-candidates-enriched\route.ts:2023:          
+          0,
+  app\api\market-candidates-enriched\route.ts:2024:
+  app\api\market-candidates-enriched\route.ts:2025:          
+        reviewTextSource:
+  app\api\market-candidates-enriched\route.ts:2026:          
+          "canonical-fallback" as const,
+  app\api\market-candidates-enriched\route.ts:2027:
+  app\api\market-candidates-enriched\route.ts:2028:          
+        status:
+  app\api\market-candidates-enriched\route.ts:2029:          
+          "fallback-canonical" as const,
+  app\api\market-candidates-enriched\route.ts:2030:          
+      },
+  app\api\market-candidates-enriched\route.ts:2031:
+  app\api\market-candidates-enriched\route.ts:2032:          
+purchaseSource:
+  app\api\market-candidates-enriched\route.ts:2033:          
+  selectedPurchaseSource
+  app\api\market-candidates-enriched\route.ts:2034:          
+    ? {
+> app\api\market-candidates-enriched\route.ts:2035:          
+        productName:
+  app\api\market-candidates-enriched\route.ts:2036:          
+          selectedPurchaseSource.name,
+  app\api\market-candidates-enriched\route.ts:2037:
+  app\api\market-candidates-enriched\route.ts:2038:          
+        seller:
+  app\api\market-candidates-enriched\route.ts:2039:          
+          selectedPurchaseSource.brand,
+  app\api\market-candidates-enriched\route.ts:2040:
+  app\api\market-candidates-enriched\route.ts:2041:          
+        price:
+  app\api\market-candidates-enriched\route.ts:2042:          
+          selectedPurchaseSource.price,
+  app\api\market-candidates-enriched\route.ts:2043:
+  app\api\market-candidates-enriched\route.ts:2044:          
+        reviewCount:
+  app\api\market-candidates-enriched\route.ts:2045:          
+          selectedPurchaseSource.reviewCount,
+  app\api\market-candidates-enriched\route.ts:2057:          
+          selectedPurchaseSource.sourceType,
+  app\api\market-candidates-enriched\route.ts:2058:
+  app\api\market-candidates-enriched\route.ts:2059:          
+        isIndividualSeller:
+  app\api\market-candidates-enriched\route.ts:2060:          
+          selectedPurchaseSource.isIndividualSeller,
+  app\api\market-candidates-enriched\route.ts:2061:
+> app\api\market-candidates-enriched\route.ts:2062:          
+        matchScore:
+> app\api\market-candidates-enriched\route.ts:2063:          
+          selectedPurchaseSource.matchScore,
+  app\api\market-candidates-enriched\route.ts:2064:
+  app\api\market-candidates-enriched\route.ts:2065:          
+        status:
+  app\api\market-candidates-enriched\route.ts:2066:          
+          "selected" as const,
+  app\api\market-candidates-enriched\route.ts:2067:          
+      }
+  app\api\market-candidates-enriched\route.ts:2068:          
+    : {
+> app\api\market-candidates-enriched\route.ts:2069:          
+        productName:
+  app\api\market-candidates-enriched\route.ts:2070:          
+          market.name,
+  app\api\market-candidates-enriched\route.ts:2071:
+  app\api\market-candidates-enriched\route.ts:2072:          
+        seller:
+  app\api\market-candidates-enriched\route.ts:2073:          
+          market.seller,
+  app\api\market-candidates-enriched\route.ts:2074:
+  app\api\market-candidates-enriched\route.ts:2075:          
+        price:
+  app\api\market-candidates-enriched\route.ts:2076:          
+          market.price,
+  app\api\market-candidates-enriched\route.ts:2077:
+  app\api\market-candidates-enriched\route.ts:2078:          
+        reviewCount:
+  app\api\market-candidates-enriched\route.ts:2079:          
+          market.reviewCount,
+  app\api\market-candidates-enriched\route.ts:2091:          
+          "unknown" as const,
+  app\api\market-candidates-enriched\route.ts:2092:
+  app\api\market-candidates-enriched\route.ts:2093:          
+        isIndividualSeller:
+  app\api\market-candidates-enriched\route.ts:2094:          
+          false,
+  app\api\market-candidates-enriched\route.ts:2095:
+> app\api\market-candidates-enriched\route.ts:2096:          
+        matchScore:
+  app\api\market-candidates-enriched\route.ts:2097:          
+          0,
+  app\api\market-candidates-enriched\route.ts:2098:
+  app\api\market-candidates-enriched\route.ts:2099:          
+        status:
+  app\api\market-candidates-enriched\route.ts:2100:          
+          "fallback-market" as const,
+  app\api\market-candidates-enriched\route.ts:2101:          
+      },
+  app\api\market-candidates-enriched\route.ts:2102:
+  app\api\market-candidates-enriched\route.ts:2103:          
+market: {
+> app\api\market-candidates-enriched\route.ts:2104:          
+  productName:
+  app\api\market-candidates-enriched\route.ts:2105:          
+    market.name,
+  app\api\market-candidates-enriched\route.ts:2106:
+  app\api\market-candidates-enriched\route.ts:2107:          
+  seller:
+  app\api\market-candidates-enriched\route.ts:2108:          
+    market.seller,
+  app\api\market-candidates-enriched\route.ts:2109:
+  app\api\market-candidates-enriched\route.ts:2110:          
+  listedPrice:
+  app\api\market-candidates-enriched\route.ts:2111:          
+    market.price,
+  app\api\market-candidates-enriched\route.ts:2112:
+  app\api\market-candidates-enriched\route.ts:2113:          
+  reviewCount:
+  app\api\market-candidates-enriched\route.ts:2114:          
+    market.reviewCount,
+  app\api\market-candidates-enriched\route.ts:2139:
+  app\api\market-candidates-enriched\route.ts:2140:          
+detail: {
+  app\api\market-candidates-enriched\route.ts:2141:          
+  productId:
+  app\api\market-candidates-enriched\route.ts:2142:          
+    finalProductId,
+  app\api\market-candidates-enriched\route.ts:2143:
+> app\api\market-candidates-enriched\route.ts:2144:          
+  productName:
+> app\api\market-candidates-enriched\route.ts:2145:          
+    detail.title,
+  app\api\market-candidates-enriched\route.ts:2146:
+  app\api\market-candidates-enriched\route.ts:2147:          
+  brand:
+  app\api\market-candidates-enriched\route.ts:2148:          
+    detail.brand,
+  app\api\market-candidates-enriched\route.ts:2149:
+  app\api\market-candidates-enriched\route.ts:2150:          
+  manufacturer:
+  app\api\market-candidates-enriched\route.ts:2151:          
+    detail.manufacturer,
+  app\api\market-candidates-enriched\route.ts:2152:
+> app\api\market-candidates-enriched\route.ts:2153:          
+  modelName:
+> app\api\market-candidates-enriched\route.ts:2154:          
+    detail.modelName,
+  app\api\market-candidates-enriched\route.ts:2155:
+  app\api\market-candidates-enriched\route.ts:2156:          
+  originalPrice:
+  app\api\market-candidates-enriched\route.ts:2157:          
+    detail.originalPrice,
+  app\api\market-candidates-enriched\route.ts:2158:
+  app\api\market-candidates-enriched\route.ts:2159:          
+  finalPrice:
+  app\api\market-candidates-enriched\route.ts:2160:          
+    detail.finalPrice,
+  app\api\market-candidates-enriched\route.ts:2161:
+  app\api\market-candidates-enriched\route.ts:2162:          
+  discountRate:
+  app\api\market-candidates-enriched\route.ts:2163:          
+    detail.discountRate,
+  app\api\market-candidates-enriched\route.ts:2164:
+  app\api\market-candidates-enriched\route.ts:2187:          
+    detail.url,
+  app\api\market-candidates-enriched\route.ts:2188:
+  app\api\market-candidates-enriched\route.ts:2189:          
+  reviewSourceUrl,
+  app\api\market-candidates-enriched\route.ts:2190:
+  app\api\market-candidates-enriched\route.ts:2191:          
+  detailStatus:
+> app\api\market-candidates-enriched\route.ts:2192:          
+    "full",
+  app\api\market-candidates-enriched\route.ts:2193:          
+},
+  app\api\market-candidates-enriched\route.ts:2194:        },
+  app\api\market-candidates-enriched\route.ts:2195:      };
+  app\api\market-candidates-enriched\route.ts:2196:    }
+  app\api\market-candidates-enriched\route.ts:2197:
+  app\api\market-candidates-enriched\route.ts:2198:    /*
+  app\api\market-candidates-enriched\route.ts:2199:      3개씩 
+병렬 처리.
+  app\api\market-candidates-enriched\route.ts:2200:
+  app\api\market-candidates-enriched\route.ts:2201:      한 묶음
+이 끝날 때마다 결과를 반영하고,
+  app\api\market-candidates-enriched\route.ts:2202:      최종 5
+개가 확보되면 다음 묶음은 시작하지 않는다.
+  app\api\market-candidates-enriched\route.ts:2277:          
+      result.position,
+  app\api\market-candidates-enriched\route.ts:2278:
+  app\api\market-candidates-enriched\route.ts:2279:          
+    marketProduct:
+  app\api\market-candidates-enriched\route.ts:2280:          
+      result.candidate
+  app\api\market-candidates-enriched\route.ts:2281:          
+        .market
+> app\api\market-candidates-enriched\route.ts:2282:          
+        .productName,
+  app\api\market-candidates-enriched\route.ts:2283:
+  app\api\market-candidates-enriched\route.ts:2284:          
+    stage:
+  app\api\market-candidates-enriched\route.ts:2285:          
+      "duplicate",
+  app\api\market-candidates-enriched\route.ts:2286:
+  app\api\market-candidates-enriched\route.ts:2287:          
+    reason:
+  app\api\market-candidates-enriched\route.ts:2288:          
+      `Bright Data 기준 동일상품 중복: ${result.productId}`,
+  app\api\market-candidates-enriched\route.ts:2289:          
+  };
+  app\api\market-candidates-enriched\route.ts:2290:
+  app\api\market-candidates-enriched\route.ts:2291:          
+failures.push(
+  app\api\market-candidates-enriched\route.ts:2292:          
+  failure,
+  app\api\market-candidates-enriched\route.ts:2302:
+  app\api\market-candidates-enriched\route.ts:2303:        if
+ (
+  app\api\market-candidates-enriched\route.ts:2304:          
+result.candidate
+  app\api\market-candidates-enriched\route.ts:2305:          
+  .detail
+  app\api\market-candidates-enriched\route.ts:2306:          
+  .detailStatus ===
+> app\api\market-candidates-enriched\route.ts:2307:          
+"partial-market"
+  app\api\market-candidates-enriched\route.ts:2308:        ) 
+{
+  app\api\market-candidates-enriched\route.ts:2309:          
+/*
+> app\api\market-candidates-enriched\route.ts:2310:          
+  partial은 예비 후보로만 보관한다.
+> app\api\market-candidates-enriched\route.ts:2311:          
+  뒤쪽 후보에서 full 상세를 확보할 가능성이 있으므로
+  app\api\market-candidates-enriched\route.ts:2312:          
+  지금 최종 5개 자리를 차지시키지 않는다.
+  app\api\market-candidates-enriched\route.ts:2313:          
+*/
+  app\api\market-candidates-enriched\route.ts:2314:          
+seenProductIds.add(
+  app\api\market-candidates-enriched\route.ts:2315:          
+  result.productId,
+  app\api\market-candidates-enriched\route.ts:2316:          
+);
+  app\api\market-candidates-enriched\route.ts:2317:
+> app\api\market-candidates-enriched\route.ts:2318:          
+partialCandidates.push(
+  app\api\market-candidates-enriched\route.ts:2319:          
+  result.candidate,
+  app\api\market-candidates-enriched\route.ts:2320:          
+);
+  app\api\market-candidates-enriched\route.ts:2321:
+  app\api\market-candidates-enriched\route.ts:2322:          
+console.log(
+> app\api\market-candidates-enriched\route.ts:2323:          
+  `[ENRICH ${result.position}] partial 예비 후보 보관`,
+> app\api\market-candidates-enriched\route.ts:2324:          
+  `${partialCandidates.length}개`,
+  app\api\market-candidates-enriched\route.ts:2325:          
+  result.candidate
+  app\api\market-candidates-enriched\route.ts:2326:          
+    .market
+> app\api\market-candidates-enriched\route.ts:2327:          
+    .productName,
+  app\api\market-candidates-enriched\route.ts:2328:          
+);
+  app\api\market-candidates-enriched\route.ts:2329:
+  app\api\market-candidates-enriched\route.ts:2330:          
+continue;
+  app\api\market-candidates-enriched\route.ts:2331:        }
+  app\api\market-candidates-enriched\route.ts:2332:
+  app\api\market-candidates-enriched\route.ts:2333:        if
+ (
+  app\api\market-candidates-enriched\route.ts:2334:          
+finalCandidates.length >=
+  app\api\market-candidates-enriched\route.ts:2335:          
+TARGET_COUNT
+  app\api\market-candidates-enriched\route.ts:2336:        ) 
+{
+  app\api\market-candidates-enriched\route.ts:2337:          
+/*
+> app\api\market-candidates-enriched\route.ts:2338:          
+  이 배치에서 이미 full 후보 5개가 찼으면
+  app\api\market-candidates-enriched\route.ts:2339:          
+  추가 성공 결과는 저장하지 않는다.
+  app\api\market-candidates-enriched\route.ts:2340:          
+  다음 배치는 호출하지 않는다.
+  app\api\market-candidates-enriched\route.ts:2341:          
+*/
+  app\api\market-candidates-enriched\route.ts:2342:          
+continue;
+  app\api\market-candidates-enriched\route.ts:2343:        }
+  app\api\market-candidates-enriched\route.ts:2344:
+  app\api\market-candidates-enriched\route.ts:2345:        se
+enProductIds.add(
+  app\api\market-candidates-enriched\route.ts:2346:          
+result.productId,
+  app\api\market-candidates-enriched\route.ts:2347:        );
+  app\api\market-candidates-enriched\route.ts:2348:
+  app\api\market-candidates-enriched\route.ts:2349:        fi
+nalCandidates.push(
+  app\api\market-candidates-enriched\route.ts:2350:          
+result.candidate,
+  app\api\market-candidates-enriched\route.ts:2351:        );
+  app\api\market-candidates-enriched\route.ts:2352:
+  app\api\market-candidates-enriched\route.ts:2353:        co
+nsole.log(
+> app\api\market-candidates-enriched\route.ts:2354:          
+`[ENRICH ${result.position}] full 최종 후보 확정`,
+  app\api\market-candidates-enriched\route.ts:2355:          
+`${finalCandidates.length}/${TARGET_COUNT}`,
+  app\api\market-candidates-enriched\route.ts:2356:          
+result.candidate
+  app\api\market-candidates-enriched\route.ts:2357:          
+  .detail
+> app\api\market-candidates-enriched\route.ts:2358:          
+  .productName,
+  app\api\market-candidates-enriched\route.ts:2359:        );
+  app\api\market-candidates-enriched\route.ts:2360:      }
+  app\api\market-candidates-enriched\route.ts:2361:
+  app\api\market-candidates-enriched\route.ts:2362:      cons
+ole.log(
+  app\api\market-candidates-enriched\route.ts:2363:        `[
+ENRICH BATCH] 완료`,
+  app\api\market-candidates-enriched\route.ts:2364:        `현
+재 최종 ${finalCandidates.length}/${TARGET_COUNT}`,
+  app\api\market-candidates-enriched\route.ts:2365:      );
+  app\api\market-candidates-enriched\route.ts:2366:    }
+  app\api\market-candidates-enriched\route.ts:2367:
+  app\api\market-candidates-enriched\route.ts:2368:    /*
+> app\api\market-candidates-enriched\route.ts:2369:      모든 후
+보를 검사한 뒤에도 full 후보가 5개 미만이면
+> app\api\market-candidates-enriched\route.ts:2370:      앞서 보
+관한 partial 후보를 시장 우선순위 순서대로
+  app\api\market-candidates-enriched\route.ts:2371:      필요한 
+만큼만 보충한다.
+  app\api\market-candidates-enriched\route.ts:2372:    */
+  app\api\market-candidates-enriched\route.ts:2373:    if (
+  app\api\market-candidates-enriched\route.ts:2374:      fina
+lCandidates.length <
+  app\api\market-candidates-enriched\route.ts:2375:        TA
+RGET_COUNT &&
+> app\api\market-candidates-enriched\route.ts:2376:      part
+ialCandidates.length >
+  app\api\market-candidates-enriched\route.ts:2377:        0
+  app\api\market-candidates-enriched\route.ts:2378:    ) {
+  app\api\market-candidates-enriched\route.ts:2379:      for 
+(
+  app\api\market-candidates-enriched\route.ts:2380:        co
+nst candidate of
+> app\api\market-candidates-enriched\route.ts:2381:        pa
+rtialCandidates
+  app\api\market-candidates-enriched\route.ts:2382:      ) {
+  app\api\market-candidates-enriched\route.ts:2383:        if
+ (
+  app\api\market-candidates-enriched\route.ts:2384:          
+finalCandidates.length >=
+  app\api\market-candidates-enriched\route.ts:2385:          
+TARGET_COUNT
+  app\api\market-candidates-enriched\route.ts:2386:        ) 
+{
+  app\api\market-candidates-enriched\route.ts:2387:          
+break;
+  app\api\market-candidates-enriched\route.ts:2388:        }
+  app\api\market-candidates-enriched\route.ts:2389:
+  app\api\market-candidates-enriched\route.ts:2390:        fi
+nalCandidates.push(
+  app\api\market-candidates-enriched\route.ts:2391:          
+candidate,
+  app\api\market-candidates-enriched\route.ts:2392:        );
+  app\api\market-candidates-enriched\route.ts:2393:
+  app\api\market-candidates-enriched\route.ts:2394:        co
+nsole.log(
+> app\api\market-candidates-enriched\route.ts:2395:          
+`[ENRICH ${candidate.position}] partial 최종 보충`,
+  app\api\market-candidates-enriched\route.ts:2396:          
+`${finalCandidates.length}/${TARGET_COUNT}`,
+  app\api\market-candidates-enriched\route.ts:2397:          
+candidate.market
+> app\api\market-candidates-enriched\route.ts:2398:          
+  .productName,
+  app\api\market-candidates-enriched\route.ts:2399:        );
+  app\api\market-candidates-enriched\route.ts:2400:      }
+  app\api\market-candidates-enriched\route.ts:2401:    }
+  app\api\market-candidates-enriched\route.ts:2402:
+  app\api\market-candidates-enriched\route.ts:2403:    consol
+e.log(
+  app\api\market-candidates-enriched\route.ts:2404:      "Mar
+ket candidates enriched summary:",
+  app\api\market-candidates-enriched\route.ts:2405:      {
+  app\api\market-candidates-enriched\route.ts:2406:        ca
+tegory,
+  app\api\market-candidates-enriched\route.ts:2407:
+  app\api\market-candidates-enriched\route.ts:2408:        ma
+rketCandidateCount:
+
+

@@ -1,0 +1,226 @@
+﻿
+  app\admin\naver-capture\page.tsx:1:"use client";
+  app\admin\naver-capture\page.tsx:2:
+  app\admin\naver-capture\page.tsx:3:import {
+  app\admin\naver-capture\page.tsx:4:  useEffect,
+  app\admin\naver-capture\page.tsx:5:  useMemo,
+  app\admin\naver-capture\page.tsx:6:  useState,
+  app\admin\naver-capture\page.tsx:7:} from "react";
+  app\admin\naver-capture\page.tsx:8:
+> app\admin\naver-capture\page.tsx:9:import NaverCaptureAutomation from "../../../components/NaverCaptureAutomation";
+  app\admin\naver-capture\page.tsx:10:
+  app\admin\naver-capture\page.tsx:11:type CapturedProduct = {
+  app\admin\naver-capture\page.tsx:12:  name: string;
+  app\admin\naver-capture\page.tsx:13:  text: string;
+  app\admin\naver-capture\page.tsx:14:  url: string;
+  app\admin\naver-capture\page.tsx:15:  imageUrl: string;
+  app\admin\naver-capture\page.tsx:16:  price: number;
+  app\admin\naver-capture\page.tsx:17:  reviewCount: number;
+  app\admin\naver-capture\page.tsx:18:  rating: number;
+  app\admin\naver-capture\page.tsx:19:};
+  app\admin\naver-capture\page.tsx:20:
+  app\admin\naver-capture\page.tsx:21:type BudgetStatus =
+  app\admin\naver-capture\page.tsx:22:  | "within"
+  app\admin\naver-capture\page.tsx:23:  | "below"
+  app\admin\naver-capture\page.tsx:24:  | "above"
+  app\admin\naver-capture\page.tsx:25:  | "unlimited";
+  app\admin\naver-capture\page.tsx:26:
+  app\admin\naver-capture\page.tsx:27:type RankedProduct =
+  app\admin\naver-capture\page.tsx:28:  CapturedProduct & {
+  app\admin\naver-capture\page.tsx:29:    candidateScore: number;
+  app\admin\naver-capture\page.tsx:30:    scoreReasons: string[];
+  app\admin\naver-capture\page.tsx:31:    budgetStatus: BudgetStatus;
+  app\admin\naver-capture\page.tsx:32:    budgetDistance: number;
+  app\admin\naver-capture\page.tsx:33:  };
+  app\admin\naver-capture\page.tsx:34:
+  app\admin\naver-capture\page.tsx:35:function formatPrice(
+  app\admin\naver-capture\page.tsx:36:  value: number,
+  app\admin\naver-capture\page.tsx:37:) {
+  app\admin\naver-capture\page.tsx:38:  if (!value) {
+  app\admin\naver-capture\page.tsx:39:    return "-";
+  app\admin\naver-capture\page.tsx:40:  }
+  app\admin\naver-capture\page.tsx:41:
+  app\admin\naver-capture\page.tsx:42:  return (
+  app\admin\naver-capture\page.tsx:43:    value.toLocaleString(
+  app\admin\naver-capture\page.tsx:44:      "ko-KR",
+  app\admin\naver-capture\page.tsx:1191:                        700,
+  app\admin\naver-capture\page.tsx:1192:                    }}
+  app\admin\naver-capture\page.tsx:1193:                  >
+  app\admin\naver-capture\page.tsx:1194:                    상품 열기
+  app\admin\naver-capture\page.tsx:1195:                  </a>
+  app\admin\naver-capture\page.tsx:1196:                </div>
+  app\admin\naver-capture\page.tsx:1197:              </article>
+  app\admin\naver-capture\page.tsx:1198:            ),
+  app\admin\naver-capture\page.tsx:1199:          )}
+  app\admin\naver-capture\page.tsx:1200:        </div>
+  app\admin\naver-capture\page.tsx:1201:      )}
+  app\admin\naver-capture\page.tsx:1202:
+  app\admin\naver-capture\page.tsx:1203:      {captureId &&
+  app\admin\naver-capture\page.tsx:1204:      category &&
+  app\admin\naver-capture\page.tsx:1205:      finalists.length > 0 ? (
+> app\admin\naver-capture\page.tsx:1206:        <NaverCaptureAutomation
+  app\admin\naver-capture\page.tsx:1207:          captureId={captureId}
+  app\admin\naver-capture\page.tsx:1208:          category={category}
+  app\admin\naver-capture\page.tsx:1209:          finalists={finalists}
+  app\admin\naver-capture\page.tsx:1210:        />
+  app\admin\naver-capture\page.tsx:1211:      ) : null}
+  app\admin\naver-capture\page.tsx:1212:    </main>
+  app\admin\naver-capture\page.tsx:1213:  );
+  app\admin\naver-capture\page.tsx:1214:}
+  app\admin\naver-capture\page.tsx:1215:
+  app\admin\page.tsx:659:            })
+  app\admin\page.tsx:660:            .eq("id", product.id);
+  app\admin\page.tsx:661:
+  app\admin\page.tsx:662:        if (updateError) {
+  app\admin\page.tsx:663:          throw updateError;
+  app\admin\page.tsx:664:        }
+  app\admin\page.tsx:665:
+  app\admin\page.tsx:666:        completed += 1;
+  app\admin\page.tsx:667:      }
+  app\admin\page.tsx:668:
+  app\admin\page.tsx:669:      setBulkReviewMessage(
+  app\admin\page.tsx:670:        `${completed}개 제품의 저장 리뷰 재분석 완료. 제품별 점수를 새 근거로 다시 계산하는 중...`,
+  app\admin\page.tsx:671:      );
+  app\admin\page.tsx:672:
+  app\admin\page.tsx:673:      const scoreResponse = await fetch(
+> app\admin\page.tsx:674:        "/api/generate-product-scores",
+  app\admin\page.tsx:675:        {
+  app\admin\page.tsx:676:          method: "POST",
+  app\admin\page.tsx:677:          headers: {
+  app\admin\page.tsx:678:            "Content-Type": "application/json",
+  app\admin\page.tsx:679:          },
+  app\admin\page.tsx:680:          body: JSON.stringify({ category }),
+  app\admin\page.tsx:681:        },
+  app\admin\page.tsx:682:      );
+  app\admin\page.tsx:683:
+  app\admin\page.tsx:684:      const scoreResult =
+  app\admin\page.tsx:685:        (await scoreResponse.json()) as {
+  app\admin\page.tsx:686:          success?: boolean;
+  app\admin\page.tsx:687:          message?: string;
+  app\admin\page.tsx:688:        };
+  app\admin\page.tsx:689:
+  app\admin\page.tsx:690:      if (!scoreResponse.ok || !scoreResult.success) {
+  app\admin\page.tsx:691:        throw new Error(
+  app\admin\page.tsx:692:          scoreResult.message ??
+  app\admin\page.tsx:693:            "리뷰 재분석은 완료됐지만 제품별 점수 재생성에 실패했습니다.",
+  app\admin\page.tsx:694:        );
+  app\admin\page.tsx:695:      }
+  app\admin\page.tsx:696:
+  app\admin\page.tsx:697:      setBulkReviewMessage(
+  app\admin\page.tsx:698:        `${completed}개 제품 완료 · DB에 저장된 리뷰 원문으로 재분석 · 제품별 점수까지 갱신했습니다. 네이버 리뷰 재수집은 하지 않았습니다.`,
+  app\admin\page.tsx:699:      );
+  app\admin\page.tsx:700:
+  app\admin\page.tsx:701:      await loadProducts();
+  app\admin\page.tsx:702:    } catch (error) {
+  app\admin\page.tsx:703:      console.error(
+  app\admin\page.tsx:704:        "리뷰 근거 일괄 재분석 실패:",
+  app\admin\page.tsx:705:        error,
+  app\admin\page.tsx:706:      );
+  app\admin\page.tsx:707:
+  app\admin\page.tsx:708:      const message =
+  app\admin\page.tsx:709:        error instanceof Error
+  app\admin\page.tsx:813:
+  app\admin\page.tsx:814:    const categoryProducts = registeredProducts.filter(
+  app\admin\page.tsx:815:      (product) => product.category === category,
+  app\admin\page.tsx:816:    );
+  app\admin\page.tsx:817:
+  app\admin\page.tsx:818:    if (categoryProducts.length < 2) {
+  app\admin\page.tsx:819:      alert(`"${category}" 카테고리 제품을 최소 2개 등록한 뒤 실행하세요.`);
+  app\admin\page.tsx:820:      return;
+  app\admin\page.tsx:821:    }
+  app\admin\page.tsx:822:
+  app\admin\page.tsx:823:    setIsGeneratingProductScores(true);
+  app\admin\page.tsx:824:    setProductScoresMessage("");
+  app\admin\page.tsx:825:    setErrorMessage("");
+  app\admin\page.tsx:826:
+  app\admin\page.tsx:827:    try {
+> app\admin\page.tsx:828:      const response = await fetch("/api/generate-product-scores", {
+  app\admin\page.tsx:829:        method: "POST",
+  app\admin\page.tsx:830:        headers: { "Content-Type": "application/json" },
+  app\admin\page.tsx:831:        body: JSON.stringify({ category }),
+  app\admin\page.tsx:832:      });
+  app\admin\page.tsx:833:
+  app\admin\page.tsx:834:      const contentType = response.headers.get("content-type") ?? "";
+  app\admin\page.tsx:835:      if (!contentType.includes("application/json")) {
+  app\admin\page.tsx:836:        const text = await response.text();
+  app\admin\page.tsx:837:        throw new Error(
+  app\admin\page.tsx:838:          `제품별 점수 생성 API가 JSON이 아닌 응답을 반환했습니다. (${response.status}) ${text.slice(0, 120)}`,
+  app\admin\page.tsx:839:        );
+  app\admin\page.tsx:840:      }
+  app\admin\page.tsx:841:
+  app\admin\page.tsx:842:      const result = (await response.json()) as {
+  app\admin\page.tsx:843:        success?: boolean;
+  app\admin\page.tsx:844:        message?: string;
+  app\admin\page.tsx:845:        updatedCount?: number;
+  app\admin\page.tsx:846:        productCount?: number;
+  app\admin\page.tsx:847:        cacheHit?: boolean;
+  app\admin\page.tsx:848:      };
+  app\admin\page.tsx:849:
+  app\admin\page.tsx:850:      if (!response.ok || !result.success) {
+  app\admin\page.tsx:851:        throw new Error(result.message ?? "제품별 점수 자동 생성에 실패했습니다.");
+  app\admin\page.tsx:852:      }
+  app\admin\page.tsx:853:
+  app\admin\page.tsx:854:      const count = result.updatedCount ?? result.productCount;
+  app\admin\page.tsx:855:
+  app\admin\page.tsx:856:      setProductScoresMessage(
+  app\admin\page.tsx:857:        result.cacheHit
+  app\admin\page.tsx:858:          ? result.message ??
+  app\admin\page.tsx:859:              "변경된 데이터가 없어 기존 제품별 점수를 그대로 사용했습니다."
+  app\admin\page.tsx:860:          : result.message ??
+  app\admin\page.tsx:861:              (typeof count === "number"
+  app\admin\page.tsx:862:                ? `제품 ${count}개의 비교 점수를 새 기준으로 생성했습니다.`
+  app\admin\page.tsx:863:                : "제품별 비교 점수 생성이 완료되었습니다."),
+  app\advisor\results\ResultsClient.tsx:795:        }
+  app\advisor\results\ResultsClient.tsx:796:
+  app\advisor\results\ResultsClient.tsx:797:        let {
+  app\advisor\results\ResultsClient.tsx:798:          response,
+  app\advisor\results\ResultsClient.tsx:799:          result,
+  app\advisor\results\ResultsClient.tsx:800:        } =
+  app\advisor\results\ResultsClient.tsx:801:          await requestRecommendations();
+  app\advisor\results\ResultsClient.tsx:802:
+  app\advisor\results\ResultsClient.tsx:803:        if (
+  app\advisor\results\ResultsClient.tsx:804:          (!response.ok ||
+  app\advisor\results\ResultsClient.tsx:805:            !result.success) &&
+  app\advisor\results\ResultsClient.tsx:806:          result.needsScoreGeneration
+  app\advisor\results\ResultsClient.tsx:807:        ) {
+  app\advisor\results\ResultsClient.tsx:808:          const scoreResponse =
+  app\advisor\results\ResultsClient.tsx:809:            await fetch(
+> app\advisor\results\ResultsClient.tsx:810:              "/api/generate-product-scores",
+  app\advisor\results\ResultsClient.tsx:811:              {
+  app\advisor\results\ResultsClient.tsx:812:                method:
+  app\advisor\results\ResultsClient.tsx:813:                  "POST",
+  app\advisor\results\ResultsClient.tsx:814:                headers: {
+  app\advisor\results\ResultsClient.tsx:815:                  "Content-Type":
+  app\advisor\results\ResultsClient.tsx:816:                    "application/json",
+  app\advisor\results\ResultsClient.tsx:817:                },
+  app\advisor\results\ResultsClient.tsx:818:                body:
+  app\advisor\results\ResultsClient.tsx:819:                  JSON.stringify({
+  app\advisor\results\ResultsClient.tsx:820:                    category:
+  app\advisor\results\ResultsClient.tsx:821:                      nextCategory,
+  app\advisor\results\ResultsClient.tsx:822:                  }),
+  app\advisor\results\ResultsClient.tsx:823:              },
+  app\advisor\results\ResultsClient.tsx:824:            );
+  app\advisor\results\ResultsClient.tsx:825:
+  app\advisor\results\ResultsClient.tsx:826:          const scoreResult =
+  app\advisor\results\ResultsClient.tsx:827:            (await scoreResponse.json()) as ProductScoreGenerationResponse;
+  app\advisor\results\ResultsClient.tsx:828:
+  app\advisor\results\ResultsClient.tsx:829:          if (
+  app\advisor\results\ResultsClient.tsx:830:            !scoreResponse.ok ||
+  app\advisor\results\ResultsClient.tsx:831:            !scoreResult.success
+  app\advisor\results\ResultsClient.tsx:832:          ) {
+  app\advisor\results\ResultsClient.tsx:833:            throw new Error(
+  app\advisor\results\ResultsClient.tsx:834:              scoreResult.message ??
+  app\advisor\results\ResultsClient.tsx:835:                "제품별 AI 평가 점수를 만들지 못했습니다.",
+  app\advisor\results\ResultsClient.tsx:836:            );
+  app\advisor\results\ResultsClient.tsx:837:          }
+  app\advisor\results\ResultsClient.tsx:838:
+  app\advisor\results\ResultsClient.tsx:839:          ({
+  app\advisor\results\ResultsClient.tsx:840:            response,
+  app\advisor\results\ResultsClient.tsx:841:            result,
+  app\advisor\results\ResultsClient.tsx:842:          } =
+  app\advisor\results\ResultsClient.tsx:843:            await requestRecommendations());
+  app\advisor\results\ResultsClient.tsx:844:        }
+  app\advisor\results\ResultsClient.tsx:845:
+
+
+

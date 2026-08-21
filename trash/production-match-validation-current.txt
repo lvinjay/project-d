@@ -1,0 +1,146 @@
+﻿              market.name,
+
+            stage:
+              "brightdata",
+
+            reason:
+              "상품 상세정보를 확보하지 못했습니다.",
+          },
+        };
+      }
+
+      /*
+        시장 후보와 Bright Data 상세상품이 실제 같은 모델인지 확인한다.
+
+        예:
+        - S10 MaxV Ultra -> 로보락 세제 : 차단
+        - S10 MaxV Ultra -> S10 MaxV Slim : 차단
+        - X60 Ultra -> X60 Ultra : 허용
+
+        숫자/영문이 섞인 모델 토큰을 우선 비교한다.
+      */
+      const getModelTokensForValidation = (
+        value: string,
+      ) =>
+        String(value ?? "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, " ")
+          .split(/\s+/)
+          .map((token) => token.trim())
+          .filter(
+            (token) =>
+              token.length >= 2 &&
+              /[a-z]/.test(token) &&
+              /\d/.test(token),
+          );
+
+      const marketModelTokens =
+        getModelTokensForValidation(
+          market.name,
+        );
+
+      const detailModelTokens =
+        getModelTokensForValidation(
+          [
+            detail.title,
+            detail.modelName,
+          ]
+            .filter(Boolean)
+            .join(" "),
+        );
+
+      const modelMatched =
+        marketModelTokens.length === 0 ||
+        marketModelTokens.some((token) =>
+          detailModelTokens.includes(
+            token,
+          ),
+        );
+
+      /*
+        같은 기본 모델이라도 서로 다른 변형 제품을
+        FULL로 오인하지 않도록 variant를 추가 검증한다.
+
+        예:
+        S10 MaxV Ultra -> S10 MaxV Slim : 차단
+        X60 Ultra -> X60 Ultra : 허용
+
+        양쪽 모두 variant가 명시된 경우에만 비교하므로
+        상세 제목이 짧은 정상 상품을 과도하게 탈락시키지 않는다.
+      */
+      const variantTokens = new Set([
+        "ultra",
+        "slim",
+        "master",
+        "pro",
+        "maxv",
+        "max",
+        "plus",
+        "mini",
+      ]);
+
+      const getVariantTokensForValidation = (
+        value: string,
+      ) =>
+        String(value ?? "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, " ")
+          .split(/\s+/)
+          .map((token) => token.trim())
+          .filter((token) =>
+            variantTokens.has(token),
+          );
+
+      const marketVariantTokens =
+        getVariantTokensForValidation(
+          market.name,
+        );
+
+      const detailVariantTokens =
+        getVariantTokensForValidation(
+          [
+            detail.title,
+            detail.modelName,
+          ]
+            .filter(Boolean)
+            .join(" "),
+        );
+
+      const variantMatched =
+        marketVariantTokens.length === 0 ||
+        detailVariantTokens.length === 0 ||
+        marketVariantTokens.every(
+          (token) =>
+            detailVariantTokens.includes(
+              token,
+            ),
+        );
+
+      const usable =
+        Boolean(
+          detail.productId,
+        ) &&
+        Boolean(
+          detail.title,
+        ) &&
+        detail.finalPrice >
+          0 &&
+        modelMatched &&
+        variantMatched;
+
+      if (!usable) {
+        const reason =
+          "상세수집은 완료됐지만 필수 상품정보가 없습니다.";
+
+        console.log(
+          `[ENRICH ${position}] 탈락(validation)`,
+          reason,
+        );
+
+        return {
+          success: false,
+
+          resolverAttempts:
+            candidateResolverAttempts,
+
+          brightDataCalls:

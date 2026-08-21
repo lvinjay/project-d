@@ -1,0 +1,649 @@
+﻿============================================================
+PROJECT D REVIEW HISTORY AUDIT
+============================================================
+
+
+############################################################
+FILE: fresh-manufacturer-enriched-full.json
+LastWriteTime: 08/20/2026 15:23:15
+############################################################
+
+===== FINAL CANDIDATES: 4 =====
+
+PRODUCT: [1위 달성] X60 Ultra 올인원 로봇청소기 화이트, 단품
+reviewSamples: 20
+reviewTextSource: canonical-reuse
+detailStatus: full
+
+PRODUCT: 모바 로봇청소기 P70 Pro Ultra RLP54HE AI센서 자동세척 화이트, 단품
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+PRODUCT: 삼성 2026 신제품 비스포크 AI 스팀 울트라 물걸레 올인원로봇청소기 새틴 그레이지
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+PRODUCT: LG홈봇 로봇청소기 RONi 로니 N95TWU
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+===== FAILURES: 5 =====
+
+PRODUCT: 드리미 올인원 로봇청소기 X60 Master 스팀 직배수형, 화이트
+stage: validation
+reason: 상세수집은 완료됐지만 필수 상품정보가 없습니다.
+
+PRODUCT: JONR 존알 로봇청소기 올인원 자동세척 건조 스테이션 최강희청소기 X1 MAX, 블랙
+stage: validation
+reason: 상세수집은 완료됐지만 필수 상품정보가 없습니다.
+
+PRODUCT: 에브리봇 TS450 쓰리스핀 슬림 물걸레 로봇청소기 26년 NEW
+stage: validation
+reason: 분석 가능한 리뷰가 부족합니다. (0개)
+
+PRODUCT: 로보락 로봇청소기 S10 MaxV Ultra RRE0VES+EWFD55HRR 자동 물통형, 화이트
+stage: validation
+reason: 상세수집은 완료됐지만 필수 상품정보가 없습니다.
+
+PRODUCT: 로보락 S10 MaxV Ultra 로봇청소기
+stage: validation
+reason: 상세수집은 완료됐지만 필수 상품정보가 없습니다.
+
+############################################################
+FILE: manufacturer-review-fix-enriched-result.json
+LastWriteTime: 08/20/2026 15:50:28
+############################################################
+
+===== FINAL CANDIDATES: 5 =====
+
+PRODUCT: 모바 P70 Pro Ultra 물걸레 로봇청소기 RGB 센서 온수세척 고온건조 물걸레 확장
+reviewSamples: 20
+reviewTextSource: canonical-reuse
+detailStatus: full
+
+PRODUCT: 드리미 로봇청소기 X60 Ultra X60ULTRA 올인원 물통형, 화이트
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+PRODUCT: JONR 존알 로봇청소기 올인원 자동세척 건조 스테이션 최강희청소기 X1 MAX, 블랙
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+PRODUCT: 삼성 2026 신제품 비스포크 AI 스팀 울트라 물걸레 올인원로봇청소기 새틴 그레이지
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+PRODUCT: LG홈봇 로봇청소기 RONi 로니 N95TWU
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+===== FAILURES: 4 =====
+
+PRODUCT: 드리미 올인원 로봇청소기 X60 Master 스팀 직배수형, 화이트
+stage: brightdata
+reason: Bright Data가 상품 정보를 반환하지 않았습니다.
+
+PRODUCT: 에브리봇 TS450 쓰리스핀 슬림 물걸레 로봇청소기 26년 NEW
+stage: validation
+reason: 분석 가능한 리뷰가 부족합니다. (0개)
+
+PRODUCT: 로보락 로봇청소기 S10 MaxV Ultra RRE0VES+EWFD55HRR 자동 물통형, 화이트
+stage: validation
+reason: 상세수집은 완료됐지만 필수 상품정보가 없습니다.
+
+PRODUCT: 로보락 S10 MaxV Ultra 로봇청소기
+stage: validation
+reason: 상세수집은 완료됐지만 필수 상품정보가 없습니다.
+
+############################################################
+FILE: market-candidates-final.json
+LastWriteTime: 08/14/2026 11:45:09
+############################################################
+
+===== FINAL CANDIDATES: 5 =====
+
+PRODUCT: 에브리봇 AI 올인원 로봇청소기 Q9 프리미엄
+reviewSamples: 20
+reviewTextSource: (없음)
+detailStatus: (없음)
+
+PRODUCT: 모바 P70 Pro Ultra 물걸레 로봇청소기 RGB 센서 온수세척 고온건조 물걸레 확장
+reviewSamples: 20
+reviewTextSource: (없음)
+detailStatus: (없음)
+
+PRODUCT: [슈퍼적립] 로보락 S8 Pro Plus 로봇청소기
+reviewSamples: 20
+reviewTextSource: (없음)
+detailStatus: (없음)
+
+PRODUCT: 에코백스 T50 물걸레로봇청소기 AI 올인원 로청 슬림 회전형 에코벡스
+reviewSamples: 20
+reviewTextSource: (없음)
+detailStatus: (없음)
+
+PRODUCT: 모바 S70 Ultra Roller 물걸레 로봇청소기 RGB AI 센서 온수 자동세척
+reviewSamples: 20
+reviewTextSource: (없음)
+detailStatus: (없음)
+
+===== FAILURES: 1 =====
+
+PRODUCT: 로보락 로봇청소기 Qrevo Edge C 화이트, 단품
+stage: validation
+reason: 상세수집은 완료됐지만 필수 상품정보가 없습니다.
+
+############################################################
+FILE: robot-clean-full-test.json
+LastWriteTime: 08/20/2026 11:29:41
+############################################################
+
+===== FINAL CANDIDATES: 5 =====
+
+PRODUCT: ëª¨ë° P70 Pro Ultra ë¬¼ê±¸ë  ë¡ë´ì²­ìê¸° RGB ì¼ì ì¨ìì¸ì² ê³ ì¨ê±´ì¡° ë¬¼ê±¸ë  íì¥
+reviewSamples: 20
+reviewTextSource: canonical-reuse
+detailStatus: full
+
+PRODUCT: [1ì ë¬ì±] X60 Ultra ì¬ì¸ì ë¡ë´ì²­ìê¸° íì´í¸, ë¨í
+reviewSamples: 20
+reviewTextSource: canonical-reuse
+detailStatus: full
+
+PRODUCT: ë¡ë³´ë½ì¸ì  ìíë°±ì ê³ ì²´ì¸ì  ì½ì¸í 30ê°ì ë¡ë´ì²­ìê¸° í¸íì©
+reviewSamples: 20
+reviewTextSource: canonical-fallback
+detailStatus: full
+
+PRODUCT: [ëì§í¸ê°ì íì¤í] ë¡ë³´ë½ S10 MaxV Slim ì§ë°°ì ë¡ë´ì²­ìê¸°
+reviewSamples: 20
+reviewTextSource: canonical-fallback
+detailStatus: full
+
+PRODUCT: JONR ì¡´ì ë¡ë´ì²­ìê¸° ì¬ì¸ì ìëì¸ì² ê±´ì¡° ì¤íì´ì ìµê°í¬ì²­ìê¸° X1 MAX, ë¸ë
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+===== FAILURES: 1 =====
+
+PRODUCT: ëë¦¬ë¯¸ ì¬ì¸ì ë¡ë´ì²­ìê¸° X60 Master ì¤í ì§ë°°ìí, íì´í¸
+stage: budget
+reason: ì¤ì  íë§¤ê° 92,500ìì´ ì¤ì  ìì° ë²ìë¥¼ ë²ì´ë¬ìµëë¤.
+
+############################################################
+FILE: robot-enriched-5-final.json
+LastWriteTime: 08/19/2026 15:50:06
+############################################################
+
+===== FINAL CANDIDATES: 0 =====
+
+===== FAILURES: 3 =====
+
+PRODUCT: Ã«ÂªÂ¨Ã«Â°Â Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° P70 Pro Ultra RLP54HE AIÃ¬ÂÂ¼Ã¬ÂÂ Ã¬ÂÂÃ«ÂÂÃ¬ÂÂ¸Ã¬Â²Â Ã­ÂÂÃ¬ÂÂ´Ã­ÂÂ¸, Ã«ÂÂ¨Ã­ÂÂ
+stage: resolve
+reason: Naver hasn't returned any results for this query.
+
+PRODUCT: Ã«ÂÂÃ«Â¦Â¬Ã«Â¯Â¸ Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° X60 Ultra X60ULTRA Ã¬ÂÂ¬Ã¬ÂÂ¸Ã¬ÂÂ Ã«Â¬Â¼Ã­ÂÂµÃ­ÂÂ, Ã­ÂÂÃ¬ÂÂ´Ã­ÂÂ¸
+stage: resolve
+reason: Naver hasn't returned any results for this query.
+
+PRODUCT: Ã«ÂÂÃ«Â¦Â¬Ã«Â¯Â¸ Ã¬ÂÂ¬Ã¬ÂÂ¸Ã¬ÂÂ Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° X60 Master Ã¬ÂÂ¤Ã­ÂÂ Ã¬Â§ÂÃ«Â°Â°Ã¬ÂÂÃ­ÂÂ, Ã­ÂÂÃ¬ÂÂ´Ã­ÂÂ¸
+stage: resolve
+reason: Naver hasn't returned any results for this query.
+
+############################################################
+FILE: robot-enriched-budget-fallback-final.json
+LastWriteTime: 08/19/2026 16:14:40
+############################################################
+
+===== FINAL CANDIDATES: 3 =====
+
+PRODUCT: 모바 P70 Pro Ultra 물걸레 로봇청소기 RGB 센서 온수세척 고온건조 물걸레 확장
+reviewSamples: 20
+reviewTextSource: canonical-fallback
+detailStatus: (없음)
+
+PRODUCT: [1위 달성] X60 Ultra 올인원 로봇청소기 화이트, 단품
+reviewSamples: 20
+reviewTextSource: canonical-reuse
+detailStatus: (없음)
+
+PRODUCT: [디지털가전페스타] 로보락 S10 MaxV Slim 직배수 로봇청소기
+reviewSamples: 20
+reviewTextSource: canonical-fallback
+detailStatus: (없음)
+
+===== FAILURES: 6 =====
+
+PRODUCT: 드리미 올인원 로봇청소기 X60 Master 스팀 직배수형, 화이트
+stage: resolve
+reason: 중간 네이버 URL에서 공식 Brand 상품 URL을 확인하지 못했습니다.
+
+PRODUCT: 에브리봇 TS450 쓰리스핀 슬림 물걸레 로봇청소기 26년 NEW
+stage: resolve
+reason: 중간 네이버 URL에서 공식 Brand 상품 URL을 확인하지 못했습니다.
+
+PRODUCT: 로보락 로봇청소기 S10 MaxV Ultra RRE0VES+EWFD55HRR 자동 물통형, 화이트
+stage: resolve
+reason: URL resolver 오류
+
+PRODUCT: 로보락S10 MaxV Slim 직배수로봇청소기
+stage: resolve
+reason: 중간 네이버 URL에서 공식 Brand 상품 URL을 확인하지 못했습니다.
+
+PRODUCT: 삼성 2026 신제품 비스포크 AI 스팀 울트라 물걸레 올인원로봇청소기 새틴 그레이지
+stage: resolve
+reason: 중간 네이버 URL에서 공식 Brand 상품 URL을 확인하지 못했습니다.
+
+PRODUCT: LG홈봇 로봇청소기 RONi 로니 N95TWU
+stage: resolve
+reason: 중간 네이버 URL에서 공식 Brand 상품 URL을 확인하지 못했습니다.
+
+############################################################
+FILE: robot-enriched-current-test.json
+LastWriteTime: 08/19/2026 16:00:48
+############################################################
+
+===== FINAL CANDIDATES: 2 =====
+
+PRODUCT: ëª¨ë° P70 Pro Ultra ë¬¼ê±¸ë  ë¡ë´ì²­ìê¸° RGB ì¼ì ì¨ìì¸ì² ê³ ì¨ê±´ì¡° ë¬¼ê±¸ë  íì¥
+reviewSamples: 20
+reviewTextSource: canonical-fallback
+detailStatus: (없음)
+
+PRODUCT: [1ì ë¬ì±] X60 Ultra ì¬ì¸ì ë¡ë´ì²­ìê¸° íì´í¸, ë¨í
+reviewSamples: 20
+reviewTextSource: canonical-reuse
+detailStatus: (없음)
+
+===== FAILURES: 1 =====
+
+PRODUCT: ëë¦¬ë¯¸ ì¬ì¸ì ë¡ë´ì²­ìê¸° X60 Master ì¤í ì§ë°°ìí, íì´í¸
+stage: resolve
+reason: ì¤ê° ë¤ì´ë² URLìì ê³µì Brand ìí URLì íì¸íì§ ëª»íìµëë¤.
+
+############################################################
+FILE: robot-enriched-full-test.json
+LastWriteTime: 08/19/2026 15:42:22
+############################################################
+
+===== FINAL CANDIDATES: 1 =====
+
+PRODUCT: [1ì ë¬ì±] X60 Ultra ì¬ì¸ì ë¡ë´ì²­ìê¸° íì´í¸, ë¨í
+reviewSamples: 20
+reviewTextSource: canonical-reuse
+detailStatus: (없음)
+
+===== FAILURES: 0 =====
+
+############################################################
+FILE: robot-final-after-cost-guard.json
+LastWriteTime: 08/19/2026 16:52:12
+############################################################
+
+===== FINAL CANDIDATES: 5 =====
+
+PRODUCT: [디지털가전페스타] 로보락 S10 MaxV Slim 직배수 로봇청소기
+reviewSamples: 20
+reviewTextSource: canonical-fallback
+detailStatus: full
+
+PRODUCT: 모바 로봇청소기 P70 Pro Ultra RLP54HE AI센서 자동세척 화이트, 단품
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+PRODUCT: 드리미 로봇청소기 X60 Ultra X60ULTRA 올인원 물통형, 화이트
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+PRODUCT: 드리미 올인원 로봇청소기 X60 Master 스팀 직배수형, 화이트
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+PRODUCT: 에브리봇 TS450 쓰리스핀 슬림 물걸레 로봇청소기 26년 NEW
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+===== FAILURES: 0 =====
+
+############################################################
+FILE: robot-final-node-check.json
+LastWriteTime: 08/20/2026 12:21:15
+############################################################
+
+===== FINAL CANDIDATES: 5 =====
+
+PRODUCT: 모바 P70 Pro Ultra 물걸레 로봇청소기 RGB 센서 온수세척 고온건조 물걸레 확장
+reviewSamples: 20
+reviewTextSource: canonical-reuse
+detailStatus: full
+
+PRODUCT: [1위 달성] X60 Ultra 올인원 로봇청소기 화이트, 단품
+reviewSamples: 20
+reviewTextSource: canonical-reuse
+detailStatus: full
+
+PRODUCT: 드리미 올인원 로봇청소기 X60 Master 스팀 직배수형, 화이트
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+PRODUCT: JONR 존알 로봇청소기 올인원 자동세척 건조 스테이션 최강희청소기 X1 MAX, 블랙
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+PRODUCT: JONR 존알 로봇청소기 올인원 자동세척 건조 스테이션 최강희청소기 X9 PRO, 블랙
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+===== FAILURES: 2 =====
+
+PRODUCT: 로보락 로봇청소기 S10 MaxV Ultra RRE0VES+EWFD55HRR 자동 물통형, 화이트
+stage: validation
+reason: 상세수집은 완료됐지만 필수 상품정보가 없습니다.
+
+PRODUCT: 로보락 S10 MaxV Ultra 로봇청소기
+stage: validation
+reason: 상세수집은 완료됐지만 필수 상품정보가 없습니다.
+
+############################################################
+FILE: robot-full-after-ranking-fix-2.json
+LastWriteTime: 08/20/2026 11:12:00
+############################################################
+
+===== FINAL CANDIDATES: 5 =====
+
+PRODUCT: Ã«ÂªÂ¨Ã«Â°Â Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° P70 Pro Ultra RLP54HE AIÃ¬ÂÂ¼Ã¬ÂÂ Ã¬ÂÂÃ«ÂÂÃ¬ÂÂ¸Ã¬Â²Â Ã­ÂÂÃ¬ÂÂ´Ã­ÂÂ¸, Ã«ÂÂ¨Ã­ÂÂ
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+PRODUCT: Ã«ÂÂÃ«Â¦Â¬Ã«Â¯Â¸ Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° X60 Ultra X60ULTRA Ã¬ÂÂ¬Ã¬ÂÂ¸Ã¬ÂÂ Ã«Â¬Â¼Ã­ÂÂµÃ­ÂÂ, Ã­ÂÂÃ¬ÂÂ´Ã­ÂÂ¸
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+PRODUCT: Ã«ÂÂÃ«Â¦Â¬Ã«Â¯Â¸ Ã¬ÂÂ¬Ã¬ÂÂ¸Ã¬ÂÂ Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° X60 Master Ã¬ÂÂ¤Ã­ÂÂ Ã¬Â§ÂÃ«Â°Â°Ã¬ÂÂÃ­ÂÂ, Ã­ÂÂÃ¬ÂÂ´Ã­ÂÂ¸
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+PRODUCT: Ã¬ÂÂÃ«Â¸ÂÃ«Â¦Â¬Ã«Â´Â TS450 Ã¬ÂÂ°Ã«Â¦Â¬Ã¬ÂÂ¤Ã­ÂÂ Ã¬ÂÂ¬Ã«Â¦Â¼ Ã«Â¬Â¼ÃªÂ±Â¸Ã« Â Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° 26Ã«ÂÂ NEW
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+PRODUCT: Ã«Â¡ÂÃ«Â³Â´Ã«ÂÂ½ Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° S10 MaxV Ultra RRE0VES+EWFD55HRR Ã¬ÂÂÃ«ÂÂ Ã«Â¬Â¼Ã­ÂÂµÃ­ÂÂ, Ã­ÂÂÃ¬ÂÂ´Ã­ÂÂ¸
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+===== FAILURES: 0 =====
+
+############################################################
+FILE: robot-full-recovery-result.json
+LastWriteTime: 08/19/2026 16:59:11
+############################################################
+
+===== FINAL CANDIDATES: 5 =====
+
+PRODUCT: [디지털가전페스타] 로보락 S10 MaxV Slim 직배수 로봇청소기
+reviewSamples: 20
+reviewTextSource: canonical-fallback
+detailStatus: full
+
+PRODUCT: 모바 로봇청소기 P70 Pro Ultra RLP54HE AI센서 자동세척 화이트, 단품
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+PRODUCT: 드리미 로봇청소기 X60 Ultra X60ULTRA 올인원 물통형, 화이트
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+PRODUCT: 드리미 올인원 로봇청소기 X60 Master 스팀 직배수형, 화이트
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+PRODUCT: 에브리봇 TS450 쓰리스핀 슬림 물걸레 로봇청소기 26년 NEW
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+===== FAILURES: 0 =====
+
+############################################################
+FILE: robot-optimized-final-result.json
+LastWriteTime: 08/20/2026 12:55:37
+############################################################
+
+===== FINAL CANDIDATES: 5 =====
+
+PRODUCT: 모바 P70 Pro Ultra 물걸레 로봇청소기 RGB 센서 온수세척 고온건조 물걸레 확장
+reviewSamples: 20
+reviewTextSource: canonical-reuse
+detailStatus: full
+
+PRODUCT: [1위 달성] X60 Ultra 올인원 로봇청소기 화이트, 단품
+reviewSamples: 20
+reviewTextSource: canonical-reuse
+detailStatus: full
+
+PRODUCT: JONR 존알 로봇청소기 올인원 자동세척 건조 스테이션 최강희청소기 X1 MAX, 블랙
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+PRODUCT: JONR 존알 로봇청소기 올인원 자동세척 건조 스테이션 최강희청소기 X9 PRO, 블랙
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+PRODUCT: 에브리봇 TS450 쓰리스핀 슬림 물걸레 로봇청소기 26년 NEW
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+===== FAILURES: 3 =====
+
+PRODUCT: 드리미 올인원 로봇청소기 X60 Master 스팀 직배수형, 화이트
+stage: validation
+reason: 상세수집은 완료됐지만 필수 상품정보가 없습니다.
+
+PRODUCT: 로보락 로봇청소기 S10 MaxV Ultra RRE0VES+EWFD55HRR 자동 물통형, 화이트
+stage: validation
+reason: 상세수집은 완료됐지만 필수 상품정보가 없습니다.
+
+PRODUCT: 로보락 S10 MaxV Ultra 로봇청소기
+stage: validation
+reason: 상세수집은 완료됐지만 필수 상품정보가 없습니다.
+
+############################################################
+FILE: ts450-final-enriched-check.json
+LastWriteTime: 08/20/2026 16:07:12
+############################################################
+
+===== FINAL CANDIDATES: 5 =====
+
+PRODUCT: [1위 달성] X60 Ultra 올인원 로봇청소기 화이트, 단품
+reviewSamples: 20
+reviewTextSource: canonical-reuse
+detailStatus: full
+
+PRODUCT: 모바 로봇청소기 P70 Pro Ultra RLP54HE AI센서 자동세척 화이트, 단품
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+PRODUCT: JONR 존알 로봇청소기 올인원 자동세척 건조 스테이션 최강희청소기 X1 MAX, 블랙
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+PRODUCT: 에브리봇 TS450 쓰리스핀 슬림 물걸레 로봇청소기 26년 NEW
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+PRODUCT: 삼성 2026 신제품 비스포크 AI 스팀 울트라 물걸레 올인원로봇청소기 새틴 그레이지
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+===== FAILURES: 3 =====
+
+PRODUCT: 드리미 올인원 로봇청소기 X60 Master 스팀 직배수형, 화이트
+stage: validation
+reason: 상세수집은 완료됐지만 필수 상품정보가 없습니다.
+
+PRODUCT: 로보락 로봇청소기 S10 MaxV Ultra RRE0VES+EWFD55HRR 자동 물통형, 화이트
+stage: validation
+reason: 상세수집은 완료됐지만 필수 상품정보가 없습니다.
+
+PRODUCT: 로보락 S10 MaxV Ultra 로봇청소기
+stage: validation
+reason: 상세수집은 완료됐지만 필수 상품정보가 없습니다.
+
+############################################################
+FILE: ts450-final-integrated-check.json
+LastWriteTime: 08/20/2026 16:20:02
+############################################################
+
+===== FINAL CANDIDATES: 5 =====
+
+PRODUCT: 모바 P70 Pro Ultra 물걸레 로봇청소기 RGB 센서 온수세척 고온건조 물걸레 확장
+reviewSamples: 20
+reviewTextSource: canonical-reuse
+detailStatus: full
+
+PRODUCT: [1위 달성] X60 Ultra 올인원 로봇청소기 화이트, 단품
+reviewSamples: 20
+reviewTextSource: canonical-reuse
+detailStatus: full
+
+PRODUCT: JONR 존알 로봇청소기 올인원 자동세척 건조 스테이션 최강희청소기 X1 MAX, 블랙
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+PRODUCT: 삼성 2026 신제품 비스포크 AI 스팀 울트라 물걸레 올인원로봇청소기 새틴 그레이지
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+PRODUCT: LG홈봇 로봇청소기 RONi 로니 N95TWU
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+===== FAILURES: 4 =====
+
+PRODUCT: 드리미 올인원 로봇청소기 X60 Master 스팀 직배수형, 화이트
+stage: validation
+reason: 상세수집은 완료됐지만 필수 상품정보가 없습니다.
+
+PRODUCT: 에브리봇 TS450 쓰리스핀 슬림 물걸레 로봇청소기 26년 NEW
+stage: validation
+reason: 분석 가능한 리뷰가 부족합니다. (0개)
+
+PRODUCT: 로보락 로봇청소기 S10 MaxV Ultra RRE0VES+EWFD55HRR 자동 물통형, 화이트
+stage: validation
+reason: 상세수집은 완료됐지만 필수 상품정보가 없습니다.
+
+PRODUCT: 로보락 S10 MaxV Ultra 로봇청소기
+stage: validation
+reason: 상세수집은 완료됐지만 필수 상품정보가 없습니다.
+
+############################################################
+FILE: ts450-final-pass-check.json
+LastWriteTime: 08/20/2026 16:38:26
+############################################################
+
+===== FINAL CANDIDATES: 5 =====
+
+PRODUCT: 모바 P70 Pro Ultra 물걸레 로봇청소기 RGB 센서 온수세척 고온건조 물걸레 확장
+reviewSamples: 20
+reviewTextSource: canonical-reuse
+detailStatus: full
+
+PRODUCT: 드리미 로봇청소기 X60 Ultra X60ULTRA 올인원 물통형, 화이트
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+PRODUCT: JONR 존알 로봇청소기 올인원 자동세척 건조 스테이션 최강희청소기 X1 MAX, 블랙
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+PRODUCT: 삼성 2026 신제품 비스포크 AI 스팀 울트라 물걸레 올인원로봇청소기 새틴 그레이지
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+PRODUCT: LG홈봇 로봇청소기 RONi 로니 N95TWU
+reviewSamples: 0
+reviewTextSource: canonical-fallback
+detailStatus: partial-market
+
+===== FAILURES: 4 =====
+
+PRODUCT: 드리미 올인원 로봇청소기 X60 Master 스팀 직배수형, 화이트
+stage: validation
+reason: 상세수집은 완료됐지만 필수 상품정보가 없습니다.
+
+PRODUCT: 에브리봇 TS450 쓰리스핀 슬림 물걸레 로봇청소기 26년 NEW
+stage: validation
+reason: 분석 가능한 리뷰가 부족합니다. (0개)
+
+PRODUCT: 로보락 로봇청소기 S10 MaxV Ultra RRE0VES+EWFD55HRR 자동 물통형, 화이트
+stage: validation
+reason: 상세수집은 완료됐지만 필수 상품정보가 없습니다.
+
+PRODUCT: 로보락 S10 MaxV Ultra 로봇청소기
+stage: validation
+reason: 상세수집은 완료됐지만 필수 상품정보가 없습니다.
+
+############################################################
+FILE: x60-review-source-final.json
+LastWriteTime: 08/19/2026 15:39:14
+############################################################
+
+===== FINAL CANDIDATES: 1 =====
+
+PRODUCT: [1ì ë¬ì±] X60 Ultra ì¬ì¸ì ë¡ë´ì²­ìê¸° íì´í¸, ë¨í
+reviewSamples: 20
+reviewTextSource: canonical-reuse
+detailStatus: (없음)
+
+===== FAILURES: 0 =====
+
+############################################################
+FILE: x60-sources-result.json
+LastWriteTime: 08/19/2026 14:53:40
+############################################################
+
+===== FINAL CANDIDATES: 1 =====
+
+PRODUCT: [1위 달성] X60 Ultra 올인원 로봇청소기 화이트, 단품
+reviewSamples: 20
+reviewTextSource: (없음)
+detailStatus: (없음)
+
+===== FAILURES: 0 =====

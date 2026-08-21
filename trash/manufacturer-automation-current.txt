@@ -1,0 +1,327 @@
+﻿
+  components\ProjectDAutomationPanel.tsx:490:      updateStep
+(
+  components\ProjectDAutomationPanel.tsx:491:        "import"
+,
+  components\ProjectDAutomationPanel.tsx:492:        "working
+",
+  components\ProjectDAutomationPanel.tsx:493:        "최종 후보를 
+제품 DB에 등록하는 중...",
+  components\ProjectDAutomationPanel.tsx:494:      );
+  components\ProjectDAutomationPanel.tsx:495:
+  components\ProjectDAutomationPanel.tsx:496:      const impo
+rtResponse =
+  components\ProjectDAutomationPanel.tsx:497:        await fe
+tch(
+> components\ProjectDAutomationPanel.tsx:498:          "/api/
+import-market-candidates",
+  components\ProjectDAutomationPanel.tsx:499:          {
+  components\ProjectDAutomationPanel.tsx:500:            meth
+od: "POST",
+  components\ProjectDAutomationPanel.tsx:501:
+  components\ProjectDAutomationPanel.tsx:502:            head
+ers: {
+  components\ProjectDAutomationPanel.tsx:503:              "C
+ontent-Type":
+  components\ProjectDAutomationPanel.tsx:504:                
+"application/json",
+  components\ProjectDAutomationPanel.tsx:505:            },
+  components\ProjectDAutomationPanel.tsx:506:
+  components\ProjectDAutomationPanel.tsx:507:            body
+: JSON.stringify({
+  components\ProjectDAutomationPanel.tsx:508:              ca
+tegory:
+  components\ProjectDAutomationPanel.tsx:509:                
+normalizedCategory,
+  components\ProjectDAutomationPanel.tsx:510:
+  components\ProjectDAutomationPanel.tsx:511:              ca
+ndidates:
+  components\ProjectDAutomationPanel.tsx:512:                
+finalCandidates,
+  components\ProjectDAutomationPanel.tsx:513:            }),
+  components\ProjectDAutomationPanel.tsx:514:          },
+  components\ProjectDAutomationPanel.tsx:515:        );
+  components\ProjectDAutomationPanel.tsx:516:
+> components\ProjectDAutomationPanel.tsx:517:      const impo
+rtResult =
+  components\ProjectDAutomationPanel.tsx:518:        await re
+adJson(
+  components\ProjectDAutomationPanel.tsx:519:          import
+Response,
+  components\ProjectDAutomationPanel.tsx:520:        );
+  components\ProjectDAutomationPanel.tsx:521:
+  components\ProjectDAutomationPanel.tsx:522:      if (
+  components\ProjectDAutomationPanel.tsx:523:        !importR
+esponse.ok ||
+> components\ProjectDAutomationPanel.tsx:524:        importRe
+sult.success !==
+  components\ProjectDAutomationPanel.tsx:525:          true
+  components\ProjectDAutomationPanel.tsx:526:      ) {
+  components\ProjectDAutomationPanel.tsx:527:        throw ne
+w Error(
+  components\ProjectDAutomationPanel.tsx:528:          cleanT
+ext(
+> components\ProjectDAutomationPanel.tsx:529:            impo
+rtResult.message,
+  components\ProjectDAutomationPanel.tsx:530:          ) ||
+  components\ProjectDAutomationPanel.tsx:531:            "제품 
+DB 등록에 실패했습니다.",
+  components\ProjectDAutomationPanel.tsx:532:        );
+  components\ProjectDAutomationPanel.tsx:533:      }
+  components\ProjectDAutomationPanel.tsx:534:
+  components\ProjectDAutomationPanel.tsx:535:      updateStep
+(
+  components\ProjectDAutomationPanel.tsx:536:        "import"
+,
+  components\ProjectDAutomationPanel.tsx:537:        "done",
+  components\ProjectDAutomationPanel.tsx:538:        `${Numbe
+r(
+> components\ProjectDAutomationPanel.tsx:539:          import
+Result.successCount ??
+  components\ProjectDAutomationPanel.tsx:540:            0,
+  components\ProjectDAutomationPanel.tsx:541:        )}개 제품 등
+록/갱신 완료`,
+  components\ProjectDAutomationPanel.tsx:542:      );
+  components\ProjectDAutomationPanel.tsx:543:
+  components\ProjectDAutomationPanel.tsx:544:      /*
+  components\ProjectDAutomationPanel.tsx:545:        4단계
+  components\ProjectDAutomationPanel.tsx:546:        리뷰분석 API
+가 구매기준을 사용하므로
+  components\ProjectDAutomationPanel.tsx:547:        상세정보 기반 
+1차 구매기준 생성.
+  components\ProjectDAutomationPanel.tsx:548:      */
+  components\ProjectDAutomationPanel.tsx:549:      updateStep
+(
+  components\ProjectDAutomationPanel.tsx:550:        "criteri
+a-first",
+  components\ProjectDAutomationPanel.tsx:551:        "working
+",
+  components\ProjectDAutomationPanel.tsx:552:        "리뷰 분석용 
+1차 구매기준을 생성하는 중...",
+  components\ProjectDAutomationPanel.tsx:553:      );
+  components\ProjectDAutomationPanel.tsx:554:
+  components\ProjectDAutomationPanel.tsx:555:      const firs
+tCriteriaResponse =
+  components\ProjectDAutomationPanel.tsx:556:        await fe
+tch(
+  components\ProjectDAutomationPanel.tsx:557:          "/api/
+generate-category-criteria",
+  components\ProjectDAutomationPanel.tsx:558:          {
+  components\ProjectDAutomationPanel.tsx:559:            meth
+od: "POST",
+  components\ProjectDAutomationPanel.tsx:560:
+  components\ProjectDAutomationPanel.tsx:561:            head
+ers: {
+  components\ProjectDAutomationPanel.tsx:562:              "C
+ontent-Type":
+  components\ProjectDAutomationPanel.tsx:563:                
+"application/json",
+  components\ProjectDAutomationPanel.tsx:564:            },
+  components\ProjectDAutomationPanel.tsx:600:        제품별로 AI 
+분석.
+  components\ProjectDAutomationPanel.tsx:601:      */
+  components\ProjectDAutomationPanel.tsx:602:      updateStep
+(
+  components\ProjectDAutomationPanel.tsx:603:        "reviews
+",
+  components\ProjectDAutomationPanel.tsx:604:        "working
+",
+  components\ProjectDAutomationPanel.tsx:605:        "제품 5개의 
+리뷰를 순서대로 AI 분석 중...",
+  components\ProjectDAutomationPanel.tsx:606:      );
+  components\ProjectDAutomationPanel.tsx:607:
+> components\ProjectDAutomationPanel.tsx:608:      const anal
+yzedProducts:
+  components\ProjectDAutomationPanel.tsx:609:        Array<{
+  components\ProjectDAutomationPanel.tsx:610:          produc
+tId: string;
+  components\ProjectDAutomationPanel.tsx:611:          produc
+tName: string;
+  components\ProjectDAutomationPanel.tsx:612:          analys
+is: unknown;
+  components\ProjectDAutomationPanel.tsx:613:        }> = [];
+  components\ProjectDAutomationPanel.tsx:614:
+  components\ProjectDAutomationPanel.tsx:615:      for (
+  components\ProjectDAutomationPanel.tsx:616:        let inde
+x = 0;
+  components\ProjectDAutomationPanel.tsx:617:        index <
+  components\ProjectDAutomationPanel.tsx:618:        finalCan
+didates.length;
+  components\ProjectDAutomationPanel.tsx:619:        index++
+  components\ProjectDAutomationPanel.tsx:620:      ) {
+  components\ProjectDAutomationPanel.tsx:621:        const ca
+ndidate =
+  components\ProjectDAutomationPanel.tsx:622:          finalC
+andidates[index];
+  components\ProjectDAutomationPanel.tsx:623:
+  components\ProjectDAutomationPanel.tsx:624:        const de
+tail =
+  components\ProjectDAutomationPanel.tsx:625:          candid
+ate.detail ?? {};
+  components\ProjectDAutomationPanel.tsx:626:
+  components\ProjectDAutomationPanel.tsx:627:        const pr
+oductId =
+  components\ProjectDAutomationPanel.tsx:628:          cleanT
+ext(
+> components\ProjectDAutomationPanel.tsx:629:            deta
+il.productId,
+  components\ProjectDAutomationPanel.tsx:630:          );
+  components\ProjectDAutomationPanel.tsx:631:
+  components\ProjectDAutomationPanel.tsx:632:        const pr
+oductName =
+  components\ProjectDAutomationPanel.tsx:633:          cleanT
+ext(
+  components\ProjectDAutomationPanel.tsx:634:            deta
+il.productName,
+  components\ProjectDAutomationPanel.tsx:635:          );
+  components\ProjectDAutomationPanel.tsx:636:
+  components\ProjectDAutomationPanel.tsx:637:        const re
+viewObjects =
+  components\ProjectDAutomationPanel.tsx:638:          Array.
+isArray(
+  components\ProjectDAutomationPanel.tsx:639:            deta
+il.reviews,
+  components\ProjectDAutomationPanel.tsx:640:          )
+  components\ProjectDAutomationPanel.tsx:641:            ? de
+tail.reviews
+  components\ProjectDAutomationPanel.tsx:642:            : []
+;
+  components\ProjectDAutomationPanel.tsx:643:
+  components\ProjectDAutomationPanel.tsx:644:        const re
+views =
+  components\ProjectDAutomationPanel.tsx:645:          review
+Objects
+  components\ProjectDAutomationPanel.tsx:646:            .map
+(
+  components\ProjectDAutomationPanel.tsx:647:              (r
+eview) =>
+  components\ProjectDAutomationPanel.tsx:648:                
+cleanText(
+  components\ProjectDAutomationPanel.tsx:649:                
+  review.text,
+  components\ProjectDAutomationPanel.tsx:650:                
+),
+  components\ProjectDAutomationPanel.tsx:651:            )
+  components\ProjectDAutomationPanel.tsx:652:            .fil
+ter(Boolean);
+  components\ProjectDAutomationPanel.tsx:653:
+  components\ProjectDAutomationPanel.tsx:654:        const lo
+wScore =
+  components\ProjectDAutomationPanel.tsx:722:              cl
+eanText(
+  components\ProjectDAutomationPanel.tsx:723:                
+analyzeResult.message,
+  components\ProjectDAutomationPanel.tsx:724:              ) 
+||
+  components\ProjectDAutomationPanel.tsx:725:              "리
+뷰 AI 분석 실패"
+  components\ProjectDAutomationPanel.tsx:726:            }`,
+  components\ProjectDAutomationPanel.tsx:727:          );
+  components\ProjectDAutomationPanel.tsx:728:        }
+  components\ProjectDAutomationPanel.tsx:729:
+> components\ProjectDAutomationPanel.tsx:730:        analyzed
+Products.push({
+  components\ProjectDAutomationPanel.tsx:731:          produc
+tId,
+  components\ProjectDAutomationPanel.tsx:732:
+  components\ProjectDAutomationPanel.tsx:733:          produc
+tName,
+  components\ProjectDAutomationPanel.tsx:734:
+  components\ProjectDAutomationPanel.tsx:735:          analys
+is:
+  components\ProjectDAutomationPanel.tsx:736:            anal
+yzeResult.analysis,
+  components\ProjectDAutomationPanel.tsx:737:        });
+  components\ProjectDAutomationPanel.tsx:738:      }
+  components\ProjectDAutomationPanel.tsx:739:
+  components\ProjectDAutomationPanel.tsx:740:      updateStep
+(
+  components\ProjectDAutomationPanel.tsx:741:        "reviews
+",
+  components\ProjectDAutomationPanel.tsx:742:        "done",
+> components\ProjectDAutomationPanel.tsx:743:        `${analy
+zedProducts.length}개 제품 리뷰 AI 분석 완료`,
+  components\ProjectDAutomationPanel.tsx:744:      );
+  components\ProjectDAutomationPanel.tsx:745:
+  components\ProjectDAutomationPanel.tsx:746:      /*
+  components\ProjectDAutomationPanel.tsx:747:        6단계
+  components\ProjectDAutomationPanel.tsx:748:        리뷰 분석 저장
+.
+  components\ProjectDAutomationPanel.tsx:749:      */
+  components\ProjectDAutomationPanel.tsx:750:      updateStep
+(
+  components\ProjectDAutomationPanel.tsx:751:        "save-re
+views",
+  components\ProjectDAutomationPanel.tsx:752:        "working
+",
+  components\ProjectDAutomationPanel.tsx:753:        "리뷰 분석 결
+과를 DB에 저장하는 중...",
+  components\ProjectDAutomationPanel.tsx:754:      );
+  components\ProjectDAutomationPanel.tsx:755:
+  components\ProjectDAutomationPanel.tsx:756:      const save
+Response =
+  components\ProjectDAutomationPanel.tsx:757:        await fe
+tch(
+> components\ProjectDAutomationPanel.tsx:758:          "/api/
+save-review-analysis-batch",
+  components\ProjectDAutomationPanel.tsx:759:          {
+  components\ProjectDAutomationPanel.tsx:760:            meth
+od: "POST",
+  components\ProjectDAutomationPanel.tsx:761:
+  components\ProjectDAutomationPanel.tsx:762:            head
+ers: {
+  components\ProjectDAutomationPanel.tsx:763:              "C
+ontent-Type":
+  components\ProjectDAutomationPanel.tsx:764:                
+"application/json",
+  components\ProjectDAutomationPanel.tsx:765:            },
+  components\ProjectDAutomationPanel.tsx:766:
+  components\ProjectDAutomationPanel.tsx:767:            body
+: JSON.stringify({
+  components\ProjectDAutomationPanel.tsx:768:              ca
+tegory:
+  components\ProjectDAutomationPanel.tsx:769:                
+normalizedCategory,
+  components\ProjectDAutomationPanel.tsx:770:
+  components\ProjectDAutomationPanel.tsx:771:              pr
+oducts:
+> components\ProjectDAutomationPanel.tsx:772:                
+analyzedProducts,
+  components\ProjectDAutomationPanel.tsx:773:            }),
+  components\ProjectDAutomationPanel.tsx:774:          },
+  components\ProjectDAutomationPanel.tsx:775:        );
+  components\ProjectDAutomationPanel.tsx:776:
+  components\ProjectDAutomationPanel.tsx:777:      const save
+Result =
+  components\ProjectDAutomationPanel.tsx:778:        await re
+adJson(
+  components\ProjectDAutomationPanel.tsx:779:          saveRe
+sponse,
+  components\ProjectDAutomationPanel.tsx:780:        );
+  components\ProjectDAutomationPanel.tsx:781:
+  components\ProjectDAutomationPanel.tsx:782:      if (
+  components\ProjectDAutomationPanel.tsx:783:        !saveRes
+ponse.ok ||
+  components\ProjectDAutomationPanel.tsx:784:        saveResu
+lt.success !==
+  components\ProjectDAutomationPanel.tsx:785:          true
+  components\ProjectDAutomationPanel.tsx:786:      ) {
+  components\ProjectDAutomationPanel.tsx:787:        throw ne
+w Error(
+  components\ProjectDAutomationPanel.tsx:788:          cleanT
+ext(
+  components\ProjectDAutomationPanel.tsx:789:            save
+Result.message,
+  components\ProjectDAutomationPanel.tsx:790:          ) ||
+  components\ProjectDAutomationPanel.tsx:791:            "리뷰 
+분석 DB 저장에 실패했습니다.",
+  components\ProjectDAutomationPanel.tsx:792:        );
+  components\ProjectDAutomationPanel.tsx:793:      }
+  components\ProjectDAutomationPanel.tsx:794:
+  components\ProjectDAutomationPanel.tsx:795:      updateStep
+(
+  components\ProjectDAutomationPanel.tsx:796:        "save-re
+views",
+  components\ProjectDAutomationPanel.tsx:797:        "done",
+
+

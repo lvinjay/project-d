@@ -1,0 +1,111 @@
+﻿            )
+          ) {
+            canonicalCandidates.push(
+              candidate,
+            );
+          }
+        }
+
+        for (
+          const site of
+          extractBrandSites(
+            googleData,
+          )
+        ) {
+          brandSites.add(site);
+        }
+      } catch (error) {
+        console.warn(
+          "Google broad fallback warning:",
+          error,
+        );
+      }
+    }
+  }
+
+  /*
+    공식 상품 URL 후보가 확보됐으면
+    상품번호 일치 또는 상품명 토큰 일치도가
+    가장 높은 후보를 선택한다.
+  */
+  const rankedCandidates =
+    [...canonicalCandidates]
+      .map(
+        (candidate) => ({
+          candidate,
+          score:
+            candidateScore(
+              candidate,
+              productName,
+              inputProductId,
+            ),
+        }),
+      )
+      .sort(
+        (a, b) =>
+          b.score -
+          a.score,
+      );
+
+  const best =
+    rankedCandidates[0];
+
+  if (
+    best &&
+    (
+      inputProductId
+        ? best.candidate
+            .productId ===
+          inputProductId
+        : best.score > 0 ||
+          canonicalCandidates.length ===
+            1
+    )
+  ) {
+    const resolvedBrandName =
+      brandName ||
+      initialBrandCandidate;
+
+    try {
+      await saveBrandStoreMapping(
+        [
+          initialBrandCandidate,
+          brandName,
+          resolvedBrandName,
+        ],
+        best.candidate
+          .brandSite,
+        {
+          source:
+            "serpapi_product_match",
+          confidence:
+            100,
+        },
+      );
+    } catch (error) {
+      console.warn(
+        "Brand mapping save warning:",
+        error,
+      );
+    }
+
+    return {
+      success: true as const,
+
+      productId:
+        best.candidate
+          .productId,
+
+      brandName:
+        resolvedBrandName,
+
+      brandSite:
+        best.candidate
+          .brandSite,
+
+      canonicalUrl:
+        best.candidate
+          .canonicalUrl,
+
+      triedQueries,
+    };

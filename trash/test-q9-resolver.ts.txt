@@ -1,0 +1,21 @@
+﻿import {
+  resolveNaverBrandProductUrl,
+} from "../lib/resolveNaverBrandProductUrl";
+
+async function run() {
+  const result =
+    await resolveNaverBrandProductUrl(
+      "https://smartstore.naver.com/main/products/10775617216",
+      "에브리봇 로봇청소기 AI 올인원 Q9 인공지능 자동 화이트, 단품",
+    );
+
+  console.log(
+    JSON.stringify(
+      result,
+      null,
+      2,
+    ),
+  );
+}
+
+run().catch(console.error);

@@ -1,0 +1,168 @@
+﻿                  "",
+              }))
+              .filter(
+                (seller) =>
+                  seller.finalPrice > 0 &&
+                  Boolean(
+                    seller.sellerLink,
+                  ),
+              )
+              .sort(
+                (a, b) =>
+                  a.finalPrice -
+                  b.finalPrice,
+              )
+          : [];
+
+      const cheapestSeller =
+        sellers[0];
+
+      return {
+        url:
+          raw.url ??
+          normalizedUrl,
+
+        productId:
+          raw.product_id ??
+          "",
+
+        title:
+          raw.title ??
+          "",
+
+        /*
+          사용자에게 보여줄 기본 가격은
+          반드시 finalPrice를 사용한다.
+        */
+        originalPrice,
+
+        finalPrice,
+
+        discountRate:
+          Number(
+            raw.discount_rate ??
+              0,
+          ),
+
+        currency:
+          raw.currency ??
+          "KRW",
+
+        imageUrl:
+          raw.images?.[0]
+            ?.link ??
+          "",
+
+        totalReviews:
+          Number(
+            raw.total_reviews ??
+              0,
+          ),
+
+        averageRating:
+          typeof raw.average_rating ===
+          "number"
+            ? raw.average_rating
+            : null,
+
+        soldOut:
+          Boolean(
+            raw.sold_out,
+          ),
+
+        sellerName:
+          cheapestSeller
+            ?.sellerName ??
+          raw.sellers?.[0]
+            ?.seller_name ??
+          "",
+
+        sellers,
+
+        purchaseSeller:
+          cheapestSeller
+            ?.sellerName ??
+          "",
+
+        purchasePrice:
+          cheapestSeller
+            ?.finalPrice ??
+          0,
+
+        purchaseUrl:
+          cheapestSeller
+            ?.sellerLink ??
+          "",
+
+        manufacturer:
+          getProductInfo(
+            raw.product_information,
+            "제조사",
+          ),
+
+        brand:
+          getProductInfo(
+            raw.product_information,
+            "브랜드",
+          ),
+
+        modelName:
+          getProductInfo(
+            raw.product_information,
+            "모델명",
+          ),
+
+        categoryName:
+          raw.category_name ??
+          "",
+
+        topReviews:
+          Array.isArray(
+            raw.top_reviews,
+          )
+            ? raw.top_reviews
+                .slice(0, 20)
+                .map(
+                  (review) => ({
+                    rating:
+                      Number(
+                        review.rating ??
+                          0,
+                      ),
+
+                    date:
+                      review.rating_date ??
+                      "",
+
+                    text:
+                      review.review ??
+                      "",
+
+                    helpfulCount:
+                      Number(
+                        review.helpful_count ??
+                          0,
+                      ),
+                  }),
+                )
+            : [],
+      };
+    }
+
+    if (
+      progress.status ===
+      "failed"
+    ) {
+      throw new Error(
+        `Bright Data 상품 수집 실패 (records=${progress.records ?? 0}, errors=${progress.errors ?? 0})`,
+      );
+    }
+
+    await sleep(5000);
+  }
+
+  throw new Error(
+    "Bright Data 상품 수집이 제한 시간 안에 완료되지 않았습니다.",
+  );
+}
+

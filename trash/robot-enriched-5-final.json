@@ -1,0 +1,38 @@
+﻿{
+    "success":  true,
+    "category":  "ë¡ë´ì²­ìê¸°",
+    "budget":  {
+                   "minBudget":  500000,
+                   "maxBudget":  1500000
+               },
+    "targetCount":  5,
+    "marketCandidateCount":  3,
+    "resolverAttempts":  3,
+    "brightDataCalls":  0,
+    "finalCandidateCount":  0,
+    "targetReached":  false,
+    "finalCandidates":  [
+
+                        ],
+    "failureCount":  3,
+    "failures":  [
+                     {
+                         "position":  1,
+                         "marketProduct":  "Ã«ÂªÂ¨Ã«Â°Â Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° P70 Pro Ultra RLP54HE AIÃ¬ÂÂ¼Ã¬ÂÂ Ã¬ÂÂÃ«ÂÂÃ¬ÂÂ¸Ã¬Â²Â Ã­ÂÂÃ¬ÂÂ´Ã­ÂÂ¸, Ã«ÂÂ¨Ã­ÂÂ",
+                         "stage":  "resolve",
+                         "reason":  "Naver hasn\u0027t returned any results for this query."
+                     },
+                     {
+                         "position":  2,
+                         "marketProduct":  "Ã«ÂÂÃ«Â¦Â¬Ã«Â¯Â¸ Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° X60 Ultra X60ULTRA Ã¬ÂÂ¬Ã¬ÂÂ¸Ã¬ÂÂ Ã«Â¬Â¼Ã­ÂÂµÃ­ÂÂ, Ã­ÂÂÃ¬ÂÂ´Ã­ÂÂ¸",
+                         "stage":  "resolve",
+                         "reason":  "Naver hasn\u0027t returned any results for this query."
+                     },
+                     {
+                         "position":  3,
+                         "marketProduct":  "Ã«ÂÂÃ«Â¦Â¬Ã«Â¯Â¸ Ã¬ÂÂ¬Ã¬ÂÂ¸Ã¬ÂÂ Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° X60 Master Ã¬ÂÂ¤Ã­ÂÂ Ã¬Â§ÂÃ«Â°Â°Ã¬ÂÂÃ­ÂÂ, Ã­ÂÂÃ¬ÂÂ´Ã­ÂÂ¸",
+                         "stage":  "resolve",
+                         "reason":  "Naver hasn\u0027t returned any results for this query."
+                     }
+                 ]
+}

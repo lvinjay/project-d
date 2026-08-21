@@ -1,0 +1,141 @@
+﻿export async function resolveNaverBrandProductUrl(
+  productUrl: string,
+  productName: string,
+) {
+  /*
+    direct smartstore/brand URL이면
+    여기서 상품번호가 바로 잡힌다.
+
+    ader/cr3 같은 중간 URL이면
+    productId는 빈 문자열로 시작하고,
+    아래 SerpApi 공식상품 검색에서
+    실제 productId를 다시 확보한다.
+  */
+  const inputProductId =
+    getProductId(
+      productUrl,
+    );
+
+  const cleanedName =
+    cleanProductName(
+      productName,
+    );
+
+  const usefulTokens =
+    getUsefulTokens(
+      productName,
+    );
+
+  const initialBrandCandidate =
+    getBrandCandidate(
+      productName,
+    );
+
+  /*
+    이미 학습된 브랜드스토어가 있으면
+    SerpApi 검색 전에 즉시 재사용.
+  */
+  if (
+    inputProductId &&
+    initialBrandCandidate
+  ) {
+    const learned =
+      await findBrandStoreMapping([
+        initialBrandCandidate,
+      ]);
+
+    if (
+      learned?.brandSite
+    ) {
+      return {
+        success: true as const,
+
+        productId:
+          inputProductId,
+
+        brandName:
+          learned.brandName ||
+          initialBrandCandidate,
+
+        brandSite:
+          learned.brandSite,
+
+        canonicalUrl:
+          `${learned.brandSite}/products/${inputProductId}`,
+
+        triedQueries:
+          [] as string[],
+      };
+    }
+  }
+
+  const modelTokens =
+    usefulTokens
+      .filter(
+        (token) =>
+          token !==
+          initialBrandCandidate,
+      )
+      .slice(
+        0,
+        3,
+      );
+
+  const triedQueries:
+    string[] = [];
+
+  let brandName = "";
+
+  const canonicalCandidates:
+    CanonicalCandidate[] = [];
+
+  const brandSites =
+    new Set<string>();
+
+  const tryQuery =
+    async (
+      query: string,
+    ) => {
+      const normalized =
+        query
+          .replace(
+            /\s+/g,
+            " ",
+          )
+          .trim();
+
+      if (
+        !normalized ||
+        triedQueries.includes(
+          normalized,
+        )
+      ) {
+        return;
+      }
+
+      triedQueries.push(
+        normalized,
+      );
+
+      const data =
+        await searchNaver(
+          normalized,
+        );
+
+      for (
+        const site of
+        extractBrandSites(
+          data,
+        )
+      ) {
+        brandSites.add(site);
+      }
+
+      for (
+        const candidate of
+        extractCanonicalCandidates(
+          data,
+        )
+      ) {
+        if (
+          !canonicalCandidates.some(

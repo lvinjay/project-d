@@ -1,0 +1,96 @@
+﻿        )}초`,
+        );
+      }
+
+      if (!detail) {
+        return {
+          success: false,
+
+          resolverAttempts:
+            candidateResolverAttempts,
+
+          brightDataCalls:
+            usedCache
+              ? 0
+              : 1,
+
+          failure: {
+            position,
+
+            marketProduct:
+              market.name,
+
+            stage:
+              "brightdata",
+
+            reason:
+              "상품 상세정보를 확보하지 못했습니다.",
+          },
+        };
+      }
+
+      /*
+        시장 후보와 Bright Data 상세상품이 실제 같은 모델인지 확인한다.
+
+        예:
+        - S10 MaxV Ultra -> 로보락 세제 : 차단
+        - S10 MaxV Ultra -> S10 MaxV Slim : 차단
+        - X60 Ultra -> X60 Ultra : 허용
+
+        숫자/영문이 섞인 모델 토큰을 우선 비교한다.
+      */
+      const getModelTokensForValidation = (
+        value: string,
+      ) =>
+        String(value ?? "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, " ")
+          .split(/\s+/)
+          .map((token) => token.trim())
+          .filter(
+            (token) =>
+              token.length >= 2 &&
+              /[a-z]/.test(token) &&
+              /\d/.test(token),
+          );
+
+      const marketModelTokens =
+        getModelTokensForValidation(
+          market.name,
+        );
+
+      const detailModelTokens =
+        getModelTokensForValidation(
+          [
+            detail.title,
+            detail.modelName,
+          ]
+            .filter(Boolean)
+            .join(" "),
+        );
+
+      const modelMatched =
+        marketModelTokens.length === 0 ||
+        marketModelTokens.some((token) =>
+          detailModelTokens.includes(
+            token,
+          ),
+        );
+
+      const usable =
+        Boolean(
+          detail.productId,
+        ) &&
+        Boolean(
+          detail.title,
+        ) &&
+        detail.finalPrice >
+          0 &&
+        modelMatched;
+
+      if (!usable) {
+        const reason =
+          "상세수집은 완료됐지만 필수 상품정보가 없습니다.";
+
+        console.log(
+          `[ENRICH ${position}] 탈락(validation)`,

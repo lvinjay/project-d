@@ -1,0 +1,15 @@
+﻿===== Q9 RAW JSON 전체 =====
+[
+  {
+    "timestamp": "2026-08-13T07:55:56.715Z",
+    "input": {
+      "url": "https://smartstore.naver.com/main/products/10775617216"
+    },
+    "error": "Naver required login on this session — retry with a fresh peer",
+    "error_code": "blocked"
+  }
+]
+
+===== 파일 정보 =====
+Length: 257
+LastWriteTime: 08/13/2026 16:55:59

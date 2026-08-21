@@ -1,0 +1,74 @@
+﻿import {
+  resolveNaverBrandProductUrl,
+} from "../lib/resolveNaverBrandProductUrl";
+
+const tests = [
+  {
+    name:
+      "[슈퍼적립] 로보락 S8 Pro Plus 로봇청소기",
+
+    url:
+      "https://smartstore.naver.com/main/products/11905202334",
+  },
+
+  {
+    name:
+      "에코백스 올인원 로봇청소기 디봇 T50 프로 옴니 DDX67 AI 물통형, 화이트",
+
+    url:
+      "https://smartstore.naver.com/main/products/12177851468",
+  },
+
+  {
+    name:
+      "모바 로봇청소기 S70 Ultra Roller RLZ52EE AI 센서 자동세척 물통형, 화이트",
+
+    url:
+      "https://smartstore.naver.com/main/products/12926470457",
+  },
+];
+
+async function main() {
+  for (const item of tests) {
+    console.log("");
+    console.log("==============================");
+    console.log("상품:", item.name);
+
+    const started =
+      Date.now();
+
+    try {
+      const result =
+        await resolveNaverBrandProductUrl(
+          item.url,
+          item.name,
+        );
+
+      console.log(
+        "TIME:",
+        Math.round(
+          (Date.now() - started) /
+            1000,
+        ),
+        "초",
+      );
+
+      console.log(
+        JSON.stringify(
+          result,
+          null,
+          2,
+        ),
+      );
+    } catch (error) {
+      console.log(
+        "ERROR:",
+        error instanceof Error
+          ? error.message
+          : error,
+      );
+    }
+  }
+}
+
+main();

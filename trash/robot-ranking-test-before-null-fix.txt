@@ -1,0 +1,305 @@
+﻿import {
+  NextResponse,
+} from "next/server";
+
+import {
+  supabaseAdmin,
+} from "../../../lib/supabaseAdmin";
+
+export const runtime =
+  "nodejs";
+
+export const dynamic =
+  "force-dynamic";
+
+type Criterion = {
+  key?: string;
+  label?: string;
+  defaultWeight?: number;
+};
+
+function normalizeText(
+  value: unknown,
+) {
+  return typeof value === "string"
+    ? value.trim()
+    : "";
+}
+
+export async function GET() {
+  try {
+    const category =
+      "로봇청소기";
+
+    const {
+      data: profile,
+      error: profileError,
+    } =
+      await supabaseAdmin
+        .from(
+          "category_profiles",
+        )
+        .select(
+          "criteria",
+        )
+        .eq(
+          "category",
+          category,
+        )
+        .single();
+
+    if (profileError) {
+      throw profileError;
+    }
+
+    const criteria =
+      Array.isArray(
+        profile.criteria,
+      )
+        ? (
+            profile.criteria as Criterion[]
+          )
+            .map(
+              (
+                criterion,
+              ) => ({
+                key:
+                  normalizeText(
+                    criterion.key,
+                  ),
+
+                label:
+                  normalizeText(
+                    criterion.label,
+                  ),
+
+                weight:
+                  Math.max(
+                    1,
+                    Math.min(
+                      10,
+                      Number(
+                        criterion.defaultWeight ??
+                          5,
+                      ),
+                    ),
+                  ),
+              }),
+            )
+            .filter(
+              (
+                criterion,
+              ) =>
+                criterion.key,
+            )
+        : [];
+
+    const {
+      data: products,
+      error: productError,
+    } =
+      await supabaseAdmin
+        .from(
+          "products",
+        )
+        .select(
+          "id, product_name, criterion_scores, product_detail_analysis",
+        )
+        .eq(
+          "category",
+          category,
+        );
+
+    if (productError) {
+      throw productError;
+    }
+
+    const ranking =
+      (products ?? [])
+        .map(
+          (
+            product,
+          ) => {
+            const scores =
+              product.criterion_scores &&
+              typeof product
+                .criterion_scores ===
+                "object" &&
+              !Array.isArray(
+                product.criterion_scores,
+              )
+                ? (
+                    product.criterion_scores as Record<
+                      string,
+                      unknown
+                    >
+                  )
+                : {};
+
+            let weightedSum = 0;
+            let usedWeight = 0;
+
+            const criterionResults =
+              criteria.map(
+                (
+                  criterion,
+                ) => {
+                  const raw =
+                    scores[
+                      criterion.key
+                    ];
+
+                  const score =
+                    raw === null ||
+                    raw === undefined
+                      ? null
+                      : Number(
+                          raw,
+                        );
+
+                  if (
+                    score !== null &&
+                    Number.isFinite(
+                      score,
+                    )
+                  ) {
+                    weightedSum +=
+                      score *
+                      criterion.weight;
+
+                    usedWeight +=
+                      criterion.weight;
+                  }
+
+                  return {
+                    key:
+                      criterion.key,
+
+                    label:
+                      criterion.label,
+
+                    weight:
+                      criterion.weight,
+
+                    score:
+                      score !== null &&
+                      Number.isFinite(
+                        score,
+                      )
+                        ? score
+                        : null,
+                  };
+                },
+              );
+
+            const overallScore =
+              usedWeight > 0
+                ? Math.round(
+                    (
+                      weightedSum /
+                      usedWeight
+                    ) *
+                      10,
+                  ) / 10
+                : null;
+
+            const detail =
+              product
+                .product_detail_analysis &&
+              typeof product
+                .product_detail_analysis ===
+                "object" &&
+              !Array.isArray(
+                product
+                  .product_detail_analysis,
+              )
+                ? (
+                    product
+                      .product_detail_analysis as Record<
+                      string,
+                      unknown
+                    >
+                  )
+                : {};
+
+            const price =
+              detail.price &&
+              typeof detail.price ===
+                "object" &&
+              !Array.isArray(
+                detail.price,
+              )
+                ? (
+                    detail.price as Record<
+                      string,
+                      unknown
+                    >
+                  ).finalPrice
+                : null;
+
+            return {
+              productId:
+                product.id,
+
+              productName:
+                product.product_name,
+
+              finalPrice:
+                Number(price ?? 0),
+
+              overallScore,
+
+              usedWeight,
+
+              criterionResults,
+            };
+          },
+        )
+        .sort(
+          (
+            a,
+            b,
+          ) =>
+            (
+              b.overallScore ??
+              -1
+            ) -
+            (
+              a.overallScore ??
+              -1
+            ),
+        )
+        .map(
+          (
+            item,
+            index,
+          ) => ({
+            rank:
+              index + 1,
+            ...item,
+          }),
+        );
+
+    return NextResponse.json({
+      success: true,
+      category,
+      criteria,
+      ranking,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        success: false,
+
+        message:
+          error instanceof Error
+            ? error.message
+            : "순위 계산 실패",
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+}
+

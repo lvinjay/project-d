@@ -6,6 +6,13 @@ export const dynamic = "force-dynamic";
 
 type ProductDetailAnalysis = {
   price?: unknown;
+
+  finalPrice?: unknown;
+
+  marketListedPrice?: unknown;
+
+  imageUrl?: unknown;
+
   representativeImageUrl?: unknown;
 };
 
@@ -93,19 +100,46 @@ export async function GET(request: Request) {
               ? (product.product_detail_analysis as ProductDetailAnalysis)
               : {};
 
-          const price =
+          const priceObject =
+            detail.price &&
             typeof detail.price ===
+              "object" &&
+            !Array.isArray(
+              detail.price,
+            )
+              ? (
+                  detail.price as Record<
+                    string,
+                    unknown
+                  >
+                )
+              : {};
+
+          const rawPrice =
+            priceObject.finalPrice ??
+            detail.finalPrice ??
+            detail.price ??
+            detail.marketListedPrice ??
+            "";
+
+          const price =
+            typeof rawPrice ===
             "string"
-              ? detail.price.trim()
-              : typeof detail.price ===
+              ? rawPrice.trim()
+              : typeof rawPrice ===
                     "number"
-                ? String(detail.price)
+                ? String(rawPrice)
                 : "";
 
+          const rawImageUrl =
+            detail.representativeImageUrl ??
+            detail.imageUrl ??
+            "";
+
           const representativeImageUrl =
-            typeof detail.representativeImageUrl ===
+            typeof rawImageUrl ===
             "string"
-              ? detail.representativeImageUrl.trim()
+              ? rawImageUrl.trim()
               : "";
 
           return {
@@ -149,3 +183,4 @@ export async function GET(request: Request) {
     );
   }
 }
+

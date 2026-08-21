@@ -1,0 +1,337 @@
+﻿"use client";
+
+import {
+  useState,
+} from "react";
+
+function parsePrice(
+  value: string,
+) {
+  const digits =
+    value.replace(
+      /[^\d]/g,
+      "",
+    );
+
+  return digits
+    ? Number(digits)
+    : 0;
+}
+
+function displayPrice(
+  value: string,
+) {
+  const price =
+    parsePrice(value);
+
+  return price
+    ? price.toLocaleString(
+        "ko-KR",
+      )
+    : "";
+}
+
+/*
+  현재 검증 완료된 카테고리 매핑.
+
+  이후 Project D가 안정화되면
+  여기를 수동 목록으로 계속 늘리는 게 아니라
+  제품군 → 네이버 카테고리 자동 탐색으로
+  바꿀 예정이다.
+*/
+const NAVER_CATEGORY_MAP:
+  Record<string, string> = {
+    "로봇청소기":
+      "10007182",
+};
+
+export default function MarketCandidateSetup() {
+  const [
+    category,
+    setCategory,
+  ] = useState(
+    "로봇청소기",
+  );
+
+  const [
+    minBudget,
+    setMinBudget,
+  ] = useState("");
+
+  const [
+    maxBudget,
+    setMaxBudget,
+  ] = useState("");
+
+  function start() {
+    const normalizedCategory =
+      category.trim();
+
+    const min =
+      parsePrice(
+        minBudget,
+      );
+
+    const max =
+      parsePrice(
+        maxBudget,
+      );
+
+    if (!normalizedCategory) {
+      alert(
+        "제품군을 입력하세요.",
+      );
+      return;
+    }
+
+    if (
+      min > 0 &&
+      max > 0 &&
+      min > max
+    ) {
+      alert(
+        "최소 예산은 최대 예산보다 작아야 합니다.",
+      );
+      return;
+    }
+
+    const categoryId =
+      NAVER_CATEGORY_MAP[
+        normalizedCategory
+      ];
+
+    /*
+      아직 카테고리 ID가 등록되지 않은
+      제품군은 임시로 일반 검색으로 보낸다.
+
+      로봇청소기는 현재 정확한
+      카테고리 페이지로 이동한다.
+    */
+    let targetUrl = "";
+
+    if (categoryId) {
+      const params =
+        new URLSearchParams();
+
+      params.set(
+        "pd_category",
+        normalizedCategory,
+      );
+
+      if (min > 0) {
+        params.set(
+          "pd_min",
+          String(min),
+        );
+      }
+
+      if (max > 0) {
+        params.set(
+          "pd_max",
+          String(max),
+        );
+      }
+
+      targetUrl =
+        `https://search.shopping.naver.com/ns/category/${categoryId}?${params.toString()}`;
+    } else {
+      const params =
+        new URLSearchParams();
+
+      params.set(
+        "query",
+        normalizedCategory,
+      );
+
+      params.set(
+        "pd_category",
+        normalizedCategory,
+      );
+
+      if (min > 0) {
+        params.set(
+          "pd_min",
+          String(min),
+        );
+      }
+
+      if (max > 0) {
+        params.set(
+          "pd_max",
+          String(max),
+        );
+      }
+
+      targetUrl =
+        "https://search.shopping.naver.com/search/all?" +
+        params.toString();
+    }
+
+    window.open(
+      targetUrl,
+      "_blank",
+    );
+  }
+
+  return (
+    <div
+      className="card"
+      style={{
+        marginTop: 28,
+        padding: 28,
+        border:
+          "2px solid #b9d8ff",
+        background:
+          "#f8fbff",
+      }}
+    >
+      <div>
+        <span
+          style={{
+            display:
+              "inline-block",
+            color:
+              "#175cd3",
+            fontSize: 12,
+            fontWeight:
+              800,
+            letterSpacing:
+              "0.08em",
+            marginBottom: 8,
+          }}
+        >
+          AUTOMATIC MARKET DISCOVERY
+        </span>
+
+        <h2
+          style={{
+            margin: 0,
+          }}
+        >
+          자동 후보 구축
+        </h2>
+
+        <p
+          style={{
+            margin:
+              "8px 0 0",
+            color:
+              "#667085",
+            lineHeight:
+              1.7,
+          }}
+        >
+          제품군과 원하는 예산을 입력하면
+          네이버쇼핑의 해당 상품 카테고리에서
+          시장 후보를 수집합니다.
+        </p>
+      </div>
+
+      <div
+        className="field"
+        style={{
+          marginTop: 24,
+        }}
+      >
+        <label htmlFor="marketCategory">
+          제품군
+        </label>
+
+        <input
+          id="marketCategory"
+          className="textInput"
+          value={category}
+          onChange={(event) =>
+            setCategory(
+              event.target.value,
+            )
+          }
+          placeholder="예: 로봇청소기"
+        />
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns:
+            "1fr 1fr",
+          gap: 16,
+          marginTop: 18,
+        }}
+      >
+        <div className="field">
+          <label htmlFor="minBudget">
+            최소 예산 (선택)
+          </label>
+
+          <input
+            id="minBudget"
+            className="textInput"
+            inputMode="numeric"
+            value={minBudget}
+            onChange={(event) =>
+              setMinBudget(
+                displayPrice(
+                  event.target.value,
+                ),
+              )
+            }
+            placeholder="500,000"
+          />
+        </div>
+
+        <div className="field">
+          <label htmlFor="maxBudget">
+            최대 예산 (선택)
+          </label>
+
+          <input
+            id="maxBudget"
+            className="textInput"
+            inputMode="numeric"
+            value={maxBudget}
+            onChange={(event) =>
+              setMaxBudget(
+                displayPrice(
+                  event.target.value,
+                ),
+              )
+            }
+            placeholder="1,500,000"
+          />
+        </div>
+      </div>
+
+      <div
+        style={{
+          marginTop: 18,
+          padding: 16,
+          borderRadius: 12,
+          background:
+            "#eef6ff",
+          border:
+            "1px solid #b9d8ff",
+          color:
+            "#315b88",
+          lineHeight: 1.7,
+        }}
+      >
+        네이버 표시가격은 1차 후보 선정에
+        사용하고, 최종 후보에서는 상세조회한
+        실제 판매가격으로 다시 검증합니다.
+      </div>
+
+      <button
+        type="button"
+        className="primaryButton"
+        onClick={start}
+        style={{
+          width: "100%",
+          marginTop: 20,
+        }}
+      >
+        네이버쇼핑에서 후보 찾기
+      </button>
+    </div>
+  );
+}

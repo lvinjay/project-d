@@ -1,0 +1,639 @@
+﻿import OpenAI from "openai";
+import { NextResponse } from "next/server";
+import { supabase } from "../../../lib/supabase";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+type GenerateCriteriaRequest = {
+  category?: string;
+};
+
+type ProductRow = {
+  id: string;
+  category: string;
+  product_name: string;
+  source_url: string;
+  review_analysis: Record<string, unknown> | null;
+  product_detail_analysis: Record<string, unknown> | null;
+};
+
+type Criterion = {
+  key: string;
+  label: string;
+  shortDescription: string;
+  helpTitle: string;
+  helpText: string;
+  sourceType: string;
+  defaultWeight: number;
+  importanceReason?: string;
+  evidence?: string[];
+};
+
+type PersonalizationOption = {
+  label: string;
+  value: string;
+  weightAdjustments: Record<string, number>;
+};
+
+type PersonalizationQuestion = {
+  key: string;
+  question: string;
+  reason: string;
+  options: PersonalizationOption[];
+};
+
+function stripHtml(html: string) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extractMeta(html: string, key: string) {
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const patterns = [
+    new RegExp(`<meta[^>]+property=["']${escaped}["'][^>]+content=["']([^"']*)["']`, "i"),
+    new RegExp(`<meta[^>]+name=["']${escaped}["'][^>]+content=["']([^"']*)["']`, "i"),
+    new RegExp(`<meta[^>]+content=["']([^"']*)["'][^>]+property=["']${escaped}["']`, "i"),
+    new RegExp(`<meta[^>]+content=["']([^"']*)["'][^>]+name=["']${escaped}["']`, "i"),
+  ];
+
+  for (const pattern of patterns) {
+    const match = html.match(pattern);
+    if (match?.[1]) return stripHtml(match[1]);
+  }
+
+  return "";
+}
+
+async function fetchProductPageSummary(sourceUrl: string) {
+  try {
+    const response = await fetch(sourceUrl, {
+      method: "GET",
+      redirect: "follow",
+      cache: "no-store",
+      signal: AbortSignal.timeout(10000),
+      headers: {
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.8",
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/150.0.0.0 Safari/537.36",
+      },
+    });
+
+    const html = await response.text();
+    const blocked =
+      response.status === 403 ||
+      response.status === 418 ||
+      html.includes("鍮꾩젙?곸쟻???묎렐") ||
+      html.includes("?묎렐???쒗븳") ||
+      html.includes("Access Denied");
+
+    if (!response.ok || blocked) {
+      return {
+        ok: false,
+        status: response.status,
+        description: "",
+        visibleText: "",
+      };
+    }
+
+    const description =
+      extractMeta(html, "og:description") ||
+      extractMeta(html, "description");
+
+    const visibleText = stripHtml(html).slice(0, 7000);
+
+    return {
+      ok: true,
+      status: response.status,
+      description,
+      visibleText,
+    };
+  } catch {
+    return {
+      ok: false,
+      status: 0,
+      description: "",
+      visibleText: "",
+    };
+  }
+}
+
+function extractJson(text: string) {
+  const cleaned = text
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+
+  return JSON.parse(cleaned) as Record<string, unknown>;
+}
+
+function normalizeCommonCautions(value: unknown) {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const row = item as Record<string, unknown>;
+      const title = typeof row.title === "string" ? row.title.trim() : "";
+      const description =
+        typeof row.description === "string" ? row.description.trim() : "";
+      const affectedProducts = Array.isArray(row.affectedProducts)
+        ? row.affectedProducts
+            .filter((name): name is string => typeof name === "string")
+            .map((name) => name.trim())
+            .filter(Boolean)
+        : [];
+
+      if (!title || !description || affectedProducts.length < 2) return null;
+
+      return {
+        title,
+        description,
+        affectedProducts,
+        affectedCount: affectedProducts.length,
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 4);
+}
+
+function normalizeKey(value: unknown, index: number) {
+  const raw = typeof value === "string" ? value.trim().toLowerCase() : "";
+  const normalized = raw
+    .replace(/[^a-z0-9_]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 50);
+
+  return normalized || `criterion_${index + 1}`;
+}
+
+function normalizeCriteria(raw: unknown): Criterion[] {
+  if (!Array.isArray(raw)) return [];
+
+  const seen = new Set<string>();
+  const result: Criterion[] = [];
+
+  for (let index = 0; index < raw.length; index += 1) {
+    const item = raw[index];
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+
+    const record = item as Record<string, unknown>;
+    let key = normalizeKey(record.key, index);
+    if (seen.has(key)) key = `${key}_${index + 1}`;
+    seen.add(key);
+
+    const label = typeof record.label === "string" ? record.label.trim() : "";
+    if (!label) continue;
+
+    const defaultWeightRaw = Number(record.defaultWeight);
+    const defaultWeight = Number.isFinite(defaultWeightRaw)
+      ? Math.max(1, Math.min(10, Math.round(defaultWeightRaw)))
+      : 5;
+
+    const evidence = Array.isArray(record.evidence)
+      ? record.evidence
+          .filter((value): value is string => typeof value === "string")
+          .map((value) => value.trim())
+          .filter(Boolean)
+          .slice(0, 4)
+      : [];
+
+    result.push({
+      key,
+      label,
+      shortDescription:
+        typeof record.shortDescription === "string"
+          ? record.shortDescription.trim()
+          : "援щℓ ?꾩뿉 鍮꾧탳??媛移섍? ??湲곗??낅땲??",
+      helpTitle:
+        typeof record.helpTitle === "string"
+          ? record.helpTitle.trim()
+          : `${label}? ??以묒슂?쒓???`,
+      helpText:
+        typeof record.helpText === "string"
+          ? record.helpText.trim()
+          : "?쒗뭹蹂?李⑥씠瑜??뺤씤?댁빞 ?⑸땲??",
+      sourceType:
+        typeof record.sourceType === "string"
+          ? record.sourceType.trim()
+          : "detail_and_review",
+      defaultWeight,
+      importanceReason:
+        typeof record.importanceReason === "string"
+          ? record.importanceReason.trim()
+          : "",
+      evidence,
+    });
+  }
+
+  return result.slice(0, 5);
+}
+
+
+function normalizePersonalizationQuestions(
+  value: unknown,
+  validCriterionKeys: string[],
+): PersonalizationQuestion[] {
+  if (!Array.isArray(value)) return [];
+
+  const validKeys = new Set(validCriterionKeys);
+
+  return value
+    .map((item, questionIndex) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+      const row = item as Record<string, unknown>;
+
+      const question =
+        typeof row.question === "string" ? row.question.trim() : "";
+      if (!question) return null;
+
+      const key =
+        typeof row.key === "string" && row.key.trim()
+          ? row.key.trim()
+          : `question_${questionIndex + 1}`;
+
+      const reason =
+        typeof row.reason === "string" ? row.reason.trim() : "";
+
+      const rawOptions = Array.isArray(row.options) ? row.options : [];
+      const options = rawOptions
+        .map((option, optionIndex) => {
+          if (!option || typeof option !== "object" || Array.isArray(option)) {
+            return null;
+          }
+
+          const optionRow = option as Record<string, unknown>;
+          const label =
+            typeof optionRow.label === "string" ? optionRow.label.trim() : "";
+          if (!label) return null;
+
+          const optionValue =
+            typeof optionRow.value === "string" && optionRow.value.trim()
+              ? optionRow.value.trim()
+              : `option_${optionIndex + 1}`;
+
+          const rawAdjustments =
+            optionRow.weightAdjustments &&
+            typeof optionRow.weightAdjustments === "object" &&
+            !Array.isArray(optionRow.weightAdjustments)
+              ? (optionRow.weightAdjustments as Record<string, unknown>)
+              : {};
+
+          const weightAdjustments: Record<string, number> = {};
+
+          for (const [criterionKey, rawAmount] of Object.entries(rawAdjustments)) {
+            if (!validKeys.has(criterionKey)) continue;
+
+            const amount =
+              typeof rawAmount === "number"
+                ? rawAmount
+                : typeof rawAmount === "string"
+                  ? Number(rawAmount)
+                  : NaN;
+
+            if (!Number.isFinite(amount) || amount === 0) continue;
+
+            weightAdjustments[criterionKey] = Math.max(
+              -3,
+              Math.min(3, Math.round(amount)),
+            );
+          }
+
+          return {
+            label,
+            value: optionValue,
+            weightAdjustments,
+          };
+        })
+        .filter((option): option is PersonalizationOption => Boolean(option))
+        .slice(0, 5);
+
+      if (options.length < 2) return null;
+
+      return {
+        key,
+        question,
+        reason,
+        options,
+      };
+    })
+    .filter((question): question is PersonalizationQuestion => Boolean(question))
+    .slice(0, 3);
+}
+
+export async function POST(request: Request) {
+  try {
+    const apiKey = process.env.OPENAI_API_KEY;
+
+    if (!apiKey) {
+      return NextResponse.json(
+        { success: false, message: "OPENAI_API_KEY媛 ?ㅼ젙?섏? ?딆븯?듬땲??" },
+        { status: 500 },
+      );
+    }
+
+    const body = (await request.json()) as GenerateCriteriaRequest;
+    const category = typeof body.category === "string" ? body.category.trim() : "";
+
+    if (!category) {
+      return NextResponse.json(
+        { success: false, message: "移댄뀒怨좊━媛 ?꾩슂?⑸땲??" },
+        { status: 400 },
+      );
+    }
+
+    const { data, error } = await supabase
+      .from("products")
+      .select("id, category, product_name, source_url, review_analysis, product_detail_analysis")
+      .eq("category", category)
+      .order("created_at", { ascending: true });
+
+    if (error) throw error;
+
+    const products = (data ?? []) as ProductRow[];
+
+    if (products.length < 3) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "援щℓ湲곗? ?먮룞 ?앹꽦???꾪빐 媛숈? 移댄뀒怨좊━ ?쒗뭹??理쒖냼 3媛??깅줉??二쇱꽭??",
+        },
+        { status: 400 },
+      );
+    }
+
+    const sourceProducts = products.slice(0, 5);
+
+    const productEvidence = sourceProducts.map((product) => ({
+      productName: product.product_name,
+      sourceUrl: product.source_url,
+      productDetailAnalysis: product.product_detail_analysis,
+      reviewAnalysis: product.review_analysis,
+      evidenceAvailability: {
+        hasBrowserDetailAnalysis: Boolean(product.product_detail_analysis),
+        hasReviewAnalysis: Boolean(product.review_analysis),
+      },
+    }));
+
+    const detailReadyCount = productEvidence.filter(
+      (product) => product.evidenceAvailability.hasBrowserDetailAnalysis,
+    ).length;
+
+    const reviewReadyCount = productEvidence.filter(
+      (product) => product.evidenceAvailability.hasReviewAnalysis,
+    ).length;
+
+    if (detailReadyCount < 3) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            `援щℓ湲곗? V3 ?앹꽦???꾪빐 ?곸꽭?뺣낫 遺꾩꽍 ?꾨즺 ?쒗뭹??理쒖냼 3媛??꾩슂?⑸땲?? ?꾩옱 ${detailReadyCount}媛쒖엯?덈떎.`,
+        },
+        { status: 400 },
+      );
+    }
+
+    const client = new OpenAI({ apiKey });
+
+    const prompt = `
+?뱀떊? Project D??移댄뀒怨좊━ 援щℓ湲곗? ?ㅺ퀎?먯엯?덈떎.
+
+紐⑺몴???댁쁺?먭? 湲곗??대굹 吏덈Ц??吏곸젒 ?뺥븯??寃껋씠 ?꾨땲?? 媛숈? 移댄뀒怨좊━??????쒗뭹 ?곸꽭?섏씠吏? ?ㅼ젣 由щ럭 遺꾩꽍??蹂닿퀬
+1) ?뚮퉬?먭? ?뺣쭚 鍮꾧탳?댁빞 ???듭떖 援щℓ湲곗? 5媛쒖?
+2) 媛쒖씤蹂?異붿쿇 ?쒖쐞瑜??ㅼ젣濡?諛붽씀??留욎땄 吏덈Ц 2~3媛쒖?
+3) ?щ윭 鍮꾧탳 ?쒗뭹?먯꽌 ?섎???諛섎났?섎뒗 ?쒗뭹援?怨듯넻 ?쒓퀎 0~4媛쒕?
+?먮룞?쇰줈 ?ㅺ퀎?섎뒗 寃껋엯?덈떎.
+
+移댄뀒怨좊━: ${category}
+遺꾩꽍 ?쒗뭹 ?? ${sourceProducts.length}
+
+?쒗뭹蹂?洹쇨굅 ?곗씠??
+${JSON.stringify(productEvidence, null, 2)}
+
+?곗씠???곹깭:
+- 釉뚮씪?곗? ?곸꽭?뺣낫 遺꾩꽍 ?꾨즺: ${detailReadyCount}/${sourceProducts.length}媛?- 由щ럭 遺꾩꽍 ?꾨즺: ${reviewReadyCount}/${sourceProducts.length}媛?
+以묒슂:
+- productDetailAnalysis???ъ슜?먯쓽 ?ㅼ젣 釉뚮씪?곗??먯꽌 ?곹뭹 ?곸꽭?섏씠吏瑜??쇱튇 ???섏쭛쨌遺꾩꽍???곗씠?곗엯?덈떎. ?쒕쾭?먯꽌 ?ㅼ떆 ?곹뭹?섏씠吏瑜??쎌쑝?ㅺ퀬 ?섏? 留먭퀬 ???곗씠?곕? ?곸꽭?섏씠吏??二?洹쇨굅濡??ъ슜?섏꽭??
+- reviewAnalysis???ㅼ젣 由щ럭 遺꾩꽍 寃곌낵?낅땲??
+- ???곗씠?곌? 異⑸룎?섎㈃ ?꾩쓽濡??ъ떎???뺤젙?섏? 留먭퀬 evidence?먯꽌 洹쇨굅???깃꺽??援щ텇?섏꽭??
+- ?⑥닚??移댄뀒怨좊━?먯꽌 ?쇰컲?곸쑝濡?以묒슂?섎떎怨??뚮젮吏???ぉ???좎삱由ъ? 留먭퀬, ?쒓났???쒗뭹???ъ씠?먯꽌 ?ㅼ젣 李⑥씠媛 ?뺤씤?섎뒗吏瑜?諛섎뱶???됯??섏꽭??
+
+?좎젙 ?덉감:
+1. 癒쇱? ?대??곸쑝濡?援щℓ湲곗? ?꾨낫瑜?理쒖냼 8媛? 理쒕? 12媛쒓퉴吏 ??꼻寃?李얠쑝?몄슂.
+2. ?꾨낫???꾨옒 ??異뺤쓣 紐⑤몢 寃?좏빐??留뚮뱶?몄슂.
+   A) ?먮ℓ???곸꽭?섏씠吏 異? ?먮ℓ?먭? 寃쎌웳?곸쑝濡?媛뺤“?섎뒗 ?ㅽ럺, 湲곕뒫, 援ъ“, ?깅뒫, 李⑤퀎??   B) ?ㅼ궗?⑹옄/由щ럭 異? 留뚯”쨌遺덈쭔쨌?꾪쉶쨌怨좎옣쨌?ъ슜 遺덊렪쨌?ㅼ튂쨌?뚯쓬쨌?깅뒫 ??諛섎났?섎뒗 ?ㅼ젣 寃쏀뿕
+   C) 援щℓ寃쎌젣??由ъ뒪??異? A/S, ?닿뎄?? ?좎?鍮? ?뚮え?? 怨좎옣 由ъ뒪?? 蹂댁쬆 ??   ??媛寃??덉궛? Project D媛 紐⑤뱺 移댄뀒怨좊━??怨듯넻?쇰줈 蹂꾨룄 ?곸슜?섎?濡?TOP 5 ?먮━?먮뒗 ?ｌ? 留덉꽭??
+3. 媛??꾨낫留덈떎 ?꾨옒 ??媛吏瑜??대??곸쑝濡??됯??섏꽭??
+   - 援щℓ寃곗젙 ?곹뼢?? ??李⑥씠 ?뚮Ц???쒗뭹 ?좏깮???ㅼ젣濡??щ씪吏?붽??
+   - ?쒗뭹 媛?蹂蹂꾨젰: ?꾩옱 ?쒗뭹???ъ씠???섎? ?덈뒗 李⑥씠媛 ?ㅼ젣 ?곗씠?곕줈 ?뺤씤?섎뒗媛?
+   - 洹쇨굅 媛뺣룄: ?곸꽭?뺣낫 ?먮뒗 由щ럭?먯꽌 異⑸텇??洹쇨굅媛 ?덈뒗媛?
+   - 珥덈낫???꾩슂?? 援щℓ?먭? 紐⑤Ⅴ怨?吏?섏튂硫??섎せ 怨좊? 媛?μ꽦???곌??
+4. ?섎?媛 寃뱀튂???꾨낫???섎굹???곸쐞 援щℓ湲곗??쇰줈 ?듯빀?섏꽭?? ?? BTU? ?띾웾??紐⑤몢 '?됰갑 ?깅뒫'???ㅻ챸?쒕떎硫?蹂꾨룄 ???먮━瑜??곗? 留덉꽭??
+5. 媛앷? ?ㅽ럺 ?꾨낫? ?ㅼ궗??由ъ뒪???꾨낫瑜??쒕줈 寃쎌웳?쒗궎?몄슂. ?ㅽ럺?대씪???댁쑀留뚯쑝濡??곗꽑?섏? 留먭퀬 A/S쨌?닿뎄?굿룰?寃㈑룰??깅퉬쨌?좎?愿由щ룄 媛숈? 湲곗??쇰줈 ?됯??섏꽭??
+6. '??湲곗? ?뚮Ц???쒗뭹 A ???B瑜??좏깮??媛?μ꽦???ㅼ젣濡??щ씪吏?붽??'???듯븯湲??대젮???꾨낫??TOP 5?먯꽌 ?쒖쇅?섏꽭??
+7. ???됯?瑜?醫낇빀??媛??以묒슂???뺥솗??5媛쒕쭔 理쒖쥌 ?좎젙?섏꽭??
+
+諛섎뱶??吏耳쒖빞 ???먯튃:
+- ?듭떖 援щℓ湲곗?? ?뺥솗??5媛쒕? ?좎젙?섏꽭??
+- '留뚯”??, '?덉쭏', '?대???, '?몄쓽??泥섎읆 ?덈Т 異붿긽?곸씠怨??뱀뿰???쒗쁽? 洹??먯껜濡?湲곗???留뚮뱾吏 留덉꽭?? ?ㅼ젣 鍮꾧탳 媛?ν븳 ?섏쐞 ?섎?媛 ?덉쓣 ??援ъ껜?곸쑝濡??쒗쁽?섏꽭??
+- 媛앷? ?ㅽ럺(BTU, ?≪엯?? ?쒖뒿?? 諛고꽣由ъ떆媛? ?뚯쓬 dB ??? ?ㅼ젣 援щℓ ?좏깮??媛瑜대뒗 寃쎌슦 ?곴레?곸쑝濡?諛섏쁺?섎릺, 鍮꾩듂???ㅽ럺?쇰━???섎굹???섎? ?덈뒗 湲곗??쇰줈 臾띠쑝?몄슂.
+- ?먮ℓ?먭? 媛뺤“?섎뒗 ?붿냼留??곕씪媛吏 留덉꽭?? ?먮ℓ?먭? ??媛뺤“?섏? ?딅뒗 A/S쨌?닿뎄?굿룹쑀吏鍮꽷룰퀬??由ъ뒪?щ룄 諛섎뱶???꾨낫援곗뿉??寃?좏븯?몄슂.
+- 媛寃㈑룹삁?걔룰??깅퉬??紐⑤뱺 移댄뀒怨좊━??怨듯넻?쇰줈 蹂꾨룄 ?됯??섎?濡??듭떖 援щℓ湲곗? 5媛쒖뿉???ｌ? 留덉꽭?? ????쒗뭹 怨좎쑀???깅뒫쨌?ъ슜?굿룸━?ㅽ겕 湲곗? 5媛쒕? ?좎젙?섏꽭??
+- A/S쨌?닿뎄?깆? ?꾩옱 ?곗씠?곗? 移댄뀒怨좊━ ?뱀꽦??諛뷀깢?쇰줈 ?ㅻⅨ ?꾨낫蹂대떎 援щℓ寃곗젙 ?곹뼢?꾧? ?믪쓣 ??TOP 5???ｌ쑝?몄슂.
+- 由щ럭?먯꽌 諛섎났?곸쑝濡??깆옣?섎뒗 遺덈쭔?대굹 援щℓ ???꾪쉶 ?ъ씤?몃뒗 ?먮ℓ???뚭뎄?먭낵 ?숇벑?섍굅????以묒슂??洹쇨굅濡?痍④툒?섏꽭??
+- '?뱀옣???대씪???ш큵??湲곗?? 媛湲됱쟻 ?쇳븯?몄슂. ?щ윭 ?쒗뭹 ?ъ씠?먯꽌 ?ㅼ젣 ?좏깮??媛瑜대뒗 援ъ껜??湲곕뒫/援ъ“媛 ?덈떎硫?洹??대쫫?쇰줈 湲곗??뷀븯?몄슂.
+- ???쒗뭹?먮쭔 ?덈뒗 湲곕뒫?대씪???뚮퉬?먯쓽 ?좏깮???ш쾶 諛붽씀???듭떖 李⑤퀎?먯씠?쇰㈃ ?꾨낫媛 ?????덉뒿?덈떎. ?ㅻ쭔 ?ㅻⅨ ?쒗뭹怨?鍮꾧탳 媛?ν븳 愿?먯쑝濡??쒗쁽?섏꽭??
+- 理쒖쥌 5媛쒕뒗 ?쒕줈 ?ㅻⅨ 援щℓ 怨좊?????쒗빐???⑸땲?? 媛숈? ?깅뒫異뺤쓽 湲곗????щ윭 媛??ｌ뼱 5媛??먮━瑜???퉬?섏? 留덉꽭??
+- productDetailAnalysis媛 ?녿뒗 ?쒗뭹? reviewAnalysis? ?쒗뭹紐낆뿉???뺤씤 媛?ν븳 洹쇨굅留??ъ슜?섏꽭?? productDetailAnalysis媛 ?덈뒗 ?쒗뭹? 洹?????곗씠?곕? ?곗꽑 ?ъ슜?섏꽭??
+- ?뺤씤?섏? ?딆? ?レ옄???ъ떎??留뚮뱾?대궡吏 留덉꽭??
+- evidence?먮뒗 ?쒓났???곗씠?곗뿉???ㅼ젣濡??뺤씤 媛?ν븳 ?댁슜留??붿빟?섏꽭??
+- 媛?湲곗???defaultWeight???쇰컲 ?뚮퉬??湲곗? 以묒슂?꾨? 1~10?쇰줈 ?됯??섏꽭??
+- key??吏㏃? ?곷Ц snake_case濡??묒꽦?섏꽭?? ?뱀젙 移댄뀒怨좊━??醫낆냽?섏뼱??愿쒖갖?듬땲??
+- sourceType? spec, review, detail_and_review, price_and_review 以?媛???곸젅??媛믪쓣 ?ъ슜?섏꽭??
+
+留욎땄 吏덈Ц ?ㅺ퀎 ?먯튃:
+- 吏덈Ц? ?뺥솗??2媛??먮뒗 3媛쒕쭔 留뚮뱶?몄슂.
+- ?깅퀎, ?섏씠泥섎읆 異붿쿇 ?쒖쐞瑜?嫄곗쓽 諛붽씀吏 ?딅뒗 吏덈Ц? 留뚮뱾吏 留덉꽭??
+- ?대? 援щℓ湲곗? ?ㅻ챸?먯꽌 ?앸굹??吏덈Ц???꾨땲?? ?ъ슜?먯쓽 ?곹솴???곕씪 ?쒗뭹 ?쒖쐞媛 ?ㅼ젣濡??щ씪吏?吏덈Ц留?怨좊Ⅴ?몄슂.
+- ?좏깮吏??吏덈Ц??2~5媛쒕줈 媛꾧껐?섍쾶 留뚮뱶?몄슂.
+- 媛??좏깮吏???꾩뿉???앹꽦??criteria??key留??ъ슜??weightAdjustments瑜?吏?뺥븯?몄슂.
+- weightAdjustments 媛믪? -3~+3???뺤닔?낅땲?? +???대떦 湲곗?????以묒슂?섍쾶, -????以묒슂?섍쾶 蹂몃떎???살엯?덈떎.
+- 紐⑤뱺 湲곗????듭?濡?議곗젙?섏? 留덉꽭?? ?ㅼ젣濡??곹뼢??諛쏅뒗 湲곗?留??ｌ쑝?몄슂.
+- ?덉궛/媛寃?吏덈Ц? 留뚮뱾吏 留덉꽭?? 媛寃⑹? 紐⑤뱺 移댄뀒怨좊━?먯꽌 怨듯넻 吏덈Ц?쇰줈 蹂꾨룄 泥섎━?⑸땲??
+- ?ъ슜?섍꼍, ?ㅼ튂?섍꼍, ?꾩썝, ?ш린, ?ъ슜鍮덈룄, ?뚯쓬 誘쇨컧?? ?좎?愿由??깅룄 ?꾩옱 ?쒗뭹援곗뿉???ㅼ젣 ?쒖쐞瑜?諛붽? ?뚮쭔 吏덈Ц?쇰줈 ?좎젙?섏꽭??
+- 吏덈Ц?쇰━ 媛숈? ?댁슜??諛섎났?섏? 留덉꽭??
+- 諛섎뱶??JSON留?異쒕젰?섏꽭??
+
+?쒗뭹援?怨듯넻 ?쒓퀎 ?ㅺ퀎 ?먯튃:
+- ?⑥뼱媛 媛숈?吏媛 ?꾨땲???섎?媛 媛숈?吏瑜??먮떒?섏꽭??
+- 媛??쒗뭹??reviewAnalysis? productDetailAnalysis瑜??쒗뭹 ?꾩껜瑜?媛濡쒖쭏??鍮꾧탳?섏꽭??
+- ?쒕줈 ?ㅻⅨ ?쒗쁽?대씪??媛숈? ?ㅼ궗???쒓퀎?쇰㈃ ?섎굹濡??듯빀?섏꽭??
+- 理쒖냼 2媛??쒗뭹?먯꽌 洹쇨굅媛 ?뺤씤?섍퀬, 鍮꾧탳 ?쒗뭹???덈컲 ?댁긽?먯꽌 諛섎났?섎뒗 寃쎌슦?먮쭔 commonCautions???ｌ쑝?몄슂.
+- ?뱀젙 ?쒗뭹?먯꽌留??먮뱶?ъ???臾몄젣??commonCautions???ｌ? 留덉꽭??
+- affectedProducts?먮뒗 ?ㅼ젣 洹쇨굅媛 ?뺤씤???쒗뭹紐낅쭔 ?뺥솗???ｌ쑝?몄슂.
+- 怨듯넻 ?쒓퀎媛 異⑸텇???뺤씤?섏? ?딆쑝硫?鍮?諛곗뿴??諛섑솚?섏꽭??
+- 怨듯넻 ?쒓퀎???쒗뭹 媛??쒖쐞瑜?媛瑜대뒗 怨좎쑀 ?⑥젏?쇰줈 痍④툒?섎㈃ ???⑸땲??
+
+異쒕젰 ?뺤떇:
+{
+  "title": "??移댄뀒怨좊━瑜?????臾댁뾿??遊먯빞 ?섎뒗吏 ??以??쒕ぉ",
+  "introduction": "珥덈낫 援щℓ?먭? 2~3臾몄옣 ?덉뿉 ?댄빐?????덈뒗 吏㏃? 援щℓ 媛?대뱶",
+  "criteria": [
+    {
+      "key": "example_key",
+      "label": "?ъ슜?먯뿉寃?蹂댁뿬以?吏㏐퀬 紐낇솗??湲곗?紐?,
+      "shortDescription": "臾댁뾿??鍮꾧탳?섎뒗 湲곗??몄? ??臾몄옣",
+      "helpTitle": "珥덈낫?먭? 沅곴툑?댄븷 吏덈Ц",
+      "helpText": "??以묒슂?쒖?? 臾댁뾿??蹂대㈃ ?섎뒗吏 2臾몄옣 ?대궡",
+      "sourceType": "detail_and_review",
+      "defaultWeight": 8,
+      "importanceReason": "??湲곗???TOP 5???ｌ? ?댁쑀",
+      "evidence": ["?쒗뭹 ?곸꽭?섏씠吏/由щ럭?먯꽌 ?뺤씤??洹쇨굅 ?붿빟"]
+    }
+  ],
+  "personalizationQuestions": [
+    {
+      "key": "usage_environment",
+      "question": "異붿쿇 寃곌낵瑜??ㅼ젣濡?諛붽씀??吏㏃? 吏덈Ц",
+      "reason": "????吏덈Ц???쒗뭹 ?좏깮??以묒슂?쒖?",
+      "options": [
+        {
+          "label": "?ъ슜?먯뿉寃?蹂댁뿬以??좏깮吏",
+          "value": "short_value",
+          "weightAdjustments": {
+            "??criteria???ㅼ젣 議댁옱?섎뒗 key": 2
+          }
+        }
+      ]
+    }
+  ],
+  "commonCautions": [
+    {
+      "title": "?쒗뭹援?怨듯넻 ?쒓퀎??吏㏃? ?쒕ぉ",
+      "description": "?뚮퉬?먭? ?댄빐?섍린 ?ъ슫 ??臾몄옣 ?ㅻ챸",
+      "affectedProducts": ["?ㅼ젣 洹쇨굅媛 ?뺤씤???쒗뭹紐?]
+    }
+  ]
+}
+`;
+
+    const response = await client.responses.create({
+      model: "gpt-5",
+      input: prompt,
+    });
+
+    const outputText = response.output_text?.trim();
+    if (!outputText) throw new Error("AI媛 援щℓ湲곗???諛섑솚?섏? ?딆븯?듬땲??");
+
+    const parsed = extractJson(outputText);
+    const criteria = normalizeCriteria(parsed.criteria);
+
+    if (criteria.length !== 5) {
+      throw new Error("AI媛 ?듭떖 援щℓ湲곗? 5媛쒕? ?щ컮瑜닿쾶 ?앹꽦?섏? 紐삵뻽?듬땲??");
+    }
+
+    const personalizationQuestions = normalizePersonalizationQuestions(
+      parsed.personalizationQuestions,
+      criteria.map((criterion) => criterion.key),
+    );
+    const commonCautions = normalizeCommonCautions(parsed.commonCautions);
+
+    if (
+      personalizationQuestions.length < 2 ||
+      personalizationQuestions.length > 3
+    ) {
+      throw new Error(
+        "AI媛 留욎땄 吏덈Ц 2~3媛쒕? ?щ컮瑜닿쾶 ?앹꽦?섏? 紐삵뻽?듬땲??",
+      );
+    }
+
+    const title =
+      typeof parsed.title === "string" && parsed.title.trim()
+        ? parsed.title.trim()
+        : `${category} 援щℓ 媛?대뱶`;
+
+    const introduction =
+      typeof parsed.introduction === "string" && parsed.introduction.trim()
+        ? parsed.introduction.trim()
+        : `${category} 援щℓ ???쒗뭹蹂??듭떖 李⑥씠瑜?癒쇱? 鍮꾧탳?섏꽭??`;
+
+    const { data: existing, error: existingError } = await supabase
+      .from("category_profiles")
+      .select("id, use_cases, candidate_limit")
+      .eq("category", category)
+      .maybeSingle();
+
+    if (existingError) throw existingError;
+
+    if (existing) {
+      const { error: updateError } = await supabase
+        .from("category_profiles")
+        .update({
+          title,
+          introduction,
+          criteria,
+          personalization_questions: personalizationQuestions,
+          common_cautions: commonCautions,
+          candidate_limit: Math.min(5, products.length),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id);
+
+      if (updateError) throw updateError;
+    } else {
+      const { error: insertError } = await supabase
+        .from("category_profiles")
+        .insert({
+          category,
+          title,
+          introduction,
+          criteria,
+          personalization_questions: personalizationQuestions,
+          common_cautions: commonCautions,
+          use_cases: [],
+          candidate_limit: Math.min(5, products.length),
+        });
+
+      if (insertError) throw insertError;
+    }
+
+    return NextResponse.json({
+      success: true,
+      category,
+      analyzedProductCount: sourceProducts.length,
+      detailPageSuccessCount: detailReadyCount,
+      title,
+      introduction,
+      criteria,
+      personalizationQuestions,
+      commonCautions,
+      message:
+        `?쒗뭹 ?곸꽭?뺣낫? 由щ럭瑜?諛뷀깢?쇰줈 ?듭떖 援щℓ湲곗? 5媛쒖? 留욎땄 吏덈Ц ${personalizationQuestions.length}媛쒕? ?먮룞 ?앹꽦?덉뒿?덈떎.`, 
+    });
+  } catch (error) {
+    console.error("Generate category criteria API error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : "移댄뀒怨좊━ 援щℓ湲곗????먮룞 ?앹꽦?섏? 紐삵뻽?듬땲??",
+      },
+      { status: 500 },
+    );
+  }
+}
+

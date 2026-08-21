@@ -1,0 +1,779 @@
+﻿
+  app\api\generate-product-scores\route.ts:13:
+  app\api\generate-product-scores\route.ts:14:export const runtime =
+  app\api\generate-product-scores\route.ts:15:  "nodejs";
+  app\api\generate-product-scores\route.ts:16:
+  app\api\generate-product-scores\route.ts:17:export const dynamic =
+  app\api\generate-product-scores\route.ts:18:  "force-dynamic";
+  app\api\generate-product-scores\route.ts:19:
+  app\api\generate-product-scores\route.ts:20:type RequestBody = {
+> app\api\generate-product-scores\route.ts:21:  category?: unknown;
+  app\api\generate-product-scores\route.ts:22:};
+  app\api\generate-product-scores\route.ts:23:
+  app\api\generate-product-scores\route.ts:24:type Criterion = {
+  app\api\generate-product-scores\route.ts:25:  key?: string;
+  app\api\generate-product-scores\route.ts:26:  label?: string;
+  app\api\generate-product-scores\route.ts:27:  shortDescription?: string;
+  app\api\generate-product-scores\route.ts:28:  helpText?: string;
+  app\api\generate-product-scores\route.ts:29:  sourceType?: string;
+  app\api\generate-product-scores\route.ts:30:  defaultWeight?: number;
+  app\api\generate-product-scores\route.ts:31:};
+  app\api\generate-product-scores\route.ts:32:
+  app\api\generate-product-scores\route.ts:33:type ProductRow = {
+  app\api\generate-product-scores\route.ts:34:  id: string;
+  app\api\generate-product-scores\route.ts:35:  product_name: string;
+  app\api\generate-product-scores\route.ts:36:  source_url: string;
+  app\api\generate-product-scores\route.ts:37:
+  app\api\generate-product-scores\route.ts:38:  review_analysis:
+  app\api\generate-product-scores\route.ts:39:    | Record<string, unknown>
+  app\api\generate-product-scores\route.ts:40:    | null;
+  app\api\generate-product-scores\route.ts:41:
+  app\api\generate-product-scores\route.ts:42:  product_detail_analysis:
+  app\api\generate-product-scores\route.ts:43:    | Record<string, unknown>
+  app\api\generate-product-scores\route.ts:44:    | null;
+  app\api\generate-product-scores\route.ts:45:
+> app\api\generate-product-scores\route.ts:46:  criterion_scores:
+  app\api\generate-product-scores\route.ts:47:    | Record<string, unknown>
+  app\api\generate-product-scores\route.ts:48:    | null;
+  app\api\generate-product-scores\route.ts:49:};
+  app\api\generate-product-scores\route.ts:50:
+> app\api\generate-product-scores\route.ts:51:type ScoreResult = {
+  app\api\generate-product-scores\route.ts:52:  productId: string;
+  app\api\generate-product-scores\route.ts:53:
+> app\api\generate-product-scores\route.ts:54:  criterionScores:
+  app\api\generate-product-scores\route.ts:55:    Record<
+  app\api\generate-product-scores\route.ts:56:      string,
+  app\api\generate-product-scores\route.ts:57:      number | null
+  app\api\generate-product-scores\route.ts:58:    >;
+  app\api\generate-product-scores\route.ts:59:
+  app\api\generate-product-scores\route.ts:60:  criterionReasons:
+  app\api\generate-product-scores\route.ts:61:    Record<
+  app\api\generate-product-scores\route.ts:62:      string,
+  app\api\generate-product-scores\route.ts:63:      string
+  app\api\generate-product-scores\route.ts:64:    >;
+  app\api\generate-product-scores\route.ts:65:};
+  app\api\generate-product-scores\route.ts:66:
+  app\api\generate-product-scores\route.ts:67:function normalizeText(
+  app\api\generate-product-scores\route.ts:68:  value: unknown,
+  app\api\generate-product-scores\route.ts:69:) {
+  app\api\generate-product-scores\route.ts:70:  return typeof value === "string"
+  app\api\generate-product-scores\route.ts:71:    ? value.trim()
+  app\api\generate-product-scores\route.ts:72:    : "";
+  app\api\generate-product-scores\route.ts:73:}
+  app\api\generate-product-scores\route.ts:74:
+  app\api\generate-product-scores\route.ts:94:  return JSON.parse(
+  app\api\generate-product-scores\route.ts:95:    cleaned,
+  app\api\generate-product-scores\route.ts:96:  ) as Record<
+  app\api\generate-product-scores\route.ts:97:    string,
+  app\api\generate-product-scores\route.ts:98:    unknown
+  app\api\generate-product-scores\route.ts:99:  >;
+  app\api\generate-product-scores\route.ts:100:}
+  app\api\generate-product-scores\route.ts:101:
+> app\api\generate-product-scores\route.ts:102:function normalizeScore(
+  app\api\generate-product-scores\route.ts:103:  value: unknown,
+  app\api\generate-product-scores\route.ts:104:): number | null {
+  app\api\generate-product-scores\route.ts:105:  if (value === null) {
+  app\api\generate-product-scores\route.ts:106:    return null;
+  app\api\generate-product-scores\route.ts:107:  }
+  app\api\generate-product-scores\route.ts:108:
+  app\api\generate-product-scores\route.ts:109:  const numberValue =
+  app\api\generate-product-scores\route.ts:110:    typeof value === "number"
+  app\api\generate-product-scores\route.ts:111:      ? value
+  app\api\generate-product-scores\route.ts:112:      : typeof value === "string"
+  app\api\generate-product-scores\route.ts:113:        ? Number(value)
+  app\api\generate-product-scores\route.ts:114:        : NaN;
+  app\api\generate-product-scores\route.ts:115:
+  app\api\generate-product-scores\route.ts:116:  if (
+  app\api\generate-product-scores\route.ts:117:    !Number.isFinite(
+  app\api\generate-product-scores\route.ts:118:      numberValue,
+  app\api\generate-product-scores\route.ts:119:    )
+  app\api\generate-product-scores\route.ts:120:  ) {
+  app\api\generate-product-scores\route.ts:121:    return null;
+  app\api\generate-product-scores\route.ts:122:  }
+  app\api\generate-product-scores\route.ts:129:        numberValue,
+  app\api\generate-product-scores\route.ts:130:      ),
+  app\api\generate-product-scores\route.ts:131:    ),
+  app\api\generate-product-scores\route.ts:132:  );
+  app\api\generate-product-scores\route.ts:133:}
+  app\api\generate-product-scores\route.ts:134:
+  app\api\generate-product-scores\route.ts:135:function normalizeResults(
+  app\api\generate-product-scores\route.ts:136:  value: unknown,
+> app\api\generate-product-scores\route.ts:137:  productIds: Set<string>,
+  app\api\generate-product-scores\route.ts:138:  criterionKeys: string[],
+> app\api\generate-product-scores\route.ts:139:): ScoreResult[] {
+  app\api\generate-product-scores\route.ts:140:  if (!Array.isArray(value)) {
+  app\api\generate-product-scores\route.ts:141:    return [];
+  app\api\generate-product-scores\route.ts:142:  }
+  app\api\generate-product-scores\route.ts:143:
+  app\api\generate-product-scores\route.ts:144:  return value
+  app\api\generate-product-scores\route.ts:145:    .map(
+  app\api\generate-product-scores\route.ts:146:      (item) => {
+  app\api\generate-product-scores\route.ts:147:        if (
+  app\api\generate-product-scores\route.ts:148:          !item ||
+  app\api\generate-product-scores\route.ts:149:          typeof item !==
+  app\api\generate-product-scores\route.ts:150:            "object" ||
+  app\api\generate-product-scores\route.ts:151:          Array.isArray(item)
+  app\api\generate-product-scores\route.ts:152:        ) {
+  app\api\generate-product-scores\route.ts:153:          return null;
+  app\api\generate-product-scores\route.ts:154:        }
+  app\api\generate-product-scores\route.ts:155:
+  app\api\generate-product-scores\route.ts:156:        const row =
+  app\api\generate-product-scores\route.ts:157:          item as Record<
+  app\api\generate-product-scores\route.ts:158:            string,
+  app\api\generate-product-scores\route.ts:159:            unknown
+  app\api\generate-product-scores\route.ts:161:
+  app\api\generate-product-scores\route.ts:162:        const productId =
+  app\api\generate-product-scores\route.ts:163:          normalizeText(
+  app\api\generate-product-scores\route.ts:164:            row.productId,
+  app\api\generate-product-scores\route.ts:165:          );
+  app\api\generate-product-scores\route.ts:166:
+  app\api\generate-product-scores\route.ts:167:        if (
+  app\api\generate-product-scores\route.ts:168:          !productId ||
+> app\api\generate-product-scores\route.ts:169:          !productIds.has(
+  app\api\generate-product-scores\route.ts:170:            productId,
+  app\api\generate-product-scores\route.ts:171:          )
+  app\api\generate-product-scores\route.ts:172:        ) {
+  app\api\generate-product-scores\route.ts:173:          return null;
+  app\api\generate-product-scores\route.ts:174:        }
+  app\api\generate-product-scores\route.ts:175:
+> app\api\generate-product-scores\route.ts:176:        const rawScores =
+> app\api\generate-product-scores\route.ts:177:          row.criterionScores &&
+  app\api\generate-product-scores\route.ts:178:          typeof row
+> app\api\generate-product-scores\route.ts:179:            .criterionScores ===
+  app\api\generate-product-scores\route.ts:180:            "object" &&
+  app\api\generate-product-scores\route.ts:181:          !Array.isArray(
+> app\api\generate-product-scores\route.ts:182:            row.criterionScores,
+  app\api\generate-product-scores\route.ts:183:          )
+  app\api\generate-product-scores\route.ts:184:            ? (
+> app\api\generate-product-scores\route.ts:185:                row.criterionScores as Record<
+  app\api\generate-product-scores\route.ts:186:                  string,
+  app\api\generate-product-scores\route.ts:187:                  unknown
+  app\api\generate-product-scores\route.ts:188:                >
+  app\api\generate-product-scores\route.ts:189:              )
+  app\api\generate-product-scores\route.ts:190:            : {};
+  app\api\generate-product-scores\route.ts:191:
+  app\api\generate-product-scores\route.ts:192:        const rawReasons =
+  app\api\generate-product-scores\route.ts:193:          row.criterionReasons &&
+  app\api\generate-product-scores\route.ts:194:          typeof row
+  app\api\generate-product-scores\route.ts:195:            .criterionReasons ===
+  app\api\generate-product-scores\route.ts:196:            "object" &&
+  app\api\generate-product-scores\route.ts:197:          !Array.isArray(
+  app\api\generate-product-scores\route.ts:198:            row.criterionReasons,
+  app\api\generate-product-scores\route.ts:199:          )
+  app\api\generate-product-scores\route.ts:200:            ? (
+  app\api\generate-product-scores\route.ts:201:                row.criterionReasons as Record<
+  app\api\generate-product-scores\route.ts:202:                  string,
+  app\api\generate-product-scores\route.ts:203:                  unknown
+  app\api\generate-product-scores\route.ts:204:                >
+  app\api\generate-product-scores\route.ts:205:              )
+  app\api\generate-product-scores\route.ts:206:            : {};
+  app\api\generate-product-scores\route.ts:207:
+> app\api\generate-product-scores\route.ts:208:        const criterionScores:
+  app\api\generate-product-scores\route.ts:209:          Record<
+  app\api\generate-product-scores\route.ts:210:            string,
+  app\api\generate-product-scores\route.ts:211:            number | null
+  app\api\generate-product-scores\route.ts:212:          > = {};
+  app\api\generate-product-scores\route.ts:213:
+  app\api\generate-product-scores\route.ts:214:        const criterionReasons:
+  app\api\generate-product-scores\route.ts:215:          Record<
+  app\api\generate-product-scores\route.ts:216:            string,
+  app\api\generate-product-scores\route.ts:217:            string
+  app\api\generate-product-scores\route.ts:218:          > = {};
+  app\api\generate-product-scores\route.ts:219:
+  app\api\generate-product-scores\route.ts:220:        for (
+  app\api\generate-product-scores\route.ts:221:          const key of
+  app\api\generate-product-scores\route.ts:222:          criterionKeys
+  app\api\generate-product-scores\route.ts:223:        ) {
+> app\api\generate-product-scores\route.ts:224:          criterionScores[key] =
+> app\api\generate-product-scores\route.ts:225:            normalizeScore(
+> app\api\generate-product-scores\route.ts:226:              rawScores[key],
+  app\api\generate-product-scores\route.ts:227:            );
+  app\api\generate-product-scores\route.ts:228:
+  app\api\generate-product-scores\route.ts:229:          criterionReasons[key] =
+  app\api\generate-product-scores\route.ts:230:            normalizeText(
+  app\api\generate-product-scores\route.ts:231:              rawReasons[key],
+  app\api\generate-product-scores\route.ts:232:            ) ||
+  app\api\generate-product-scores\route.ts:233:            "현재 확보된 근거만으로는 명확한 점수 차이를 설명하기 어렵습니다.";
+  app\api\generate-product-scores\route.ts:234:        }
+  app\api\generate-product-scores\route.ts:235:
+  app\api\generate-product-scores\route.ts:236:        return {
+  app\api\generate-product-scores\route.ts:237:          productId,
+> app\api\generate-product-scores\route.ts:238:          criterionScores,
+  app\api\generate-product-scores\route.ts:239:          criterionReasons,
+  app\api\generate-product-scores\route.ts:240:        };
+  app\api\generate-product-scores\route.ts:241:      },
+  app\api\generate-product-scores\route.ts:242:    )
+  app\api\generate-product-scores\route.ts:243:    .filter(
+  app\api\generate-product-scores\route.ts:244:      (
+  app\api\generate-product-scores\route.ts:245:        item,
+> app\api\generate-product-scores\route.ts:246:      ): item is ScoreResult =>
+  app\api\generate-product-scores\route.ts:247:        Boolean(item),
+  app\api\generate-product-scores\route.ts:248:    );
+  app\api\generate-product-scores\route.ts:249:}
+  app\api\generate-product-scores\route.ts:250:
+  app\api\generate-product-scores\route.ts:251:function stableStringify(
+  app\api\generate-product-scores\route.ts:252:  value: unknown,
+  app\api\generate-product-scores\route.ts:253:): string {
+  app\api\generate-product-scores\route.ts:254:  if (
+  app\api\generate-product-scores\route.ts:255:    value === null ||
+  app\api\generate-product-scores\route.ts:256:    typeof value !==
+  app\api\generate-product-scores\route.ts:257:      "object"
+  app\api\generate-product-scores\route.ts:258:  ) {
+  app\api\generate-product-scores\route.ts:259:    return JSON.stringify(
+  app\api\generate-product-scores\route.ts:260:      value,
+  app\api\generate-product-scores\route.ts:261:    );
+  app\api\generate-product-scores\route.ts:262:  }
+  app\api\generate-product-scores\route.ts:263:
+  app\api\generate-product-scores\route.ts:264:  if (
+  app\api\generate-product-scores\route.ts:265:    Array.isArray(value)
+  app\api\generate-product-scores\route.ts:266:  ) {
+  app\api\generate-product-scores\route.ts:307:        value,
+  app\api\generate-product-scores\route.ts:308:      ),
+  app\api\generate-product-scores\route.ts:309:    )
+  app\api\generate-product-scores\route.ts:310:    .digest(
+  app\api\generate-product-scores\route.ts:311:      "hex",
+  app\api\generate-product-scores\route.ts:312:    );
+  app\api\generate-product-scores\route.ts:313:}
+  app\api\generate-product-scores\route.ts:314:
+> app\api\generate-product-scores\route.ts:315:function hasCompleteScores(
+> app\api\generate-product-scores\route.ts:316:  scores:
+  app\api\generate-product-scores\route.ts:317:    | Record<
+  app\api\generate-product-scores\route.ts:318:        string,
+  app\api\generate-product-scores\route.ts:319:        unknown
+  app\api\generate-product-scores\route.ts:320:      >
+  app\api\generate-product-scores\route.ts:321:    | null,
+  app\api\generate-product-scores\route.ts:322:  criterionKeys:
+  app\api\generate-product-scores\route.ts:323:    string[],
+  app\api\generate-product-scores\route.ts:324:) {
+  app\api\generate-product-scores\route.ts:325:  if (
+> app\api\generate-product-scores\route.ts:326:    !scores ||
+> app\api\generate-product-scores\route.ts:327:    typeof scores !==
+  app\api\generate-product-scores\route.ts:328:      "object" ||
+> app\api\generate-product-scores\route.ts:329:    Array.isArray(scores)
+  app\api\generate-product-scores\route.ts:330:  ) {
+  app\api\generate-product-scores\route.ts:331:    return false;
+  app\api\generate-product-scores\route.ts:332:  }
+  app\api\generate-product-scores\route.ts:333:
+  app\api\generate-product-scores\route.ts:334:  return criterionKeys.every(
+  app\api\generate-product-scores\route.ts:335:    (key) => {
+  app\api\generate-product-scores\route.ts:336:      const value =
+> app\api\generate-product-scores\route.ts:337:        scores[key];
+  app\api\generate-product-scores\route.ts:338:
+  app\api\generate-product-scores\route.ts:339:      if (
+  app\api\generate-product-scores\route.ts:340:        value === null
+  app\api\generate-product-scores\route.ts:341:      ) {
+  app\api\generate-product-scores\route.ts:342:        return true;
+  app\api\generate-product-scores\route.ts:343:      }
+  app\api\generate-product-scores\route.ts:344:
+  app\api\generate-product-scores\route.ts:345:      const numberValue =
+  app\api\generate-product-scores\route.ts:346:        typeof value ===
+  app\api\generate-product-scores\route.ts:347:          "number"
+  app\api\generate-product-scores\route.ts:348:          ? value
+  app\api\generate-product-scores\route.ts:349:          : typeof value ===
+  app\api\generate-product-scores\route.ts:350:              "string"
+  app\api\generate-product-scores\route.ts:351:            ? Number(
+  app\api\generate-product-scores\route.ts:352:                value,
+  app\api\generate-product-scores\route.ts:353:              )
+  app\api\generate-product-scores\route.ts:354:            : NaN;
+  app\api\generate-product-scores\route.ts:355:
+  app\api\generate-product-scores\route.ts:356:      return (
+  app\api\generate-product-scores\route.ts:357:        Number.isFinite(
+  app\api\generate-product-scores\route.ts:368:  request: Request,
+  app\api\generate-product-scores\route.ts:369:) {
+  app\api\generate-product-scores\route.ts:370:  try {
+  app\api\generate-product-scores\route.ts:371:    const body =
+  app\api\generate-product-scores\route.ts:372:      (
+  app\api\generate-product-scores\route.ts:373:        await request.json()
+  app\api\generate-product-scores\route.ts:374:      ) as RequestBody;
+  app\api\generate-product-scores\route.ts:375:
+> app\api\generate-product-scores\route.ts:376:    const category =
+  app\api\generate-product-scores\route.ts:377:      normalizeText(
+> app\api\generate-product-scores\route.ts:378:        body.category,
+  app\api\generate-product-scores\route.ts:379:      );
+  app\api\generate-product-scores\route.ts:380:
+> app\api\generate-product-scores\route.ts:381:    if (!category) {
+  app\api\generate-product-scores\route.ts:382:      return NextResponse.json(
+  app\api\generate-product-scores\route.ts:383:        {
+  app\api\generate-product-scores\route.ts:384:          success: false,
+  app\api\generate-product-scores\route.ts:385:          message:
+  app\api\generate-product-scores\route.ts:386:            "카테고리가 필요합니다.",
+  app\api\generate-product-scores\route.ts:387:        },
+  app\api\generate-product-scores\route.ts:388:        {
+  app\api\generate-product-scores\route.ts:389:          status: 400,
+  app\api\generate-product-scores\route.ts:390:        },
+  app\api\generate-product-scores\route.ts:391:      );
+  app\api\generate-product-scores\route.ts:392:    }
+  app\api\generate-product-scores\route.ts:393:
+  app\api\generate-product-scores\route.ts:394:    const apiKey =
+  app\api\generate-product-scores\route.ts:395:      process.env
+  app\api\generate-product-scores\route.ts:396:        .OPENAI_API_KEY;
+  app\api\generate-product-scores\route.ts:397:
+  app\api\generate-product-scores\route.ts:398:    if (!apiKey) {
+  app\api\generate-product-scores\route.ts:399:      return NextResponse.json(
+  app\api\generate-product-scores\route.ts:400:        {
+  app\api\generate-product-scores\route.ts:401:          success: false,
+  app\api\generate-product-scores\route.ts:410:
+  app\api\generate-product-scores\route.ts:411:    const {
+  app\api\generate-product-scores\route.ts:412:      data: profile,
+  app\api\generate-product-scores\route.ts:413:      error:
+  app\api\generate-product-scores\route.ts:414:        profileError,
+  app\api\generate-product-scores\route.ts:415:    } =
+  app\api\generate-product-scores\route.ts:416:      await supabaseAdmin
+  app\api\generate-product-scores\route.ts:417:        .from(
+> app\api\generate-product-scores\route.ts:418:          "category_profiles",
+  app\api\generate-product-scores\route.ts:419:        )
+  app\api\generate-product-scores\route.ts:420:        .select(
+> app\api\generate-product-scores\route.ts:421:          "category, criteria, common_cautions, score_generation_fingerprint, score_generated_at",
+  app\api\generate-product-scores\route.ts:422:        )
+  app\api\generate-product-scores\route.ts:423:        .eq(
+> app\api\generate-product-scores\route.ts:424:          "category",
+> app\api\generate-product-scores\route.ts:425:          category,
+  app\api\generate-product-scores\route.ts:426:        )
+  app\api\generate-product-scores\route.ts:427:        .maybeSingle();
+  app\api\generate-product-scores\route.ts:428:
+  app\api\generate-product-scores\route.ts:429:    if (profileError) {
+  app\api\generate-product-scores\route.ts:430:      throw profileError;
+  app\api\generate-product-scores\route.ts:431:    }
+  app\api\generate-product-scores\route.ts:432:
+  app\api\generate-product-scores\route.ts:433:    if (!profile) {
+  app\api\generate-product-scores\route.ts:434:      return NextResponse.json(
+  app\api\generate-product-scores\route.ts:435:        {
+  app\api\generate-product-scores\route.ts:436:          success: false,
+  app\api\generate-product-scores\route.ts:437:          message:
+  app\api\generate-product-scores\route.ts:438:            "먼저 이 카테고리의 구매기준을 생성해 주세요.",
+  app\api\generate-product-scores\route.ts:439:        },
+  app\api\generate-product-scores\route.ts:440:        {
+  app\api\generate-product-scores\route.ts:441:          status: 404,
+  app\api\generate-product-scores\route.ts:442:        },
+  app\api\generate-product-scores\route.ts:443:      );
+  app\api\generate-product-scores\route.ts:444:    }
+  app\api\generate-product-scores\route.ts:445:
+  app\api\generate-product-scores\route.ts:488:            )
+  app\api\generate-product-scores\route.ts:489:            .filter(
+  app\api\generate-product-scores\route.ts:490:              (
+  app\api\generate-product-scores\route.ts:491:                criterion,
+  app\api\generate-product-scores\route.ts:492:              ) =>
+  app\api\generate-product-scores\route.ts:493:                criterion.key &&
+  app\api\generate-product-scores\route.ts:494:                criterion.label,
+  app\api\generate-product-scores\route.ts:495:            )
+> app\api\generate-product-scores\route.ts:496:            .slice(
+  app\api\generate-product-scores\route.ts:497:              0,
+  app\api\generate-product-scores\route.ts:498:              5,
+  app\api\generate-product-scores\route.ts:499:            )
+  app\api\generate-product-scores\route.ts:500:        : [];
+  app\api\generate-product-scores\route.ts:501:
+  app\api\generate-product-scores\route.ts:502:    if (
+  app\api\generate-product-scores\route.ts:503:      criteria.length !== 5
+  app\api\generate-product-scores\route.ts:504:    ) {
+  app\api\generate-product-scores\route.ts:505:      return NextResponse.json(
+  app\api\generate-product-scores\route.ts:506:        {
+  app\api\generate-product-scores\route.ts:507:          success: false,
+  app\api\generate-product-scores\route.ts:508:          message:
+  app\api\generate-product-scores\route.ts:509:            `구매기준이 정확히 5개여야 합니다. 현재 ${criteria.length}개입니다.`,
+  app\api\generate-product-scores\route.ts:510:        },
+  app\api\generate-product-scores\route.ts:511:        {
+  app\api\generate-product-scores\route.ts:512:          status: 400,
+  app\api\generate-product-scores\route.ts:513:        },
+  app\api\generate-product-scores\route.ts:514:      );
+  app\api\generate-product-scores\route.ts:515:    }
+  app\api\generate-product-scores\route.ts:516:
+  app\api\generate-product-scores\route.ts:517:    const {
+  app\api\generate-product-scores\route.ts:518:      data,
+  app\api\generate-product-scores\route.ts:519:      error,
+  app\api\generate-product-scores\route.ts:520:    } =
+  app\api\generate-product-scores\route.ts:521:      await supabaseAdmin
+  app\api\generate-product-scores\route.ts:522:        .from(
+> app\api\generate-product-scores\route.ts:523:          "products",
+  app\api\generate-product-scores\route.ts:524:        )
+  app\api\generate-product-scores\route.ts:525:        .select(
+> app\api\generate-product-scores\route.ts:526:          "id, product_name, source_url, review_analysis, product_detail_analysis, criterion_scores",
+  app\api\generate-product-scores\route.ts:527:        )
+  app\api\generate-product-scores\route.ts:528:        .eq(
+> app\api\generate-product-scores\route.ts:529:          "category",
+> app\api\generate-product-scores\route.ts:530:          category,
+  app\api\generate-product-scores\route.ts:531:        )
+  app\api\generate-product-scores\route.ts:532:        .order(
+  app\api\generate-product-scores\route.ts:533:          "created_at",
+  app\api\generate-product-scores\route.ts:534:          {
+  app\api\generate-product-scores\route.ts:535:            ascending: true,
+  app\api\generate-product-scores\route.ts:536:          },
+  app\api\generate-product-scores\route.ts:537:        );
+  app\api\generate-product-scores\route.ts:538:
+  app\api\generate-product-scores\route.ts:539:    if (error) {
+  app\api\generate-product-scores\route.ts:540:      throw error;
+  app\api\generate-product-scores\route.ts:541:    }
+  app\api\generate-product-scores\route.ts:542:
+> app\api\generate-product-scores\route.ts:543:    const products =
+  app\api\generate-product-scores\route.ts:544:      (
+  app\api\generate-product-scores\route.ts:545:        data ?? []
+  app\api\generate-product-scores\route.ts:546:      ) as ProductRow[];
+  app\api\generate-product-scores\route.ts:547:
+  app\api\generate-product-scores\route.ts:548:    if (
+> app\api\generate-product-scores\route.ts:549:      products.length < 2
+  app\api\generate-product-scores\route.ts:550:    ) {
+  app\api\generate-product-scores\route.ts:551:      return NextResponse.json(
+  app\api\generate-product-scores\route.ts:552:        {
+  app\api\generate-product-scores\route.ts:553:          success: false,
+  app\api\generate-product-scores\route.ts:554:          message:
+  app\api\generate-product-scores\route.ts:555:            "제품 상대평가를 위해 최소 2개 제품이 필요합니다.",
+  app\api\generate-product-scores\route.ts:556:        },
+  app\api\generate-product-scores\route.ts:557:        {
+  app\api\generate-product-scores\route.ts:558:          status: 400,
+  app\api\generate-product-scores\route.ts:559:        },
+  app\api\generate-product-scores\route.ts:560:      );
+  app\api\generate-product-scores\route.ts:561:    }
+  app\api\generate-product-scores\route.ts:562:
+  app\api\generate-product-scores\route.ts:563:    const criterionKeys =
+  app\api\generate-product-scores\route.ts:564:      criteria.map(
+  app\api\generate-product-scores\route.ts:565:        (
+  app\api\generate-product-scores\route.ts:566:          criterion,
+  app\api\generate-product-scores\route.ts:567:        ) =>
+  app\api\generate-product-scores\route.ts:568:          criterion.key,
+  app\api\generate-product-scores\route.ts:569:      );
+  app\api\generate-product-scores\route.ts:570:
+  app\api\generate-product-scores\route.ts:571:    const fingerprint =
+  app\api\generate-product-scores\route.ts:572:      createFingerprint({
+> app\api\generate-product-scores\route.ts:573:        category,
+  app\api\generate-product-scores\route.ts:574:        criteria,
+  app\api\generate-product-scores\route.ts:575:
+  app\api\generate-product-scores\route.ts:576:        commonCautions:
+  app\api\generate-product-scores\route.ts:577:          Array.isArray(
+  app\api\generate-product-scores\route.ts:578:            profile.common_cautions,
+  app\api\generate-product-scores\route.ts:579:          )
+  app\api\generate-product-scores\route.ts:580:            ? profile.common_cautions
+  app\api\generate-product-scores\route.ts:581:            : [],
+  app\api\generate-product-scores\route.ts:582:
+> app\api\generate-product-scores\route.ts:583:        products:
+> app\api\generate-product-scores\route.ts:584:          products.map(
+  app\api\generate-product-scores\route.ts:585:            (
+  app\api\generate-product-scores\route.ts:586:              product,
+  app\api\generate-product-scores\route.ts:587:            ) => ({
+  app\api\generate-product-scores\route.ts:588:              id:
+  app\api\generate-product-scores\route.ts:589:                product.id,
+  app\api\generate-product-scores\route.ts:590:
+  app\api\generate-product-scores\route.ts:591:              productName:
+  app\api\generate-product-scores\route.ts:592:                product.product_name,
+  app\api\generate-product-scores\route.ts:593:
+  app\api\generate-product-scores\route.ts:594:              sourceUrl:
+  app\api\generate-product-scores\route.ts:595:                product.source_url,
+  app\api\generate-product-scores\route.ts:596:
+  app\api\generate-product-scores\route.ts:597:              reviewAnalysis:
+  app\api\generate-product-scores\route.ts:598:                product.review_analysis,
+  app\api\generate-product-scores\route.ts:599:
+  app\api\generate-product-scores\route.ts:600:              productDetailAnalysis:
+  app\api\generate-product-scores\route.ts:601:                product.product_detail_analysis,
+  app\api\generate-product-scores\route.ts:602:            }),
+  app\api\generate-product-scores\route.ts:603:          ),
+  app\api\generate-product-scores\route.ts:604:      });
+  app\api\generate-product-scores\route.ts:605:
+  app\api\generate-product-scores\route.ts:606:    const cachedFingerprint =
+  app\api\generate-product-scores\route.ts:607:      normalizeText(
+  app\api\generate-product-scores\route.ts:608:        profile
+> app\api\generate-product-scores\route.ts:609:          .score_generation_fingerprint,
+  app\api\generate-product-scores\route.ts:610:      );
+  app\api\generate-product-scores\route.ts:611:
+> app\api\generate-product-scores\route.ts:612:    const allHaveScores =
+> app\api\generate-product-scores\route.ts:613:      products.every(
+  app\api\generate-product-scores\route.ts:614:        (
+  app\api\generate-product-scores\route.ts:615:          product,
+  app\api\generate-product-scores\route.ts:616:        ) =>
+> app\api\generate-product-scores\route.ts:617:          hasCompleteScores(
+  app\api\generate-product-scores\route.ts:618:            product
+> app\api\generate-product-scores\route.ts:619:              .criterion_scores,
+  app\api\generate-product-scores\route.ts:620:            criterionKeys,
+  app\api\generate-product-scores\route.ts:621:          ),
+  app\api\generate-product-scores\route.ts:622:      );
+  app\api\generate-product-scores\route.ts:623:
+  app\api\generate-product-scores\route.ts:624:    if (
+  app\api\generate-product-scores\route.ts:625:      cachedFingerprint ===
+  app\api\generate-product-scores\route.ts:626:        fingerprint &&
+> app\api\generate-product-scores\route.ts:627:      allHaveScores
+  app\api\generate-product-scores\route.ts:628:    ) {
+  app\api\generate-product-scores\route.ts:629:      return NextResponse.json({
+  app\api\generate-product-scores\route.ts:630:        success: true,
+  app\api\generate-product-scores\route.ts:631:        cacheHit: true,
+> app\api\generate-product-scores\route.ts:632:        category,
+  app\api\generate-product-scores\route.ts:633:        productCount:
+> app\api\generate-product-scores\route.ts:634:          products.length,
+  app\api\generate-product-scores\route.ts:635:        criterionCount:
+  app\api\generate-product-scores\route.ts:636:          criteria.length,
+> app\api\generate-product-scores\route.ts:637:        scoreGeneratedAt:
+  app\api\generate-product-scores\route.ts:638:          profile
+> app\api\generate-product-scores\route.ts:639:            .score_generated_at ??
+  app\api\generate-product-scores\route.ts:640:          null,
+  app\api\generate-product-scores\route.ts:641:        message:
+  app\api\generate-product-scores\route.ts:642:          "제품 근거가 변경되지 않아 기존 AI 점수를 그대로 사용합니다.",
+  app\api\generate-product-scores\route.ts:643:      });
+  app\api\generate-product-scores\route.ts:644:    }
+  app\api\generate-product-scores\route.ts:645:
+> app\api\generate-product-scores\route.ts:646:    const evidenceProducts =
+> app\api\generate-product-scores\route.ts:647:      products.map(
+  app\api\generate-product-scores\route.ts:648:        (
+  app\api\generate-product-scores\route.ts:649:          product,
+  app\api\generate-product-scores\route.ts:650:        ) => ({
+  app\api\generate-product-scores\route.ts:651:          productId:
+  app\api\generate-product-scores\route.ts:652:            product.id,
+  app\api\generate-product-scores\route.ts:653:
+  app\api\generate-product-scores\route.ts:654:          productName:
+  app\api\generate-product-scores\route.ts:655:            product.product_name,
+  app\api\generate-product-scores\route.ts:656:
+  app\api\generate-product-scores\route.ts:657:          sourceUrl:
+  app\api\generate-product-scores\route.ts:658:            product.source_url,
+  app\api\generate-product-scores\route.ts:659:
+  app\api\generate-product-scores\route.ts:660:          productDetailAnalysis:
+  app\api\generate-product-scores\route.ts:661:            product.product_detail_analysis,
+  app\api\generate-product-scores\route.ts:662:
+  app\api\generate-product-scores\route.ts:663:          reviewAnalysis:
+  app\api\generate-product-scores\route.ts:664:            product.review_analysis,
+  app\api\generate-product-scores\route.ts:665:        }),
+  app\api\generate-product-scores\route.ts:666:      );
+  app\api\generate-product-scores\route.ts:667:
+  app\api\generate-product-scores\route.ts:669:      new OpenAI({
+  app\api\generate-product-scores\route.ts:670:        apiKey,
+  app\api\generate-product-scores\route.ts:671:      });
+  app\api\generate-product-scores\route.ts:672:
+  app\api\generate-product-scores\route.ts:673:    const prompt = `
+  app\api\generate-product-scores\route.ts:674:당신은 Project D의 제품 상대평가 엔진입니다.
+  app\api\generate-product-scores\route.ts:675:
+  app\api\generate-product-scores\route.ts:676:카테고리:
+> app\api\generate-product-scores\route.ts:677:${category}
+  app\api\generate-product-scores\route.ts:678:
+  app\api\generate-product-scores\route.ts:679:현재 카테고리의 핵심 구매기준:
+  app\api\generate-product-scores\route.ts:680:${JSON.stringify(
+  app\api\generate-product-scores\route.ts:681:  criteria,
+  app\api\generate-product-scores\route.ts:682:  null,
+  app\api\generate-product-scores\route.ts:683:  2,
+  app\api\generate-product-scores\route.ts:684:)}
+  app\api\generate-product-scores\route.ts:685:
+  app\api\generate-product-scores\route.ts:686:비교 대상 제품과 확보된 실제 근거:
+  app\api\generate-product-scores\route.ts:687:${JSON.stringify(
+> app\api\generate-product-scores\route.ts:688:  evidenceProducts,
+  app\api\generate-product-scores\route.ts:689:  null,
+  app\api\generate-product-scores\route.ts:690:  2,
+  app\api\generate-product-scores\route.ts:691:)}
+  app\api\generate-product-scores\route.ts:692:
+  app\api\generate-product-scores\route.ts:693:평가 목표:
+  app\api\generate-product-scores\route.ts:694:
+  app\api\generate-product-scores\route.ts:695:같은 카테고리의 제품들을 서로 직접 비교하여
+  app\api\generate-product-scores\route.ts:696:각 제품을 각 구매기준별로 0~100점으로 평가하세요.
+  app\api\generate-product-scores\route.ts:697:
+  app\api\generate-product-scores\route.ts:698:중요 원칙:
+  app\api\generate-product-scores\route.ts:699:
+  app\api\generate-product-scores\route.ts:700:1. 모든 제품을 같은 기준과 같은 척도로 평가하세요.
+  app\api\generate-product-scores\route.ts:701:2. productDetailAnalysis와 reviewAnalysis에 있는 근거만 사용하세요.
+  app\api\generate-product-scores\route.ts:702:3. 근거가 없는 사양이나 성능은 추측하지 마세요.
+  app\api\generate-product-scores\route.ts:703:4. 제품 상세페이지의 판매 문구보다 실제 리뷰 분석을 중요하게 보세요.
+  app\api\generate-product-scores\route.ts:704:5. 리뷰에서 반복적으로 확인된 장점과 단점은 점수에 적극 반영하세요.
+  app\api\generate-product-scores\route.ts:705:6. 한두 리뷰에서만 나타난 문제는 지나치게 크게 반영하지 마세요.
+  app\api\generate-product-scores\route.ts:706:7. 같은 문제가 여러 제품에 공통적으로 존재한다면 특정 제품만 과도하게 감점하지 마세요.
+  app\api\generate-product-scores\route.ts:707:8. 특정 제품에서 반복적으로 나타나는 고유한 오류·불편은 해당 기준 점수에 반영하세요.
+  app\api\generate-product-scores\route.ts:708:9. 현재 5개 제품 사이에서 실제 상대적 차이가 드러나도록 평가하세요.
+  app\api\generate-product-scores\route.ts:739:
+  app\api\generate-product-scores\route.ts:740:${criterionKeys.join(
+  app\api\generate-product-scores\route.ts:741:  ", ",
+  app\api\generate-product-scores\route.ts:742:)}
+  app\api\generate-product-scores\route.ts:743:
+  app\api\generate-product-scores\route.ts:744:반환 형식:
+  app\api\generate-product-scores\route.ts:745:
+  app\api\generate-product-scores\route.ts:746:{
+> app\api\generate-product-scores\route.ts:747:  "products": [
+  app\api\generate-product-scores\route.ts:748:    {
+  app\api\generate-product-scores\route.ts:749:      "productId": "입력으로 제공된 실제 UUID productId",
+> app\api\generate-product-scores\route.ts:750:      "criterionScores": {
+  app\api\generate-product-scores\route.ts:751:        "${criterionKeys[0]}": 0,
+  app\api\generate-product-scores\route.ts:752:        "${criterionKeys[1]}": 0,
+  app\api\generate-product-scores\route.ts:753:        "${criterionKeys[2]}": 0,
+  app\api\generate-product-scores\route.ts:754:        "${criterionKeys[3]}": 0,
+  app\api\generate-product-scores\route.ts:755:        "${criterionKeys[4]}": 0
+  app\api\generate-product-scores\route.ts:756:      },
+  app\api\generate-product-scores\route.ts:757:      "criterionReasons": {
+  app\api\generate-product-scores\route.ts:758:        "${criterionKeys[0]}": "점수 근거",
+  app\api\generate-product-scores\route.ts:759:        "${criterionKeys[1]}": "점수 근거",
+  app\api\generate-product-scores\route.ts:760:        "${criterionKeys[2]}": "점수 근거",
+  app\api\generate-product-scores\route.ts:761:        "${criterionKeys[3]}": "점수 근거",
+  app\api\generate-product-scores\route.ts:762:        "${criterionKeys[4]}": "점수 근거"
+  app\api\generate-product-scores\route.ts:763:      }
+  app\api\generate-product-scores\route.ts:764:    }
+  app\api\generate-product-scores\route.ts:765:  ]
+  app\api\generate-product-scores\route.ts:766:}
+  app\api\generate-product-scores\route.ts:767:
+  app\api\generate-product-scores\route.ts:768:반드시 비교 대상 모든 제품을 반환하세요.
+  app\api\generate-product-scores\route.ts:769:`;
+  app\api\generate-product-scores\route.ts:770:
+  app\api\generate-product-scores\route.ts:789:      );
+  app\api\generate-product-scores\route.ts:790:    }
+  app\api\generate-product-scores\route.ts:791:
+  app\api\generate-product-scores\route.ts:792:    const parsed =
+  app\api\generate-product-scores\route.ts:793:      extractJson(
+  app\api\generate-product-scores\route.ts:794:        outputText,
+  app\api\generate-product-scores\route.ts:795:      );
+  app\api\generate-product-scores\route.ts:796:
+> app\api\generate-product-scores\route.ts:797:    const productIds =
+  app\api\generate-product-scores\route.ts:798:      new Set(
+> app\api\generate-product-scores\route.ts:799:        products.map(
+  app\api\generate-product-scores\route.ts:800:          (
+  app\api\generate-product-scores\route.ts:801:            product,
+  app\api\generate-product-scores\route.ts:802:          ) =>
+  app\api\generate-product-scores\route.ts:803:            product.id,
+  app\api\generate-product-scores\route.ts:804:        ),
+  app\api\generate-product-scores\route.ts:805:      );
+  app\api\generate-product-scores\route.ts:806:
+> app\api\generate-product-scores\route.ts:807:    const scoreResults =
+  app\api\generate-product-scores\route.ts:808:      normalizeResults(
+> app\api\generate-product-scores\route.ts:809:        parsed.products,
+> app\api\generate-product-scores\route.ts:810:        productIds,
+  app\api\generate-product-scores\route.ts:811:        criterionKeys,
+  app\api\generate-product-scores\route.ts:812:      );
+  app\api\generate-product-scores\route.ts:813:
+  app\api\generate-product-scores\route.ts:814:    if (
+> app\api\generate-product-scores\route.ts:815:      scoreResults.length !==
+> app\api\generate-product-scores\route.ts:816:      products.length
+  app\api\generate-product-scores\route.ts:817:    ) {
+  app\api\generate-product-scores\route.ts:818:      throw new Error(
+> app\api\generate-product-scores\route.ts:819:        `AI 제품 평가 결과가 완전하지 않습니다. ${products.length}개 중 ${scoreResults.length}개만 반환되었습니다.`,
+  app\api\generate-product-scores\route.ts:820:      );
+  app\api\generate-product-scores\route.ts:821:    }
+  app\api\generate-product-scores\route.ts:822:
+  app\api\generate-product-scores\route.ts:823:    for (
+  app\api\generate-product-scores\route.ts:824:      const product of
+> app\api\generate-product-scores\route.ts:825:      products
+  app\api\generate-product-scores\route.ts:826:    ) {
+> app\api\generate-product-scores\route.ts:827:      const scoreResult =
+> app\api\generate-product-scores\route.ts:828:        scoreResults.find(
+  app\api\generate-product-scores\route.ts:829:          (
+  app\api\generate-product-scores\route.ts:830:            item,
+  app\api\generate-product-scores\route.ts:831:          ) =>
+  app\api\generate-product-scores\route.ts:832:            item.productId ===
+  app\api\generate-product-scores\route.ts:833:            product.id,
+  app\api\generate-product-scores\route.ts:834:        );
+  app\api\generate-product-scores\route.ts:835:
+> app\api\generate-product-scores\route.ts:836:      if (!scoreResult) {
+  app\api\generate-product-scores\route.ts:837:        continue;
+  app\api\generate-product-scores\route.ts:838:      }
+  app\api\generate-product-scores\route.ts:839:
+  app\api\generate-product-scores\route.ts:840:      const existingReview =
+  app\api\generate-product-scores\route.ts:841:        product.review_analysis &&
+  app\api\generate-product-scores\route.ts:842:        typeof product
+  app\api\generate-product-scores\route.ts:843:          .review_analysis ===
+  app\api\generate-product-scores\route.ts:844:          "object" &&
+  app\api\generate-product-scores\route.ts:845:        !Array.isArray(
+  app\api\generate-product-scores\route.ts:846:          product.review_analysis,
+  app\api\generate-product-scores\route.ts:847:        )
+  app\api\generate-product-scores\route.ts:848:          ? product.review_analysis
+  app\api\generate-product-scores\route.ts:849:          : {};
+  app\api\generate-product-scores\route.ts:850:
+  app\api\generate-product-scores\route.ts:851:      const mergedReviewAnalysis = {
+  app\api\generate-product-scores\route.ts:852:        ...existingReview,
+  app\api\generate-product-scores\route.ts:853:
+  app\api\generate-product-scores\route.ts:854:        criterionReasons:
+> app\api\generate-product-scores\route.ts:855:          scoreResult
+  app\api\generate-product-scores\route.ts:856:            .criterionReasons,
+  app\api\generate-product-scores\route.ts:857:
+  app\api\generate-product-scores\route.ts:858:        criterion_reasons:
+> app\api\generate-product-scores\route.ts:859:          scoreResult
+  app\api\generate-product-scores\route.ts:860:            .criterionReasons,
+  app\api\generate-product-scores\route.ts:861:      };
+  app\api\generate-product-scores\route.ts:862:
+  app\api\generate-product-scores\route.ts:863:      const {
+  app\api\generate-product-scores\route.ts:864:        error:
+  app\api\generate-product-scores\route.ts:865:          updateError,
+  app\api\generate-product-scores\route.ts:866:      } =
+  app\api\generate-product-scores\route.ts:867:        await supabaseAdmin
+  app\api\generate-product-scores\route.ts:868:          .from(
+> app\api\generate-product-scores\route.ts:869:            "products",
+  app\api\generate-product-scores\route.ts:870:          )
+  app\api\generate-product-scores\route.ts:871:          .update({
+> app\api\generate-product-scores\route.ts:872:            criterion_scores:
+> app\api\generate-product-scores\route.ts:873:              scoreResult
+> app\api\generate-product-scores\route.ts:874:                .criterionScores,
+  app\api\generate-product-scores\route.ts:875:
+  app\api\generate-product-scores\route.ts:876:            review_analysis:
+  app\api\generate-product-scores\route.ts:877:              mergedReviewAnalysis,
+  app\api\generate-product-scores\route.ts:878:
+  app\api\generate-product-scores\route.ts:879:            updated_at:
+  app\api\generate-product-scores\route.ts:880:              new Date()
+  app\api\generate-product-scores\route.ts:881:                .toISOString(),
+  app\api\generate-product-scores\route.ts:882:          })
+  app\api\generate-product-scores\route.ts:883:          .eq(
+  app\api\generate-product-scores\route.ts:884:            "id",
+  app\api\generate-product-scores\route.ts:885:            product.id,
+  app\api\generate-product-scores\route.ts:886:          );
+  app\api\generate-product-scores\route.ts:887:
+  app\api\generate-product-scores\route.ts:888:      if (updateError) {
+  app\api\generate-product-scores\route.ts:889:        throw updateError;
+  app\api\generate-product-scores\route.ts:890:      }
+  app\api\generate-product-scores\route.ts:891:    }
+  app\api\generate-product-scores\route.ts:892:
+> app\api\generate-product-scores\route.ts:893:    const scoreGeneratedAt =
+  app\api\generate-product-scores\route.ts:894:      new Date()
+  app\api\generate-product-scores\route.ts:895:        .toISOString();
+  app\api\generate-product-scores\route.ts:896:
+  app\api\generate-product-scores\route.ts:897:    const {
+  app\api\generate-product-scores\route.ts:898:      error:
+  app\api\generate-product-scores\route.ts:899:        profileUpdateError,
+  app\api\generate-product-scores\route.ts:900:    } =
+  app\api\generate-product-scores\route.ts:901:      await supabaseAdmin
+  app\api\generate-product-scores\route.ts:902:        .from(
+> app\api\generate-product-scores\route.ts:903:          "category_profiles",
+  app\api\generate-product-scores\route.ts:904:        )
+  app\api\generate-product-scores\route.ts:905:        .update({
+> app\api\generate-product-scores\route.ts:906:          score_generation_fingerprint:
+  app\api\generate-product-scores\route.ts:907:            fingerprint,
+  app\api\generate-product-scores\route.ts:908:
+> app\api\generate-product-scores\route.ts:909:          score_generated_at:
+> app\api\generate-product-scores\route.ts:910:            scoreGeneratedAt,
+  app\api\generate-product-scores\route.ts:911:        })
+  app\api\generate-product-scores\route.ts:912:        .eq(
+> app\api\generate-product-scores\route.ts:913:          "category",
+> app\api\generate-product-scores\route.ts:914:          category,
+  app\api\generate-product-scores\route.ts:915:        );
+  app\api\generate-product-scores\route.ts:916:
+  app\api\generate-product-scores\route.ts:917:    if (
+  app\api\generate-product-scores\route.ts:918:      profileUpdateError
+  app\api\generate-product-scores\route.ts:919:    ) {
+  app\api\generate-product-scores\route.ts:920:      throw profileUpdateError;
+  app\api\generate-product-scores\route.ts:921:    }
+  app\api\generate-product-scores\route.ts:922:
+  app\api\generate-product-scores\route.ts:923:    return NextResponse.json({
+  app\api\generate-product-scores\route.ts:924:      success: true,
+  app\api\generate-product-scores\route.ts:925:      cacheHit: false,
+> app\api\generate-product-scores\route.ts:926:      category,
+  app\api\generate-product-scores\route.ts:927:
+  app\api\generate-product-scores\route.ts:928:      productCount:
+> app\api\generate-product-scores\route.ts:929:        products.length,
+  app\api\generate-product-scores\route.ts:930:
+  app\api\generate-product-scores\route.ts:931:      criterionCount:
+  app\api\generate-product-scores\route.ts:932:        criteria.length,
+  app\api\generate-product-scores\route.ts:933:
+> app\api\generate-product-scores\route.ts:934:      scoreGeneratedAt,
+  app\api\generate-product-scores\route.ts:935:
+> app\api\generate-product-scores\route.ts:936:      scores:
+> app\api\generate-product-scores\route.ts:937:        scoreResults,
+  app\api\generate-product-scores\route.ts:938:
+  app\api\generate-product-scores\route.ts:939:      message:
+> app\api\generate-product-scores\route.ts:940:        `${products.length}개 제품을 구매기준 ${criteria.length}개로 상대평가해 점수와 근거를 저장했습니다.`,
+  app\api\generate-product-scores\route.ts:941:    });
+  app\api\generate-product-scores\route.ts:942:  } catch (error) {
+  app\api\generate-product-scores\route.ts:943:    console.error(
+> app\api\generate-product-scores\route.ts:944:      "Generate product scores API error:",
+  app\api\generate-product-scores\route.ts:945:      error,
+  app\api\generate-product-scores\route.ts:946:    );
+  app\api\generate-product-scores\route.ts:947:
+  app\api\generate-product-scores\route.ts:948:    return NextResponse.json(
+  app\api\generate-product-scores\route.ts:949:      {
+  app\api\generate-product-scores\route.ts:950:        success: false,
+  app\api\generate-product-scores\route.ts:951:
+  app\api\generate-product-scores\route.ts:952:        message:
+  app\api\generate-product-scores\route.ts:953:          error instanceof Error
+  app\api\generate-product-scores\route.ts:954:            ? error.message
+  app\api\generate-product-scores\route.ts:955:            : "제품별 AI 점수 생성 중 오류가 발생했습니다.",
+  app\api\generate-product-scores\route.ts:956:      },
+  app\api\generate-product-scores\route.ts:957:      {
+  app\api\generate-product-scores\route.ts:958:        status: 500,
+  app\api\generate-product-scores\route.ts:959:      },
+  app\api\generate-product-scores\route.ts:960:    );
+  app\api\generate-product-scores\route.ts:961:  }
+  app\api\generate-product-scores\route.ts:962:}
+
+
+

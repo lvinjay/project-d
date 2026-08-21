@@ -1,0 +1,798 @@
+﻿===== Capture 생성 호출부 찾기 =====
+
+  app\admin\naver-capture\page.tsx:193:    0.78
+  app\admin\naver-capture\page.tsx:194:  );
+  app\admin\naver-capture\page.tsx:195:}
+  app\admin\naver-capture\page.tsx:196:
+  app\admin\naver-capture\page.tsx:197:function removeDuplicates(
+> app\admin\naver-capture\page.tsx:198:  products:
+  app\admin\naver-capture\page.tsx:199:    CapturedProduct[],
+  app\admin\naver-capture\page.tsx:200:) {
+  app\admin\naver-capture\page.tsx:201:  const unique:
+  app\admin\naver-capture\page.tsx:202:    CapturedProduct[] = [];
+  app\admin\naver-capture\page.tsx:203:
+  app\admin\naver-capture\page.tsx:204:  /*
+  app\admin\naver-capture\page.tsx:205:    동일 제품이면
+  app\admin\naver-capture\page.tsx:206:    리뷰가 많은 판매등록을 대표로 사용.
+  app\admin\naver-capture\page.tsx:207:  */
+  app\admin\naver-capture\page.tsx:208:  const sorted =
+  app\admin\naver-capture\page.tsx:209:    [...products].sort(
+  app\admin\naver-capture\page.tsx:210:      (a, b) =>
+  app\admin\naver-capture\page.tsx:237:  return unique;
+  app\admin\naver-capture\page.tsx:238:}
+  app\admin\naver-capture\page.tsx:239:
+  app\admin\naver-capture\page.tsx:240:function getBudgetStatus(
+  app\admin\naver-capture\page.tsx:241:  price: number,
+> app\admin\naver-capture\page.tsx:242:  minBudget: number,
+> app\admin\naver-capture\page.tsx:243:  maxBudget: number,
+  app\admin\naver-capture\page.tsx:244:): {
+  app\admin\naver-capture\page.tsx:245:  status: BudgetStatus;
+  app\admin\naver-capture\page.tsx:246:  distance: number;
+  app\admin\naver-capture\page.tsx:247:} {
+  app\admin\naver-capture\page.tsx:248:  if (
+> app\admin\naver-capture\page.tsx:249:    minBudget <= 0 &&
+> app\admin\naver-capture\page.tsx:250:    maxBudget <= 0
+  app\admin\naver-capture\page.tsx:251:  ) {
+  app\admin\naver-capture\page.tsx:252:    return {
+  app\admin\naver-capture\page.tsx:253:      status:
+  app\admin\naver-capture\page.tsx:254:        "unlimited",
+  app\admin\naver-capture\page.tsx:255:      distance: 0,
+  app\admin\naver-capture\page.tsx:256:    };
+  app\admin\naver-capture\page.tsx:257:  }
+  app\admin\naver-capture\page.tsx:258:
+  app\admin\naver-capture\page.tsx:259:  if (
+> app\admin\naver-capture\page.tsx:260:    minBudget > 0 &&
+> app\admin\naver-capture\page.tsx:261:    price < minBudget
+  app\admin\naver-capture\page.tsx:262:  ) {
+  app\admin\naver-capture\page.tsx:263:    return {
+  app\admin\naver-capture\page.tsx:264:      status:
+  app\admin\naver-capture\page.tsx:265:        "below",
+  app\admin\naver-capture\page.tsx:266:      distance:
+> app\admin\naver-capture\page.tsx:267:        minBudget -
+  app\admin\naver-capture\page.tsx:268:        price,
+  app\admin\naver-capture\page.tsx:269:    };
+  app\admin\naver-capture\page.tsx:270:  }
+  app\admin\naver-capture\page.tsx:271:
+  app\admin\naver-capture\page.tsx:272:  if (
+> app\admin\naver-capture\page.tsx:273:    maxBudget > 0 &&
+> app\admin\naver-capture\page.tsx:274:    price > maxBudget
+  app\admin\naver-capture\page.tsx:275:  ) {
+  app\admin\naver-capture\page.tsx:276:    return {
+  app\admin\naver-capture\page.tsx:277:      status:
+  app\admin\naver-capture\page.tsx:278:        "above",
+  app\admin\naver-capture\page.tsx:279:      distance:
+  app\admin\naver-capture\page.tsx:280:        price -
+> app\admin\naver-capture\page.tsx:281:        maxBudget,
+  app\admin\naver-capture\page.tsx:282:    };
+  app\admin\naver-capture\page.tsx:283:  }
+  app\admin\naver-capture\page.tsx:284:
+  app\admin\naver-capture\page.tsx:285:  return {
+  app\admin\naver-capture\page.tsx:286:    status:
+  app\admin\naver-capture\page.tsx:287:      "within",
+  app\admin\naver-capture\page.tsx:288:    distance: 0,
+  app\admin\naver-capture\page.tsx:289:  };
+  app\admin\naver-capture\page.tsx:290:}
+  app\admin\naver-capture\page.tsx:291:
+  app\admin\naver-capture\page.tsx:292:function rankProducts(
+> app\admin\naver-capture\page.tsx:293:  products:
+  app\admin\naver-capture\page.tsx:294:    CapturedProduct[],
+> app\admin\naver-capture\page.tsx:295:  minBudget: number,
+> app\admin\naver-capture\page.tsx:296:  maxBudget: number,
+  app\admin\naver-capture\page.tsx:297:): RankedProduct[] {
+  app\admin\naver-capture\page.tsx:298:  if (
+  app\admin\naver-capture\page.tsx:299:    products.length === 0
+  app\admin\naver-capture\page.tsx:300:  ) {
+  app\admin\naver-capture\page.tsx:301:    return [];
+  app\admin\naver-capture\page.tsx:302:  }
+  app\admin\naver-capture\page.tsx:303:
+  app\admin\naver-capture\page.tsx:304:  const maximumReviews =
+  app\admin\naver-capture\page.tsx:305:    Math.max(
+  app\admin\naver-capture\page.tsx:306:      1,
+  app\admin\naver-capture\page.tsx:307:      ...products.map(
+  app\admin\naver-capture\page.tsx:308:        (product) =>
+  app\admin\naver-capture\page.tsx:391:            0.15;
+  app\admin\naver-capture\page.tsx:392:
+  app\admin\naver-capture\page.tsx:393:        const budget =
+  app\admin\naver-capture\page.tsx:394:          getBudgetStatus(
+  app\admin\naver-capture\page.tsx:395:            product.price,
+> app\admin\naver-capture\page.tsx:396:            minBudget,
+> app\admin\naver-capture\page.tsx:397:            maxBudget,
+  app\admin\naver-capture\page.tsx:398:          );
+  app\admin\naver-capture\page.tsx:399:
+  app\admin\naver-capture\page.tsx:400:        return {
+  app\admin\naver-capture\page.tsx:401:          ...product,
+  app\admin\naver-capture\page.tsx:402:
+  app\admin\naver-capture\page.tsx:403:          candidateScore:
+  app\admin\naver-capture\page.tsx:404:            Math.round(
+  app\admin\naver-capture\page.tsx:405:              score *
+  app\admin\naver-capture\page.tsx:406:                10,
+  app\admin\naver-capture\page.tsx:407:            ) / 10,
+  app\admin\naver-capture\page.tsx:408:
+  app\admin\naver-capture\page.tsx:409:          scoreReasons: [
+  app\admin\naver-capture\page.tsx:437:}
+  app\admin\naver-capture\page.tsx:438:
+  app\admin\naver-capture\page.tsx:439:function selectFinalists(
+  app\admin\naver-capture\page.tsx:440:  ranked:
+  app\admin\naver-capture\page.tsx:441:    RankedProduct[],
+> app\admin\naver-capture\page.tsx:442:  minBudget: number,
+> app\admin\naver-capture\page.tsx:443:  maxBudget: number,
+  app\admin\naver-capture\page.tsx:444:) {
+  app\admin\naver-capture\page.tsx:445:  /*
+  app\admin\naver-capture\page.tsx:446:    예산을 입력하지 않은 경우
+  app\admin\naver-capture\page.tsx:447:    기존처럼 상위 15개.
+  app\admin\naver-capture\page.tsx:448:  */
+  app\admin\naver-capture\page.tsx:449:  if (
+> app\admin\naver-capture\page.tsx:450:    minBudget <= 0 &&
+> app\admin\naver-capture\page.tsx:451:    maxBudget <= 0
+  app\admin\naver-capture\page.tsx:452:  ) {
+  app\admin\naver-capture\page.tsx:453:    return ranked.slice(
+  app\admin\naver-capture\page.tsx:454:      0,
+  app\admin\naver-capture\page.tsx:455:      15,
+  app\admin\naver-capture\page.tsx:456:    );
+  app\admin\naver-capture\page.tsx:457:  }
+  app\admin\naver-capture\page.tsx:458:
+  app\admin\naver-capture\page.tsx:459:  /*
+  app\admin\naver-capture\page.tsx:460:    1순위:
+  app\admin\naver-capture\page.tsx:461:    예산 범위 안의 제품.
+  app\admin\naver-capture\page.tsx:462:  */
+  app\admin\naver-capture\page.tsx:463:  const withinBudget =
+  app\admin\naver-capture\page.tsx:574:    setCategory,
+  app\admin\naver-capture\page.tsx:575:  ] =
+  app\admin\naver-capture\page.tsx:576:    useState("");
+  app\admin\naver-capture\page.tsx:577:
+  app\admin\naver-capture\page.tsx:578:  const [
+> app\admin\naver-capture\page.tsx:579:    minBudget,
+> app\admin\naver-capture\page.tsx:580:    setMinBudget,
+  app\admin\naver-capture\page.tsx:581:  ] =
+  app\admin\naver-capture\page.tsx:582:    useState(0);
+  app\admin\naver-capture\page.tsx:583:
+  app\admin\naver-capture\page.tsx:584:  const [
+> app\admin\naver-capture\page.tsx:585:    maxBudget,
+> app\admin\naver-capture\page.tsx:586:    setMaxBudget,
+  app\admin\naver-capture\page.tsx:587:  ] =
+  app\admin\naver-capture\page.tsx:588:    useState(0);
+  app\admin\naver-capture\page.tsx:589:
+  app\admin\naver-capture\page.tsx:590:  const [
+  app\admin\naver-capture\page.tsx:591:    message,
+  app\admin\naver-capture\page.tsx:592:    setMessage,
+  app\admin\naver-capture\page.tsx:593:  ] =
+  app\admin\naver-capture\page.tsx:594:    useState(
+  app\admin\naver-capture\page.tsx:595:      "수집 데이터를 불러오는 중입니다.",
+  app\admin\naver-capture\page.tsx:596:    );
+  app\admin\naver-capture\page.tsx:597:
+  app\admin\naver-capture\page.tsx:598:  useEffect(() => {
+  app\admin\naver-capture\page.tsx:617:      setCaptureId(id);
+  app\admin\naver-capture\page.tsx:618:
+  app\admin\naver-capture\page.tsx:619:      try {
+  app\admin\naver-capture\page.tsx:620:        const response =
+  app\admin\naver-capture\page.tsx:621:          await fetch(
+> app\admin\naver-capture\page.tsx:622:            `/api/naver-capture?id=${encodeURIComponent(
+  app\admin\naver-capture\page.tsx:623:              id,
+  app\admin\naver-capture\page.tsx:624:            )}`,
+  app\admin\naver-capture\page.tsx:625:            {
+  app\admin\naver-capture\page.tsx:626:              cache:
+  app\admin\naver-capture\page.tsx:627:                "no-store",
+  app\admin\naver-capture\page.tsx:628:            },
+  app\admin\naver-capture\page.tsx:629:          );
+  app\admin\naver-capture\page.tsx:630:
+  app\admin\naver-capture\page.tsx:631:        const data =
+  app\admin\naver-capture\page.tsx:632:          await response.json();
+  app\admin\naver-capture\page.tsx:633:
+  app\admin\naver-capture\page.tsx:634:        if (
+  app\admin\naver-capture\page.tsx:651:        setCategory(
+  app\admin\naver-capture\page.tsx:652:          data.category ??
+  app\admin\naver-capture\page.tsx:653:            "",
+  app\admin\naver-capture\page.tsx:654:        );
+  app\admin\naver-capture\page.tsx:655:
+> app\admin\naver-capture\page.tsx:656:        setMinBudget(
+  app\admin\naver-capture\page.tsx:657:          Number(
+> app\admin\naver-capture\page.tsx:658:            data.minBudget ??
+  app\admin\naver-capture\page.tsx:659:              0,
+  app\admin\naver-capture\page.tsx:660:          ) || 0,
+  app\admin\naver-capture\page.tsx:661:        );
+  app\admin\naver-capture\page.tsx:662:
+> app\admin\naver-capture\page.tsx:663:        setMaxBudget(
+  app\admin\naver-capture\page.tsx:664:          Number(
+> app\admin\naver-capture\page.tsx:665:            data.maxBudget ??
+  app\admin\naver-capture\page.tsx:666:              0,
+  app\admin\naver-capture\page.tsx:667:          ) || 0,
+  app\admin\naver-capture\page.tsx:668:        );
+  app\admin\naver-capture\page.tsx:669:
+  app\admin\naver-capture\page.tsx:670:        setProducts(
+  app\admin\naver-capture\page.tsx:671:          incoming,
+  app\admin\naver-capture\page.tsx:672:        );
+  app\admin\naver-capture\page.tsx:673:
+  app\admin\naver-capture\page.tsx:674:        setMessage(
+  app\admin\naver-capture\page.tsx:675:          `${incoming.length}개 상품을 수집했습니다.`,
+  app\admin\naver-capture\page.tsx:676:        );
+  app\admin\naver-capture\page.tsx:677:      } catch (error) {
+  app\admin\naver-capture\page.tsx:699:  const rankedProducts =
+  app\admin\naver-capture\page.tsx:700:    useMemo(
+  app\admin\naver-capture\page.tsx:701:      () =>
+  app\admin\naver-capture\page.tsx:702:        rankProducts(
+  app\admin\naver-capture\page.tsx:703:          uniqueProducts,
+> app\admin\naver-capture\page.tsx:704:          minBudget,
+> app\admin\naver-capture\page.tsx:705:          maxBudget,
+  app\admin\naver-capture\page.tsx:706:        ),
+  app\admin\naver-capture\page.tsx:707:      [
+  app\admin\naver-capture\page.tsx:708:        uniqueProducts,
+> app\admin\naver-capture\page.tsx:709:        minBudget,
+> app\admin\naver-capture\page.tsx:710:        maxBudget,
+  app\admin\naver-capture\page.tsx:711:      ],
+  app\admin\naver-capture\page.tsx:712:    );
+  app\admin\naver-capture\page.tsx:713:
+  app\admin\naver-capture\page.tsx:714:  const finalists =
+  app\admin\naver-capture\page.tsx:715:    useMemo(
+  app\admin\naver-capture\page.tsx:716:      () =>
+  app\admin\naver-capture\page.tsx:717:        selectFinalists(
+  app\admin\naver-capture\page.tsx:718:          rankedProducts,
+> app\admin\naver-capture\page.tsx:719:          minBudget,
+> app\admin\naver-capture\page.tsx:720:          maxBudget,
+  app\admin\naver-capture\page.tsx:721:        ),
+  app\admin\naver-capture\page.tsx:722:      [
+  app\admin\naver-capture\page.tsx:723:        rankedProducts,
+> app\admin\naver-capture\page.tsx:724:        minBudget,
+> app\admin\naver-capture\page.tsx:725:        maxBudget,
+  app\admin\naver-capture\page.tsx:726:      ],
+  app\admin\naver-capture\page.tsx:727:    );
+  app\admin\naver-capture\page.tsx:728:
+  app\admin\naver-capture\page.tsx:729:  const withinBudgetCount =
+  app\admin\naver-capture\page.tsx:730:    rankedProducts.filter(
+  app\admin\naver-capture\page.tsx:731:      (product) =>
+  app\admin\naver-capture\page.tsx:732:        product.budgetStatus ===
+  app\admin\naver-capture\page.tsx:733:        "within",
+  app\admin\naver-capture\page.tsx:734:    ).length;
+  app\admin\naver-capture\page.tsx:735:
+  app\admin\naver-capture\page.tsx:736:  const supplementCount =
+  app\admin\naver-capture\page.tsx:737:    finalists.filter(
+  app\admin\naver-capture\page.tsx:741:        product.budgetStatus !==
+  app\admin\naver-capture\page.tsx:742:          "unlimited",
+  app\admin\naver-capture\page.tsx:743:    ).length;
+  app\admin\naver-capture\page.tsx:744:
+  app\admin\naver-capture\page.tsx:745:  const hasBudget =
+> app\admin\naver-capture\page.tsx:746:    minBudget > 0 ||
+> app\admin\naver-capture\page.tsx:747:    maxBudget > 0;
+  app\admin\naver-capture\page.tsx:748:
+  app\admin\naver-capture\page.tsx:749:  return (
+  app\admin\naver-capture\page.tsx:750:    <main
+  app\admin\naver-capture\page.tsx:751:      style={{
+  app\admin\naver-capture\page.tsx:752:        maxWidth: 1200,
+  app\admin\naver-capture\page.tsx:753:        margin: "0 auto",
+  app\admin\naver-capture\page.tsx:754:        padding:
+  app\admin\naver-capture\page.tsx:755:          "40px 24px",
+  app\admin\naver-capture\page.tsx:756:      }}
+  app\admin\naver-capture\page.tsx:757:    >
+  app\admin\naver-capture\page.tsx:758:      <div
+  app\admin\naver-capture\page.tsx:759:        style={{
+  app\admin\naver-capture\page.tsx:829:                1.7,
+  app\admin\naver-capture\page.tsx:830:            }}
+  app\admin\naver-capture\page.tsx:831:          >
+  app\admin\naver-capture\page.tsx:832:            설정 예산:{" "}
+  app\admin\naver-capture\page.tsx:833:            <strong>
+> app\admin\naver-capture\page.tsx:834:              {minBudget >
+  app\admin\naver-capture\page.tsx:835:              0
+  app\admin\naver-capture\page.tsx:836:                ? formatPrice(
+> app\admin\naver-capture\page.tsx:837:                    minBudget,
+  app\admin\naver-capture\page.tsx:838:                  )
+  app\admin\naver-capture\page.tsx:839:                : "최소 제한 없음"}
+  app\admin\naver-capture\page.tsx:840:              {" ~ "}
+> app\admin\naver-capture\page.tsx:841:              {maxBudget >
+  app\admin\naver-capture\page.tsx:842:              0
+  app\admin\naver-capture\page.tsx:843:                ? formatPrice(
+> app\admin\naver-capture\page.tsx:844:                    maxBudget,
+  app\admin\naver-capture\page.tsx:845:                  )
+  app\admin\naver-capture\page.tsx:846:                : "최대 제한 없음"}
+  app\admin\naver-capture\page.tsx:847:            </strong>
+  app\admin\naver-capture\page.tsx:848:          </div>
+  app\admin\naver-capture\page.tsx:849:        ) : null}
+  app\admin\naver-capture\page.tsx:850:
+  app\admin\naver-capture\page.tsx:851:        <div
+  app\admin\naver-capture\page.tsx:852:          style={{
+  app\admin\naver-capture\page.tsx:853:            display:
+  app\admin\naver-capture\page.tsx:854:              "flex",
+  app\admin\naver-capture\page.tsx:855:            gap: 18,
+  app\admin\naver-capture\page.tsx:856:            flexWrap:
+  app\advisor\results\ResultsClient.tsx:47:  productCautions?: string[];
+  app\advisor\results\ResultsClient.tsx:48:  commonCautions?: Array<{
+  app\advisor\results\ResultsClient.tsx:49:    title: string;
+  app\advisor\results\ResultsClient.tsx:50:    description: string;
+  app\advisor\results\ResultsClient.tsx:51:    affectedCount: number;
+> app\advisor\results\ResultsClient.tsx:52:    affectedProducts: string[];
+  app\advisor\results\ResultsClient.tsx:53:  }>;
+  app\advisor\results\ResultsClient.tsx:54:  bestFor: string[];
+  app\advisor\results\ResultsClient.tsx:55:  criterionBreakdown: CriterionBreakdown[];
+  app\advisor\results\ResultsClient.tsx:56:  personalPreferenceScore?: number | null;
+  app\advisor\results\ResultsClient.tsx:57:  personalPreferenceReason?: string;
+  app\advisor\results\ResultsClient.tsx:58:  productPrice?: number | null;
+  app\advisor\results\ResultsClient.tsx:59:  keySpecs?: KeySpec[];
+  app\advisor\results\ResultsClient.tsx:60:  budgetPenalty?: number;
+  app\advisor\results\ResultsClient.tsx:61:  budgetReason?: string;
+  app\advisor\results\ResultsClient.tsx:62:};
+  app\advisor\results\ResultsClient.tsx:63:
+  app\advisor\results\ResultsClient.tsx:64:type RecommendationResponse = {
+  app\api\analyze-personal-preferences\route.ts:123:
+  app\api\analyze-personal-preferences\route.ts:124:  return Math.max(unit, Math.round(value / unit) * unit);
+  app\api\analyze-personal-preferences\route.ts:125:}
+  app\api\analyze-personal-preferences\route.ts:126:
+  app\api\analyze-personal-preferences\route.ts:127:function createBudgetOptions(
+> app\api\analyze-personal-preferences\route.ts:128:  products: Array<Record<string, unknown>>,
+  app\api\analyze-personal-preferences\route.ts:129:) {
+  app\api\analyze-personal-preferences\route.ts:130:  const prices = products
+  app\api\analyze-personal-preferences\route.ts:131:    .map((product) => getProductPrice(product))
+  app\api\analyze-personal-preferences\route.ts:132:    .filter((price): price is number => price !== null && price > 0)
+  app\api\analyze-personal-preferences\route.ts:133:    .sort((a, b) => a - b);
+  app\api\analyze-personal-preferences\route.ts:134:
+  app\api\analyze-personal-preferences\route.ts:135:  if (prices.length < 2) {
+  app\api\analyze-personal-preferences\route.ts:136:    return [
+  app\api\analyze-personal-preferences\route.ts:137:      {
+  app\api\analyze-personal-preferences\route.ts:138:        label: "예산 제한 없음",
+  app\api\analyze-personal-preferences\route.ts:139:        value: "no_limit",
+  app\api\analyze-personal-preferences\route.ts:140:      },
+  app\api\analyze-personal-preferences\route.ts:222:    },
+  app\api\analyze-personal-preferences\route.ts:223:  ];
+  app\api\analyze-personal-preferences\route.ts:224:}
+  app\api\analyze-personal-preferences\route.ts:225:
+  app\api\analyze-personal-preferences\route.ts:226:function budgetOnlyScores(
+> app\api\analyze-personal-preferences\route.ts:227:  products: Array<Record<string, unknown>>,
+  app\api\analyze-personal-preferences\route.ts:228:  budgetChoice: string,
+  app\api\analyze-personal-preferences\route.ts:229:) {
+  app\api\analyze-personal-preferences\route.ts:230:  const range = parseBudgetChoice(budgetChoice);
+  app\api\analyze-personal-preferences\route.ts:231:
+  app\api\analyze-personal-preferences\route.ts:232:  return products.map((product) => {
+  app\api\analyze-personal-preferences\route.ts:233:    const price = getProductPrice(product);
+  app\api\analyze-personal-preferences\route.ts:234:
+  app\api\analyze-personal-preferences\route.ts:235:    if (!range) {
+  app\api\analyze-personal-preferences\route.ts:236:      return {
+  app\api\analyze-personal-preferences\route.ts:237:        productId: String(product.id),
+  app\api\analyze-personal-preferences\route.ts:238:        score: 100,
+  app\api\analyze-personal-preferences\route.ts:239:        reason: "예산 제한이 없어 가격 초과 페널티를 적용하지 않았습니다.",
+  app\api\analyze-personal-preferences\route.ts:333:
+  app\api\analyze-personal-preferences\route.ts:334:  return null;
+  app\api\analyze-personal-preferences\route.ts:335:}
+  app\api\analyze-personal-preferences\route.ts:336:
+  app\api\analyze-personal-preferences\route.ts:337:function createPersonalPreferenceEvidence(
+> app\api\analyze-personal-preferences\route.ts:338:  products: Array<Record<string, unknown>>,
+  app\api\analyze-personal-preferences\route.ts:339:) {
+  app\api\analyze-personal-preferences\route.ts:340:  return products.map((product) => ({
+  app\api\analyze-personal-preferences\route.ts:341:    id: String(product.id ?? ""),
+  app\api\analyze-personal-preferences\route.ts:342:    productName: compactText(product.product_name, 120),
+  app\api\analyze-personal-preferences\route.ts:343:    price: getProductPrice(product),
+  app\api\analyze-personal-preferences\route.ts:344:    marketMetrics: compactEvidence(product.market_metrics),
+  app\api\analyze-personal-preferences\route.ts:345:    detailSummary: compactEvidence(product.product_detail_analysis),
+  app\api\analyze-personal-preferences\route.ts:346:    reviewSummary: compactEvidence(product.review_analysis),
+  app\api\analyze-personal-preferences\route.ts:347:  }));
+  app\api\analyze-personal-preferences\route.ts:348:}
+  app\api\analyze-personal-preferences\route.ts:349:
+  app\api\analyze-personal-preferences\route.ts:350:export async function POST(request: Request) {
+  app\api\analyze-personal-preferences\route.ts:425:              interpretedPreferences: {
+  app\api\analyze-personal-preferences\route.ts:426:                type: "array",
+  app\api\analyze-personal-preferences\route.ts:427:                maxItems: 8,
+  app\api\analyze-personal-preferences\route.ts:428:                items: { type: "string" },
+  app\api\analyze-personal-preferences\route.ts:429:              },
+> app\api\analyze-personal-preferences\route.ts:430:              products: {
+  app\api\analyze-personal-preferences\route.ts:431:                type: "array",
+  app\api\analyze-personal-preferences\route.ts:432:                items: {
+  app\api\analyze-personal-preferences\route.ts:433:                  type: "object",
+  app\api\analyze-personal-preferences\route.ts:434:                  additionalProperties: false,
+  app\api\analyze-personal-preferences\route.ts:435:                  properties: {
+  app\api\analyze-personal-preferences\route.ts:436:                    productId: { type: "string" },
+  app\api\analyze-personal-preferences\route.ts:437:                    score: {
+  app\api\analyze-personal-preferences\route.ts:438:                      type: "integer",
+  app\api\analyze-personal-preferences\route.ts:439:                      minimum: 0,
+  app\api\analyze-personal-preferences\route.ts:440:                      maximum: 100,
+  app\api\analyze-personal-preferences\route.ts:441:                    },
+  app\api\analyze-personal-preferences\route.ts:442:                    reason: { type: "string" },
+  app\api\catalog-products\route.ts:171:
+  app\api\catalog-products\route.ts:172:    return NextResponse.json(
+  app\api\catalog-products\route.ts:173:      {
+  app\api\catalog-products\route.ts:174:        success: false,
+  app\api\catalog-products\route.ts:175:        count: 0,
+> app\api\catalog-products\route.ts:176:        products: [],
+  app\api\catalog-products\route.ts:177:        message:
+  app\api\catalog-products\route.ts:178:          error instanceof Error
+  app\api\catalog-products\route.ts:179:            ? error.message
+  app\api\catalog-products\route.ts:180:            : "제품 목록을 불러오지 못했습니다.",
+  app\api\catalog-products\route.ts:181:      },
+  app\api\catalog-products\route.ts:182:      { status: 500 },
+  app\api\catalog-products\route.ts:183:    );
+  app\api\catalog-products\route.ts:184:  }
+  app\api\catalog-products\route.ts:185:}
+  app\api\catalog-products\route.ts:186:
+  app\api\debug-robot-products\route.ts:45:      success: true,
+  app\api\debug-robot-products\route.ts:46:
+  app\api\debug-robot-products\route.ts:47:      count:
+  app\api\debug-robot-products\route.ts:48:        products.length,
+  app\api\debug-robot-products\route.ts:49:
+> app\api\debug-robot-products\route.ts:50:      products:
+  app\api\debug-robot-products\route.ts:51:        products.map(
+  app\api\debug-robot-products\route.ts:52:          (product) => ({
+  app\api\debug-robot-products\route.ts:53:            id:
+  app\api\debug-robot-products\route.ts:54:              product.id,
+  app\api\debug-robot-products\route.ts:55:
+  app\api\debug-robot-products\route.ts:56:            productName:
+  app\api\debug-robot-products\route.ts:57:              product.product_name,
+  app\api\debug-robot-products\route.ts:58:
+  app\api\debug-robot-products\route.ts:59:            hasReviewAnalysis:
+  app\api\debug-robot-products\route.ts:60:              Boolean(
+  app\api\debug-robot-products\route.ts:61:                product.review_analysis,
+  app\api\debug-robot-products\route.ts:62:              ),
+  app\api\generate-category-criteria\route.ts:58:};
+  app\api\generate-category-criteria\route.ts:59:
+  app\api\generate-category-criteria\route.ts:60:type CommonCaution = {
+  app\api\generate-category-criteria\route.ts:61:  title: string;
+  app\api\generate-category-criteria\route.ts:62:  description: string;
+> app\api\generate-category-criteria\route.ts:63:  affectedProducts: string[];
+  app\api\generate-category-criteria\route.ts:64:  affectedCount: number;
+  app\api\generate-category-criteria\route.ts:65:};
+  app\api\generate-category-criteria\route.ts:66:
+  app\api\generate-category-criteria\route.ts:67:function normalizeText(
+  app\api\generate-category-criteria\route.ts:68:  value: unknown,
+  app\api\generate-category-criteria\route.ts:69:) {
+  app\api\generate-category-criteria\route.ts:70:  return typeof value === "string"
+  app\api\generate-category-criteria\route.ts:71:    ? value
+  app\api\generate-category-criteria\route.ts:72:        .replace(/\s+/g, " ")
+  app\api\generate-category-criteria\route.ts:73:        .trim()
+  app\api\generate-category-criteria\route.ts:74:    : "";
+  app\api\generate-category-criteria\route.ts:75:}
+  app\api\generate-product-scores\route.ts:629:            profile.common_cautions,
+  app\api\generate-product-scores\route.ts:630:          )
+  app\api\generate-product-scores\route.ts:631:            ? profile.common_cautions
+  app\api\generate-product-scores\route.ts:632:            : [],
+  app\api\generate-product-scores\route.ts:633:
+> app\api\generate-product-scores\route.ts:634:        products:
+  app\api\generate-product-scores\route.ts:635:          products.map(
+  app\api\generate-product-scores\route.ts:636:            (
+  app\api\generate-product-scores\route.ts:637:              product,
+  app\api\generate-product-scores\route.ts:638:            ) => ({
+  app\api\generate-product-scores\route.ts:639:              id:
+  app\api\generate-product-scores\route.ts:640:                product.id,
+  app\api\generate-product-scores\route.ts:641:
+  app\api\generate-product-scores\route.ts:642:              productName:
+  app\api\generate-product-scores\route.ts:643:                product.product_name,
+  app\api\generate-product-scores\route.ts:644:
+  app\api\generate-product-scores\route.ts:645:              sourceUrl:
+  app\api\generate-product-scores\route.ts:646:                product.source_url,
+  app\api\market-candidates-enriched\route.ts:90:
+  app\api\market-candidates-enriched\route.ts:91:type CaptureResponse = {
+  app\api\market-candidates-enriched\route.ts:92:  success: boolean;
+  app\api\market-candidates-enriched\route.ts:93:  message?: string;
+  app\api\market-candidates-enriched\route.ts:94:  category?: string;
+> app\api\market-candidates-enriched\route.ts:95:  minBudget?: number;
+> app\api\market-candidates-enriched\route.ts:96:  maxBudget?: number;
+  app\api\market-candidates-enriched\route.ts:97:  products?: CapturedProduct[];
+  app\api\market-candidates-enriched\route.ts:98:};
+  app\api\market-candidates-enriched\route.ts:99:
+  app\api\market-candidates-enriched\route.ts:100:type FailureItem = {
+  app\api\market-candidates-enriched\route.ts:101:  position: number;
+  app\api\market-candidates-enriched\route.ts:102:  marketProduct: string;
+  app\api\market-candidates-enriched\route.ts:103:  stage:
+  app\api\market-candidates-enriched\route.ts:104:    | "resolve"
+  app\api\market-candidates-enriched\route.ts:105:    | "brightdata"
+  app\api\market-candidates-enriched\route.ts:106:    | "validation"
+  app\api\market-candidates-enriched\route.ts:107:    | "budget"
+  app\api\market-candidates-enriched\route.ts:108:    | "duplicate";
+  app\api\market-candidates-enriched\route.ts:267:  | ProcessSuccess
+  app\api\market-candidates-enriched\route.ts:268:  | ProcessFailure;
+  app\api\market-candidates-enriched\route.ts:269:
+  app\api\market-candidates-enriched\route.ts:270:function isWithinBudget(
+  app\api\market-candidates-enriched\route.ts:271:  price: number,
+> app\api\market-candidates-enriched\route.ts:272:  minBudget: number,
+> app\api\market-candidates-enriched\route.ts:273:  maxBudget: number,
+  app\api\market-candidates-enriched\route.ts:274:) {
+  app\api\market-candidates-enriched\route.ts:275:  if (
+> app\api\market-candidates-enriched\route.ts:276:    minBudget > 0 &&
+> app\api\market-candidates-enriched\route.ts:277:    price < minBudget
+  app\api\market-candidates-enriched\route.ts:278:  ) {
+  app\api\market-candidates-enriched\route.ts:279:    return false;
+  app\api\market-candidates-enriched\route.ts:280:  }
+  app\api\market-candidates-enriched\route.ts:281:
+  app\api\market-candidates-enriched\route.ts:282:  if (
+> app\api\market-candidates-enriched\route.ts:283:    maxBudget > 0 &&
+> app\api\market-candidates-enriched\route.ts:284:    price > maxBudget
+  app\api\market-candidates-enriched\route.ts:285:  ) {
+  app\api\market-candidates-enriched\route.ts:286:    return false;
+  app\api\market-candidates-enriched\route.ts:287:  }
+  app\api\market-candidates-enriched\route.ts:288:
+  app\api\market-candidates-enriched\route.ts:289:  return true;
+  app\api\market-candidates-enriched\route.ts:290:}
+  app\api\market-candidates-enriched\route.ts:291:
+  app\api\market-candidates-enriched\route.ts:292:function cleanName(
+  app\api\market-candidates-enriched\route.ts:293:  value: string,
+  app\api\market-candidates-enriched\route.ts:294:) {
+  app\api\market-candidates-enriched\route.ts:295:  return value
+  app\api\market-candidates-enriched\route.ts:296:    .toLowerCase()
+  app\api\market-candidates-enriched\route.ts:482:    ) >= 0.95
+  app\api\market-candidates-enriched\route.ts:483:  );
+  app\api\market-candidates-enriched\route.ts:484:}
+  app\api\market-candidates-enriched\route.ts:485:
+  app\api\market-candidates-enriched\route.ts:486:function removeMarketDuplicates(
+> app\api\market-candidates-enriched\route.ts:487:  products: CapturedProduct[],
+  app\api\market-candidates-enriched\route.ts:488:) {
+  app\api\market-candidates-enriched\route.ts:489:  const result:
+  app\api\market-candidates-enriched\route.ts:490:    CapturedProduct[] = [];
+  app\api\market-candidates-enriched\route.ts:491:
+  app\api\market-candidates-enriched\route.ts:492:  const sorted =
+  app\api\market-candidates-enriched\route.ts:493:    [...products].sort(
+  app\api\market-candidates-enriched\route.ts:494:      (a, b) =>
+  app\api\market-candidates-enriched\route.ts:495:        b.reviewCount -
+  app\api\market-candidates-enriched\route.ts:496:        a.reviewCount,
+  app\api\market-candidates-enriched\route.ts:497:    );
+  app\api\market-candidates-enriched\route.ts:498:
+  app\api\market-candidates-enriched\route.ts:499:  for (
+  app\api\market-candidates-enriched\route.ts:995:      );
+  app\api\market-candidates-enriched\route.ts:996:    }
+  app\api\market-candidates-enriched\route.ts:997:
+  app\api\market-candidates-enriched\route.ts:998:    const captureUrl =
+  app\api\market-candidates-enriched\route.ts:999:      new URL(
+> app\api\market-candidates-enriched\route.ts:1000:        "/api/naver-capture",
+  app\api\market-candidates-enriched\route.ts:1001:        requestUrl.origin,
+  app\api\market-candidates-enriched\route.ts:1002:      );
+  app\api\market-candidates-enriched\route.ts:1003:
+  app\api\market-candidates-enriched\route.ts:1004:    captureUrl.searchParams.set(
+  app\api\market-candidates-enriched\route.ts:1005:      "id",
+  app\api\market-candidates-enriched\route.ts:1006:      captureId,
+  app\api\market-candidates-enriched\route.ts:1007:    );
+  app\api\market-candidates-enriched\route.ts:1008:
+  app\api\market-candidates-enriched\route.ts:1009:    const captureResponse =
+  app\api\market-candidates-enriched\route.ts:1010:      await fetch(
+  app\api\market-candidates-enriched\route.ts:1011:        captureUrl,
+  app\api\market-candidates-enriched\route.ts:1012:        {
+  app\api\market-candidates-enriched\route.ts:1032:
+  app\api\market-candidates-enriched\route.ts:1033:    const category =
+  app\api\market-candidates-enriched\route.ts:1034:      captureData.category ??
+  app\api\market-candidates-enriched\route.ts:1035:      "";
+  app\api\market-candidates-enriched\route.ts:1036:
+> app\api\market-candidates-enriched\route.ts:1037:    const minBudget =
+  app\api\market-candidates-enriched\route.ts:1038:      Number(
+> app\api\market-candidates-enriched\route.ts:1039:        captureData.minBudget ??
+  app\api\market-candidates-enriched\route.ts:1040:          0,
+  app\api\market-candidates-enriched\route.ts:1041:      ) || 0;
+  app\api\market-candidates-enriched\route.ts:1042:
+> app\api\market-candidates-enriched\route.ts:1043:    const maxBudget =
+  app\api\market-candidates-enriched\route.ts:1044:      Number(
+> app\api\market-candidates-enriched\route.ts:1045:        captureData.maxBudget ??
+  app\api\market-candidates-enriched\route.ts:1046:          0,
+  app\api\market-candidates-enriched\route.ts:1047:      ) || 0;
+  app\api\market-candidates-enriched\route.ts:1048:
+  app\api\market-candidates-enriched\route.ts:1049:    /*
+  app\api\market-candidates-enriched\route.ts:1050:      캡처 전체에서:
+  app\api\market-candidates-enriched\route.ts:1051:
+  app\api\market-candidates-enriched\route.ts:1052:      1. 동일제품 제거
+  app\api\market-candidates-enriched\route.ts:1053:      2. 예산 안 상품을 최우선으로 정렬
+  app\api\market-candidates-enriched\route.ts:1054:      3. 목표 개수를 채우지 못하면
+  app\api\market-candidates-enriched\route.ts:1055:         예산 범위에서 가장 가까운 상품부터 자동 보충
+  app\api\market-candidates-enriched\route.ts:1056:      4. 같은 우선순위에서는 리뷰 수 / 평점 순 정렬
+  app\api\market-candidates-enriched\route.ts:1057:      5. 최대 30개까지 보충 후보로 보관
+  app\api\market-candidates-enriched\route.ts:1078:      price: number,
+  app\api\market-candidates-enriched\route.ts:1079:    ) {
+  app\api\market-candidates-enriched\route.ts:1080:      if (
+  app\api\market-candidates-enriched\route.ts:1081:        isWithinBudget(
+  app\api\market-candidates-enriched\route.ts:1082:          price,
+> app\api\market-candidates-enriched\route.ts:1083:          minBudget,
+> app\api\market-candidates-enriched\route.ts:1084:          maxBudget,
+  app\api\market-candidates-enriched\route.ts:1085:        )
+  app\api\market-candidates-enriched\route.ts:1086:      ) {
+  app\api\market-candidates-enriched\route.ts:1087:        return 0;
+  app\api\market-candidates-enriched\route.ts:1088:      }
+  app\api\market-candidates-enriched\route.ts:1089:
+  app\api\market-candidates-enriched\route.ts:1090:      if (
+> app\api\market-candidates-enriched\route.ts:1091:        minBudget > 0 &&
+> app\api\market-candidates-enriched\route.ts:1092:        price < minBudget
+  app\api\market-candidates-enriched\route.ts:1093:      ) {
+  app\api\market-candidates-enriched\route.ts:1094:        return (
+> app\api\market-candidates-enriched\route.ts:1095:          minBudget -
+  app\api\market-candidates-enriched\route.ts:1096:          price
+  app\api\market-candidates-enriched\route.ts:1097:        );
+  app\api\market-candidates-enriched\route.ts:1098:      }
+  app\api\market-candidates-enriched\route.ts:1099:
+  app\api\market-candidates-enriched\route.ts:1100:      if (
+> app\api\market-candidates-enriched\route.ts:1101:        maxBudget > 0 &&
+> app\api\market-candidates-enriched\route.ts:1102:        price > maxBudget
+  app\api\market-candidates-enriched\route.ts:1103:      ) {
+  app\api\market-candidates-enriched\route.ts:1104:        return (
+  app\api\market-candidates-enriched\route.ts:1105:          price -
+> app\api\market-candidates-enriched\route.ts:1106:          maxBudget
+  app\api\market-candidates-enriched\route.ts:1107:        );
+  app\api\market-candidates-enriched\route.ts:1108:      }
+  app\api\market-candidates-enriched\route.ts:1109:
+  app\api\market-candidates-enriched\route.ts:1110:      return 0;
+  app\api\market-candidates-enriched\route.ts:1111:    }
+  app\api\market-candidates-enriched\route.ts:1112:
+  app\api\market-candidates-enriched\route.ts:1113:    const marketCandidates =
+  app\api\market-candidates-enriched\route.ts:1114:      [...dedupedMarketProducts]
+  app\api\market-candidates-enriched\route.ts:1115:        .sort(
+  app\api\market-candidates-enriched\route.ts:1116:          (a, b) => {
+  app\api\market-candidates-enriched\route.ts:1117:            const aInBudget =
+  app\api\market-candidates-enriched\route.ts:1118:              isWithinBudget(
+  app\api\market-candidates-enriched\route.ts:1119:                a.price,
+> app\api\market-candidates-enriched\route.ts:1120:                minBudget,
+> app\api\market-candidates-enriched\route.ts:1121:                maxBudget,
+  app\api\market-candidates-enriched\route.ts:1122:              );
+  app\api\market-candidates-enriched\route.ts:1123:
+  app\api\market-candidates-enriched\route.ts:1124:            const bInBudget =
+  app\api\market-candidates-enriched\route.ts:1125:              isWithinBudget(
+  app\api\market-candidates-enriched\route.ts:1126:                b.price,
+> app\api\market-candidates-enriched\route.ts:1127:                minBudget,
+> app\api\market-candidates-enriched\route.ts:1128:                maxBudget,
+  app\api\market-candidates-enriched\route.ts:1129:              );
+  app\api\market-candidates-enriched\route.ts:1130:
+  app\api\market-candidates-enriched\route.ts:1131:            /*
+  app\api\market-candidates-enriched\route.ts:1132:              예산 안 상품은 항상 먼저.
+  app\api\market-candidates-enriched\route.ts:1133:            */
+  app\api\market-candidates-enriched\route.ts:1134:            if (
+  app\api\market-candidates-enriched\route.ts:1135:              aInBudget !==
+  app\api\market-candidates-enriched\route.ts:1136:              bInBudget
+  app\api\market-candidates-enriched\route.ts:1137:            ) {
+  app\api\market-candidates-enriched\route.ts:1138:              return aInBudget
+  app\api\market-candidates-enriched\route.ts:1139:                ? -1
+  app\api\market-candidates-enriched\route.ts:1140:                : 1;
+  app\api\market-candidates-enriched\route.ts:1951:        가격 정보가 달라진 것이므로 기존처럼 탈락시킨다.
+  app\api\market-candidates-enriched\route.ts:1952:      */
+  app\api\market-candidates-enriched\route.ts:1953:      const marketBudgetFallback =
+  app\api\market-candidates-enriched\route.ts:1954:        !isWithinBudget(
+  app\api\market-candidates-enriched\route.ts:1955:          market.price,
+> app\api\market-candidates-enriched\route.ts:1956:          minBudget,
+> app\api\market-candidates-enriched\route.ts:1957:          maxBudget,
+  app\api\market-candidates-enriched\route.ts:1958:        );
+  app\api\market-candidates-enriched\route.ts:1959:
+  app\api\market-candidates-enriched\route.ts:1960:      if (
+  app\api\market-candidates-enriched\route.ts:1961:        !marketBudgetFallback &&
+  app\api\market-candidates-enriched\route.ts:1962:        !isWithinBudget(
+  app\api\market-candidates-enriched\route.ts:1963:          detail.finalPrice,
+> app\api\market-candidates-enriched\route.ts:1964:          minBudget,
+> app\api\market-candidates-enriched\route.ts:1965:          maxBudget,
+  app\api\market-candidates-enriched\route.ts:1966:        )
+  app\api\market-candidates-enriched\route.ts:1967:      ) {
+  app\api\market-candidates-enriched\route.ts:1968:        const reason =
+  app\api\market-candidates-enriched\route.ts:1969:          `실제 판매가 ${detail.finalPrice.toLocaleString(
+  app\api\market-candidates-enriched\route.ts:1970:            "ko-KR",
+  app\api\market-candidates-enriched\route.ts:1971:          )}원이 설정 예산 범위를 벗어났습니다.`;
+  app\api\market-candidates-enriched\route.ts:1972:
+  app\api\market-candidates-enriched\route.ts:1973:        console.log(
+  app\api\market-candidates-enriched\route.ts:1974:          `[ENRICH ${position}] 탈락(budget)`,
+  app\api\market-candidates-enriched\route.ts:1975:          reason,
+  app\api\market-candidates-enriched\route.ts:1976:        );
+  app\api\market-candidates-enriched\route.ts:1977:
+  app\api\market-candidates-enriched\route.ts:2758:      success: true,
+  app\api\market-candidates-enriched\route.ts:2759:
+  app\api\market-candidates-enriched\route.ts:2760:      category,
+  app\api\market-candidates-enriched\route.ts:2761:
+  app\api\market-candidates-enriched\route.ts:2762:      budget: {
+> app\api\market-candidates-enriched\route.ts:2763:        minBudget,
+> app\api\market-candidates-enriched\route.ts:2764:        maxBudget,
+  app\api\market-candidates-enriched\route.ts:2765:      },
+  app\api\market-candidates-enriched\route.ts:2766:
+  app\api\market-candidates-enriched\route.ts:2767:      targetCount:
+  app\api\market-candidates-enriched\route.ts:2768:        TARGET_COUNT,
+  app\api\market-candidates-enriched\route.ts:2769:
+  app\api\market-candidates-enriched\route.ts:2770:      marketCandidateCount:
+  app\api\market-candidates-enriched\route.ts:2771:        marketCandidates.length,
+  app\api\market-candidates-enriched\route.ts:2772:
+  app\api\market-candidates-enriched\route.ts:2773:      resolverAttempts,
+  app\api\market-candidates-enriched\route.ts:2774:
+  app\api\market-candidates-enriched\route.ts:2775:      brightDataCalls,
+  app\api\market-candidates-enriched\route.ts:2776:
+  app\assistant\page.tsx:38:};
+  app\assistant\page.tsx:39:
+  app\assistant\page.tsx:40:type CatalogResponse = {
+  app\assistant\page.tsx:41:  success: boolean;
+  app\assistant\page.tsx:42:  count: number;
+> app\assistant\page.tsx:43:  products: CatalogProduct[];
+  app\assistant\page.tsx:44:  message?: string;
+  app\assistant\page.tsx:45:};
+  app\assistant\page.tsx:46:
+  app\assistant\page.tsx:47:function AssistantContent() {
+  app\assistant\page.tsx:48:  const searchParams = useSearchParams();
+  app\assistant\page.tsx:49:
+  app\assistant\page.tsx:50:  const [query, setQuery] = useState(
+  app\assistant\page.tsx:51:    searchParams.get("q") ?? "",
+  app\assistant\page.tsx:52:  );
+  app\assistant\page.tsx:53:
+  app\assistant\page.tsx:54:  const [products, setProducts] = useState<
+  app\assistant\page.tsx:55:    CatalogProduct[]
+  app\search\page.tsx:41:};
+  app\search\page.tsx:42:
+  app\search\page.tsx:43:type CatalogResponse = {
+  app\search\page.tsx:44:  success: boolean;
+  app\search\page.tsx:45:  count: number;
+> app\search\page.tsx:46:  products: CatalogProduct[];
+  app\search\page.tsx:47:  message?: string;
+  app\search\page.tsx:48:};
+  app\search\page.tsx:49:
+  app\search\page.tsx:50:type SortOption =
+  app\search\page.tsx:51:  | "analysis"
+  app\search\page.tsx:52:  | "confidence"
+  app\search\page.tsx:53:  | "newest"
+  app\search\page.tsx:54:  | "name";
+  app\search\page.tsx:55:
+  app\search\page.tsx:56:function formatDate(value: string) {
+  app\search\page.tsx:57:  const date = new Date(value);
+  app\search\page.tsx:58:
+  lib\marketRanking.ts:93:    marketReasons,
+  lib\marketRanking.ts:94:  };
+  lib\marketRanking.ts:95:}
+  lib\marketRanking.ts:96:
+  lib\marketRanking.ts:97:export function getMarketCandidates(
+> lib\marketRanking.ts:98:  products: Product[],
+  lib\marketRanking.ts:99:  category?: string,
+  lib\marketRanking.ts:100:  limit = 5,
+  lib\marketRanking.ts:101:): MarketCandidate[] {
+  lib\marketRanking.ts:102:  const normalizedCategory =
+  lib\marketRanking.ts:103:    category?.trim().toLowerCase() ?? "";
+  lib\marketRanking.ts:104:
+  lib\marketRanking.ts:105:  const categoryProducts = products.filter(
+  lib\marketRanking.ts:106:    (product) => {
+  lib\marketRanking.ts:107:      if (product.isDiscontinued) {
+  lib\marketRanking.ts:108:        return false;
+  lib\marketRanking.ts:109:      }
+  lib\marketRanking.ts:110:
+  lib\marketSearch.ts:706:    `${normalizedKeyword} 추천`,
+  lib\marketSearch.ts:707:    `${normalizedKeyword} 인기`,
+  lib\marketSearch.ts:708:    `${normalizedKeyword} 비교`,
+  lib\marketSearch.ts:709:  ];
+  lib\marketSearch.ts:710:
+> lib\marketSearch.ts:711:  const uniqueProducts:
+  lib\marketSearch.ts:712:    MarketSearchResult[] = [];
+  lib\marketSearch.ts:713:
+  lib\marketSearch.ts:714:  const seen =
+  lib\marketSearch.ts:715:    new Set<string>();
+  lib\marketSearch.ts:716:
+  lib\marketSearch.ts:717:  for (
+  lib\marketSearch.ts:718:    const query of queries
+  lib\marketSearch.ts:719:  ) {
+  lib\marketSearch.ts:720:    if (
+  lib\marketSearch.ts:721:      uniqueProducts.length >=
+  lib\marketSearch.ts:722:      15
+  lib\marketSearch.ts:723:    ) {
+  lib\recommendation.ts:9:} as const;
+  lib\recommendation.ts:10:
+  lib\recommendation.ts:11:type Criterion = keyof typeof criterionLabels;
+  lib\recommendation.ts:12:
+  lib\recommendation.ts:13:export function getRecommendation(
+> lib\recommendation.ts:14:  sourceProducts: Product[],
+  lib\recommendation.ts:15:  options: RecommendationOptions,
+  lib\recommendation.ts:16:): RecommendationResult[] {
+  lib\recommendation.ts:17:  const weights: Record<Criterion, number> = {
+  lib\recommendation.ts:18:    cooling: options.cooling,
+  lib\recommendation.ts:19:    quietness: options.quietness,
+  lib\recommendation.ts:20:    portability: options.portability,
+  lib\recommendation.ts:21:    battery: options.battery,
+  lib\recommendation.ts:22:    afterService: options.afterService,
+  lib\recommendation.ts:23:  };
+  lib\recommendation.ts:24:
+  lib\recommendation.ts:25:  const totalWeight = Object.values(weights).reduce((sum, value) => sum + value, 0) || 1;
+  lib\recommendation.ts:26:
+
+
+
+
+===== API Route 목록 =====
+app\api\advisor-recommendations\route.ts
+app\api\analyze-personal-preferences\route.ts
+app\api\analyze-product-detail\route.ts
+app\api\analyze-reviews\route.ts
+app\api\auto-register-product\route.ts
+app\api\brightdata-test\route.ts
+app\api\catalog-products\route.ts
+app\api\category-profile\route.ts
+app\api\debug-robot-products\route.ts
+app\api\detail-bookmarklet\route.ts
+app\api\extract-product\route.ts
+app\api\fetch-reviews\route.ts
+app\api\generate-category-criteria\route.ts
+app\api\generate-product-scores\route.ts
+app\api\import-market-candidates\route.ts
+app\api\market-candidates\route.ts
+app\api\market-candidates-enriched\route.ts
+app\api\naver-capture\route.ts
+app\api\naver-product-detail\route.ts
+app\api\recommend\route.ts
+app\api\resolve-naver-product-url\route.ts
+app\api\review-bookmarklet\route.ts
+app\api\robot-ranking-test\route.ts
+app\api\save-review-analysis-batch\route.ts
+app\api\search-products\route.ts
+app\api\test-source\route.ts
+app\api\update-product-source\route.ts
+
+===== 완료 =====

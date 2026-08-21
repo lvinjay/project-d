@@ -1,0 +1,149 @@
+﻿============================================================
+REQUIRED DETAIL FIELD CHECK
+============================================================
+
+############################################################
+TARGET: X60 Master
+############################################################
+
+===== FILE: robot-final-after-cost-guard.json =====
+detailStatus: partial-market
+productId: 59204433943
+productName: 드리미 올인원 로봇청소기 X60 Master 스팀 직배수형, 화이트
+brand: 
+manufacturer: 
+modelName: 
+originalPrice: 1090000
+finalPrice: 1090000
+reviewCount: 1135
+rating: 4.82
+sellerName: 판매처 23
+categoryName: 
+imageUrl: https://shopping-phinf.pstatic.net/main_5920443/59204433943.20260310171023.jpg?type=f300
+reviewSamples: 0
+sourceUrl: https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59204433943&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0&t=mszqcje6&h=393afaa5077ba76a1c10bf134ae6fc6fb242a1bc&frm=NVSCDIG
+reviewSourceUrl: https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59204433943&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0&t=mszqcje6&h=393afaa5077ba76a1c10bf134ae6fc6fb242a1bc&frm=NVSCDIG
+
+===== FILE: robot-final-node-check.json =====
+detailStatus: partial-market
+productId: 59204433943
+productName: 드리미 올인원 로봇청소기 X60 Master 스팀 직배수형, 화이트
+brand: 
+manufacturer: 
+modelName: 
+originalPrice: 1090000
+finalPrice: 1090000
+reviewCount: 1154
+rating: 4.83
+sellerName: 판매처 23
+categoryName: 
+imageUrl: https://shopping-phinf.pstatic.net/main_5920443/59204433943.20260310171023.jpg?type=f300
+reviewSamples: 0
+sourceUrl: https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59204433943&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0&t=mt0w9208&h=005ad807f8f4d9da251a2a19fa5f288524de1ef6&frm=NVSCPRO
+reviewSourceUrl: https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59204433943&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0&t=mt0w9208&h=005ad807f8f4d9da251a2a19fa5f288524de1ef6&frm=NVSCPRO
+
+===== FILE: robot-full-after-ranking-fix-2.json =====
+detailStatus: partial-market
+productId: 59204433943
+productName: Ã«ÂÂÃ«Â¦Â¬Ã«Â¯Â¸ Ã¬ÂÂ¬Ã¬ÂÂ¸Ã¬ÂÂ Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° X60 Master Ã¬ÂÂ¤Ã­ÂÂ Ã¬Â§ÂÃ«Â°Â°Ã¬ÂÂÃ­ÂÂ, Ã­ÂÂÃ¬ÂÂ´Ã­ÂÂ¸
+brand: 
+manufacturer: 
+modelName: 
+originalPrice: 1090000
+finalPrice: 1090000
+reviewCount: 1135
+rating: 4.82
+sellerName: Ã­ÂÂÃ«Â§Â¤Ã¬Â²Â 23
+categoryName: 
+imageUrl: https://shopping-phinf.pstatic.net/main_5920443/59204433943.20260310171023.jpg?type=f300
+reviewSamples: 0
+sourceUrl: https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59204433943&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0&t=mszqcje6&h=393afaa5077ba76a1c10bf134ae6fc6fb242a1bc&frm=NVSCDIG
+reviewSourceUrl: https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59204433943&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0&t=mszqcje6&h=393afaa5077ba76a1c10bf134ae6fc6fb242a1bc&frm=NVSCDIG
+
+===== FILE: robot-full-recovery-result.json =====
+detailStatus: partial-market
+productId: 59204433943
+productName: 드리미 올인원 로봇청소기 X60 Master 스팀 직배수형, 화이트
+brand: 
+manufacturer: 
+modelName: 
+originalPrice: 1090000
+finalPrice: 1090000
+reviewCount: 1135
+rating: 4.82
+sellerName: 판매처 23
+categoryName: 
+imageUrl: https://shopping-phinf.pstatic.net/main_5920443/59204433943.20260310171023.jpg?type=f300
+reviewSamples: 0
+sourceUrl: https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59204433943&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0&t=mszqcje6&h=393afaa5077ba76a1c10bf134ae6fc6fb242a1bc&frm=NVSCDIG
+reviewSourceUrl: https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59204433943&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0&t=mszqcje6&h=393afaa5077ba76a1c10bf134ae6fc6fb242a1bc&frm=NVSCDIG
+
+############################################################
+TARGET: S10 MaxV Ultra
+############################################################
+
+===== FILE: robot-clean-full-test.json =====
+detailStatus: full
+productId: 12049377990
+productName: ë¡ë³´ë½ì¸ì  ìíë°±ì ê³ ì²´ì¸ì  ì½ì¸í 30ê°ì ë¡ë´ì²­ìê¸° í¸íì©
+brand: ìíë°±ì
+manufacturer: (ì£¼)ë°ëëì½í¼ë ì´ì
+modelName: ìíë°±ì ë¡ë´ì²­ìê¸° ì½ì¸ í´ë¦¬ë
+originalPrice: 20000
+finalPrice: 13500
+reviewCount: 153
+rating: 
+sellerName: ìíë°±ì
+categoryName: ì²­ìê¸°ë¶ìí
+imageUrl: https://shop-phinf.pstatic.net/20250610_81/17495439688206uxjb_JPEG/100487837746435902_1326420450.jpg?type=o1000
+reviewSamples: 20
+sourceUrl: https://brand.naver.com/lifed100/products/12049377990
+reviewSourceUrl: https://brand.naver.com/lifed100/products/12049377990
+
+===== FILE: robot-clean-full-test.json =====
+detailStatus: full
+productId: 13370765217
+productName: [ëì§í¸ê°ì íì¤í] ë¡ë³´ë½ S10 MaxV Slim ì§ë°°ì ë¡ë´ì²­ìê¸°
+brand: ë¡ë³´ë½
+manufacturer: ë¡ë³´ë½
+modelName: RRE0CPS+EWFD51HRR
+originalPrice: 1840000
+finalPrice: 1690000
+reviewCount: 567
+rating: 
+sellerName: ë¡ë³´ë½ ê³µì ì¤í ì´
+categoryName: ë¡ë´ì²­ìê¸°
+imageUrl: https://shop-phinf.pstatic.net/20260428_27/17773432554605JLo2_JPEG/49310745541365623_326419501.jpg?type=o1000
+reviewSamples: 20
+sourceUrl: https://brand.naver.com/roborock/products/13370765217
+reviewSourceUrl: https://brand.naver.com/roborock/products/13370765217
+
+===== FILE: robot-full-after-ranking-fix-2.json =====
+detailStatus: partial-market
+productId: 59077746157
+productName: Ã«Â¡ÂÃ«Â³Â´Ã«ÂÂ½ Ã«Â¡ÂÃ«Â´ÂÃ¬Â²Â­Ã¬ÂÂÃªÂ¸Â° S10 MaxV Ultra RRE0VES+EWFD55HRR Ã¬ÂÂÃ«ÂÂ Ã«Â¬Â¼Ã­ÂÂµÃ­ÂÂ, Ã­ÂÂÃ¬ÂÂ´Ã­ÂÂ¸
+brand: 
+manufacturer: 
+modelName: 
+originalPrice: 1590000
+finalPrice: 1590000
+reviewCount: 7946
+rating: 4.85
+sellerName: Ã­ÂÂÃ«Â§Â¤Ã¬Â²Â 43
+categoryName: 
+imageUrl: https://shopping-phinf.pstatic.net/main_5907774/59077746157.20260227155822.jpg?type=f300
+reviewSamples: 0
+sourceUrl: https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59077746157&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0&t=mszqcnvf&h=6c0cfafca0d7c2e80770a3e3d5f5cbcdb57ad6b1&frm=NVSCPRO
+reviewSourceUrl: https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59077746157&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0&t=mszqcnvf&h=6c0cfafca0d7c2e80770a3e3d5f5cbcdb57ad6b1&frm=NVSCPRO
+
+===== FILE: serpapi-price-raw-check.json =====
+DETAIL: NULL
+
+===== FILE: serpapi-price-raw-check.json =====
+DETAIL: NULL
+
+===== FILE: serpapi-price-raw-check.json =====
+DETAIL: NULL
+
+===== FILE: serpapi-price-raw-check.json =====
+DETAIL: NULL

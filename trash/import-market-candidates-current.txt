@@ -1,0 +1,422 @@
+﻿import {
+  NextResponse,
+} from "next/server";
+
+import {
+  supabase,
+} from "../../../lib/supabase";
+
+export const runtime =
+  "nodejs";
+
+export const dynamic =
+  "force-dynamic";
+
+type ReviewItem = {
+  rating?: number;
+  date?: string;
+  text?: string;
+  helpfulCount?: number;
+};
+
+type CandidateDetail = {
+  productId?: string;
+  productName?: string;
+  brand?: string;
+  manufacturer?: string;
+  modelName?: string;
+  originalPrice?: number;
+  finalPrice?: number;
+  discountRate?: number;
+  reviewCount?: number;
+  rating?: number | null;
+  sellerName?: string;
+  categoryName?: string;
+  imageUrl?: string;
+  reviewSamples?: number;
+  reviews?: ReviewItem[];
+  sourceUrl?: string;
+};
+
+type Candidate = {
+  market?: {
+    productName?: string;
+    listedPrice?: number;
+    reviewCount?: number;
+    rating?: number;
+    imageUrl?: string;
+    sourceUrl?: string;
+  };
+
+  detail?: CandidateDetail;
+};
+
+type ImportRequest = {
+  category?: string;
+  candidates?: Candidate[];
+};
+
+function normalizeText(
+  value: unknown,
+) {
+  return typeof value === "string"
+    ? value
+        .replace(/\s+/g, " ")
+        .trim()
+    : "";
+}
+
+export async function POST(
+  request: Request,
+) {
+  try {
+    const body =
+      (await request.json()) as ImportRequest;
+
+    const category =
+      normalizeText(
+        body.category,
+      );
+
+    const candidates =
+      Array.isArray(
+        body.candidates,
+      )
+        ? body.candidates
+        : [];
+
+    if (!category) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "카테고리가 필요합니다.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    if (
+      candidates.length === 0
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "등록할 후보가 없습니다.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    const results = [];
+
+    for (
+      const candidate of
+      candidates
+    ) {
+      const detail =
+        candidate.detail ?? {};
+
+      const productId =
+        normalizeText(
+          detail.productId,
+        );
+
+      const productName =
+        normalizeText(
+          detail.productName,
+        );
+
+      const sourceUrl =
+        normalizeText(
+          detail.sourceUrl,
+        );
+
+      const originProductNo =
+        Number(
+          productId,
+        );
+
+      if (
+        !productId ||
+        !productName ||
+        !sourceUrl ||
+        !Number.isSafeInteger(
+          originProductNo,
+        )
+      ) {
+        results.push({
+          productName,
+          productId,
+          success: false,
+          reason:
+            "필수 상품정보가 부족합니다.",
+        });
+
+        continue;
+      }
+
+      /*
+        새 자동수집 파이프라인에서
+        확보한 상세정보를 기존 Project D의
+        product_detail_analysis에 저장한다.
+
+        따라서 별도의 상세페이지 재수집 없이
+        category criteria 생성에 사용할 수 있다.
+      */
+      const productDetailAnalysis = {
+        source:
+          "market_candidate_brightdata",
+
+        productId,
+
+        productName,
+
+        brand:
+          normalizeText(
+            detail.brand,
+          ),
+
+        manufacturer:
+          normalizeText(
+            detail.manufacturer,
+          ),
+
+        modelName:
+          normalizeText(
+            detail.modelName,
+          ),
+
+        price: {
+          originalPrice:
+            Number(
+              detail.originalPrice ??
+                0,
+            ),
+
+          finalPrice:
+            Number(
+              detail.finalPrice ??
+                0,
+            ),
+
+          discountRate:
+            Number(
+              detail.discountRate ??
+                0,
+            ),
+        },
+
+        reviewCount:
+          Number(
+            detail.reviewCount ??
+              0,
+          ),
+
+        rating:
+          detail.rating ??
+          null,
+
+        sellerName:
+          normalizeText(
+            detail.sellerName,
+          ),
+
+        categoryName:
+          normalizeText(
+            detail.categoryName,
+          ),
+
+        imageUrl:
+          normalizeText(
+            detail.imageUrl,
+          ),
+
+        marketListedPrice:
+          Number(
+            candidate.market
+              ?.listedPrice ??
+              0,
+          ),
+
+        collectedReviewSamples:
+          Array.isArray(
+            detail.reviews,
+          )
+            ? detail.reviews.length
+            : 0,
+
+        sourceUrl,
+
+        collectedAt:
+          new Date()
+            .toISOString(),
+      };
+
+      const {
+        data: existing,
+        error:
+          existingError,
+      } =
+        await supabase
+          .from("products")
+          .select("id")
+          .or(
+            `origin_product_no.eq.${originProductNo},source_url.eq.${sourceUrl}`,
+          )
+          .limit(1);
+
+      if (existingError) {
+        throw existingError;
+      }
+
+      const existingId =
+        Array.isArray(
+          existing,
+        ) &&
+        existing.length > 0
+          ? existing[0].id
+          : null;
+
+      if (existingId) {
+        const {
+          data,
+          error,
+        } =
+          await supabase
+            .from("products")
+            .update({
+              category,
+
+              product_name:
+                productName,
+
+              source_url:
+                sourceUrl,
+
+              checkout_merchant_no:
+                null,
+
+              origin_product_no:
+                originProductNo,
+
+              product_detail_analysis:
+                productDetailAnalysis,
+
+              updated_at:
+                new Date()
+                  .toISOString(),
+            })
+            .eq(
+              "id",
+              existingId,
+            )
+            .select(
+              "id, product_name, origin_product_no",
+            )
+            .single();
+
+        if (error) {
+          throw error;
+        }
+
+        results.push({
+          success: true,
+          created: false,
+          product: data,
+        });
+
+        continue;
+      }
+
+      const {
+        data,
+        error,
+      } =
+        await supabase
+          .from("products")
+          .insert({
+            category,
+
+            product_name:
+              productName,
+
+            source_url:
+              sourceUrl,
+
+            checkout_merchant_no:
+              null,
+
+            origin_product_no:
+              originProductNo,
+
+            product_detail_analysis:
+              productDetailAnalysis,
+          })
+          .select(
+            "id, product_name, origin_product_no",
+          )
+          .single();
+
+      if (error) {
+        throw error;
+      }
+
+      results.push({
+        success: true,
+        created: true,
+        product: data,
+      });
+    }
+
+    const successful =
+      results.filter(
+        (item) =>
+          item.success,
+      );
+
+    return NextResponse.json({
+      success:
+        successful.length >
+        0,
+
+      category,
+
+      requestedCount:
+        candidates.length,
+
+      successCount:
+        successful.length,
+
+      failureCount:
+        results.length -
+        successful.length,
+
+      results,
+    });
+  } catch (error) {
+    console.error(
+      "Import market candidates error:",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        success: false,
+
+        message:
+          error instanceof Error
+            ? error.message
+            : "후보상품 DB 등록 중 오류가 발생했습니다.",
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+}

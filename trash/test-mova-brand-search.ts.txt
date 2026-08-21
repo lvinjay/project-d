@@ -1,0 +1,73 @@
+﻿const apiKey =
+  process.env.SERPAPI_API_KEY;
+
+if (!apiKey) {
+  throw new Error(
+    "SERPAPI_API_KEY가 없습니다.",
+  );
+}
+
+async function search(
+  query: string,
+) {
+  const params =
+    new URLSearchParams({
+      engine: "naver",
+      query,
+      where: "nexearch",
+      output: "json",
+      api_key: apiKey,
+    });
+
+  const response =
+    await fetch(
+      "https://serpapi.com/search?" +
+        params.toString(),
+    );
+
+  const data =
+    await response.json();
+
+  console.log(
+    "\nQUERY:",
+    query,
+  );
+
+  const text =
+    JSON.stringify(
+      data,
+    );
+
+  const matches =
+    text.match(
+      /https?:\/\/brand\.naver\.com\/mova\/products\/\d+/gi,
+    ) ?? [];
+
+  console.log(
+    "MATCHES:",
+    [
+      ...new Set(matches),
+    ],
+  );
+}
+
+async function main() {
+  await search(
+    "site:brand.naver.com/mova P70 Pro Ultra",
+  );
+
+  await search(
+    "site:brand.naver.com/mova RLP54HE",
+  );
+
+  await search(
+    "site:brand.naver.com/mova 모바 P70",
+  );
+}
+
+main().catch(
+  (error) => {
+    console.error(error);
+    process.exit(1);
+  },
+);

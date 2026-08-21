@@ -1,0 +1,76 @@
+===== Fresh Manufacturer Enriched 통합 결과 =====
+
+HTTP: 200
+성공: true
+소요 시간: 250초
+카테고리: 로봇청소기
+시장 후보: 9
+최종 후보: 4
+FULL: 1
+PARTIAL: 3
+목표 달성: false
+Resolver 시도: 9
+Bright Data 호출: 6
+
+===== TS450 생산 판정 =====
+TS450 존재: NO
+상태: -
+sourceType: -
+productId: (없음)
+identityKey: -
+가격: 0
+이미지: NO
+
+[FAIL] TS450 Manufacturer 생산 판정
+
+===== 최종 후보 =====
+
+2. [full] [naver-brand]
+MARKET: 드리미 로봇청소기 X60 Ultra X60ULTRA 올인원 물통형, 화이트
+DETAIL: [1위 달성] X60 Ultra 올인원 로봇청소기 화이트, 단품
+BRAND: 드리미
+URL: https://brand.naver.com/dreame/products/13086178143
+IDENTITY: naver:13086178143
+
+1. [partial-market] [legacy]
+MARKET: 모바 로봇청소기 P70 Pro Ultra RLP54HE AI센서 자동세척 화이트, 단품
+DETAIL: 모바 로봇청소기 P70 Pro Ultra RLP54HE AI센서 자동세척 화이트, 단품
+BRAND: 
+URL: https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59760912197&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0&t=mt14mzcl&h=6da605990de0ab6cc1bb97d84ceb2405083f1d6f&frm=NVSCDIG
+IDENTITY: 
+
+8. [partial-market] [legacy]
+MARKET: 삼성 2026 신제품 비스포크 AI 스팀 울트라 물걸레 올인원로봇청소기 새틴 그레이지
+DETAIL: 삼성 2026 신제품 비스포크 AI 스팀 울트라 물걸레 올인원로봇청소기 새틴 그레이지
+BRAND: 
+URL: https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=90574795333&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0&t=mt14n356&h=6aefda81723439acc85ce587a7f126b37ac5ea41&frm=NVSCPRO
+IDENTITY: 
+
+9. [partial-market] [legacy]
+MARKET: LG홈봇 로봇청소기 RONi 로니 N95TWU
+DETAIL: LG홈봇 로봇청소기 RONi 로니 N95TWU
+BRAND: 
+URL: https://ader.naver.com/v1/NmQSTN5UHN5_67I8zEFpXwIt4mW6UPi_8hqv8zm_XQ6-2SAWDib9Qxf44p4LwSs0J9FA3Iz0LuFuiJeLNtZ1hhYONYMjrrcCs3XlVBfdMfV7LlSVYutO3oAlfIJKFzCg_JbR8jCLbyrV1ZBb_ex04IOeYNp4woSW3HovLwVKnMiHLPgGoLMiemoYne1Dj-ubW8bl2k5aVxEjUMI8sx46sBJd7hznvAIN8DHr6nF-XAuGjBh-uh4BNrws6p9AytqZ3ZQV5BmWkNuqsXfhEK_Mq2c34zS8yg2j6GAnjjJUBe8nY2-BUJJo0LswKMe1NLCkvR2WYZm2Zr758qthEDoFLw==?c=naver.search.pc.npla&t=0&ui=LIST_FINDER
+IDENTITY: 
+
+===== 실패 목록 =====
+
+3. [validation]
+드리미 올인원 로봇청소기 X60 Master 스팀 직배수형, 화이트
+상세수집은 완료됐지만 필수 상품정보가 없습니다.
+
+4. [validation]
+JONR 존알 로봇청소기 올인원 자동세척 건조 스테이션 최강희청소기 X1 MAX, 블랙
+상세수집은 완료됐지만 필수 상품정보가 없습니다.
+
+5. [validation]
+에브리봇 TS450 쓰리스핀 슬림 물걸레 로봇청소기 26년 NEW
+분석 가능한 리뷰가 부족합니다. (0개)
+
+6. [validation]
+로보락 로봇청소기 S10 MaxV Ultra RRE0VES+EWFD55HRR 자동 물통형, 화이트
+상세수집은 완료됐지만 필수 상품정보가 없습니다.
+
+7. [validation]
+로보락 S10 MaxV Ultra 로봇청소기
+상세수집은 완료됐지만 필수 상품정보가 없습니다.

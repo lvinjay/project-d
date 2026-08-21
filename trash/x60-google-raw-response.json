@@ -1,0 +1,403 @@
+{
+  "search_metadata": {
+    "id": "6a8659df919dfacf79b5650b",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/bdqY-tCtHongN6PBS2uw0A/6a8659df919dfacf79b5650b.json",
+    "markdown_endpoint": "https://serpapi.com/searches/bdqY-tCtHongN6PBS2uw0A/6a8659df919dfacf79b5650b.md",
+    "pixel_position_endpoint": "https://serpapi.com/searches/bdqY-tCtHongN6PBS2uw0A/6a8659df919dfacf79b5650b.json_with_pixel_position",
+    "created_at": "2026-08-20 01:35:27 UTC",
+    "processed_at": "2026-08-20 01:35:27 UTC",
+    "google_url": "https://www.google.com/search?q=%22%EB%93%9C%EB%A6%AC%EB%AF%B8+X60+Ultra+X60ULTRA%22+%22brand.naver.com%22&oq=%22%EB%93%9C%EB%A6%AC%EB%AF%B8+X60+Ultra+X60ULTRA%22+%22brand.naver.com%22&hl=ko&gl=kr&sourceid=chrome&ie=UTF-8",
+    "raw_html_file": "https://serpapi.com/searches/bdqY-tCtHongN6PBS2uw0A/6a8659df919dfacf79b5650b.html",
+    "total_time_taken": 4.14
+  },
+  "search_parameters": {
+    "engine": "google",
+    "q": "\"드리미 X60 Ultra X60ULTRA\" \"brand.naver.com\"",
+    "google_domain": "google.com",
+    "hl": "ko",
+    "gl": "kr",
+    "device": "desktop"
+  },
+  "search_information": {
+    "query_displayed": "\"드리미 X60 Ultra X60ULTRA\" \"brand.naver.com\"",
+    "total_results": 716,
+    "time_taken_displayed": 0.29,
+    "organic_results_state": "Empty showing fixed spelling results",
+    "spelling_fix": "\"드리미 X60 Ultra X60 ULTRA\" \"brand.naver.com\"",
+    "showing_results_for": "드리미 X60 Ultra X60ULTRA brand.naver.com"
+  },
+  "inline_videos": [
+    {
+      "position": 1,
+      "title": "이 가격이면 어떻게 버텨;; 폭룡적 출시가 드리미 X60 Ultra 리뷰 ...",
+      "link": "https://www.youtube.com/watch?v=Ozfh-ewT2p8",
+      "thumbnail": "https://serpapi.com/searches/6a8659df919dfacf79b5650b/images/A8NLjD0gv240j3krKUZjy0ivl-DQgSB6lpzp_FMqstk.jpeg",
+      "channel": "귀곰",
+      "duration": "13:22",
+      "platform": "YouTube",
+      "date": "2026. 3. 8.",
+      "short_clip": "https://encrypted-vtbn0.gstatic.com/video?q=tbn:ANd9GcQ-JlKL1TIriWr_8ZfDFd5Y04wyXBbw713wRg"
+    },
+    {
+      "position": 2,
+      "title": "로청이 더 좋아질게 있어?! 2026년형 플래그십 로봇청소기 성능 ...",
+      "link": "https://www.youtube.com/watch?v=7zA_y-qMkrE",
+      "thumbnail": "https://serpapi.com/searches/6a8659df919dfacf79b5650b/images/sQBlPw750wJvxwzLJ1zIgRRc3sF0g-uQK9KTLBRFLgA.jpeg",
+      "channel": "제이제이",
+      "duration": "20:02",
+      "platform": "YouTube",
+      "date": "2026. 2. 26.",
+      "key_moments": [
+        {
+          "time": "00:00",
+          "title": "인트로",
+          "link": "https://www.youtube.com/watch?v=7zA_y-qMkrE&t=0"
+        },
+        {
+          "time": "01:19",
+          "title": "장애물, 오염인식 및 식별 성능",
+          "link": "https://www.youtube.com/watch?v=7zA_y-qMkrE&t=79"
+        },
+        {
+          "time": "04:17",
+          "title": "가구 밑, 코너, 모서리 청소 및 음성인식",
+          "link": "https://www.youtube.com/watch?v=7zA_y-qMkrE&t=257"
+        },
+        {
+          "time": "06:15",
+          "title": "문턱돌파 성능",
+          "link": "https://www.youtube.com/watch?v=7zA_y-qMkrE&t=375"
+        },
+        {
+          "time": "08:43",
+          "title": "진공청소 성능",
+          "link": "https://www.youtube.com/watch?v=7zA_y-qMkrE&t=523"
+        },
+        {
+          "time": "11:01",
+          "title": "물걸레청소 성능",
+          "link": "https://www.youtube.com/watch?v=7zA_y-qMkrE&t=661"
+        },
+        {
+          "time": "15:11",
+          "title": "올인원 스테이션",
+          "link": "https://www.youtube.com/watch?v=7zA_y-qMkrE&t=911"
+        },
+        {
+          "time": "17:09",
+          "title": "이런 분들께 추천해요",
+          "link": "https://www.youtube.com/watch?v=7zA_y-qMkrE&t=1029"
+        }
+      ]
+    },
+    {
+      "position": 3,
+      "title": "드리미 on Instagram: \"로봇청소기, 이제 오염의 종류까지 ...",
+      "link": "https://www.instagram.com/reel/DWNTWZCgRLl/",
+      "thumbnail": "https://serpapi.com/searches/6a8659df919dfacf79b5650b/images/eKXKKu8xRnjeZFq-N59GDaE0yA8TS-GZ9CrQHEfIOus.jpeg",
+      "channel": "드리미",
+      "duration": "0:08",
+      "platform": "Instagram",
+      "date": "2026. 3. 22."
+    }
+  ],
+  "ai_overview": {
+    "page_token": "6BUD93iczVbbcqJIGH6AfQ65SVbAs6mipro77Vm0JUxibiwEbJFTAihj7uZd9qn2aaYbo0FHTWUutrarpA_85_4_Pn_-4zmB--9f9jJJXuI7UUzTtEjDkHp20Qx90Yi3gSkuQi-OzOU36iluJCzZMxS2G6UsmLEiCbajVDy_bYT2ZjTV-q6lj-P1QJJILGTqymxuxPaKWf-xisWZyB5uoXzPNsW46IZFx5l0xiUcGUupWJLkZnEkGj4TAP_RIMDhUw_AbAvPSQD6qRUKMABa7gTyg2zgj8MUdAHKpPnQL5rD3CkAEybLfafqzG-nALTf4zCvRJKPAQy5N25juDNEup9mkg_iKMhrmujSi-6RiVHuDblmLP8SEoDHlD0PhfyIBB9dGM7U0sxEJx0N4QhPLrvhmvABdDBFuxa4MlCA9PR93U5VFoJoUdakkjiP2CSLjrk0s0UU895FD00pbL2ZYVRqhAOzvdCTkM5n6N4dv06dZ0RFc87kvNCwbGu2nEnfsr1ckqtSs1xv3GagMeMDauI8atTETryujDYoLQ6KUM5Bpnu-upSQcwXHXJ4cdejHaB-U-e-9zMOcLtzb5hs_p7mcVPi0LxhocD28b9qPXuFuz0PmSDCDDNpdOmzl0jvGai7FXKt2zqVGD3Xa6x46M6XHguBYlGKHuT04zsfbBbCfdSDUeew7O5379Ljw_ZNaYybKPCw_3HZzKaAcZFgRIPOB-GVglx1okLALZB-eLJzsK_VuBWqnaKW_wxdyVy3yhQ9CPo1PJRDYY-Ok1fMQwa-L7sh3hsG4dW8F_WYL0ic57C9M3wbnIRH68y8wifn_AU3GM3jPM3RyFjT0M9AQiq_zzE7wnWe03eV-vwgavEvxlGc653jmBDRaHjTxVZ75GmjoFdCgvYWzoNHPgYZcBA36DTTuKc_sHRx4Jgear_NM_494JsOQvZuOSWe9ohfJp03igeN24nQ6UavPCzsZjiy0ek7LIy39lHwWfnLnG5Z3O3OsO1jqJVvrdsYOwjvbEl6VAoaFZrnQRHwBagWwW7QKsHHzVJNudC-JDL7SBw8TcDOPjMAqBsbGjvi_SsH3olCRjFpFaz289V6Slvc4DLsjtH6Y4kW8jjHVgon6Y7vtVb9vK0915JTNFVTHxPNXDVPVq73lRH9UB7OhnC7UQKvJqEUerZ7eempXh75cbr89kua8pK9ffWiXXDL1qs4g-NvVusspNa3qW6_XS6qGungp4TrS6-XUeMqiipVGaShPEzNdVyXBj0yF9UiFApWARwpNgKaAMCIiKGQ_1qOoBgiGQmwaMzveKIu6USlJNaluW1ZNsg3Bp8n2RWlKQhxEivwL5jg7Jw",
+    "serpapi_link": "https://serpapi.com/search.json?engine=google_ai_overview&page_token=6BUD93iczVbbcqJIGH6AfQ65SVbAs6mipro77Vm0JUxibiwEbJFTAihj7uZd9qn2aaYbo0FHTWUutrarpA_85_4_Pn_-4zmB--9f9jJJXuI7UUzTtEjDkHp20Qx90Yi3gSkuQi-OzOU36iluJCzZMxS2G6UsmLEiCbajVDy_bYT2ZjTV-q6lj-P1QJJILGTqymxuxPaKWf-xisWZyB5uoXzPNsW46IZFx5l0xiUcGUupWJLkZnEkGj4TAP_RIMDhUw_AbAvPSQD6qRUKMABa7gTyg2zgj8MUdAHKpPnQL5rD3CkAEybLfafqzG-nALTf4zCvRJKPAQy5N25juDNEup9mkg_iKMhrmujSi-6RiVHuDblmLP8SEoDHlD0PhfyIBB9dGM7U0sxEJx0N4QhPLrvhmvABdDBFuxa4MlCA9PR93U5VFoJoUdakkjiP2CSLjrk0s0UU895FD00pbL2ZYVRqhAOzvdCTkM5n6N4dv06dZ0RFc87kvNCwbGu2nEnfsr1ckqtSs1xv3GagMeMDauI8atTETryujDYoLQ6KUM5Bpnu-upSQcwXHXJ4cdejHaB-U-e-9zMOcLtzb5hs_p7mcVPi0LxhocD28b9qPXuFuz0PmSDCDDNpdOmzl0jvGai7FXKt2zqVGD3Xa6x46M6XHguBYlGKHuT04zsfbBbCfdSDUeew7O5379Ljw_ZNaYybKPCw_3HZzKaAcZFgRIPOB-GVglx1okLALZB-eLJzsK_VuBWqnaKW_wxdyVy3yhQ9CPo1PJRDYY-Ok1fMQwa-L7sh3hsG4dW8F_WYL0ic57C9M3wbnIRH68y8wifn_AU3GM3jPM3RyFjT0M9AQiq_zzE7wnWe03eV-vwgavEvxlGc653jmBDRaHjTxVZ75GmjoFdCgvYWzoNHPgYZcBA36DTTuKc_sHRx4Jgear_NM_494JsOQvZuOSWe9ohfJp03igeN24nQ6UavPCzsZjiy0ek7LIy39lHwWfnLnG5Z3O3OsO1jqJVvrdsYOwjvbEl6VAoaFZrnQRHwBagWwW7QKsHHzVJNudC-JDL7SBw8TcDOPjMAqBsbGjvi_SsH3olCRjFpFaz289V6Slvc4DLsjtH6Y4kW8jjHVgon6Y7vtVb9vK0915JTNFVTHxPNXDVPVq73lRH9UB7OhnC7UQKvJqEUerZ7eempXh75cbr89kua8pK9ffWiXXDL1qs4g-NvVusspNa3qW6_XS6qGungp4TrS6-XUeMqiipVGaShPEzNdVyXBj0yF9UiFApWARwpNgKaAMCIiKGQ_1qOoBgiGQmwaMzveKIu6USlJNaluW1ZNsg3Bp8n2RWlKQhxEivwL5jg7Jw"
+  },
+  "organic_results": [
+    {
+      "position": 1,
+      "title": "드리미 X60 울트라 특징 및 출시 가격 할인 살펴보기 - 블로그",
+      "link": "https://m.blog.naver.com/stella_review/224222082740",
+      "redirect_link": "https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://m.blog.naver.com/stella_review/224222082740&ved=2ahUKEwiHqLzIiK6WAxUERaQEHTIxPboQFnoECBsQAQ",
+      "displayed_link": "https://m.blog.naver.com › stella_review",
+      "favicon": "https://serpapi.com/images/i/iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAMAAABF0y-mAAAAZlBMVEUAAAAABQMCjD8CWykBUyYDuFMDtFIBHg0ClkQCYSwDz14DzFwBIQ8DylsAEQcBRB8BTyQBLhUDx1oCezgDw1gDq04BOBoDvlYAKBIBPRwCZi4CbjIBGwwCgDoCiD4ASCEDn0gDpEpWb7TqAAAAhElEQVR4AdRRUwLFQAysMVPbuP8hn9mm-99F7GinOLpKaZh_rGU77pfz_D-lCQYKZahURnqcpAfKLC8AlJWkZMbQrhlmjaisW03rQE9S0noEZK2LBd2xTwSHrfQMBynseMdO6IgFhdOcLEQvDiEESSxCn7fBx2uIspcmpFzZdeiRPUgBAKRsBoqi-z7NAAAAAElFTkSuQmCC.png",
+      "date": "2026. 3. 19.",
+      "snippet": "Dreame X60 Ultra는 이번 3월 9일에 출시된 따끈따끈한 신상품입니다. 브랜드 중에서도 프리미엄 라인으로 가장 고도화된 기능을 자랑합니다. ​. 35,000Pa ...",
+      "snippet_highlighted_words": [
+        "X60 Ultra",
+        "브랜드"
+      ],
+      "about_this_result": {
+        "source": {
+          "description": "Dreame X60 Ultra는 이번 3월 9일에 출시된 따끈따끈한 신상품입니다. 브랜드 중에서도 프리미엄 라인으로 가장 고도화된 기능을 자랑합니다. ​. 35,000Pa ...",
+          "source_info_link": "https://m.blog.naver.com/stella_review/224222082740",
+          "icon": "https://serpapi.com/images/i/iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAMAAABF0y-mAAAAZlBMVEUAAAAABQMCjD8CWykBUyYDuFMDtFIBHg0ClkQCYSwDz14DzFwBIQ8DylsAEQcBRB8BTyQBLhUDx1oCezgDw1gDq04BOBoDvlYAKBIBPRwCZi4CbjIBGwwCgDoCiD4ASCEDn0gDpEpWb7TqAAAAhElEQVR4AdRRUwLFQAysMVPbuP8hn9mm-99F7GinOLpKaZh_rGU77pfz_D-lCQYKZahURnqcpAfKLC8AlJWkZMbQrhlmjaisW03rQE9S0noEZK2LBd2xTwSHrfQMBynseMdO6IgFhdOcLEQvDiEESSxCn7fBx2uIspcmpFzZdeiRPUgBAKRsBoqi-z7NAAAAAElFTkSuQmCC.png"
+        },
+        "languages": [
+          "ko"
+        ],
+        "regions": [
+          "KR"
+        ]
+      },
+      "about_page_link": "https://www.google.com/search?q=About+https://m.blog.naver.com/stella_review/224222082740&tbm=ilp",
+      "about_page_serpapi_link": "https://serpapi.com/search.json?engine=google_about_this_result&google_domain=google.com&q=About+https%3A%2F%2Fm.blog.naver.com%2Fstella_review%2F224222082740",
+      "source": "블로그"
+    },
+    {
+      "position": 2,
+      "title": "드리미 X60 Ultra 실사용 후기 로청 3대 써보고 남긴 결론은?",
+      "link": "https://m.blog.naver.com/hsrw1011/224271733060",
+      "redirect_link": "https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://m.blog.naver.com/hsrw1011/224271733060&ved=2ahUKEwiHqLzIiK6WAxUERaQEHTIxPboQFnoECBoQAQ",
+      "displayed_link": "https://m.blog.naver.com › hsrw1011",
+      "favicon": "https://serpapi.com/images/i/iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAMAAABF0y-mAAAAZlBMVEUAAAAABQMCjD8CWykBUyYDuFMDtFIBHg0ClkQCYSwDz14DzFwBIQ8DylsAEQcBRB8BTyQBLhUDx1oCezgDw1gDq04BOBoDvlYAKBIBPRwCZi4CbjIBGwwCgDoCiD4ASCEDn0gDpEpWb7TqAAAAhElEQVR4AdRRUwLFQAysMVPbuP8hn9mm-99F7GinOLpKaZh_rGU77pfz_D-lCQYKZahURnqcpAfKLC8AlJWkZMbQrhlmjaisW03rQE9S0noEZK2LBd2xTwSHrfQMBynseMdO6IgFhdOcLEQvDiEESSxCn7fBx2uIspcmpFzZdeiRPUgBAKRsBoqi-z7NAAAAAElFTkSuQmCC.png",
+      "date": "2026. 5. 1.",
+      "snippet": "​ · 핵심 스펙 정리 · ✓ 흡입력 · 35,000Pa (VorMax 듀얼 브러시) · 최상급 · ✓ 두께 · 약 7.95cm 초슬림 · ✓ 장애물 회피.",
+      "about_this_result": {
+        "source": {
+          "description": "​ · 핵심 스펙 정리 · ✓ 흡입력 · 35,000Pa (VorMax 듀얼 브러시) · 최상급 · ✓ 두께 · 약 7.95cm 초슬림 · ✓ 장애물 회피.",
+          "source_info_link": "https://m.blog.naver.com/hsrw1011/224271733060",
+          "icon": "https://serpapi.com/images/i/iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAMAAABF0y-mAAAAZlBMVEUAAAAABQMCjD8CWykBUyYDuFMDtFIBHg0ClkQCYSwDz14DzFwBIQ8DylsAEQcBRB8BTyQBLhUDx1oCezgDw1gDq04BOBoDvlYAKBIBPRwCZi4CbjIBGwwCgDoCiD4ASCEDn0gDpEpWb7TqAAAAhElEQVR4AdRRUwLFQAysMVPbuP8hn9mm-99F7GinOLpKaZh_rGU77pfz_D-lCQYKZahURnqcpAfKLC8AlJWkZMbQrhlmjaisW03rQE9S0noEZK2LBd2xTwSHrfQMBynseMdO6IgFhdOcLEQvDiEESSxCn7fBx2uIspcmpFzZdeiRPUgBAKRsBoqi-z7NAAAAAElFTkSuQmCC.png"
+        },
+        "languages": [
+          "ko"
+        ],
+        "regions": [
+          "KR"
+        ]
+      },
+      "about_page_link": "https://www.google.com/search?q=About+https://m.blog.naver.com/hsrw1011/224271733060&tbm=ilp",
+      "about_page_serpapi_link": "https://serpapi.com/search.json?engine=google_about_this_result&google_domain=google.com&q=About+https%3A%2F%2Fm.blog.naver.com%2Fhsrw1011%2F224271733060",
+      "source": "블로그"
+    },
+    {
+      "position": 3,
+      "title": "드리미 x60 : 다나와 통합검색",
+      "link": "https://search.danawa.com/dsearch.php?query=%EB%93%9C%EB%A6%AC%EB%AF%B8%20x60",
+      "redirect_link": "https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://search.danawa.com/dsearch.php%3Fquery%3D%25EB%2593%259C%25EB%25A6%25AC%25EB%25AF%25B8%2520x60&ved=2ahUKEwiHqLzIiK6WAxUERaQEHTIxPboQFnoECCAQAQ",
+      "displayed_link": "https://search.danawa.com › dsearch",
+      "favicon": "https://serpapi.com/images/i/iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAMAAABF0y-mAAAAaVBMVEVHcEwCslYU0h0NxjMEtVANxjMLwjoHu0USzyMOyS0NyC7___8NxTQLwjkFuEsSzyIPyyoHu0UJwD0EtVERzScIvkEAwiic3KQAvTKL2ZMAuDwAvBHA6MLe8-Cl4KtDyVE0vlZnynR21YDt2PHqAAAACnRSTlMAz9jy9s1c9vb3sSTaOgAAARhJREFUKJF109F2gyAMBmBcxdYhVGFFFMW27_-QS0LwuHb9L_lOPAlBIYRo5KWk5ZxkIyhfV8oPpO_7b0jXdbqTHw1UgzafTOtGyFfzns1KcXmtS4lI29uZ8Fg3KTV6NGsJj3UFwajyTy-MaIgHg2YIAxkjW9ye45Qygg2E2fy2qhxANMSe6zY8X1ZCMkb6JhwvMcYp40DYci9YGLUOGdEM4j7f4hlnMlOLlucblUpB2x1NwS7jAiMUNAVxRf6p1Bqtxb4ATUHeHzT0iIFGmZGcA2QLS76B9Q1hRSFrejA6xFPZuw3bON3neUx3IkRZzN6GgDPMXOfqSjS75Tszhs05eLryzTK5Ch-u_L-uyk--kec9NafC3-EXB50tc2K9dh0AAAAASUVORK5CYII.png",
+      "snippet": "로봇청소기/흡입+물걸레/BLDC모터/센서: 카메라, ToF/흡입력: 35,000Pa/워셔블먼지필터/걸레탈부착/먼지비움/세제투입/걸레세척(온수)/걸레건조(온풍)/자동충전/음성 ...",
+      "about_this_result": {
+        "source": {
+          "description": "로봇청소기/흡입+물걸레/BLDC모터/센서: 카메라, ToF/흡입력: 35,000Pa/워셔블먼지필터/걸레탈부착/먼지비움/세제투입/걸레세척(온수)/걸레건조(온풍)/자동충전/음성 ...",
+          "source_info_link": "https://search.danawa.com/dsearch.php?query=%EB%93%9C%EB%A6%AC%EB%AF%B8%20x60",
+          "icon": "https://serpapi.com/images/i/iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAMAAABF0y-mAAAAaVBMVEVHcEwCslYU0h0NxjMEtVANxjMLwjoHu0USzyMOyS0NyC7___8NxTQLwjkFuEsSzyIPyyoHu0UJwD0EtVERzScIvkEAwiic3KQAvTKL2ZMAuDwAvBHA6MLe8-Cl4KtDyVE0vlZnynR21YDt2PHqAAAACnRSTlMAz9jy9s1c9vb3sSTaOgAAARhJREFUKJF109F2gyAMBmBcxdYhVGFFFMW27_-QS0LwuHb9L_lOPAlBIYRo5KWk5ZxkIyhfV8oPpO_7b0jXdbqTHw1UgzafTOtGyFfzns1KcXmtS4lI29uZ8Fg3KTV6NGsJj3UFwajyTy-MaIgHg2YIAxkjW9ye45Qygg2E2fy2qhxANMSe6zY8X1ZCMkb6JhwvMcYp40DYci9YGLUOGdEM4j7f4hlnMlOLlucblUpB2x1NwS7jAiMUNAVxRf6p1Bqtxb4ATUHeHzT0iIFGmZGcA2QLS76B9Q1hRSFrejA6xFPZuw3bON3neUx3IkRZzN6GgDPMXOfqSjS75Tszhs05eLryzTK5Ch-u_L-uyk--kec9NafC3-EXB50tc2K9dh0AAAAASUVORK5CYII.png"
+        },
+        "languages": [
+          "ko"
+        ],
+        "regions": [
+          "KR"
+        ]
+      },
+      "about_page_link": "https://www.google.com/search?q=About+https://search.danawa.com/dsearch.php?query=%EB%93%9C%EB%A6%AC%EB%AF%B8%20x60&tbm=ilp",
+      "about_page_serpapi_link": "https://serpapi.com/search.json?engine=google_about_this_result&google_domain=google.com&q=About+https%3A%2F%2Fsearch.danawa.com%2Fdsearch.php%3Fquery%3D%25EB%2593%259C%25EB%25A6%25AC%25EB%25AF%25B8%2520x60",
+      "source": "danawa.com"
+    },
+    {
+      "position": 4,
+      "title": "드리미 X60 Ultra 로봇청소기 리뷰 및 봄맞이 핫딜 정보 - 블로그",
+      "link": "https://m.blog.naver.com/PostView.naver?blogId=lee600923&logNo=224247492828",
+      "redirect_link": "https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://m.blog.naver.com/PostView.naver%3FblogId%3Dlee600923%26logNo%3D224247492828&ved=2ahUKEwiHqLzIiK6WAxUERaQEHTIxPboQFnoECCkQAQ",
+      "displayed_link": "https://m.blog.naver.com › PostView",
+      "favicon": "https://serpapi.com/images/i/iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAMAAABF0y-mAAAAZlBMVEUAAAAABQMCjD8CWykBUyYDuFMDtFIBHg0ClkQCYSwDz14DzFwBIQ8DylsAEQcBRB8BTyQBLhUDx1oCezgDw1gDq04BOBoDvlYAKBIBPRwCZi4CbjIBGwwCgDoCiD4ASCEDn0gDpEpWb7TqAAAAhElEQVR4AdRRUwLFQAysMVPbuP8hn9mm-99F7GinOLpKaZh_rGU77pfz_D-lCQYKZahURnqcpAfKLC8AlJWkZMbQrhlmjaisW03rQE9S0noEZK2LBd2xTwSHrfQMBynseMdO6IgFhdOcLEQvDiEESSxCn7fBx2uIspcmpFzZdeiRPUgBAKRsBoqi-z7NAAAAAElFTkSuQmCC.png",
+      "date": "2026. 4. 10.",
+      "snippet": "이 모델은 35,000Pa의 강력한 흡입력과 회전식 물걸레를 결합하여 건습식 청소를 동시에 수행하는 무선 가전입니다. ​. 실제 사용할 때 벽면 구석의 먼지 ...",
+      "about_this_result": {
+        "source": {
+          "description": "이 모델은 35,000Pa의 강력한 흡입력과 회전식 물걸레를 결합하여 건습식 청소를 동시에 수행하는 무선 가전입니다. ​. 실제 사용할 때 벽면 구석의 먼지 ...",
+          "source_info_link": "https://m.blog.naver.com/PostView.naver?blogId=lee600923&logNo=224247492828",
+          "icon": "https://serpapi.com/images/i/iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAMAAABF0y-mAAAAZlBMVEUAAAAABQMCjD8CWykBUyYDuFMDtFIBHg0ClkQCYSwDz14DzFwBIQ8DylsAEQcBRB8BTyQBLhUDx1oCezgDw1gDq04BOBoDvlYAKBIBPRwCZi4CbjIBGwwCgDoCiD4ASCEDn0gDpEpWb7TqAAAAhElEQVR4AdRRUwLFQAysMVPbuP8hn9mm-99F7GinOLpKaZh_rGU77pfz_D-lCQYKZahURnqcpAfKLC8AlJWkZMbQrhlmjaisW03rQE9S0noEZK2LBd2xTwSHrfQMBynseMdO6IgFhdOcLEQvDiEESSxCn7fBx2uIspcmpFzZdeiRPUgBAKRsBoqi-z7NAAAAAElFTkSuQmCC.png"
+        },
+        "languages": [
+          "ko"
+        ],
+        "regions": [
+          "KR"
+        ]
+      },
+      "about_page_link": "https://www.google.com/search?q=About+https://m.blog.naver.com/PostView.naver?blogId=lee600923&logNo=224247492828&tbm=ilp",
+      "about_page_serpapi_link": "https://serpapi.com/search.json?engine=google_about_this_result&google_domain=google.com&q=About+https%3A%2F%2Fm.blog.naver.com%2FPostView.naver%3FblogId%3Dlee600923%26logNo%3D224247492828",
+      "source": "블로그"
+    },
+    {
+      "position": 5,
+      "title": "드리미X60울트라 4회 사용기",
+      "link": "https://www.clien.net/service/board/park/19173634",
+      "redirect_link": "https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://www.clien.net/service/board/park/19173634&ved=2ahUKEwiHqLzIiK6WAxUERaQEHTIxPboQFnoECC4QAQ",
+      "displayed_link": "https://www.clien.net › service › board › park",
+      "favicon": "https://serpapi.com/images/i/iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAIAAAD9b0jDAAAAvklEQVR4AWNQ1relOho1dNRQdCSpbs4gqM7AqYwfMUvrEjQUYWJKVtG79x9-4AV__vw5dOQ4VnMZsAgJqT9_8fL___9AbdQzVBBq6LETpxiAgFLvYxoqpkVeRNHfUAltqhl6_8FDmhgKjNwhYigkGTIwCAPjChfiVzAk2lAhkKHA5A2MrnMXLuJCly5fWbxsJdxcwtm0tqkDlGfwAkhMEsxRCAS0n0feUMPYkSBS0LUmregDaiCIRkt-NDRqKACW7k5domW7hAAAAABJRU5ErkJggg.png",
+      "date": "2026. 4. 6.",
+      "snippet": "드리미X60울트라 4회 사용기 16 · 1. 청소 관련 청소력은 전반적으로 좋다고 느껴집니다. 제가 직접 진공청소기로 돌리고 물걸레질을 한 것보다 더 ...",
+      "snippet_highlighted_words": [
+        "드리미X60"
+      ],
+      "about_this_result": {
+        "source": {
+          "description": "드리미X60울트라 4회 사용기 16 · 1. 청소 관련 청소력은 전반적으로 좋다고 느껴집니다. 제가 직접 진공청소기로 돌리고 물걸레질을 한 것보다 더 ...",
+          "source_info_link": "https://www.clien.net/service/board/park/19173634",
+          "icon": "https://serpapi.com/images/i/iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAIAAAD9b0jDAAAAvklEQVR4AWNQ1relOho1dNRQdCSpbs4gqM7AqYwfMUvrEjQUYWJKVtG79x9-4AV__vw5dOQ4VnMZsAgJqT9_8fL___9AbdQzVBBq6LETpxiAgFLvYxoqpkVeRNHfUAltqhl6_8FDmhgKjNwhYigkGTIwCAPjChfiVzAk2lAhkKHA5A2MrnMXLuJCly5fWbxsJdxcwtm0tqkDlGfwAkhMEsxRCAS0n0feUMPYkSBS0LUmregDaiCIRkt-NDRqKACW7k5domW7hAAAAABJRU5ErkJggg.png"
+        },
+        "languages": [
+          "ko"
+        ],
+        "regions": [
+          "KR"
+        ]
+      },
+      "about_page_link": "https://www.google.com/search?q=About+https://www.clien.net/service/board/park/19173634&tbm=ilp",
+      "about_page_serpapi_link": "https://serpapi.com/search.json?engine=google_about_this_result&google_domain=google.com&q=About+https%3A%2F%2Fwww.clien.net%2Fservice%2Fboard%2Fpark%2F19173634",
+      "source": "클리앙"
+    },
+    {
+      "position": 6,
+      "title": "드리미 X60, 울트라 마스터 차이 가격 구매 혜택은? - 블로그",
+      "link": "https://m.blog.naver.com/yjg01212/224214298511",
+      "redirect_link": "https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://m.blog.naver.com/yjg01212/224214298511&ved=2ahUKEwiHqLzIiK6WAxUERaQEHTIxPboQFnoECC0QAQ",
+      "displayed_link": "https://m.blog.naver.com › yjg01212",
+      "favicon": "https://serpapi.com/images/i/iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAMAAABF0y-mAAAAZlBMVEUAAAAABQMCjD8CWykBUyYDuFMDtFIBHg0ClkQCYSwDz14DzFwBIQ8DylsAEQcBRB8BTyQBLhUDx1oCezgDw1gDq04BOBoDvlYAKBIBPRwCZi4CbjIBGwwCgDoCiD4ASCEDn0gDpEpWb7TqAAAAhElEQVR4AdRRUwLFQAysMVPbuP8hn9mm-99F7GinOLpKaZh_rGU77pfz_D-lCQYKZahURnqcpAfKLC8AlJWkZMbQrhlmjaisW03rQE9S0noEZK2LBd2xTwSHrfQMBynseMdO6IgFhdOcLEQvDiEESSxCn7fBx2uIspcmpFzZdeiRPUgBAKRsBoqi-z7NAAAAAElFTkSuQmCC.png",
+      "date": "2026. 3. 12.",
+      "snippet": "이번 드리미 X60은 블루라이트 광학 스캔과 120° 광각 듀얼 카메라를 조합해, 투명한 액체나 연한 색 얼룩처럼 눈에 잘 안 보이는 오염까지 잡아냅니다.",
+      "snippet_highlighted_words": [
+        "드리미 X60"
+      ],
+      "about_this_result": {
+        "source": {
+          "description": "이번 드리미 X60은 블루라이트 광학 스캔과 120° 광각 듀얼 카메라를 조합해, 투명한 액체나 연한 색 얼룩처럼 눈에 잘 안 보이는 오염까지 잡아냅니다.",
+          "source_info_link": "https://m.blog.naver.com/yjg01212/224214298511",
+          "icon": "https://serpapi.com/images/i/iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAMAAABF0y-mAAAAZlBMVEUAAAAABQMCjD8CWykBUyYDuFMDtFIBHg0ClkQCYSwDz14DzFwBIQ8DylsAEQcBRB8BTyQBLhUDx1oCezgDw1gDq04BOBoDvlYAKBIBPRwCZi4CbjIBGwwCgDoCiD4ASCEDn0gDpEpWb7TqAAAAhElEQVR4AdRRUwLFQAysMVPbuP8hn9mm-99F7GinOLpKaZh_rGU77pfz_D-lCQYKZahURnqcpAfKLC8AlJWkZMbQrhlmjaisW03rQE9S0noEZK2LBd2xTwSHrfQMBynseMdO6IgFhdOcLEQvDiEESSxCn7fBx2uIspcmpFzZdeiRPUgBAKRsBoqi-z7NAAAAAElFTkSuQmCC.png"
+        },
+        "languages": [
+          "ko"
+        ],
+        "regions": [
+          "KR"
+        ]
+      },
+      "about_page_link": "https://www.google.com/search?q=About+https://m.blog.naver.com/yjg01212/224214298511&tbm=ilp",
+      "about_page_serpapi_link": "https://serpapi.com/search.json?engine=google_about_this_result&google_domain=google.com&q=About+https%3A%2F%2Fm.blog.naver.com%2Fyjg01212%2F224214298511",
+      "source": "블로그"
+    },
+    {
+      "position": 7,
+      "title": "🔶 드리미 X60 Ultra 신모델 출시! 이 로봇청소기 진짜 물건 ...",
+      "link": "https://www.instagram.com/p/DVu7eFEmKE-/",
+      "redirect_link": "https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://www.instagram.com/p/DVu7eFEmKE-/&ved=2ahUKEwiHqLzIiK6WAxUERaQEHTIxPboQFnoECCwQAQ",
+      "displayed_link": "5개월 전",
+      "favicon": "https://serpapi.com/searches/6a8659df919dfacf79b5650b/images/EgZn4DxdHTlpHj4GU2J_y7kCJKLWm2flkNNreInLtEM.png",
+      "snippet": "드리미 X60 Ultra 신모델 출시! 이 로봇청소기 진짜 물건입니다. 업계최고 7.98Cm 울트라 슬림 디자인 - 최소 7.95Cm 낮은 가구 아래도 빈틈없는 ...",
+      "snippet_highlighted_words": [
+        "드리미 X60 Ultra 신모델 출시"
+      ],
+      "about_this_result": {
+        "source": {
+          "description": "드리미 X60 Ultra 신모델 출시! 이 로봇청소기 진짜 물건입니다. 업계최고 7.98Cm 울트라 슬림 디자인 - 최소 7.95Cm 낮은 가구 아래도 빈틈없는 ...",
+          "source_info_link": "https://www.instagram.com/p/DVu7eFEmKE-/",
+          "icon": "https://serpapi.com/searches/6a8659df919dfacf79b5650b/images/EgZn4DxdHTlpHj4GU2J_y8Z7ZqgdywxpHF_S1o1NJoZTsJT5Qru0FV353kMHT4xW.png"
+        },
+        "languages": [
+          "ko"
+        ],
+        "regions": [
+          "KR"
+        ]
+      },
+      "about_page_link": "https://www.google.com/search?q=About+https://www.instagram.com/p/DVu7eFEmKE-/&tbm=ilp",
+      "about_page_serpapi_link": "https://serpapi.com/search.json?engine=google_about_this_result&google_domain=google.com&q=About+https%3A%2F%2Fwww.instagram.com%2Fp%2FDVu7eFEmKE-%2F",
+      "source": "Instagram · lottehimartsindosigojan"
+    },
+    {
+      "position": 8,
+      "title": "DREAME - X60 시리즈 신제품 - 드리미",
+      "link": "https://kr.dreametech.com/promotion/x60_series",
+      "redirect_link": "https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://kr.dreametech.com/promotion/x60_series&ved=2ahUKEwiHqLzIiK6WAxUERaQEHTIxPboQFnoECCoQAQ",
+      "displayed_link": "https://kr.dreametech.com › promotion › x60_series",
+      "favicon": "https://serpapi.com/images/i/iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAMAAABF0y-mAAAAmVBMVEX___8AAAA1NTWEhITe3t5sbGwmJib8_Pzm5ubk5OS_v79MTEz09PSdnZ1zc3M9PT3Y2dzXz8a3nXHXxKDi06_u4tHTtYXZwpfbyZ3ZwaDTt4rfzqj28erJpXDq38fKpnfw6eHCnGzFnWbl172to5nWxbO7nHexh07WvZR2VSuke0ethVS3kF_Dw8OnjXC7kFfeyK24noGeczp9JtPXAAAAkklEQVR4Ac3QNQLDMAxAURXDzMxcvv_hGmbv-YstvU1wzE5D58sVjXU3NNbdsQ1e8TqCpOovtUG6_zL1n0QhsKcTh0S8H7bYDzwScUGUZAyBoKiajkTD1CxAoO2YmrtEDPowzzM1e4lUHccD-EHoqdHebeMkzYLAy2EPi7J6BKGJLfDZ9yqr7P2B_b6_NKHhuP0BTvsKIFleOuMAAAAASUVORK5CYII.png",
+      "snippet": "7.95cm* Ultra Slim™ 낮은 가구 틈도 막힘 없이 진입하는 세상에서 가장 슬림한 로봇 청소기.",
+      "snippet_highlighted_words": [
+        "Ultra"
+      ],
+      "about_this_result": {
+        "source": {
+          "description": "7.95cm* Ultra Slim™ 낮은 가구 틈도 막힘 없이 진입하는 세상에서 가장 슬림한 로봇 청소기.",
+          "source_info_link": "https://kr.dreametech.com/promotion/x60_series",
+          "icon": "https://serpapi.com/images/i/iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAMAAABF0y-mAAAAmVBMVEX___8AAAA1NTWEhITe3t5sbGwmJib8_Pzm5ubk5OS_v79MTEz09PSdnZ1zc3M9PT3Y2dzXz8a3nXHXxKDi06_u4tHTtYXZwpfbyZ3ZwaDTt4rfzqj28erJpXDq38fKpnfw6eHCnGzFnWbl172to5nWxbO7nHexh07WvZR2VSuke0ethVS3kF_Dw8OnjXC7kFfeyK24noGeczp9JtPXAAAAkklEQVR4Ac3QNQLDMAxAURXDzMxcvv_hGmbv-YstvU1wzE5D58sVjXU3NNbdsQ1e8TqCpOovtUG6_zL1n0QhsKcTh0S8H7bYDzwScUGUZAyBoKiajkTD1CxAoO2YmrtEDPowzzM1e4lUHccD-EHoqdHebeMkzYLAy2EPi7J6BKGJLfDZ9yqr7P2B_b6_NKHhuP0BTvsKIFleOuMAAAAASUVORK5CYII.png"
+        },
+        "languages": [
+          "ko"
+        ],
+        "regions": [
+          "KR"
+        ]
+      },
+      "about_page_link": "https://www.google.com/search?q=About+https://kr.dreametech.com/promotion/x60_series&tbm=ilp",
+      "about_page_serpapi_link": "https://serpapi.com/search.json?engine=google_about_this_result&google_domain=google.com&q=About+https%3A%2F%2Fkr.dreametech.com%2Fpromotion%2Fx60_series",
+      "source": "드리미"
+    }
+  ],
+  "related_searches": [
+    {
+      "block_position": 1,
+      "query": "드리미 X60 디시",
+      "link": "https://www.google.com/search?sca_esv=f7a420607edd60ea&gl=kr&hl=ko&q=%EB%93%9C%EB%A6%AC%EB%AF%B8+X60+%EB%94%94%EC%8B%9C&sa=X&ved=2ahUKEwiHqLzIiK6WAxUERaQEHTIxPboQ1QJ6BAgmEAE",
+      "serpapi_link": "https://serpapi.com/search.json?device=desktop&engine=google&gl=kr&google_domain=google.com&hl=ko&q=%EB%93%9C%EB%A6%AC%EB%AF%B8+X60+%EB%94%94%EC%8B%9C"
+    },
+    {
+      "block_position": 1,
+      "query": "드리미 X60 울트라 디시",
+      "link": "https://www.google.com/search?sca_esv=f7a420607edd60ea&gl=kr&hl=ko&q=%EB%93%9C%EB%A6%AC%EB%AF%B8+X60+%EC%9A%B8%ED%8A%B8%EB%9D%BC+%EB%94%94%EC%8B%9C&sa=X&ved=2ahUKEwiHqLzIiK6WAxUERaQEHTIxPboQ1QJ6BAgwEAE",
+      "serpapi_link": "https://serpapi.com/search.json?device=desktop&engine=google&gl=kr&google_domain=google.com&hl=ko&q=%EB%93%9C%EB%A6%AC%EB%AF%B8+X60+%EC%9A%B8%ED%8A%B8%EB%9D%BC+%EB%94%94%EC%8B%9C"
+    },
+    {
+      "block_position": 1,
+      "query": "드리미 로봇청소기",
+      "link": "https://www.google.com/search?sca_esv=f7a420607edd60ea&gl=kr&hl=ko&q=%EB%93%9C%EB%A6%AC%EB%AF%B8+%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0&sa=X&ved=2ahUKEwiHqLzIiK6WAxUERaQEHTIxPboQ1QJ6BAg1EAE",
+      "serpapi_link": "https://serpapi.com/search.json?device=desktop&engine=google&gl=kr&google_domain=google.com&hl=ko&q=%EB%93%9C%EB%A6%AC%EB%AF%B8+%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0"
+    },
+    {
+      "block_position": 1,
+      "query": "드리미 네이버 스토어",
+      "link": "https://www.google.com/search?sca_esv=f7a420607edd60ea&gl=kr&hl=ko&q=%EB%93%9C%EB%A6%AC%EB%AF%B8+%EB%84%A4%EC%9D%B4%EB%B2%84+%EC%8A%A4%ED%86%A0%EC%96%B4&sa=X&ved=2ahUKEwiHqLzIiK6WAxUERaQEHTIxPboQ1QJ6BAgzEAE",
+      "serpapi_link": "https://serpapi.com/search.json?device=desktop&engine=google&gl=kr&google_domain=google.com&hl=ko&q=%EB%93%9C%EB%A6%AC%EB%AF%B8+%EB%84%A4%EC%9D%B4%EB%B2%84+%EC%8A%A4%ED%86%A0%EC%96%B4"
+    },
+    {
+      "block_position": 1,
+      "query": "드리미 wn6",
+      "link": "https://www.google.com/search?sca_esv=f7a420607edd60ea&gl=kr&hl=ko&q=%EB%93%9C%EB%A6%AC%EB%AF%B8+wn6&sa=X&ved=2ahUKEwiHqLzIiK6WAxUERaQEHTIxPboQ1QJ6BAgvEAE",
+      "serpapi_link": "https://serpapi.com/search.json?device=desktop&engine=google&gl=kr&google_domain=google.com&hl=ko&q=%EB%93%9C%EB%A6%AC%EB%AF%B8+wn6"
+    },
+    {
+      "block_position": 1,
+      "query": "드리미 h12s",
+      "link": "https://www.google.com/search?sca_esv=f7a420607edd60ea&gl=kr&hl=ko&q=%EB%93%9C%EB%A6%AC%EB%AF%B8+h12s&sa=X&ved=2ahUKEwiHqLzIiK6WAxUERaQEHTIxPboQ1QJ6BAgrEAE",
+      "serpapi_link": "https://serpapi.com/search.json?device=desktop&engine=google&gl=kr&google_domain=google.com&hl=ko&q=%EB%93%9C%EB%A6%AC%EB%AF%B8+h12s"
+    },
+    {
+      "block_position": 1,
+      "query": "드리미 X50",
+      "link": "https://www.google.com/search?sca_esv=f7a420607edd60ea&gl=kr&hl=ko&q=%EB%93%9C%EB%A6%AC%EB%AF%B8+X50&sa=X&ved=2ahUKEwiHqLzIiK6WAxUERaQEHTIxPboQ1QJ6BAgoEAE",
+      "serpapi_link": "https://serpapi.com/search.json?device=desktop&engine=google&gl=kr&google_domain=google.com&hl=ko&q=%EB%93%9C%EB%A6%AC%EB%AF%B8+X50"
+    },
+    {
+      "block_position": 1,
+      "query": "드리미 Matter",
+      "link": "https://www.google.com/search?sca_esv=f7a420607edd60ea&gl=kr&hl=ko&q=%EB%93%9C%EB%A6%AC%EB%AF%B8+Matter&sa=X&ved=2ahUKEwiHqLzIiK6WAxUERaQEHTIxPboQ1QJ6BAgnEAE",
+      "serpapi_link": "https://serpapi.com/search.json?device=desktop&engine=google&gl=kr&google_domain=google.com&hl=ko&q=%EB%93%9C%EB%A6%AC%EB%AF%B8+Matter"
+    }
+  ],
+  "pagination": {
+    "current": 1,
+    "next": "https://www.google.com/search?q=%22%EB%93%9C%EB%A6%AC%EB%AF%B8+X60+Ultra+X60ULTRA%22+%22brand.naver.com%22&oq=%22%EB%93%9C%EB%A6%AC%EB%AF%B8+X60+Ultra+X60ULTRA%22+%22brand.naver.com%22&hl=ko&gl=kr&start=10&sourceid=chrome&ie=UTF-8",
+    "other_pages": {
+      "2": "https://www.google.com/search?q=%22%EB%93%9C%EB%A6%AC%EB%AF%B8+X60+Ultra+X60ULTRA%22+%22brand.naver.com%22&oq=%22%EB%93%9C%EB%A6%AC%EB%AF%B8+X60+Ultra+X60ULTRA%22+%22brand.naver.com%22&hl=ko&gl=kr&start=10&sourceid=chrome&ie=UTF-8",
+      "3": "https://www.google.com/search?q=%22%EB%93%9C%EB%A6%AC%EB%AF%B8+X60+Ultra+X60ULTRA%22+%22brand.naver.com%22&oq=%22%EB%93%9C%EB%A6%AC%EB%AF%B8+X60+Ultra+X60ULTRA%22+%22brand.naver.com%22&hl=ko&gl=kr&start=20&sourceid=chrome&ie=UTF-8",
+      "4": "https://www.google.com/search?q=%22%EB%93%9C%EB%A6%AC%EB%AF%B8+X60+Ultra+X60ULTRA%22+%22brand.naver.com%22&oq=%22%EB%93%9C%EB%A6%AC%EB%AF%B8+X60+Ultra+X60ULTRA%22+%22brand.naver.com%22&hl=ko&gl=kr&start=30&sourceid=chrome&ie=UTF-8",
+      "5": "https://www.google.com/search?q=%22%EB%93%9C%EB%A6%AC%EB%AF%B8+X60+Ultra+X60ULTRA%22+%22brand.naver.com%22&oq=%22%EB%93%9C%EB%A6%AC%EB%AF%B8+X60+Ultra+X60ULTRA%22+%22brand.naver.com%22&hl=ko&gl=kr&start=40&sourceid=chrome&ie=UTF-8"
+    }
+  },
+  "serpapi_pagination": {
+    "current": 1,
+    "next_link": "https://serpapi.com/search.json?device=desktop&engine=google&gl=kr&google_domain=google.com&hl=ko&q=%22%EB%93%9C%EB%A6%AC%EB%AF%B8+X60+Ultra+X60ULTRA%22+%22brand.naver.com%22&start=10",
+    "next": "https://serpapi.com/search.json?device=desktop&engine=google&gl=kr&google_domain=google.com&hl=ko&q=%22%EB%93%9C%EB%A6%AC%EB%AF%B8+X60+Ultra+X60ULTRA%22+%22brand.naver.com%22&start=10",
+    "other_pages": {
+      "2": "https://serpapi.com/search.json?device=desktop&engine=google&gl=kr&google_domain=google.com&hl=ko&q=%22%EB%93%9C%EB%A6%AC%EB%AF%B8+X60+Ultra+X60ULTRA%22+%22brand.naver.com%22&start=10",
+      "3": "https://serpapi.com/search.json?device=desktop&engine=google&gl=kr&google_domain=google.com&hl=ko&q=%22%EB%93%9C%EB%A6%AC%EB%AF%B8+X60+Ultra+X60ULTRA%22+%22brand.naver.com%22&start=20",
+      "4": "https://serpapi.com/search.json?device=desktop&engine=google&gl=kr&google_domain=google.com&hl=ko&q=%22%EB%93%9C%EB%A6%AC%EB%AF%B8+X60+Ultra+X60ULTRA%22+%22brand.naver.com%22&start=30",
+      "5": "https://serpapi.com/search.json?device=desktop&engine=google&gl=kr&google_domain=google.com&hl=ko&q=%22%EB%93%9C%EB%A6%AC%EB%AF%B8+X60+Ultra+X60ULTRA%22+%22brand.naver.com%22&start=40"
+    }
+  }
+}

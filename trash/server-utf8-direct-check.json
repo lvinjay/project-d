@@ -1,0 +1,129 @@
+{
+  "success": true,
+  "category": "로봇청소기",
+  "minBudget": 500000,
+  "maxBudget": 1500000,
+  "count": 12,
+  "products": [
+    {
+      "name": "로보락 로봇청소기 S10 MaxV Ultra RRE0VES+EWFD55HRR 자동 물통형, 화이트",
+      "text": "",
+      "seller": "판매처 45",
+      "url": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59077746157&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0&t=mt0w8y54&h=1e0aa79f429cfe04c69fe9d72ceea485674e90a5&frm=NVSCDIG",
+      "imageUrl": "https://shopping-phinf.pstatic.net/main_5907774/59077746157.20260227155822.jpg?type=f300",
+      "price": 1640000,
+      "reviewCount": 7959,
+      "rating": 4.85
+    },
+    {
+      "name": "로보락 S10 MaxV Ultra 로봇청소기",
+      "text": "",
+      "seller": "포인트 최대 16,900원",
+      "url": "https://ader.naver.com/v1/2EHFiXiI_pNWeDXX0znyZqfexbqdB6jqmc0aSTdH9OakD-abHc4oFYaikrJFpdtAh0xZoXinvwHBpUG1vOBQN7NfrYJ_Nrqnjs8rXNQgqH_rhb_V56y7OV2VBYezsHhEtNslILgTbJrrQ49tO9VoHKc3635hMKN4s2wpLVFuo3ZN9lqsNwGZq7QoyTpQr--m6FTd31x1xjsgh5-baYO039VMt8UYC0kEpKOtkt7uA2iggmD7-SMzVnHOlKr_w2pwlzH3fZJoR473iuqCUXqKVr-Pe1ppR8vkRez9ongaLWNMAXDqzWci1DU-Y-6ku6ruK09Qv93BbxasQbaIQc03XRCX-TC_lYQJPUhrNLlRRnmFkYaZf-kVtkyaTHgaDClbKkXAT8lGD-ZwVkZDx_s-aTbHeb-AHyobS0NY7CoGDIQfWKNe_mT903nR9K6pHbq5gTB7xyI_q54Re-Zv_pI3DVkzh9ipC2iNcAHSYsyg58JqeOY9UgQ7JWwvuJGzWWoJIvCgHJODy7Ue6brP24VGcyu4FTTwz9o-Ag-VUJicomLAB-rxNMcJOQKdTY5bmFMk?c=naver.search.pc.npla&t=0&ui=LIST_FINDER",
+      "imageUrl": "https://searchad-phinf.pstatic.net/MjAyNjA1MTFfMiAg/MDAxNzc4NDc0OTkzNDQ4.SRmAgKYn6MMT7uLOmeFbLDACywb-eft4FXK0sPZEDP4g.LStBui87mjDKYnsDZbfuLOmH-aY8I_Q-1EAMlp7yYbwg.PNG/1654034-e21a623d-a6c5-4148-9c78-83494fdf98cf.png?type=f300",
+      "price": 1890000,
+      "reviewCount": 3930,
+      "rating": 4.85
+    },
+    {
+      "name": "모바 로봇청소기 P70 Pro Ultra RLP54HE AI센서 자동세척 화이트, 단품",
+      "text": "",
+      "seller": "판매처 10",
+      "url": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59760912197&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0&t=mt0w8y55&h=899e46918e28a3364e8ac7db0f66d9e95d812eef&frm=NVSCDIG",
+      "imageUrl": "https://shopping-phinf.pstatic.net/main_5976091/59760912197.20260422124547.jpg?type=f300",
+      "price": 549000,
+      "reviewCount": 3519,
+      "rating": 4.95
+    },
+    {
+      "name": "에브리봇 TS450 쓰리스핀 슬림 물걸레 로봇청소기 26년 NEW",
+      "text": "",
+      "seller": "에브리봇 공식쇼핑몰",
+      "url": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=90381860933&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0&t=mt0w8y4w&h=2b4253f088a07b6fefe9f28051b2c671288730ba&frm=NVSCSPE",
+      "imageUrl": "https://shopping-phinf.pstatic.net/main_9038186/90381860933.13.jpg?type=f300",
+      "price": 448000,
+      "reviewCount": 2063,
+      "rating": 4.8
+    },
+    {
+      "name": "LG홈봇 로봇청소기 RONi 로니 N95TWU",
+      "text": "",
+      "seller": "포인트 최대 22,900원",
+      "url": "https://ader.naver.com/v1/m0pmE0BHs7a1MEXg35cMih7FfQbg6cDpnHndXosSC733-aADFzoLAQ-B_1b8-5yXSlnpw1XbSNz2Cp5vY7C5hrYcZsOG3XbIiLnw5pyObzv23YESeo88-zRgfYmlNSSwU2OqCibvX8uZ1h1e4QQrakjBGxhy4dZ87u6Qy8LmPJOWgRVuY7-B3aE3-GiSUlbnMEp3VRWeXceiOqWpJupP2QwqOwXXUGrIasZMxBEZeXqo1ZcDQJXuGyhMo3Zj2NiVp_6LI8YwZheBW8dulouyjeMiNiWajNEP94Dub5YpsTaK3aadJP7uMjm-fU46NwyQ5676GrOQ-nn18zdGvqvJ0A==?c=naver.search.pc.npla&t=0&ui=LIST_FINDER",
+      "imageUrl": "https://searchad-phinf.pstatic.net/MjAyNjA3MDZfNjgg/MDAxNzgzMzI3NjUzMjY3.gh27tlBsk8n6yHrxyf-EpjfXoPWtFZopoGjTIYaKJGgg.J2o_W8ktdGjcb5Jn08CjuqnIxwvpToqd-8bs-wcYQYQg.PNG/1490239-a0365634-5696-43f3-acac-9d226b87ee30.png?type=f300",
+      "price": 2300000,
+      "reviewCount": 416,
+      "rating": 5
+    },
+    {
+      "name": "삼성 2026 신제품 비스포크 AI 스팀 울트라 물걸레 올인원로봇청소기 새틴 그레이지",
+      "text": "",
+      "seller": "삼성공식파트너 우주",
+      "url": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=90574795333&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0&t=mt0w9208&h=b1f03a4f3c434cb4ba1a106895a17cb09cc4ea52&frm=NVSCPRO",
+      "imageUrl": "https://shopping-phinf.pstatic.net/main_9057479/90574795333.3.jpg?type=f300",
+      "price": 1910000,
+      "reviewCount": 3609,
+      "rating": 4.85
+    },
+    {
+      "name": "JONR 존알 로봇청소기 올인원 자동세척 건조 스테이션 최강희청소기 X1 MAX, 블랙",
+      "text": "",
+      "seller": "포인트 최대 27,990원",
+      "url": "https://ader.naver.com/v1/f_4GoxdRQqMJEyOvkaGJqwpwT2_L0IHFEZfIbjhuwpxUr5XctC_PYBLY09a-DKpTaU7QuvEgtWQ82U-_IZ9NN2nRbdbN9Ij1HQkaUDcmQeHQ2BifzzhwgaeokKFE2XjxklFq-MMg2_4quygG6TJ6fybWJEWe3TEBdTG14GGLmQTiDnfsHAJcHxV4vQvL0kWT2JE1xlc3YrhMrafC5-MT2Oh2IEXG6L8EtasHnncXfI38FlG6kWJmrZSiPBtca2FaxKrr32EdAF6PU7_r91yDnAfAk_UzEHgIsqDrF6KbfSSRatBVf2rGwi8b6Fockkppy5KUlDdaaGRvI6nfDEkRaO2lFJGGVFUWUomLJmVvaqMNN86_fcYDavOKwzDqIqDP?c=naver.search.pc.npla&NaPm=1&ui=LIST_FINDER",
+      "imageUrl": "https://shopping-phinf.pstatic.net/main_9094680/90946805496.1.jpg?type=f300",
+      "price": 799000,
+      "reviewCount": 203,
+      "rating": 4.59
+    },
+    {
+      "name": "드리미 로봇청소기 X60 Ultra X60ULTRA 올인원 물통형, 화이트",
+      "text": "",
+      "seller": "판매처 18",
+      "url": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59215055197&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0&t=mt0w9209&h=c318026a81c3044845924aac8f06b2d6eca62e90&frm=NVSCPRO",
+      "imageUrl": "https://shopping-phinf.pstatic.net/main_5921505/59215055197.20260311095819.jpg?type=f300",
+      "price": 990000,
+      "reviewCount": 2657,
+      "rating": 4.88
+    },
+    {
+      "name": "JONR 존알 로봇청소기 올인원 자동세척 건조 스테이션 최강희청소기 X1 MAX, 블랙",
+      "text": "",
+      "seller": "JONR",
+      "url": "https://ader.naver.com/v1/SC4XY7IKpuXS9jAafu-uw0iNgZajUtyKRs1qoMBjAv3v7ylilTlcmRbU_tywPaoTz5ZuX542gUJQztidBBPEKPOu05w8GB047hT5vet0th1ZykLEBuQ9mOuKFNcMcg6Up_bnhbj0L0cMycRZX7VBPsFIFLd7T2hh_FHrH97UC1PLSrGjSS7tJAGD0jckt15iqyVGIw6aS8cRuX4kmcSyue2PDH-VVZGOv_f9UXwQLRfq7Q6dIGWTWpJGtRXLGeasSWsmT9GPILnV6quT6BmVZ4iz9LfsQXZOu5XJ1qgPeAGDjI46QMbcsOC7MaoljewRO1ly4C1x1YUc7JDQnni9spNQZoZdWAz7n4JpfcYCxN1vCoeE7Ud7xWhzV9Ty4S7h?c=naver.search.pc.npla&NaPm=1&ui=GUIDE",
+      "imageUrl": "https://shopping-phinf.pstatic.net/main_9094680/90946805496.1.jpg?type=f300",
+      "price": 799000,
+      "reviewCount": 203,
+      "rating": 4.59
+    },
+    {
+      "name": "LG홈봇 로봇청소기 RONi 로니 N95TWU",
+      "text": "",
+      "seller": "LG전자",
+      "url": "https://ader.naver.com/v1/SC4XY7IKpuXS9jAafu-uw0iNgZajUtyKRs1qoMBjAv3_o_bGteFDANbNpbiHRZsYEJszfpgB1-krmSStKfFHZcbanZ3bibWo5khzNitCSaGtwbAIsaokaRlhooZB56xHlNww-LXIXoDIycoAspcZXwVnHkC5SH0b0gvBuDlt9xB9N2cjovn-4cDu9NgzrhfBYeTDgO3QwzM2hoqSADHpJJxSyUiKpNkFK_lH_tCQCBismtlTWpOL1KPMioK8pTJsTEK6Gb2BmFfhBceXdDzR1sW7IYUCZrdicwsGD1cCAGN5Pl68EVVzSgKKzKIdlV_dKJZa_SPqZeVP_wR5fD87QA==?c=naver.search.pc.npla&t=0&ui=GUIDE",
+      "imageUrl": "https://searchad-phinf.pstatic.net/MjAyNjA3MDZfNjgg/MDAxNzgzMzI3NjUzMjY3.gh27tlBsk8n6yHrxyf-EpjfXoPWtFZopoGjTIYaKJGgg.J2o_W8ktdGjcb5Jn08CjuqnIxwvpToqd-8bs-wcYQYQg.PNG/1490239-a0365634-5696-43f3-acac-9d226b87ee30.png?type=f300",
+      "price": 2300000,
+      "reviewCount": 416,
+      "rating": 5
+    },
+    {
+      "name": "드리미 올인원 로봇청소기 X60 Master 스팀 직배수형, 화이트",
+      "text": "",
+      "seller": "판매처 23",
+      "url": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59204433943&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0&t=mt0w9208&h=005ad807f8f4d9da251a2a19fa5f288524de1ef6&frm=NVSCPRO",
+      "imageUrl": "https://shopping-phinf.pstatic.net/main_5920443/59204433943.20260310171023.jpg?type=f300",
+      "price": 1090000,
+      "reviewCount": 1154,
+      "rating": 4.83
+    },
+    {
+      "name": "JONR 존알 로봇청소기 올인원 자동세척 건조 스테이션 최강희청소기 X9 PRO, 블랙",
+      "text": "",
+      "seller": "포인트 최대 6,990원",
+      "url": "https://ader.naver.com/v1/0grRS7Xt32rKxvFKQ4hL8xSJPfGK1hfmWBKIYMdDMo4y9BDBucgRP3FzLjD_-sl7Kztl-uhC2szQvhgO4bVIAQivjRaIczeAtqqYYvk1ndWrLjd_ih7sTbDYCdoTRdo9h-mpaaxJFx0dZ5jltf-svyoL2xPE6lnIsBjePKtdv_8M5dKCk7NOPkTBh2fzJJQ9d0ccammH8kz-SeXvwp_Bk7RqsIDGLAItTsigHBi5DCn7m10rMpmw9peTG7AmBqDMzEoT1tLJv5vfpyGCb8iCFlSiYoERsB1W7FcTJosd8DK8_Tzdxxe03ukkY77SEd3A80eYXP8Jpsp3MPAlVdijHjL0hOWamUZCzxo5jJJ01veqkLwxU7oOr60eQJz4CQh3?c=naver.search.pc.npla&NaPm=1&ui=LIST_FINDER",
+      "imageUrl": "https://shopping-phinf.pstatic.net/main_9094680/90946805498.3.jpg?type=f300",
+      "price": 999000,
+      "reviewCount": 203,
+      "rating": 4.59
+    }
+  ]
+}

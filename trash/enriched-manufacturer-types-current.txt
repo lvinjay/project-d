@@ -1,0 +1,161 @@
+﻿  products?: CapturedProduct[];
+};
+
+type FailureItem = {
+  position: number;
+  marketProduct: string;
+  stage:
+    | "resolve"
+    | "brightdata"
+    | "validation"
+    | "budget"
+    | "duplicate";
+  reason: string;
+};
+
+type FinalCandidate = {
+  position: number;
+
+  canonicalSource: {
+    productId: string;
+    brandName: string;
+    brandSite: string;
+    url: string;
+  };
+
+  reviewSource: {
+    productName: string;
+    seller: string;
+    price: number;
+    reviewCount: number;
+    rating: number;
+    url: string;
+    resolvedUrl: string;
+    sourceType:
+      | "naver-store"
+      | "external-store"
+      | "naver-aggregate"
+      | "unknown";
+    isIndividualSeller: boolean;
+    matchScore: number;
+    reviewTextSource:
+      | "selected-source"
+      | "canonical-reuse"
+      | "canonical-fallback";
+    status:
+      | "selected"
+      | "fallback-canonical";
+  };
+
+  purchaseSource: {
+    productName: string;
+    seller: string;
+    price: number;
+    reviewCount: number;
+    rating: number;
+    url: string;
+    resolvedUrl: string;
+    sourceType:
+      | "naver-store"
+      | "external-store"
+      | "naver-aggregate"
+      | "unknown";
+    isIndividualSeller: boolean;
+    matchScore: number;
+    status:
+      | "selected"
+      | "fallback-market";
+  };
+
+  market: {
+    productName: string;
+    seller: string;
+    listedPrice: number;
+    reviewCount: number;
+    rating: number;
+    imageUrl: string;
+    sourceUrl: string;
+  };
+
+  resolution: {
+    productId: string;
+    brandName: string;
+    brandSite: string;
+    canonicalUrl: string;
+  };
+
+  detail: {
+    productId: string;
+    productName: string;
+    brand: string;
+    manufacturer: string;
+    modelName: string;
+
+    originalPrice: number;
+    finalPrice: number;
+    discountRate: number;
+
+    reviewCount: number;
+    rating: number | null;
+
+    sellerName: string;
+    categoryName: string;
+
+    imageUrl: string;
+
+    reviewSamples: number;
+
+    /*
+      현재 단계의 reviews는 canonicalSource(Bright Data)에서
+      수집된 기존 리뷰 샘플이다.
+
+      reviewSource에는 "리뷰를 가장 많이 보유한 판매처"만
+      별도로 선택해 두며, 실제 해당 판매처 리뷰 텍스트 수집은
+      다음 단계에서 연결한다.
+    */
+    reviews: {
+      rating: number;
+      date: string;
+      text: string;
+      helpfulCount: number;
+    }[];
+
+    sourceUrl: string;
+    reviewSourceUrl: string;
+
+    detailStatus:
+      | "full"
+      | "partial-market";
+  };
+};
+
+type ProcessSuccess = {
+  success: true;
+
+  position: number;
+
+  productId: string;
+
+  candidate: FinalCandidate;
+
+  resolverAttempts: number;
+
+  brightDataCalls: number;
+};
+
+type ProcessFailure = {
+  success: false;
+
+  failure: FailureItem;
+
+  resolverAttempts: number;
+
+  brightDataCalls: number;
+};
+
+type ProcessResult =
+  | ProcessSuccess
+  | ProcessFailure;
+
+function isWithinBudget(
+  price: number,

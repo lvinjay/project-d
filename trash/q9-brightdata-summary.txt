@@ -1,0 +1,9 @@
+﻿===== Q9 BRIGHT DATA RAW 확인 =====
+records: 1
+url: 
+product_id: 
+title: 
+total_reviews: 
+top_reviews count: 1
+
+===== top_reviews 첫 3개 =====

@@ -1,0 +1,27 @@
+﻿import { collectNaverProduct } from "../lib/brightDataProduct";
+
+async function main() {
+  const url =
+    "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59760912197&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0";
+
+  console.log("Bright Data 중간 URL 직접 테스트 시작");
+  console.log("URL:", url);
+
+  const startedAt = Date.now();
+
+  try {
+    const result = await collectNaverProduct(url);
+
+    console.log("");
+    console.log("===== 성공 =====");
+    console.log("시간:", Math.round((Date.now() - startedAt) / 1000), "초");
+    console.log(JSON.stringify(result, null, 2));
+  } catch (error) {
+    console.log("");
+    console.log("===== 실패 =====");
+    console.log("시간:", Math.round((Date.now() - startedAt) / 1000), "초");
+    console.error(error);
+  }
+}
+
+main();

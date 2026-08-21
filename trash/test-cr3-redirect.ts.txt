@@ -1,0 +1,64 @@
+﻿async function main() {
+  const url =
+    "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59760912197&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0";
+
+  console.log("원본:", url);
+
+  const response =
+    await fetch(
+      url,
+      {
+        redirect: "follow",
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0",
+        },
+      },
+    );
+
+  console.log(
+    "STATUS:",
+    response.status,
+  );
+
+  console.log(
+    "FINAL URL:",
+    response.url,
+  );
+
+  const html =
+    await response.text();
+
+  const urls =
+    [
+      ...html.matchAll(
+        /https?:\/\/(?:brand|smartstore)\.naver\.com\/[^"'<>\\\s]+/gi,
+      ),
+    ]
+      .map(
+        (match) =>
+          match[0],
+      )
+      .slice(0, 10);
+
+  console.log(
+    "NAVER STORE URLS:",
+    JSON.stringify(
+      urls,
+      null,
+      2,
+    ),
+  );
+
+  console.log(
+    "HTML LENGTH:",
+    html.length,
+  );
+}
+
+main().catch(
+  (error) => {
+    console.error(error);
+    process.exit(1);
+  },
+);

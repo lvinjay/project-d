@@ -1,0 +1,201 @@
+﻿        brandName =
+          extractBrandName(
+            data,
+          );
+      }
+    };
+
+  /*
+    학습된 공식 브랜드스토어와 일치하는 canonical 후보를
+    확보했다면 남은 Naver 검색을 생략한다.
+
+    canonical 후보가 단순히 하나 존재한다는 이유만으로
+    중단하지 않는다. 검색 결과에는 다른 브랜드 상품 URL도
+    섞일 수 있기 때문이다.
+  */
+  const hasTrustedBrandCandidate =
+    () =>
+      Boolean(
+        learnedBrandMapping?.brandSite &&
+        canonicalCandidates.some(
+          (candidate) =>
+            candidate.brandSite ===
+            learnedBrandMapping.brandSite,
+        ),
+      );
+
+  /*
+    상품번호가 이미 있으면
+    기존에 성공했던 강한 검색부터 사용.
+  */
+  if (inputProductId) {
+    await tryQuery(
+      `${inputProductId} ${cleanedName}`,
+    );
+  }
+
+  /*
+    앞 검색에서 신뢰 가능한 공식 브랜드 후보를
+    확보하지 못한 경우에만 다음 검색을 실행한다.
+  */
+  if (!hasTrustedBrandCandidate()) {
+    await tryQuery(
+      `${cleanedName} brand.naver.com`,
+    );
+  }
+
+  if (
+    initialBrandCandidate &&
+    !hasTrustedBrandCandidate()
+  ) {
+    const shortModel =
+      modelTokens
+        .slice(0, 2)
+        .join(" ");
+
+    const learnedBrandSlug =
+      learnedBrandMapping?.brandSite
+        ?.replace(
+          /^https?:\/\/brand\.naver\.com\//i,
+          "",
+        )
+        .replace(/\/+$/, "");
+
+    /*
+      학습 브랜드도 Google broad로 바로 넘기지 않고
+      공식 브랜드스토어 한정 검색을 1회 허용한다.
+
+      예:
+      에브리봇 TS450
+      -> site:brand.naver.com/everybot TS450
+
+      P70 / X60처럼 앞 검색에서 이미 신뢰 후보를 찾았다면
+      이 검색은 실행되지 않는다.
+    */
+    const siteQuery =
+      learnedBrandSlug
+        ? `site:brand.naver.com/${learnedBrandSlug} ${shortModel}`
+        : `site:brand.naver.com ${initialBrandCandidate} ${shortModel}`;
+
+    await tryQuery(
+      siteQuery,
+    );
+  }
+
+  const modelLike =
+    usefulTokens.filter(
+      (token) =>
+        /[a-zA-Z]/.test(
+          token,
+        ) ||
+        /\d/.test(
+          token,
+        ),
+    );
+
+  if (
+    initialBrandCandidate &&
+    modelLike.length > 0 &&
+    !learnedBrandMapping?.brandSite &&
+    !hasTrustedBrandCandidate()
+  ) {
+    await tryQuery(
+      `${initialBrandCandidate} ${modelLike
+        .slice(0, 3)
+        .join(" ")} 공식`,
+    );
+  }
+
+  /*
+    Naver 검색만으로 공식 상품 URL을 확보하지 못했으면
+    남은 검색 예산 1회를 Google broad fallback에 사용한다.
+
+    전체 SerpApi 검색 횟수는
+    MAX_SERPAPI_QUERIES_PER_PRODUCT 한도를 공유한다.
+  */
+  if (
+    canonicalCandidates.length ===
+      0 &&
+    triedQueries.length <
+      MAX_SERPAPI_QUERIES_PER_PRODUCT
+  ) {
+    /*
+      Google broad 검색은 모델 토큰을 과하게 넣지 않는다.
+
+      예:
+      X60 Ultra X60ULTRA
+      → X60 Ultra
+
+      같은 모델의 중복 표기가 검색어를 지나치게
+      구체화해서 공식 상품 URL이 포함된
+      제3자 검색결과를 놓치는 문제를 방지한다.
+    */
+    const googleModelTokens =
+      modelLike.length > 0
+        ? modelLike
+            .slice(0, 2)
+            .join(" ")
+        : modelTokens
+            .slice(0, 2)
+            .join(" ");
+
+    const googleQuery =
+      [
+        initialBrandCandidate,
+        googleModelTokens,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+
+    if (googleQuery) {
+      const labeledQuery =
+        `[google-broad] "${googleQuery}" "brand.naver.com"`;
+
+      triedQueries.push(
+        labeledQuery,
+      );
+
+      try {
+        const googleData =
+          await searchGoogle(
+            `"${googleQuery}" "brand.naver.com"`,
+          );
+
+        for (
+          const candidate of
+          extractGoogleCanonicalCandidates(
+            googleData,
+          )
+        ) {
+          if (
+            !canonicalCandidates.some(
+              (existing) =>
+                existing.canonicalUrl ===
+                candidate.canonicalUrl,
+            )
+          ) {
+            canonicalCandidates.push(
+              candidate,
+            );
+          }
+        }
+
+        for (
+          const site of
+          extractBrandSites(
+            googleData,
+          )
+        ) {
+          brandSites.add(site);
+        }
+      } catch (error) {
+        console.warn(
+          "Google broad fallback warning:",
+          error,
+        );
+      }
+    }
+  }
+
+  /*

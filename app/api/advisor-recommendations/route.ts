@@ -70,6 +70,7 @@ type ProductRow = {
 type ProfileCriterion = {
   key?: string;
   label?: string;
+  defaultWeight?: number;
 };
 
 function normalizeText(value: unknown) {
@@ -319,12 +320,114 @@ function findPriceInObject(
 function getProductPrice(
   product: ProductRow,
 ) {
+  const detail =
+    product.product_detail_analysis;
+
+  /*
+    Bright Data에서 확보한 실제 판매가를
+    반드시 최우선으로 사용한다.
+
+    현재 Project D 저장 구조:
+    product_detail_analysis.price.finalPrice
+  */
+  if (
+    detail &&
+    typeof detail === "object" &&
+    !Array.isArray(detail)
+  ) {
+    const detailRow =
+      detail as Record<
+        string,
+        unknown
+      >;
+
+    const priceValue =
+      detailRow.price;
+
+    if (
+      priceValue &&
+      typeof priceValue ===
+        "object" &&
+      !Array.isArray(
+        priceValue,
+      )
+    ) {
+      const priceRow =
+        priceValue as Record<
+          string,
+          unknown
+        >;
+
+      const preferredFinalKeys = [
+        "finalPrice",
+        "final_price",
+        "actualPurchasePrice",
+        "actual_purchase_price",
+        "salePrice",
+        "sale_price",
+        "currentPrice",
+        "current_price",
+      ];
+
+      for (
+        const key of
+        preferredFinalKeys
+      ) {
+        const price =
+          numericPrice(
+            priceRow[key],
+          );
+
+        if (
+          price !== null
+        ) {
+          return price;
+        }
+      }
+    }
+
+    /*
+      혹시 향후 finalPrice가
+      price 객체 밖에 저장되는 경우도 대응.
+    */
+    const directFinalKeys = [
+      "finalPrice",
+      "final_price",
+      "actualPurchasePrice",
+      "actual_purchase_price",
+      "salePrice",
+      "sale_price",
+      "currentPrice",
+      "current_price",
+    ];
+
+    for (
+      const key of
+      directFinalKeys
+    ) {
+      const price =
+        numericPrice(
+          detailRow[key],
+        );
+
+      if (
+        price !== null
+      ) {
+        return price;
+      }
+    }
+  }
+
+  /*
+    실제 판매가가 없는 예전 데이터만
+    기존 범용 가격 탐색으로 fallback.
+  */
   return (
     findPriceInObject(
-      product.market_metrics,
+      product.product_detail_analysis,
     ) ??
     findPriceInObject(
-      product.product_detail_analysis,
+      product.market_metrics,
     )
   );
 }
@@ -677,27 +780,6 @@ export async function POST(
       );
     }
 
-    const activeWeights =
-      Object.entries(
-        weights,
-      ).filter(
-        ([, value]) =>
-          value > 0,
-      );
-
-    if (
-      activeWeights.length === 0
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "추천 기준 중요도가 비어 있습니다.",
-        },
-        { status: 400 },
-      );
-    }
-
     const {
       data: profile,
       error: profileError,
@@ -717,10 +799,10 @@ export async function POST(
     }
 
     const labelMap =
-      new Map<
-        string,
-        string
-      >();
+      new Map<string, string>();
+
+    const defaultWeightMap =
+      new Map<string, number>();
 
     if (
       Array.isArray(
@@ -741,13 +823,67 @@ export async function POST(
             item.label,
           );
 
+        const defaultWeight =
+          Math.max(
+            0,
+            Math.min(
+              10,
+              Number(
+                item.defaultWeight ??
+                  0,
+              ),
+            ),
+          );
+
         if (key && label) {
           labelMap.set(
             key,
             label,
           );
         }
+
+        if (
+          key &&
+          Number.isFinite(
+            defaultWeight,
+          ) &&
+          defaultWeight > 0
+        ) {
+          defaultWeightMap.set(
+            key,
+            defaultWeight,
+          );
+        }
       }
+    }
+
+    /*
+      프론트에서 개인화된 weights가 오면 그것을 사용하고,
+      없으면 category profile의 defaultWeight를 사용한다.
+    */
+    const activeWeights =
+      (
+        Object.keys(weights).length > 0
+          ? Object.entries(weights)
+          : Array.from(
+              defaultWeightMap.entries(),
+            )
+      ).filter(
+        ([, value]) =>
+          value > 0,
+      );
+
+    if (
+      activeWeights.length === 0
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "추천 기준 중요도가 비어 있습니다.",
+        },
+        { status: 400 },
+      );
     }
 
     const {
@@ -787,7 +923,49 @@ export async function POST(
           >)
         : [];
 
-    const recommendations =
+    /*
+      null 점수는 계산에서 제외하지 않는다.
+      먼저 현재 후보군에서 기준별 평균을 계산하고,
+      해당 제품의 점수가 없을 때 그 평균을 중립값으로 사용한다.
+    */
+    const criterionAverages =
+      new Map<string, number>();
+
+    for (
+      const [key] of activeWeights
+    ) {
+      const validScores =
+        rows
+          .map((product) =>
+            product.criterion_scores?.[
+              key
+            ],
+          )
+          .filter(
+            (
+              score,
+            ): score is number =>
+              isUsableScore(
+                score,
+              ),
+          );
+
+      if (
+        validScores.length > 0
+      ) {
+        criterionAverages.set(
+          key,
+          validScores.reduce(
+            (sum, score) =>
+              sum + score,
+            0,
+          ) /
+            validScores.length,
+        );
+      }
+    }
+
+    const scoredRecommendations =
       rows
         .map((product) => {
           const scores =
@@ -804,6 +982,13 @@ export async function POST(
               key: string;
               label: string;
               score:
+                | number
+                | null;
+              effectiveScore:
+                | number
+                | null;
+              imputed: boolean;
+              criterionAverage:
                 | number
                 | null;
               weight: number;
@@ -836,16 +1021,31 @@ export async function POST(
             requestedWeightTotal +=
               weight;
 
-            const score =
+            const rawScore =
               scores[key];
 
-            if (
+            const score =
               isUsableScore(
-                score,
+                rawScore,
               )
+                ? rawScore
+                : null;
+
+            const averageScore =
+              criterionAverages.get(
+                key,
+              ) ?? null;
+
+            const effectiveScore =
+              score ??
+              averageScore;
+
+            if (
+              effectiveScore !== null
             ) {
               weightedTotal +=
-                score * weight;
+                effectiveScore *
+                weight;
 
               usedWeightTotal +=
                 weight;
@@ -858,20 +1058,36 @@ export async function POST(
                   labelMap.get(
                     key,
                   ) ?? key,
-                score:
-                  isUsableScore(
-                    score,
-                  )
-                    ? score
+                score,
+                effectiveScore:
+                  effectiveScore !==
+                  null
+                    ? Number(
+                        effectiveScore.toFixed(
+                          1,
+                        ),
+                      )
+                    : null,
+                imputed:
+                  score === null &&
+                  effectiveScore !==
+                    null,
+                criterionAverage:
+                  averageScore !==
+                  null
+                    ? Number(
+                        averageScore.toFixed(
+                          1,
+                        ),
+                      )
                     : null,
                 weight,
                 contribution:
-                  isUsableScore(
-                    score,
-                  )
+                  effectiveScore !==
+                  null
                     ? Number(
                         (
-                          score *
+                          effectiveScore *
                           weight
                         ).toFixed(
                           1,
@@ -920,6 +1136,26 @@ export async function POST(
             return null;
           }
 
+          const knownWeightTotal =
+            criterionBreakdown.reduce(
+              (sum, item) =>
+                item.score !== null
+                  ? sum +
+                    item.weight
+                  : sum,
+              0,
+            );
+
+          const imputedWeightTotal =
+            criterionBreakdown.reduce(
+              (sum, item) =>
+                item.imputed
+                  ? sum +
+                    item.weight
+                  : sum,
+              0,
+            );
+
           const baseMatchScore =
             Math.round(
               weightedTotal /
@@ -952,19 +1188,23 @@ export async function POST(
               budgetRule,
             );
 
+          /*
+            성능/개인화 점수와 가격은 분리한다.
+            budgetPenalty은 표시용으로 유지하지만
+            matchScore에서는 차감하지 않는다.
+          */
           const matchScore =
             Math.max(
               0,
               Math.min(
                 100,
-                blendedMatchScore -
-                  budget.penalty,
+                blendedMatchScore,
               ),
             );
 
           const dataCoverage =
             Math.round(
-              (usedWeightTotal /
+              (knownWeightTotal /
                 Math.max(
                   1,
                   requestedWeightTotal,
@@ -999,15 +1239,15 @@ export async function POST(
             ]
               .filter(
                 (item) =>
-                  item.score !==
+                  item.effectiveScore !==
                   null,
               )
               .sort(
                 (a, b) =>
-                  (b.score ??
+                  (b.effectiveScore ??
                     0) *
                     b.weight -
-                  (a.score ??
+                  (a.effectiveScore ??
                     0) *
                     a.weight,
               )
@@ -1019,14 +1259,14 @@ export async function POST(
             ]
               .filter(
                 (item) =>
-                  item.score !==
+                  item.effectiveScore !==
                   null,
               )
               .sort(
                 (a, b) =>
-                  (a.score ??
+                  (a.effectiveScore ??
                     0) -
-                  (b.score ??
+                  (b.effectiveScore ??
                     0),
               )
               .slice(0, 2);
@@ -1157,6 +1397,9 @@ export async function POST(
 
             confidence,
             dataCoverage,
+            requestedWeightTotal,
+            knownWeightTotal,
+            imputedWeightTotal,
 
             reviewCount:
               Number(
@@ -1193,12 +1436,6 @@ export async function POST(
 
             recommendationReasons:
               [
-                ...(budget.reason
-                  ? [
-                      budget.reason,
-                    ]
-                  : []),
-
                 ...(personal?.reason
                   ? [
                       personal.reason
@@ -1225,7 +1462,7 @@ export async function POST(
                 ...strongest.map(
                   (item) => {
                     const score =
-                      item.score ??
+                      item.effectiveScore ??
                       0;
 
                     if (
@@ -1326,6 +1563,121 @@ export async function POST(
           > =>
             item !== null,
         )
+        ;
+
+    const validPrices =
+      scoredRecommendations
+        .map(
+          (item) =>
+            item.productPrice,
+        )
+        .filter(
+          (
+            price,
+          ): price is number =>
+            typeof price ===
+              "number" &&
+            Number.isFinite(
+              price,
+            ) &&
+            price > 0,
+        );
+
+    const minPrice =
+      validPrices.length > 0
+        ? Math.min(
+            ...validPrices,
+          )
+        : null;
+
+    const maxPrice =
+      validPrices.length > 0
+        ? Math.max(
+            ...validPrices,
+          )
+        : null;
+
+    /*
+      가성비 점수:
+
+      - 성능/개인화 점수 80%
+      - 후보군 내 가격경쟁력 20%
+
+      가격경쟁력은 50~100점 범위로 제한한다.
+
+      가장 비싼 제품이라고 가격점수를 0점으로 만들면
+      후보 가격 차이가 크지 않아도 성능 좋은 제품이
+      지나치게 불리해질 수 있기 때문이다.
+
+      따라서 가성비는 "가장 싼 제품"이 아니라
+      "가격을 고려해도 성능이 좋은 제품"을 찾는
+      보조 순위로 사용한다.
+    */
+    const withValueScores =
+      scoredRecommendations.map(
+        (item) => {
+          let valuePriceScore:
+            | number
+            | null = null;
+
+          if (
+            item.productPrice !==
+              null &&
+            minPrice !== null &&
+            maxPrice !== null
+          ) {
+            valuePriceScore =
+              maxPrice ===
+              minPrice
+                ? 100
+                : Math.round(
+                    100 -
+                      ((item.productPrice -
+                        minPrice) /
+                        (maxPrice -
+                          minPrice)) *
+                        50,
+                  );
+          }
+
+          const valueScore =
+            valuePriceScore ===
+            null
+              ? item.matchScore
+              : Math.round(
+                  item.matchScore *
+                    0.8 +
+                    valuePriceScore *
+                      0.2,
+                );
+
+          return {
+            ...item,
+            valuePriceScore,
+            valueScore,
+          };
+        },
+      );
+
+    const valueRankMap =
+      new Map(
+        [...withValueScores]
+          .sort(
+            (a, b) =>
+              b.valueScore -
+                a.valueScore ||
+              b.matchScore -
+                a.matchScore,
+          )
+          .map(
+            (item, index) => [
+              item.id,
+              index + 1,
+            ]),
+      );
+
+    const recommendations =
+      withValueScores
         .sort(
           (a, b) =>
             b.matchScore -
@@ -1339,6 +1691,10 @@ export async function POST(
             ...item,
             rank:
               index + 1,
+            valueRank:
+              valueRankMap.get(
+                item.id,
+              ) ?? null,
           }),
         );
 
@@ -1365,7 +1721,7 @@ export async function POST(
         recommendations.length,
       recommendations,
       note:
-        "점수가 없는 기준은 계산에서 제외했으며, 선택 예산 상한을 초과한 제품에는 초과 폭에 따라 서버에서 단계적 감점을 적용했습니다.",
+        "점수가 없는 기준은 후보군의 해당 기준 평균점으로 중립 대체하고 dataCoverage로 실제 근거 비율을 별도 표시합니다. matchScore는 성능·개인화 점수이며 가격은 감점하지 않고 valueScore/valueRank로 별도 평가합니다.",
     });
   } catch (error) {
     console.error(
@@ -1385,4 +1741,7 @@ export async function POST(
     );
   }
 }
+
+
+
 

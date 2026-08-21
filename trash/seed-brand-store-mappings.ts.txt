@@ -1,0 +1,44 @@
+﻿import {
+  saveBrandStoreMapping,
+} from "../lib/brandStoreMappings";
+
+async function main() {
+  const mappings = [
+    {
+      names: ["에브리봇"],
+      site: "https://brand.naver.com/everybot",
+    },
+    {
+      names: ["모바", "MOVA"],
+      site: "https://brand.naver.com/mova",
+    },
+    {
+      names: ["에코백스", "ECOVACS"],
+      site: "https://brand.naver.com/ecovacs",
+    },
+    {
+      names: ["로보락", "Roborock"],
+      site: "https://brand.naver.com/roborock",
+    },
+  ];
+
+  for (const item of mappings) {
+    await saveBrandStoreMapping(
+      item.names,
+      item.site,
+      {
+        source: "verified_product_url",
+        confidence: 100,
+      },
+    );
+
+    console.log(
+      "저장:",
+      item.names.join(" / "),
+      "→",
+      item.site,
+    );
+  }
+}
+
+main().catch(console.error);

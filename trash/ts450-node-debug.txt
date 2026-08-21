@@ -1,0 +1,514 @@
+===== TOP LEVEL =====
+success: true
+marketCandidateCount: 9
+resolverAttempts: 9
+brightDataCalls: 6
+finalCandidateCount: 4
+failureCount: 5
+
+===== TS450 OBJECTS =====
+
+--- MATCH 1 ---
+PATH: $
+{
+  "success": true,
+  "category": "로봇청소기",
+  "budget": {
+    "minBudget": 500000,
+    "maxBudget": 1500000
+  },
+  "targetCount": 5,
+  "marketCandidateCount": 9,
+  "resolverAttempts": 9,
+  "brightDataCalls": 6,
+  "finalCandidateCount": 4,
+  "targetReached": false,
+  "finalCandidates": [
+    {
+      "position": 2,
+      "canonicalSource": {
+        "productId": "13086178143",
+        "brandName": "드리미",
+        "brandSite": "https://brand.naver.com/dreame",
+        "url": "https://brand.naver.com/dreame/products/13086178143",
+        "sourceType": "naver-brand",
+        "identityKey": "naver:13086178143"
+      },
+      "reviewSource": {
+        "productName": "[1위 달성] X60 Ultra 올인원 로봇청소기 화이트, 단품",
+        "seller": "Dreame",
+        "price": 1590000,
+        "reviewCount": 2490,
+        "rating": 4.88,
+        "url": "https://ader.naver.com/v1/qi1YPcZwFBdV1lhvsOYMsDmteAGKfCOvVIdOQLVbkc1_DeGHDWlxAutA0EaWI4nwNoa5HUfOq1-e5LRJJuP6uFUQilIBnimDVJywTXUYx5n_CUEx0OZcSiePIIIa88EILqjCHxsGad8eU69Zk0hWKXkTwz8ooHX4sfQXjKU_bLouKYPwK38OhE1T7qbakaVWk31dAOFo4wErMdSmM3bCzqJshwOPFioBvShquzFpOAJIQxl1P1WHxNKfkY51fyhbXR3jJMZ5Z-VInfmyuO3cvE51Wl3JKmWxat2o4xVcgSJRaWXQrT2263WGqqP-1Murlt_7iEL4I2YpBjQd-O4DuYAuxo65J2ytaUrfidckPgJsnKaWUMnSE6TMGGxXOel5DW5_QI9acTU2okvvjlCP8L6g8Tha2Dqpa7JcEi9ujdNVCesE9XJahIYCOuc5gpSZOtNyU49Esweect3M71ZvfBNnRdP__3T5mrMei5qghYRJ2HIbpL3tSkJtRoEN9Q-xHm8AqXSUn9IaHI3cf6JUJA==?c=naver.search.pc.npla&t=0&ui=GUIDE",
+        "resolvedUrl": "https://smartstore.naver.com/main/products/13086178143?nl-ts-pid=jojNqsqosC8ssShcA5h-460995&n_media=27758&n_query=1%EC%9C%841%EC%9C%84X60ULTRA&n_rank=1&n_ad_group=grp-a001-02-000000063689056&n_ad=nad-a001-02-000000486714298&n_campaign_type=2&n_mall_id=ncp_1ohzns_01&n_mall_pid=13086178143&n_ad_group_type=2&n_match=3&NaPm=ct%3Dmt14ss49%7Cci%3DER3b2124c9%2D9c5f%2D11f1%2Dbbe2%2D5e28beaf1165%7Ctr%3Dpla%7Chk%3Dc5ff274000f4a814bb32b8d93b6b4a247e3b55aa%7Cnacn%3DtousBMxWCGQX",
+        "sourceType": "naver-store",
+        "isIndividualSeller": true,
+        "matchScore": 125,
+        "reviewTextSource": "canonical-reuse",
+        "status": "selected"
+      },
+      "purchaseSource": {
+        "productName": "드리미 X60 Ultra 올인원 로봇청소기 RCXE0808 화이트 물걸레 진공 스마트 무선 자동 흡입 바닥 걸레 청소 로봇",
+        "seller": "쿠팡",
+        "price": 990000,
+        "reviewCount": 0,
+        "rating": 0,
+        "url": "https://ader.naver.com/v1/8AnU9CxQ0kIOrJKX0zGgd2d7SWqFtOdQgMUCWwBvqZa2KVPqu20rHlzhbvqW6Ig7684n3uiC-VNZvmZh5nCfT3wVpACA0JIw8aKN4xa--vh3pDAKMFw-n45KwPbCd25fGObKSaZj6p5wB0w3z58Ql_G5A3mEF1Pc3z-xGsnl9MTzSZDQvOoLF4X514j5AnOMKutsrd_ma8vNLOBNoWFwD64pl1pcACtH_fyDYZG0NuwxK6tAX2sjP3J73L-BCVmVUl__RPPysLsMQWxzCzy7exqULwMV7jOv7XVphBARkqs6MnM8lDXohSaZtEDGf8R36iRakqC2HcaPZI0iflLPhGxR6GcorNIh_UHROj4N60QaaIwUpzlZttbFvEgV8zFulYFm6QZJkc9qFx8yd7rYaKsU2Y8uYMsZwaQQfTNvFndOcYxSQEq5ZF3tKLaU2SSsi7Um-IZN3_rdbF4AmLB6Q4F0ognO6aCxzCfGAVC7mcmxflHZJs4fQOx-rAklh4q1VzV0uUlXRGx38JIIEJk12WnVUNT24zi30pP58FXAFgWrFU44Rg4VhFxazHP-_e1V?c=naver.search.pc.npla&t=0&ui=GUIDE",
+        "resolvedUrl": "https://link.coupang.com/re/PCSNAVERPCSDP?pageKey=9417161256&ctag=9417161256&lptag=I27984924616&itemId=27984924616&vendorItemId=94942621363&spec=10305197&nv_ad=pla&n_media=27758&n_query=1%EC%9C%841%EC%9C%84X60ULTRA&n_rank=2&n_ad_group=grp-a001-02-000000039662292&n_ad=nad-a001-02-000000565321385&n_campaign_type=2&n_mall_id=coupang&n_mall_pid=I27984924616&n_ad_group_type=2&n_match=3",
+        "sourceType": "external-store",
+        "isIndividualSeller": true,
+        "matchScore": 71.66666666666666,
+        "status": "selected"
+      },
+      "market": {
+        "productName": "드리미 로봇청소기 X60 Ultra X60ULTRA 올인원 물통형, 화이트",
+        "seller": "판매처 18",
+        "listedPrice": 990000,
+        "reviewCount": 2657,
+        "rating": 4.88,
+        "imageUrl": "https://shopping-phinf.pstatic.net/main_5921505/59215055197.20260311095819.jpg?type=f300",
+        "sourceUrl": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59215055197&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0&t=mt14n357&h=f0b080d020b647df3d952200d28ef184e563cd4b&frm=NVSCPRO"
+      },
+      "resolution": {
+        "productId": "13086178143",
+        "brandName": "드리미",
+        "brandSite": "https://brand.naver.com/dreame",
+        "canonicalUrl": "https://brand.naver.com/dreame/products/13086178143",
+        "sourceType": "naver-brand",
+        "identityKey": "naver:13086178143"
+      },
+      "detail": {
+        "productId": "13086178143",
+        "productName": "[1위 달성] X60 Ultra 올인원 로봇청소기 화이트, 단품",
+        "brand": "드리미",
+        "manufacturer": "드리미",
+        "modelName": "",
+        "originalPrice": 1590000,
+        "finalPrice": 990000,
+        "discountRate": 37,
+        "reviewCount": 2495,
+        "rating": null,
+        "sellerName": "dreame",
+        "categoryName": "로봇청소기",
+        "imageUrl": "https://shop-phinf.pstatic.net/20260309_207/1773020472554UhAGY_PNG/25721046687230644_44856413.png?type=o1000",
+        "reviewSamples": 20,
+        "reviews": [
+          {
+            "rating": 5,
+            "date": "2026-08-14T00:06:49.306Z",
+            "text": "✅ 구매 계기\n제주로 이사오고 나서 집 주변이 밭이라 그런지 문을 열어두면 흙먼지가 꽤 들어오더라구요. 매일 청소기는 돌려도 물걸레질까지 매일 하기는 어려워서 결국 드리미 X60 Ultra를 구매했습니다! 아직 아이는 없지만 앞으로 아기가 생기거나 가족들이 놀러오면 집 바닥을 더 깨끗하게 유지하고 싶다는 생각도 컸어요 :)\n\n✅ 실제로 사용해보니\n아직 일주일 정도밖에 사용하지 않았지만 체감은 정말 큽니다. 처음 사용한 날 거실 바닥을 물티슈로 닦았을 때 생각보다 너무 더러워서 놀랐는데, 매일 예약 청소를 돌리고 며칠 뒤 다시 닦아보니 확실히 훨씬 깨끗해졌어요! 오수도 첫날에는 정말 진했는데 며칠 지나면서 점점 옅어지는 게 보여서 청소가 되고 있다는 게 눈으로 느껴지더라구요 ㅎㅎ 침대 밑이나 책장 아래처럼 평소 손이 잘 안 가는 곳도 공간만 있으면 알아서 들어가서 청소해주고, 장애물도 무작정 부딪히는 느낌보다는 미리 인식해서 피하는 편이라 만족스럽습니다.\n\n✅ 좋았던 점\n- 매일 예약 청소가 가능해서 집 바닥을 꾸준히 관리할 수 있음\n- 진공청소 + 물걸레를 따로 설정해서 좀 더 꼼꼼하게 청소 가능\n- 침대 밑, 책장 밑처럼 평소 청소하기 어려운 곳까지 들어가 줌\n- 장애물 인식이 생각보다 괜찮음\n- 오수를 직접 확인할 수 있어서 청소 효과가 눈에 보임\n\n저는 물통형으로 구매해서 오수는 매일 또는 이틀에 한 번 정도 비우고 정수도 채워주고 있습니다. 완전히 손이 안 가는 제품은 아니지만, 직접 집 전체를 쓸고 닦는 것에 비하면 훨씬 편해요.\n\n✅ 아쉬운 점\n한 가지 꼽자면 소음입니다! 엄청 시끄러운 정도는 아니지만 그렇다고 아주 조용한 제품도 아니에요. 특히 잠귀가 밝으신 분들은 야간 예약 청소할 때 조금 신경 쓰일 수도 있을 것 같아요. 그리고 스테이션 색상이 사진에서는 은색 느낌이었는데 실제로는 핑크골드 느낌이 조금 있어서, 개인적으로는 그냥 화이트나 실버였으면 더 깔끔했겠다 싶었습니다.\n\n✅ 총평\n아직 사용한 지 오래되지는 않았지만 지금까지는 만족도가 정말 높아요! 로봇청소기가 열심히 청소해주니까 저도 바닥에 있는 물건을 더 자주 치우게 되고, 집 전체가 전보다 훨씬 깔끔해졌습니다 ㅎㅎ 매일 물걸레질까지 직접 하기는 어렵고, 집 바닥을 꾸준히 깨끗하게 유지하고 싶은 분들이라면 체감이 큰 가전이라고 생각합니다 :)\n\n\n블로그에도 작성을 했는데, 배송 당일 청소하고, 5일 후 청소한 것 비교해서 적어놓았으니 참고해서 보시면 좋을 것 같습니당\nhttps://blog.naver.com/yomangjin_pick/224377054742",
+            "helpfulCount": 0
+          },
+          {
+            "rating": 5,
+            "date": "2026-08-08T02:32:26.748Z",
+            "text": "진짜 한 5년째 살까 말까 고민하던 로봇청소기를 드디어 구매했어요.\n고민들이 정말 많이 했는데, 고민이 된 이유는 \n\n1️⃣장애물 피하기.\n일단 아이들이 있어서 바닥에 물건이 진~짜 많아요. 이것 저것 많아서 로봇청소기를 사도 내가 발견하지 못한 아이들 장난감이나 물건들이 있으면 그냥 흡입하다 망가지진 않을까? 하는 걱정이 있었는데요.\n\n💛드리미를 가동(?)해보니 진짜 요리조리 너무 잘피해가요ㅋㅋ 전선도 인식하고 아이들 작은 피큐어도 인식해서 잘 피해 가서 무리한 흡입(?)으로 고장 날 일은 없겠다 싶더라구요.\n\n2️⃣걸레의 세척과 건조 (로봇청소기 걸레가 부착되어 있는 제품들은 쉰내가 난다는 후기를 봐서&hellip;)\n\n💛근데 이건 제가 오자마자 진짜 봤는데 찌든때도 쏙쏙 빠지고 세척을 하고 나온 걸레가 깨~끗해요 정말. 냄새도 안남!\n생각보다 너무 깨끗해서 내가 손빨래한거보다 낫다 싶었어요ㅋㅋㅋ 다른 빨래도 맡기고 싶은 심정&hellip;\n이건 뭐 앞으로 더 써봐야 알 수도 있는 부분이지만 그래도 지금처럼 더운 한 여름에 냄새가 안나는 거면 굿~ 건조도 뽀송~\n\n3️⃣진짜 낮은 곳도,  구석도 잘 흡입하여 청소가 되는지(청소강도)\n\n💛저희집 쇼파가 낮은 편인데 그 밑에 일반 청소기를 밀어서 들어가도 끝까지는 못들어가서 항상 돌돌이를 끝까지 밀어 넣어서 다시 두번 청소를 하는 편인데 그게 잘 될까? 싶었는데 드리미가 그 머리(?)ㅋㅋ 를 쑤욱 내려서 밑으로 들어가는거에요.\n실시간 영상 보니 로봇팔을 쭈욱 뻗어서 구석 모서리도 삭삭 잘 청소하고 깔~끔쓰 하게 마무리 짓고 여러번 돌아 돌아 나와요.\n물론 전기 선이나 다리 주변은 제가 정리 해야하는 부분도 있지만, 그래도 평소 두번 청소할거 한번에 하니까 너무 편하더라고요. 흡입 강도는 조절할 수 있는데 표준으로만 해놔도 너무 잘되고 있어서 좋아요!!\n\n❤️이번에 러브모모님 공구로 구입했는데, 솔직히 로0락이랑 고민 많이 했는데 성능에서 크게 차이도 안나구 또 무엇보다 공구로 너무 가격대가 일반가격보다 부담도 덜어져서 바로 구입했어요. 사실 가격으로 맘에 들어서 겟한거 있지만 성능이 굿이에요.\n\n😎아이들도 집에 로봇청소기 들어왔다고 대신 청소한다고 너무 신기해하고 큰아이는 &ldquo;엄마~ 집안일은 기계가 다하네요&rdquo;라고 하는데 살짝 찔렸는데ㅋㅋㅋ 그래도 엄마가 행복해야 가정이 행복한거잖아요?😆 진짜 잘산거 같아요👍👍 앞으로 더 사용해봐야겠지만 아직 앱이나 설정도 더 많이 공부해봐야겠지만 맘에 들어요!  결혼 10년차에 로봇청소기 이모를 들이니 퇴근하고 와서도 집안일에서 벗어나니 이렇게 편하고 행복할 줄 몰랐어요. 제가 너무 좋아하니 남편이 진작 사지 그랬냐며 제가 좋아하니 본인도 좋다고 하네요! 고민하시지 마시고, 지금 공구가로 혜택 빵빵하게🎉 줄때 얼른 겟하세요! 한달 뒤 사은품 기다리며 즐겁게 지내겠습니다!🫶",
+            "helpfulCount": 3
+          },
+          {
+            "rating": 5,
+            "date": "2026-08-12T06:23:14.237Z",
+            "text": "모르미 X60 울트라 솔직 후기 (신혼집 첫 로봇청소기)\n결혼한 지 얼마 안 된 새신랑입니다. 혼수 준비할 때 로봇청소기를 살까 말까 진짜 오래 고민했는데, 결국 그때는 안 샀어요. 가격대도 부담이고 &quot;있으면 좋겠지만 없어도 살긴 하잖아?&quot; 싶어서요.\n그러다 러브모모님 공구 소식을 보고 신뢰가 가서 이번에 결국 질렀습니다.\n구매 전에 백화점도 직접 다녀왔어요\n설명도 충분히 듣고 왔는데, 그러고도 이 제품을 고른 이유는 두 가지였습니다.\nAS 기간 &mdash; 추가 혜택 3년 포함해서 총 5년. 이건 확실히 마음이 놓이더라고요. 로봇청소기는 오래 쓰는 물건이라 AS가 진짜 중요하다고 생각합니다.\n10만 원 상당 키트는 백화점에서도 똑같이 준다고 해서, 솔직히 이건 큰 혜택으로는 안 느껴졌습니다. 이 부분은 솔직하게 남길게요.\n받자마자 바로 매핑 + 2시간 청소\n신기해서 오자마자 매핑 돌리고 청소까지 2시간 정도 시켰습니다. 아직 사용법이 완전히 익숙하진 않은데, 그 상태에서도 충분히 만족스럽게 해줘요.\n제일 놀란 건 침대 밑\n먼지가 진짜 어마어마했는데... 비포&middot;애프터 사진 보시면 아실 거예요. 진짜 깔끔하게 밀고 나옵니다. 사람이 들어가서 닦기 제일 귀찮은 자리를 알아서 해주니까 이것만으로도 값어치 한다 싶었어요.\n아쉬운 점 하나\n저희 집은 방지턱이 따로 없고 넘을 게 요가매트랑 욕실 발판 정도인데, 올라갈 때랑 내려올 때 &quot;쿵&quot; 하는 소리가 좀 있습니다. 이게 좀 걱정되긴 해요. 몇 번 더 학습시키면 경로를 더 잘 잡아서 빨라질 것 같습니다.\n백무빙은 아직 잘 모르겠어요\n다들 백무빙이 많다고 하시던데, 처음 써보는 저는 아직 개념 자체를 잘 모르겠습니다. 좀 더 써보고 알게 되면 다시 후기 남길게요.\n총평\n앱도 크게 어렵진 않은데, 기능이 많아서 공부는 살짝 더 해봐야 할 것 같습니다.\nLG, 로보락, 삼성 가격 보고 &quot;이건 좀 부담인데...&quot; 하셨던 분들이라면 가성비 정말 좋다고 말씀드리고 싶어요. 좋은 가격에 잘 산 것 같아서 만족스럽고, 앞으로 잘 써보겠습니다!",
+            "helpfulCount": 0
+          },
+          {
+            "rating": 5,
+            "date": "2026-08-08T02:51:46.665Z",
+            "text": "로보청소기를 구매하려고 마음먹고 여러종류의 제품을 고민하던중 마침 드리미가 할인이 떠서 구매를 결정짓게 되었습니다. \n진공청소시 소음이 있을거라 생각했는데 집에 카페트가 없어서인지 소음이 생각보단 적었습니다. \n그리고 물걸레 청소가 진짜 만족 스럽습니다. 물걸레 청소를 위해서 로봇청소기를 산다고 해도 과언이 아닙니다. \n드리미 X60 ULTRA는 특히 물걸레 관리가 타사모델에 비해 잘되는것 같습니다. 걸레쉰내가 많이 발생한다고들 하는데 고온수로 세척하는 드리미 모델은 괜찮을거 같고요. \n세척후 바닥판도 확인했는데 많이 지저분하지 않고 물티슈로 한번 닦아주면 깨끗하게 유지됩니다. \n또한 집 구역인식도 잘해서 구분하고, 청소중 장해물(케이블 종류, 의자 등)도 잘 피해서 다닙니다. \n조금 아쉬운것이 거실 소파높이가 9cm인데 드리미 X60 ULTRA가 8.5cm라 아슬하게 들어갈거 같지만 안쪽에 소파처짐이 보여서인지 소파밑으론 안들어가더라구요. \n들어갔다가 중간에 끼는것보단 나으니 좋다고 생각합니다.\n첫사용이라 그런지 39평 전체 청소시간이 3시간 정도 소요되었는데,한달정도 더 사용해보면 사용패턴이 학습되어 더 효율적으로 청소할수있게 되리라 기대합니다.",
+            "helpfulCount": 2
+          },
+          {
+            "rating": 5,
+            "date": "2026-08-07T11:48:19.682Z",
+            "text": "드리미는 드리미했다!!!!!!\n늘 고전적인것만 고집하다가 왜 다들 로봇청소기를 사는가?!생각하고 구매했는데..\n저는 이제 알았습니다 ㅋㅋ\n이편안함과 깨끗함! 저보다 바닥물걸레지를 잘합니다 러브모모님 덕에 저렴히 구매했어요^^\n소음은 있지만 예민하지 않으시면 괜찮은 소음입니다 그리고 물걸레는 정말 대박입니다👍👍\n세제가 좋은건지 드리가 꼼꼼한건지 일주일동안 청소안해도 반짝거리는 저희집! 정말최고였습니다\n드리미와 친해지고 있는데 찐친이 되려고 해요^^\n로보락이냐 삼성이냐 고민할때 러브모모에서 할인할수없는 그드리미를 꼼꼼히 설명해주시고 장단점을 말해주셔서 쉽게 결정을 내렸어요~\n긍데요~ 이리 싸고 똑똑한데 구매 안하실건가요??\n언능언능 서두르세요!! 최고!!\n남편도 최애가 된 드리미 !!\n감사합니다^^👍👍👍",
+            "helpfulCount": 2
+          },
+          {
+            "rating": 5,
+            "date": "2026-08-19T01:32:09.958Z",
+            "text": "처음에는 가격 때문에 고민을 좀 했는데 써보니 왜 상위 모델인지 알겠네요.\n\n일단 청소가 생각보다 꼼꼼해서 만족스럽습니다. 흡입력이 강해서 바닥에 있는 먼지나 머리카락, 작은 부스러기까지 잘 빨아들이고 물걸레도 같이 해주니까 청소하고 나면 바닥이 확실히 깔끔해진 느낌이에요.\n\n특히 마음에 들었던 건 낮은 가구 밑까지 들어가는 점입니다. 소파나 침대 밑처럼 평소에 청소하기 귀찮았던 곳까지 알아서 들어가서 청소해주니 확실히 편하네요. 장애물도 예전 로봇청소기보다 훨씬 자연스럽게 피해가는 느낌이고, 의자 다리나 생활용품이 조금 있어도 크게 걸리지 않고 잘 돌아다닙니다.\n\n물걸레 세척이랑 건조, 먼지 비움까지 알아서 해주는 것도 정말 편합니다. 예전에는 로봇청소기를 돌려도 결국 걸레 빨고 먼지통 비우는 게 일이었는데, 그런 번거로움이 많이 줄었어요.\n\n화이트 색상도 깔끔해서 거실에 두었을 때 생각보다 잘 어울리고요. 앱으로 구역 지정해서 청소하거나 예약할 수 있는 것도 편리합니다.\n\n단점이라면 본체뿐 아니라 스테이션까지 어느 정도 공간을 차지한다는 점, 그리고 처음 사용할 때는 앱 설정이나 기능이 워낙 많아서 조금 익숙해질 시간이 필요하다는 정도입니다.\n\n전체적으로는 매일 청소에 신경 쓰기 싫은 분들에게 특히 추천하고 싶어요. 한 번 설정해두면 알아서 청소하고 관리까지 해주니까 확실히 생활이 편해졌습니다. 가격대가 있는 제품이지만 개인적으로는 만족도가 높네요.",
+            "helpfulCount": 0
+          },
+          {
+            "rating": 5,
+            "date": "2026-08-19T11:48:01.707Z",
+            "text": "하루 30분 청소에 백만 원을 태워..?\n저희 집이 30평형이라 매일 청소기 돌리고 걸레질하는 데 딱 30분 정도 걸리거든요. 맞벌이에 4살 아이까지 있어서 힘들긴 했지만, &quot;고작 하루 30분인데 굳이 백만 원씩이나 주고 로청을 살 필요가 있나?&quot; 솔직히 엄청 고민했습니다.\n\n그래도 일단 써보자 하고 눈 딱 감고 샀는데... 웬걸, 배송 온 그날 바로 저희 집 최애템에 등극했습니다! 식기세척기랑 건조기 처음 들였을 때 느꼈던 그 신세계급 감동 그대로예요.\n\n매트 턱, 틈새 걱정은 사치!\n아이 때문에 온 집안에 매트가 깔려 있어서 턱을 잘 넘을까, 틈새 청소는 될까 걱정했는데 정말 불필요한 걱정이었습니다.\n알아서 부드럽게 잘 넘어가고 틈새 먼지까지 싹싹 완벽하게 닦아줘서, 로봇청소기 길 잃을까 봐 걱정했던 게 무색할 정도로 너무 똑똑합니다.\n\n유일한 아쉬움..\n\n열심히 일해주는 건 좋은데, 물걸레 청소.. 생각보다 오수를 자주 비워주고 정수를 채워줘야 해서 그 부분은 살짝 귀찮습니다.\n\n설치 환경만 허락하신다면 무조건 '직수 연결' 하시는 것을 강력 추천드립니다! 직수만 연결하면 정말 손가락 하나 까딱할 필요 없는 완벽한 이모님이 될 것 같아요.\n\n총평\n\n저처럼 &quot;내가 30분 하고 말지&quot;라고 고민하시는 분들, 매트 때문에 망설이시는 분들! 고민은 배송만 늦출 뿐입니다. 하루라도 빨리 사서 퇴근 후 삶의 질을 높이세요!",
+            "helpfulCount": 0
+          },
+          {
+            "rating": 5,
+            "date": "2026-08-17T22:54:09.926Z",
+            "text": "1. 가격\n- 99만원 + 악세사리 키트 + 5년 보증 이라는 상당히 좋은 조건으로 구매, 현재 로청 중에서 상위권의 스펙을 가진 제품을\n가성비 있게 구매하여 합리적인 소비 완료\n2. 배송,포장\n- 당일 배송으로 배송 빠르며, 패키징 박스가 품목 별로 잘 구분되어 포장 되어 있어서 손쉽게 꺼내어서 간편 설치 가이드가 동봉 되어 있어서 손쉽게 설치 할 수 있음\n3. 청소 \n- 가장 중요한 청소 성능은 1주일 사용 해본 소감으로 깔끔하게 청소 잘한다. 아기가 있는 집이라 거실 전체에 매트리스가 깔려 있는데 매트릭스 높이가 5cm 높은 편인데 잘 올라가고 잘 내려오면서 청소 잘 한다. 또 이 청소기를 선택한 중요한 이유는 물걸래 때문인데 물걸레 또한 바닥의 오염물 잘 제거하고 세척및 관리도 스테이션에서 알아서 해주기 때문에 관리하기가 편하다. 다만 정수물, 오수물은 직접 버리고 채워야 해서 관리가 필요하다\n4. 앱\n- 앱에서 다양한 기능으로 청소를 할 수 있어서 사용하기 편하다. 흡입력, 물걸레 수분 조절, 청소와 물걸레 동시에 할건지 따로 할건지 청소 순서 금지구역, 카펫, 커튼 등 다양한 기능을 제공 해서 각 집안에 맞게끔 청소 할 수 있게 지원 해준다.\n5. 사후 관리 \n- 1주일 사용 해본 결과 딱히 청소 한 후 관리 할게 없다. 물만 2~3일에 한번 갈아 주고 청소기 카메라,센서 정도 딱아주면 될뿐이다. 청소기 아래에 2중 브러쉬가 머리카락 엉킴 방지가 있어서 지끔까지 머리카락이 브러쉬기 엉킴이 없다. \n\n결론 - 99만원 가격대비 최고다!!!",
+            "helpfulCount": 0
+          },
+          {
+            "rating": 1,
+            "date": "2026-07-22T07:05:54.433Z",
+            "text": "선 3줄 요약합니다 상품페이지에 있는 AS 말 다 거짓이니까 믿지 마세요\n\n1) 초기 불량 제품 받음\n2) 불량 교환받기 아주 힘듬\n3) 최초로 고객센터 연락하게 7월 3일인데 3주째 교환 못받음\n\n결제한지 한달 됐는데 초기 불량때문에 쓰지도 못하고 있는 상황이라 너무 화가 나서 리뷰 남깁니다.\n\n6월 28일에 122만원에 주문했고 6월 30일에 제품 받았는데 사용해보니 물을 많이 흘리고 다니길레 7월 3일에 문의하니 기계 설정에서 물 사용양을 줄이라고 답변받았습니다.\n\n사진을 첨부했는데 아무리 봐도 한두방울 흘리는 정도가 아니라 7월 6일에 재문의했고 이제는 기계가 직접 물을 흘리는 영상을 찍어서 보내라는 답변을 받았습니다.\n\n영상까지 찍어보내라는 답변을 받고 사진만 봐도 불량인게 보이는데 왜 영상을 보내야 하냐고 따지니까 7월 7일에 영상은 필요 없으니까 AS기사를 보내겠다고 합니다.\n\n그렇게 다시 기다렸고 7월 13일이 되어서야 AS기사가 왔고 점검 시작한지 10분도 안돼서 바로 초기불량 판정 받았습니다.\n\n그러면 AS기사분께서 오셨으니 불량 제품은 가져가시고 새거를 바로 설치해주시는줄 알았는데 그건 또 아니었습니다.\n\n불량 판정서만 문자로 주시고 이거를 다시 고객센터에 문의해야 했습니다 다시 문의 넣은게 7월 14일입니다.\n\n7월 14일에 어떻게 해야 하냐고 물어보니까 제품을 다시 그대로 포장하고 충전재까지 꼼꼼하게 넣어서 반품을 해달라고 합니다.\n\n로봇청소기 스테이션까지 하면 크기가 꽤나 큽니다 엄청난 크기의 박스는 진작에 가져다 버렸으니 박스를 어디서 구해서 어떻게 보내냐 하니 그건 못도와주고 본인들은 무조건 반품받아서 회수처리를 해야만 새제품 교환이 가능하다고 합니다.\n\n인터넷 고객센터로는 답변도 느리고 답답해서 7월 15일에 전화상담 고객센터로 직접 연락을 했습니다.\n\n전화 상담을 통해 박스랑 완충재를 보내줄테니 포장해서 반품을 해달라고 답변받았고 이 와중에 포장 제대로 안해서 파손되면 고객책임이라 교환 불가하니 포장꼼꼼히 잘해달라고 합니다.\n\n그렇게 박스 다시 받고 7월 17일에 포장하고 반품 신청해서 \n7월 21일에 가져갔고 이제는 기다리고 있습니다.\n\n결국 물건은 사놓고 제대로 써보지도 못하고 이제는 제 손에 있지도 않습니다.\n\n본인들 제품의 불량에 대한 대응이나 대처방법이 그냥 모든게 다 엉망이고 화가납니다.\n\n물건 사놓고 한달 동안 쓰지도 못했는데 그 사이에 다른 사이트에서는 할인 이벤트 해서 더 싼값에 팔았습니다.\n\n120만원짜리 제품 사고 얻은게 한달동안 고객센터랑 싸우느라 신경쓰고 스트레스 받은게 끝이고 보상같은건 전혀 없습니다.\n\n드리미 제품 사실분들은 성능은 둘째치고 서비스는 하나부터 열까지 모두 다 엉망이니까 무조건 고려하고 사세요.\n\n\n7/25 내용 추가\n드디어 새거로 교환받았고 설치하고 다시 써보니 이제야 물한방울 안흘리고 청소합니다.\n\n물건 산지 한달만에 정상 제품 받아서 씁니다.\n\n진짜 다른건 모르겠고 서비스좀 개선하세요\n한달동안 나만 개고생하고 아무런 보상도 없고 진짜 정신 나가는줄 알았습니다.\n\n\n8/19 짜증나서 내용 추가로 씁니다\n리뷰에 죄송하고 도움 드릴테니 문의달라고 답변 달렸길레 문의했더니 별도 도움 어렵다고 답변하고 리뷰 내용에도 도움드리겠다는 말 쏙 빼고 수정해놨습니다.\n이럴거면 리뷰에 답변은 왜 달아놨습니까\n\n122만 주고 샀는데 불량이라 한 달 걸려서 새로 받았는데 그 사이에 추가 할인 들어가더니 99만원 됐습니다.\n\n한 달 동안 고객센터랑 씨름하는 스트레스를 23만원 주고 산 병신됐습니다.\n\n앞으로 드리미 제품 뭐든지 간에 산다는 사람 있으면 그 사람이 원수라도 사지 말라고 뜯어 말립니다.",
+            "helpfulCount": 118
+          },
+          {
+            "rating": 5,
+            "date": "2026-08-17T07:02:59.745Z",
+            "text": "말로만 듣던 로봇 청소기에 큰 감흥이 없었는데 \n러브모모님 공구를 보고 안 살수가 없어서 \n아묻따 구매!!\n일단 확실한 건 삶의 질이 상승했습니다 \n가전중에 젤 잘산템이라 인정합니다 \n로청은 이제 필수시대!!\n아침에 일어나서 제 할일이 줄어서 너무 기뻐요~\n로봇 청소기가 나온지도 꽤 되어서 기술력도 많이 발전했더군요 \n구석구석 완벽한 청소!!\n모서리나 가구 밑을 들어갈 때 사이드 브러시랑 물걸레가 밖으로 나와서 구석진 먼지까지 싹 닦아줍니다. 손이 전혀 안 가요.\n 똑똑한 장애물 회피!!\n전선이나 작은 물건들도 귀신같이 알아채고 잘 피해서 청소합니다. 밤이나 어두운 곳에서도 조명이 켜지면서 막힘없이 돌아다니네요.\n편리한 앱 관리!!\n자기전에 미리 청소 타임 맞춰두고 일어나기전에 \n청소 시키면 32평대 아파트 보통 진공물걸레 청소 110분 정도 되네요 \n일어나면 바닥이 보송보송 신세계 \n기분이 너무 좋아요 \n 손댈 필요 없는 스테이션 관리!!\n청소 끝나고 스스로 먼지 비우고, 뜨거운 물로 물걸레 세척에 온풍 건조까지 마쳐주니 냄새나 세균 걱정이 전혀 없습니다. 유지관리가 정말 편해요.\n오수 비우고 물만 채우면 끝!!\n바닥이 얼마나 더러운지 직접 눈으로 확인 가능하는다는점!!매일 물걸레 돌렸더니 오수가 점점 연해지는 중입니다 ~\n 깔끔하고 고급스러운 디자인\n화이트와 골드 트림 조합이라 집안 어디에 두어도 인테리어를 해치지 않고 너무 예쁩니다.",
+            "helpfulCount": 0
+          },
+          {
+            "rating": 5,
+            "date": "2026-08-18T12:47:01.890Z",
+            "text": "1. 디자인 &amp; 인테리어: 화이트 덕후 심쿵하는 감성깔끔한 화이트 컬러: 일단 스테이션과 본체 모두 톤이 맑은 화이트라 거실 한쪽에 두어도 가전이 아니라 예쁜 오브제 같습니다. 투박한 느낌이 전혀 없고 인테리어를 해치지 않아서 합격!마감 품질: 유광/무광 조합이 고급스럽고, 먼지가 잘 타지 않는 재질이라 관리하기도 편합니다.2. 청소 능력: &quot;눈에 안 보이던 먼지까지 싹 잡아냄&quot;역대급 흡입력 (35,000Pa): 스펙만 센 게 아니라 실제 성능이 미쳤습니다. 아이가 흘린 과자 부스러기는 물론이고 카펫 속 깊은 먼지까지 빨아들여요.  AI 블루라이트 광학 스캔: 이게 진짜 물건입니다. 육안으로는 잘 안 보이는 미세 먼지나 바닥 얼룩을 파란색 광학 빛으로 스캔해서 집요하게 닦아내는데, 청소 끝나고 바닥 맨발로 걸어보면 뽀득뽀득함이 다릅니다.  엉킴 방지 브러시: 긴 머리카락이나 반려동물 털이 메인 브러시에 엉키지 않고 깔끔하게 흡입돼서 가끔 브러시 청소해 줄 때 스트레스가 확 줄었습니다.  3. 주행 &amp; 장애물 회피: 아슬아슬하게 피해 가는 센스듀얼 고정밀 카메라와 AI 센서 조합 덕분에 바닥에 놀란 채 던져둔 충전기 선, 양말, 장난감 등을 완벽하게 인지하고 피해 갑니다.특히 의자 다리가 복잡하게 얽혀 있는 식탁 아래나 거실 테이블 밑에서도 멍때리지 않고 요리조리 지능적으로 빠져나와서 구석까지 청소해 주는 걸 보면 기특할 지경입니다.문턱 돌파력: 단일 문턱은 최대 4.5cm, 이중 문턱도 거침없이 넘어 다녀서 우리 집 문턱 높은 곳도 가로막힘없이 프리패스입니다.  4. 올인원 스테이션: 손 하나 까딱 안 하게 만드는 자동화로봇청소기의 진짜 완성은 스테이션이죠. X60 Ultra는 여기서 진가가 발휘됩니다.  80도 온수 고온 세척: 기름때나 찌든 때 묻은 물걸레를 뜨거운 물로 알아서 빨아주니 냄새나 세균 걱정이 없습니다.열풍 건조: 세척 후 바로 뽀송하게 열풍 건조까지 마쳐주니까 꿉꿉한 냄새가 원천 차단됩니다.자동 먼지 비움 &amp; 세제 투입: 청소가 끝나면 본체 먼지통을 알아서 비워주고 세제도 알아서 정량 투입되니, 사용자가 직접 손에 먼지 묻힐 일이 거의 없습니다.",
+            "helpfulCount": 0
+          },
+          {
+            "rating": 5,
+            "date": "2026-08-09T00:47:25.238Z",
+            "text": "처음 써보는 로봇청소기\n\n로보락이랑 드리미 고민하다가 as때문에 로보락사기로하고 11월 할인 기다리는데 드리미가 할인을 또 했네요\n할인을 많이해서 안살수가 없어서 구매했어요\n처음이라 사용시 어려움이 있었어요\n어플과 로봇청소기 사용설명서가 자세히 있었으면 좋겠어요\n식탁 애들 책상 선풍기 3cm매트가 있는데 의자는 빼놔야해요 식탁의자는 가로는 들어가는데 세로는 좁아서 통과를 못하더라구요\n바퀴의자있는곳은 청소 불가\n매트는 경사로 따로 구매안했는데 올라갈때 있고 걸려서 물걸래가 빠질때도 있었어요\n아무래도 자석식 탈부착 물걸래라서 그런듯\n물걸래 빠지면 청소가 중단되요\n어플로 못올라가는 문턱 조정하고 올라가는 문턱에 매트를 경사지도록 잘랐더니 무난히 올라가요\n청소는 무난히 잘돼요\n가끔 모서리부분이랑 한두개 먼지가 보이지만 그정도는 애교로 넘어가기로 했어요\n애들이 취학생이 되면서 맞벌이 가정인데 반나절만 지나도 바닥이 더러워져 스트레스였거든요\n알아서 청소해주고 청소할려면 바닥에 물건들을 치워야하니 청소후에는 늘 깔끔하고 깨끗하다는 인상을 받게되네요\n\n만족이고 as관련하여 걱정했는데 괜찮았어요\n물건 받자마자 사이드 청소솔 불량으로 톡톡 문의했고 연결이 느려 전화했는데 곧바로 연결, 많은 설명 없이 다시 보내준다고 했어요\n괜찮은듯 싶어요\n\n결론은 이가격에 잘샀다",
+            "helpfulCount": 3
+          },
+          {
+            "rating": 4,
+            "date": "2026-08-12T01:43:02.415Z",
+            "text": "드디어 우리집에도 청소이모님이 오셨습니다~\n다자녀 가구에 애완견 까지 있는 집인데도 이제야 첫 로봇청소기 구매라 열심히 알아보고 드리미x60 ultra로 결정했네요 (러브모모 이벤트!! )\n일단 디자인 깔끔하고 베이스 설치도 나름 간편하고 휴대폰 어플까지 설치 및 연결 완료~ 집구석구석 다니시면서 초기 딥클린(?) 시작하시는데 첫 로청이라 그런지 열심히 일하시는 모습에 그저 감동입니다^^\n청소 실력은 좀더 장기간 사용으로 확인해봐야 할 것 같고 소음은 뭐 청소기가 이정도는 나겠지 납득하고 넘어갈 수준 입니다. (우리집 강아지가 특별히 반응하지 않음...)\n 전반적으로 매우 만족한 가운데 굳이 한가지 단점을 애기하자면 언박싱중에 보이는 구겨진 브러쉬... 세개중에 하나가 마구잡이로 구겨져 있네요... 두개는 깔끔한데...ㅠㅠ\n 단순히 포장상태에서 눌려서 그런건지 다른이유가 있는건지 모르겠지만 새상품 언박싱중에 신나는 기분이 함께 구겨지는 느낌이랄까..\n 이런건 개선이 필요하실것 같아 아쉽지만 별한개 뺐습니다...\n 하지만 제가 구매한 러브모모 기획에는 추가 악세서리 구성품이 포함되어 있으니 깔끔한 브러쉬는 조만간 만날수 있을거라 기대하며 리뷰를 마칩니다^^",
+            "helpfulCount": 0
+          },
+          {
+            "rating": 5,
+            "date": "2026-08-09T02:27:21.466Z",
+            "text": "청소도 조용해요. 기존 건 소음이 있어 사람이 없을때만 사용했는데 티비 보면서 사용해도 될 정도 입니다.\n물걸레 성능도 너무 좋아요. 청소 후 오염된 물 청소해 보면 충격입니다. \n회피 모드도 좋아 걸림 없이 잘 돌아다닙니다.\n\n어플도 좋고 지도 생성도 좋고 구역도 자동으로 나누어 주어 너무 편합니다. \n오래된 집이라 문지방이 있는데 조금 넓은데도 정말 잘 너머다니내요.\n지도에 떨어져있는 물건도 아이콘으로 표시되어 뭐가 있는지도 알수있네요. 청소기 카메라로도 확인 할수있어 너무 좋구요.\n\n하루하루 신세계를 느끼게될것 같습니다.",
+            "helpfulCount": 2
+          },
+          {
+            "rating": 5,
+            "date": "2026-08-12T09:52:32.090Z",
+            "text": "[내돈내산] 삶의 질 수직 상승! 드리미 X60 울트라 솔직 사용 후기&nbsp; \n고민 끝에 구매한 드리미 X60 Ultra, 결론부터 말씀드리면 &quot;왜 이제야 샀나&quot; 싶을 정도로 대만족입니다! 집안일 시간이 대폭 줄어들어서 돈이 전혀 아깝지 않은 가전이 되었네요.&nbsp; \n실제로 써보면서 가장 마음에 들었던 포인트 몇 가지 정리해 봅니다.\n1. 슬림해진 헤드로 소파&middot;침대 밑까지 구석구석!\n기존 로봇청소기들은 위에 툭 튀어나온 센서 때문에 낮은 가구 밑에 못 들어가는 경우가 많았는데, X60 울트라는 센서가 본체 안으로 들어가는 구조라 슬림합니다. 덕분에 손이 안 닿던 소파 밑이나 침대 밑 깊숙한 곳까지 알아서 들어가 먼지를 싹 흡입해 주네요.&nbsp; \n2. 압도적인 흡입력과 구석 청소 능력\n35,000Pa 수준의 미친 흡입력 덕분에 머리카락, 작은 먼지, 반려동물 털까지 깔끔하게 집어삼킵니다. 특히 벽면이나 구석을 인식하면 사이드 브러시와 물걸레가 밖으로 쓱 확장되어 나오는데, 모서리 사각지대 먼지까지 잡아내는 거 보고 감탄했습니다.&nbsp; \n3. 문턱도 척척, 똑똑한 AI 장애물 회피\nProLeap&trade; 다리 구조 덕분에 집안의 높낮이가 있는 문턱이나 단차도 걸림 없이 자유자재로 넘나듭니다. 듀얼 카메라와 AI 조명(LED)이 탑재되어 있어서 바닥에 어지럽혀진 전선, 슬리퍼, 강아지 장난감도 귀신같이 피해 가고 어두운 소파 밑에서도 조명을 켜고 깔끔하게 청소합니다.&nbsp; \n4. 손 대지 않아도 되는 자동 물걸레 관리 (고온 세척 &amp; 열풍 건조)\n청소가 끝나면 도크로 돌아가 고온수로 물걸레를 팍팍 삶듯이 세척하고 열풍 건조까지 알아서 끝냅니다. 물걸레 특유의 꿉꿉한 냄새나 세균 걱정이 싹 사라졌고, 사람이 직접 손으로 빨 필요가 없어서 관리가 너무 편합니다.&nbsp; \n총평\n가격대는 조금 있지만, 뛰어난 장애물 인식, 압도적인 청소력, 그리고 완전 자동화된 관리 기능 덕분에 집안일의 스트레스를 제로로 만들어주는 효자템입니다. 로봇청소기 고민 중이신 분들이라면 고민 말고 지르셔도 후회 없으실 겁니다! 추천해요 👍",
+            "helpfulCount": 0
+          },
+          {
+            "rating": 5,
+            "date": "2026-07-13T11:47:07.793Z",
+            "text": "0.\n\n전부터 로봇청소기를 사야겠다고 생각은 하고 있었습니다. 생각만 했지요.\n원하는 만큼 청소를 잘해줄지 의심을 오래 했어요.\n그러다가 다른 집에서 로봇청소기를 보게 되었습니다.\n일반 진공 청소에, 심지어 걸레질도 알아서 하더군요.\n게다가 걸레도 자동으로 빨고 말리는 거 같았습니다.\n이제는 사도 되겠다, 사야겠다는 생각이 들었습니다.\n\n\n1. 왜 드리미를 선택했나\n\n솔직히, 어느 브랜드를 사야 할지 많이 고민하진 않았습니다.\n유튜브에서 리뷰 영상을 찾아보다가 올해 출시된 최신 모델 중에 드리미가 눈에 띄었어요.\n\n\n2. 설치\n\n본체와 스테이션을 꺼내 적당한 곳에 설치했습니다.\n폰에 앱을 설치하고 앱 화면과 청소기 본체의 안내 음성을 따라서 페어링을 할 수 있었습니다.\n\n\n3. 청소\n\n앱에서 '청소 시작' 버튼을 눌러 청소를 시켰습니다. \n청소기가 지도를 그리면서 청소했습니다. 공간의 형태를 정확하게 그려내는 게 신기했습니다.\n앱을 통해 청소기의 경로, 현재 동작, 장애물까지 확인이 되네요.\n침대 아래 같이 매번 청소하기 어려운 곳도 청소기가 들어가서 청소하고 걸레질까지 해줘서 정말 좋았습니다.\n그렇게 청소하다가 다시 돌아와서 먼지통 비우고, 걸레 세척하고, 다시 가서 청소하고...\n청소를 마무리하면 돌아와서 먼지통 비우고, 걸레 세척하고, 걸레 건조하고...\n오수통을 비우고 씻으면서 하수구로 들어가는 새카만 물을 보는데, 청소하긴 했구나 싶어서 왠지 기특했습니다.\n\n\n4. 특이하다고 생각하는 부분\n\n청소기를 처음 설치하면서 페어링할 때, 본체에서 나오는 안내 음성이 너무 우렁차서 놀랐습니다.\n다행히 앱으로 음량을 줄일 수 있어서 줄여놨고요.\n\n청소하면서 지도를 계속 갱신하는 거 같아요.\n처음 청소할 때 문을 닫아놓은 곳이 있어서 빠진 곳이 있었는데 문을 열어두니 원래 지도에 빠진 곳을 그려 넣더라구요.\n지금은 그렇게 만들어진 지도에 화장실이나 현관 같이 청소기가 들어가면 못 나올 공간을 금지 구역으로 해놨습니다.\n\n청소기의 소음은 생각보다 작았습니다.\n흡입력을 높게 설정하면 커지긴 하지만, 시끄럽다고 할 정도는 아닌 것 같습니다.\n걸레질만 할 땐 걸레판 돌아가는 소리와 청소기 바퀴가 굴러가는 소리만 나서 꽤 조용해요.\n\n청소를 시켜놓고 다른 일을 하다가 문제가 생기거나 청소를 마치면 알림이 옵니다.\n알림을 확인하면 앱 아이콘에 알림 개수가 없어져야 하는데, \n꼭 맨 처음 화면에서 알림 버튼을 눌러서 확인해야 알림 개수가 지워지네요.\n청소 방식이라던가, 청소 실황이라던가 전부 상세 화면에서 확인할 수 있는데\n앱 알림은 초기 화면서 확인해야 한다는 점은 약간 불편한 점입니다.\n나중에 앱이 업데이트되면 바뀔 수도 있겠지요.\n\n\n5. 마무리\n\n로봇청소기가 왜 필수 가전으로 불리는지 알게 됐습니다. 정말 편하네요.\n땀 흘리며 쓸고 닦을 필요가 없어진다는 게 축복같이 느껴집니다.\n사길 잘했다는 생각이 들어요. 고장 안 나고 오래오래 잘 있어주면 좋겠습니다.",
+            "helpfulCount": 21
+          },
+          {
+            "rating": 5,
+            "date": "2026-08-07T06:00:16.850Z",
+            "text": "물걸레 안되는 로봇청소기 쓰다가 이제 물걸레로봇청소기 많이 좋아졌다고 해서 구입 고민중이었어요.\n정말 모든 브랜드 유튜브보고 비교하고 있었는데...\n러브모모님이 말도 안되는 좋은 가격을 만들어 주셔서 고민 안하고 구입했습니다.\n원래 1세대로 나온 D**와 드리미 고민중이었는데 1세대는 불안하고 드리미는 안정적이라 선택했습니다.\n2번 돌려 봤는데... 정말 신세계입니다. 바닥이 뽀쏭뽀송해지는게 느껴져요.\n장점은 \n- 생각보다 엄청 조용합니다\n- 정말 똑똑 합니다. 걸리는데 없고 꼼꼼해요. 화장실 같은데는 금지구역으로 해놓으셔야 합니다.\n 이유는 그냥 넘어가서 청소를 해요ㅋㅋ\n단점은\n- 어플이 좀 느리다\n- 기능을 많이 하니 중간에 충전을 한번 하네요. 좀 시간이 걸려요. 하지만 청소 너무 잘하니 용서가 됩니다.\n 정말 대만족입니다.",
+            "helpfulCount": 2
+          },
+          {
+            "rating": 5,
+            "date": "2026-08-16T10:17:41.820Z",
+            "text": "기존에 사용하던 로봇청소기보다 훨신 똑똑합니다. 스테이션 찾는 능력도 뛰어나고 강아지때문에 바닥에 깔려있는 매트도 올라가서 청소합니다. 집에 사용하려고 샀는데 본가에도 나중에 사드려야겠네요.\n\n다만 어른들이 처음에 혼자 설치하기는 어려울 거 같아요. 디지털 기기에 익숙하지 않은 분들이라면 직배수형으로 해서 직원의 도움을 받는 게 좋아보입니다.\n\n직배수형으로 고민했다가 일반형으로 했는데 물 비우는 거나 채우는 게 별로 어렵지 않아서 다행이네요. 그냥 플라스틱 통을 들고가서 세척만 하면 되니까 어렵지 않습니다. 오수통도 바로 옆에 따로 있어서 그냥 비우고 한 번 씻어주면 끝납니다\n\n아주 저렴한 건 아니지만 100만원 언저리에 살 수 있어서 플래그쉽 모델 중에 입문용으로 아주 괜찮습니다. (저는 이걸로 로봇청소기는 졸업할 거 같습니다)\n\n삼x전자 / 로x락 이랑 비교해도 부족함이 없어서 고민하시는 분늘은 그냥 훨씬 저렴한 드리미 사시는 걸 추천드립니다.",
+            "helpfulCount": 0
+          },
+          {
+            "rating": 5,
+            "date": "2026-08-07T15:16:42.677Z",
+            "text": "그동안 로봇청소기 구매를 미루고 미루었는데, \n드리미를 보는 순간  아! 이거다! 심지어 공구로 가격할인도 많이 되어서 이건 안사면 안되겠다는 생각이 들었어요. 주문한 다음날 바로 배송이 되었어요 👍 오자마자 꺼내서 이틀째 사용중인데... 집이 깨끗해지는 마법이네요~소음도 없는편이라 밤에 자기전에 예약해놔도 될것 같아요.😊 드리미 만세에요. 증말 😍  집이 쾌적해졌고, 어플로  청소시작만 누르고, 청소 끝남 오수통만 버려주면 되니 ... 하, 정말 감동이에요!  로봇청소기 안사고 있었던 나 자신 칭찬합니다 😂 너무 맘에 들어서 여기 저기 홍보중이네요~  드리미는 꼭 들여야 한다구요!! 삶의질이 달라진다더니  고작  이틀 써보고 10000%  만족중이에요!",
+            "helpfulCount": 2
+          },
+          {
+            "rating": 5,
+            "date": "2026-08-15T02:26:28.115Z",
+            "text": "회사 대표님께 어떤 선물을 드리면 좋을지 고민하다가, 전 직원이 함께 비용을 모아 드리미 로봇청소기를 구매했습니다.\n\n백화점에서 처음 접한 뒤 관심 있게 보고 있었는데, 마침 인스타그램에서 공동구매 영상을 보게 되어 좋은 기회라고 생각했는데요.\n\n배송된 박스가 예상보다 커서 처음에는 설치가 복잡하지 않을까 걱정했어요. 하지만 막상 개봉해 보니 구성품이 깔끔하게 정리되어 있었고, 안내에 따라 설치하니 생각보다 어렵지 않았습니다.\n처음 설치하는 사람도 충분히 할 수 있을 정도였어요👍\n\n설치를 마치고 작동시켜 보니 집 안 곳곳을 부지런히 돌아다니며 청소하는 모습이 은근히 귀엽더라구여ㅎㅎ\n\n단순히 편리한 가전이라고만 생각했는데, 직접 보니 왜 요즘 로봇청소기를 많이 사용하는지 알 것 같았어요!!\n\n무엇보다 선물을 받으신 대표님께서 무척 좋아하셔서 함께 준비한 직원들도 모두 뿌듯했습니다😇\n\n좋은 선물을 드린 것 같아 만족스럽고, 설치를 도와드리다 보니 오히려 제가 더 사고 싶어졌어요. 조만간 저희 집에도 한 대 들이게 될 것 같습니다. 선물용으로도 만족스러운 선택이었어요 :)",
+            "helpfulCount": 0
+          }
+        ],
+        "sourceUrl": "https://brand.naver.com/dreame/products/13086178143",
+        "reviewSourceUrl": "https://smartstore.naver.com/main/products/13086178143?nl-ts-pid=jojNqsqosC8ssShcA5h-460995&n_media=27758&n_query=1%EC%9C%841%EC%9C%84X60ULTRA&n_rank=1&n_ad_group=grp-a001-02-000000063689056&n_ad=nad-a001-02-000000486714298&n_campaign_type=2&n_mall_id=ncp_1ohzns_01&n_mall_pid=13086178143&n_ad_group_type=2&n_match=3&NaPm=ct%3Dmt14ss49%7Cci%3DER3b2124c9%2D9c5f%2D11f1%2Dbbe2%2D5e28beaf1165%7Ctr%3Dpla%7Chk%3Dc5ff274000f4a814bb32b8d93b6b4a247e3b55aa%7Cnacn%3DtousBMxWCGQX",
+        "detailStatus": "full"
+      }
+    },
+    {
+      "position": 1,
+      "canonicalSource": {
+        "productId": "59760912197",
+        "brandName": "",
+        "brandSite": "",
+        "url": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59760912197&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0&t=mt14mzcl&h=6da605990de0ab6cc1bb97d84ceb2405083f1d6f&frm=NVSCDIG"
+      },
+      "reviewSource": {
+        "productName": "모바 로봇청소기 P70 Pro Ultra RLP54HE AI센서 자동세척 화이트, 단품",
+        "seller": "판매처 10",
+        "price": 549000,
+        "reviewCount": 3519,
+        "rating": 4.95,
+        "url": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59760912197&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0&t=mt14mzcl&h=6da605990de0ab6cc1bb97d84ceb2405083f1d6f&frm=NVSCDIG",
+        "resolvedUrl": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59760912197&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0&t=mt14mzcl&h=6da605990de0ab6cc1bb97d84ceb2405083f1d6f&frm=NVSCDIG",
+        "sourceType": "naver-aggregate",
+        "isIndividualSeller": false,
+        "matchScore": 0,
+        "reviewTextSource": "canonical-fallback",
+        "status": "fallback-canonical"
+      },
+      "purchaseSource": {
+        "productName": "모바 로봇청소기 P70 Pro Ultra RLP54HE AI센서 자동세척 화이트, 단품",
+        "seller": "판매처 10",
+        "price": 549000,
+        "reviewCount": 3519,
+        "rating": 4.95,
+        "url": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59760912197&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0&t=mt14mzcl&h=6da605990de0ab6cc1bb97d84ceb2405083f1d6f&frm=NVSCDIG",
+        "resolvedUrl": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59760912197&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0&t=mt14mzcl&h=6da605990de0ab6cc1bb97d84ceb2405083f1d6f&frm=NVSCDIG",
+        "sourceType": "naver-aggregate",
+        "isIndividualSeller": false,
+        "matchScore": 0,
+        "status": "fallback-market"
+      },
+      "market": {
+        "productName": "모바 로봇청소기 P70 Pro Ultra RLP54HE AI센서 자동세척 화이트, 단품",
+        "seller": "판매처 10",
+        "listedPrice": 549000,
+        "reviewCount": 3519,
+        "rating": 4.95,
+        "imageUrl": "https://shopping-phinf.pstatic.net/main_5976091/59760912197.20260422124547.jpg?type=f300",
+        "sourceUrl": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59760912197&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0&t=mt14mzcl&h=6da605990de0ab6cc1bb97d84ceb2405083f1d6f&frm=NVSCDIG"
+      },
+      "resolution": {
+        "productId": "59760912197",
+        "brandName": "",
+        "brandSite": "",
+        "canonicalUrl": ""
+      },
+      "detail": {
+        "productId": "59760912197",
+        "productName": "모바 로봇청소기 P70 Pro Ultra RLP54HE AI센서 자동세척 화이트, 단품",
+        "brand": "",
+        "manufacturer": "",
+        "modelName": "",
+        "originalPrice": 549000,
+        "finalPrice": 549000,
+        "discountRate": 0,
+        "reviewCount": 3519,
+        "rating": 4.95,
+        "sellerName": "판매처 10",
+        "categoryName": "",
+        "imageUrl": "https://shopping-phinf.pstatic.net/main_5976091/59760912197.20260422124547.jpg?type=f300",
+        "reviewSamples": 0,
+        "reviews": [],
+        "sourceUrl": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59760912197&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0&t=mt14mzcl&h=6da605990de0ab6cc1bb97d84ceb2405083f1d6f&frm=NVSCDIG",
+        "reviewSourceUrl": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59760912197&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0&t=mt14mzcl&h=6da605990de0ab6cc1bb97d84ceb2405083f1d6f&frm=NVSCDIG",
+        "detailStatus": "partial-market"
+      }
+    },
+    {
+      "position": 8,
+      "canonicalSource": {
+        "productId": "90574795333",
+        "brandName": "",
+        "brandSite": "",
+        "url": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=90574795333&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0&t=mt14n356&h=6aefda81723439acc85ce587a7f126b37ac5ea41&frm=NVSCPRO"
+      },
+      "reviewSource": {
+        "productName": "삼성 2026 신제품 비스포크 AI 스팀 울트라 물걸레 올인원로봇청소기 새틴 그레이지",
+        "seller": "삼성공식파트너 우주",
+        "price": 1910000,
+        "reviewCount": 3615,
+        "rating": 4.85,
+        "url": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=90574795333&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0&t=mt14n356&h=6aefda81723439acc85ce587a7f126b37ac5ea41&frm=NVSCPRO",
+        "resolvedUrl": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=90574795333&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0&t=mt14n356&h=6aefda81723439acc85ce587a7f126b37ac5ea41&frm=NVSCPRO",
+        "sourceType": "naver-aggregate",
+        "isIndividualSeller": false,
+        "matchScore": 0,
+        "reviewTextSource": "canonical-fallback",
+        "status": "fallback-canonical"
+      },
+      "purchaseSource": {
+        "productName": "삼성 2026 신제품 비스포크 AI 스팀 울트라 물걸레 올인원로봇청소기 새틴 그레이지",
+        "seller": "삼성공식파트너 우주",
+        "price": 1910000,
+        "reviewCount": 3615,
+        "rating": 4.85,
+        "url": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=90574795333&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0&t=mt14n356&h=6aefda81723439acc85ce587a7f126b37ac5ea41&frm=NVSCPRO",
+        "resolvedUrl": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=90574795333&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0&t=mt14n356&h=6aefda81723439acc85ce587a7f126b37ac5ea41&frm=NVSCPRO",
+        "sourceType": "naver-aggregate",
+        "isIndividualSeller": false,
+        "matchScore": 0,
+        "status": "fallback-market"
+      },
+      "market": {
+        "productName": "삼성 2026 신제품 비스포크 AI 스팀 울트라 물걸레 올인원로봇청소기 새틴 그레이지",
+        "seller": "삼성공식파트너 우주",
+        "listedPrice": 1910000,
+        "reviewCount": 3615,
+        "rating": 4.85,
+        "imageUrl": "https://shopping-phinf.pstatic.net/main_9057479/90574795333.3.jpg?type=f300",
+        "sourceUrl": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=90574795333&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0&t=mt14n356&h=6aefda81723439acc85ce587a7f126b37ac5ea41&frm=NVSCPRO"
+      },
+      "resolution": {
+        "productId": "90574795333",
+        "brandName": "",
+        "brandSite": "",
+        "canonicalUrl": ""
+      },
+      "detail": {
+        "productId": "90574795333",
+        "productName": "삼성 2026 신제품 비스포크 AI 스팀 울트라 물걸레 올인원로봇청소기 새틴 그레이지",
+        "brand": "",
+        "manufacturer": "",
+        "modelName": "",
+        "originalPrice": 1910000,
+        "finalPrice": 1910000,
+        "discountRate": 0,
+        "reviewCount": 3615,
+        "rating": 4.85,
+        "sellerName": "삼성공식파트너 우주",
+        "categoryName": "",
+        "imageUrl": "https://shopping-phinf.pstatic.net/main_9057479/90574795333.3.jpg?type=f300",
+        "reviewSamples": 0,
+        "reviews": [],
+        "sourceUrl": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=90574795333&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0&t=mt14n356&h=6aefda81723439acc85ce587a7f126b37ac5ea41&frm=NVSCPRO",
+        "reviewSourceUrl": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=90574795333&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0&t=mt14n356&h=6aefda81723439acc85ce587a7f126b37ac5ea41&frm=NVSCPRO",
+        "detailStatus": "partial-market"
+      }
+    },
+    {
+      "position": 9,
+      "canonicalSource": {
+        "productId": "",
+        "brandName": "",
+        "brandSite": "",
+        "url": "https://ader.naver.com/v1/NmQSTN5UHN5_67I8zEFpXwIt4mW6UPi_8hqv8zm_XQ6-2SAWDib9Qxf44p4LwSs0J9FA3Iz0LuFuiJeLNtZ1hhYONYMjrrcCs3XlVBfdMfV7LlSVYutO3oAlfIJKFzCg_JbR8jCLbyrV1ZBb_ex04IOeYNp4woSW3HovLwVKnMiHLPgGoLMiemoYne1Dj-ubW8bl2k5aVxEjUMI8sx46sBJd7hznvAIN8DHr6nF-XAuGjBh-uh4BNrws6p9AytqZ3ZQV5BmWkNuqsXfhEK_Mq2c34zS8yg2j6GAnjjJUBe8nY2-BUJJo0LswKMe1NLCkvR2WYZm2Zr758qthEDoFLw==?c=naver.search.pc.npla&t=0&ui=LIST_FINDER"
+      },
+      "reviewSource": {
+        "productName": "LG홈봇 로봇청소기 RONi 로니 N95TWU",
+        "seller": "포인트 최대 22,900원",
+        "price": 2300000,
+        "reviewCount": 417,
+        "rating": 5,
+        "url": "https://ader.naver.com/v1/NmQSTN5UHN5_67I8zEFpXwIt4mW6UPi_8hqv8zm_XQ6-2SAWDib9Qxf44p4LwSs0J9FA3Iz0LuFuiJeLNtZ1hhYONYMjrrcCs3XlVBfdMfV7LlSVYutO3oAlfIJKFzCg_JbR8jCLbyrV1ZBb_ex04IOeYNp4woSW3HovLwVKnMiHLPgGoLMiemoYne1Dj-ubW8bl2k5aVxEjUMI8sx46sBJd7hznvAIN8DHr6nF-XAuGjBh-uh4BNrws6p9AytqZ3ZQV5BmWkNuqsXfhEK_Mq2c34zS8yg2j6GAnjjJUBe8nY2-BUJJo0LswKMe1NLCkvR2WYZm2Zr758qthEDoFLw==?c=naver.search.pc.npla&t=0&ui=LIST_FINDER",
+        "resolvedUrl": "https://ader.naver.com/v1/NmQSTN5UHN5_67I8zEFpXwIt4mW6UPi_8hqv8zm_XQ6-2SAWDib9Qxf44p4LwSs0J9FA3Iz0LuFuiJeLNtZ1hhYONYMjrrcCs3XlVBfdMfV7LlSVYutO3oAlfIJKFzCg_JbR8jCLbyrV1ZBb_ex04IOeYNp4woSW3HovLwVKnMiHLPgGoLMiemoYne1Dj-ubW8bl2k5aVxEjUMI8sx46sBJd7hznvAIN8DHr6nF-XAuGjBh-uh4BNrws6p9AytqZ3ZQV5BmWkNuqsXfhEK_Mq2c34zS8yg2j6GAnjjJUBe8nY2-BUJJo0LswKMe1NLCkvR2WYZm2Zr758qthEDoFLw==?c=naver.search.pc.npla&t=0&ui=LIST_FINDER",
+        "sourceType": "naver-aggregate",
+        "isIndividualSeller": false,
+        "matchScore": 0,
+        "reviewTextSource": "canonical-fallback",
+        "status": "fallback-canonical"
+      },
+      "purchaseSource": {
+        "productName": "LG홈봇 로봇청소기 RONi 로니 N95TWU",
+        "seller": "포인트 최대 22,900원",
+        "price": 2300000,
+        "reviewCount": 417,
+        "rating": 5,
+        "url": "https://ader.naver.com/v1/NmQSTN5UHN5_67I8zEFpXwIt4mW6UPi_8hqv8zm_XQ6-2SAWDib9Qxf44p4LwSs0J9FA3Iz0LuFuiJeLNtZ1hhYONYMjrrcCs3XlVBfdMfV7LlSVYutO3oAlfIJKFzCg_JbR8jCLbyrV1ZBb_ex04IOeYNp4woSW3HovLwVKnMiHLPgGoLMiemoYne1Dj-ubW8bl2k5aVxEjUMI8sx46sBJd7hznvAIN8DHr6nF-XAuGjBh-uh4BNrws6p9AytqZ3ZQV5BmWkNuqsXfhEK_Mq2c34zS8yg2j6GAnjjJUBe8nY2-BUJJo0LswKMe1NLCkvR2WYZm2Zr758qthEDoFLw==?c=naver.search.pc.npla&t=0&ui=LIST_FINDER",
+        "resolvedUrl": "https://ader.naver.com/v1/NmQSTN5UHN5_67I8zEFpXwIt4mW6UPi_8hqv8zm_XQ6-2SAWDib9Qxf44p4LwSs0J9FA3Iz0LuFuiJeLNtZ1hhYONYMjrrcCs3XlVBfdMfV7LlSVYutO3oAlfIJKFzCg_JbR8jCLbyrV1ZBb_ex04IOeYNp4woSW3HovLwVKnMiHLPgGoLMiemoYne1Dj-ubW8bl2k5aVxEjUMI8sx46sBJd7hznvAIN8DHr6nF-XAuGjBh-uh4BNrws6p9AytqZ3ZQV5BmWkNuqsXfhEK_Mq2c34zS8yg2j6GAnjjJUBe8nY2-BUJJo0LswKMe1NLCkvR2WYZm2Zr758qthEDoFLw==?c=naver.search.pc.npla&t=0&ui=LIST_FINDER",
+        "sourceType": "naver-aggregate",
+        "isIndividualSeller": false,
+        "matchScore": 0,
+        "status": "fallback-market"
+      },
+      "market": {
+        "productName": "LG홈봇 로봇청소기 RONi 로니 N95TWU",
+        "seller": "포인트 최대 22,900원",
+        "listedPrice": 2300000,
+        "reviewCount": 417,
+        "rating": 5,
+        "imageUrl": "https://searchad-phinf.pstatic.net/MjAyNjA3MDZfNjgg/MDAxNzgzMzI3NjUzMjY3.gh27tlBsk8n6yHrxyf-EpjfXoPWtFZopoGjTIYaKJGgg.J2o_W8ktdGjcb5Jn08CjuqnIxwvpToqd-8bs-wcYQYQg.PNG/1490239-a0365634-5696-43f3-acac-9d226b87ee30.png?type=f300",
+        "sourceUrl": "https://ader.naver.com/v1/NmQSTN5UHN5_67I8zEFpXwIt4mW6UPi_8hqv8zm_XQ6-2SAWDib9Qxf44p4LwSs0J9FA3Iz0LuFuiJeLNtZ1hhYONYMjrrcCs3XlVBfdMfV7LlSVYutO3oAlfIJKFzCg_JbR8jCLbyrV1ZBb_ex04IOeYNp4woSW3HovLwVKnMiHLPgGoLMiemoYne1Dj-ubW8bl2k5aVxEjUMI8sx46sBJd7hznvAIN8DHr6nF-XAuGjBh-uh4BNrws6p9AytqZ3ZQV5BmWkNuqsXfhEK_Mq2c34zS8yg2j6GAnjjJUBe8nY2-BUJJo0LswKMe1NLCkvR2WYZm2Zr758qthEDoFLw==?c=naver.search.pc.npla&t=0&ui=LIST_FINDER"
+      },
+      "resolution": {
+        "productId": "",
+        "brandName": "",
+        "brandSite": "",
+        "canonicalUrl": ""
+      },
+      "detail": {
+        "productId": "",
+        "productName": "LG홈봇 로봇청소기 RONi 로니 N95TWU",
+        "brand": "",
+        "manufacturer": "",
+        "modelName": "",
+        "originalPrice": 2300000,
+        "finalPrice": 2300000,
+        "discountRate": 0,
+        "reviewCount": 417,
+        "rating": 5,
+        "sellerName": "포인트 최대 22,900원",
+        "categoryName": "",
+        "imageUrl": "https://searchad-phinf.pstatic.net/MjAyNjA3MDZfNjgg/MDAxNzgzMzI3NjUzMjY3.gh27tlBsk8n6yHrxyf-EpjfXoPWtFZopoGjTIYaKJGgg.J2o_W8ktdGjcb5Jn08CjuqnIxwvpToqd-8bs-wcYQYQg.PNG/1490239-a0365634-5696-43f3-acac-9d226b87ee30.png?type=f300",
+        "reviewSamples": 0,
+        "reviews": [],
+        "sourceUrl": "https://ader.naver.com/v1/NmQSTN5UHN5_67I8zEFpXwIt4mW6UPi_8hqv8zm_XQ6-2SAWDib9Qxf44p4LwSs0J9FA3Iz0LuFuiJeLNtZ1hhYONYMjrrcCs3XlVBfdMfV7LlSVYutO3oAlfIJKFzCg_JbR8jCLbyrV1ZBb_ex04IOeYNp4woSW3HovLwVKnMiHLPgGoLMiemoYne1Dj-ubW8bl2k5aVxEjUMI8sx46sBJd7hznvAIN8DHr6nF-XAuGjBh-uh4BNrws6p9AytqZ3ZQV5BmWkNuqsXfhEK_Mq2c34zS8yg2j6GAnjjJUBe8nY2-BUJJo0LswKMe1NLCkvR2WYZm2Zr758qthEDoFLw==?c=naver.search.pc.npla&t=0&ui=LIST_FINDER",
+        "reviewSourceUrl": "https://ader.naver.com/v1/NmQSTN5UHN5_67I8zEFpXwIt4mW6UPi_8hqv8zm_XQ6-2SAWDib9Qxf44p4LwSs0J9FA3Iz0LuFuiJeLNtZ1hhYONYMjrrcCs3XlVBfdMfV7LlSVYutO3oAlfIJKFzCg_JbR8jCLbyrV1ZBb_ex04IOeYNp4woSW3HovLwVKnMiHLPgGoLMiemoYne1Dj-ubW8bl2k5aVxEjUMI8sx46sBJd7hznvAIN8DHr6nF-XAuGjBh-uh4BNrws6p9AytqZ3ZQV5BmWkNuqsXfhEK_Mq2c34zS8yg2j6GAnjjJUBe8nY2-BUJJo0LswKMe1NLCkvR2WYZm2Zr758qthEDoFLw==?c=naver.search.pc.npla&t=0&ui=LIST_FINDER",
+        "detailStatus": "partial-market"
+      }
+    }
+  ],
+  "failureCount": 5,
+  "failures": [
+    {
+      "position": 3,
+      "marketProduct": "드리미 올인원 로봇청소기 X60 Master 스팀 직배수형, 화이트",
+      "stage": "validation",
+      "reason": "상세수집은 완료됐지만 필수 상품정보가 없습니다."
+    },
+    {
+      "position": 4,
+      "marketProduct": "JONR 존알 로봇청소기 올인원 자동세척 건조 스테이션 최강희청소기 X1 MAX, 블랙",
+      "stage": "validation",
+      "reason": "상세수집은 완료됐지만 필수 상품정보가 없습니다."
+    },
+    {
+      "position": 5,
+      "marketProduct": "에브리봇 TS450 쓰리스핀 슬림 물걸레 로봇청소기 26년 NEW",
+      "stage": "validation",
+      "reason": "분석 가능한 리뷰가 부족합니다. (0개)"
+    },
+    {
+      "position": 6,
+      "marketProduct": "로보락 로봇청소기 S10 MaxV Ultra RRE0VES+EWFD55HRR 자동 물통형, 화이트",
+      "stage": "validation",
+      "reason": "상세수집은 완료됐지만 필수 상품정보가 없습니다."
+    },
+    {
+      "position": 7,
+      "marketProduct": "로보락 S10 MaxV Ultra 로봇청소기",
+      "stage": "validation",
+      "reason": "상세수집은 완료됐지만 필수 상품정보가 없습니다."
+    }
+  ]
+}
+
+--- MATCH 2 ---
+PATH: $.failures
+[
+  {
+    "position": 3,
+    "marketProduct": "드리미 올인원 로봇청소기 X60 Master 스팀 직배수형, 화이트",
+    "stage": "validation",
+    "reason": "상세수집은 완료됐지만 필수 상품정보가 없습니다."
+  },
+  {
+    "position": 4,
+    "marketProduct": "JONR 존알 로봇청소기 올인원 자동세척 건조 스테이션 최강희청소기 X1 MAX, 블랙",
+    "stage": "validation",
+    "reason": "상세수집은 완료됐지만 필수 상품정보가 없습니다."
+  },
+  {
+    "position": 5,
+    "marketProduct": "에브리봇 TS450 쓰리스핀 슬림 물걸레 로봇청소기 26년 NEW",
+    "stage": "validation",
+    "reason": "분석 가능한 리뷰가 부족합니다. (0개)"
+  },
+  {
+    "position": 6,
+    "marketProduct": "로보락 로봇청소기 S10 MaxV Ultra RRE0VES+EWFD55HRR 자동 물통형, 화이트",
+    "stage": "validation",
+    "reason": "상세수집은 완료됐지만 필수 상품정보가 없습니다."
+  },
+  {
+    "position": 7,
+    "marketProduct": "로보락 S10 MaxV Ultra 로봇청소기",
+    "stage": "validation",
+    "reason": "상세수집은 완료됐지만 필수 상품정보가 없습니다."
+  }
+]
+
+--- MATCH 3 ---
+PATH: $.failures[2]
+{
+  "position": 5,
+  "marketProduct": "에브리봇 TS450 쓰리스핀 슬림 물걸레 로봇청소기 26년 NEW",
+  "stage": "validation",
+  "reason": "분석 가능한 리뷰가 부족합니다. (0개)"
+}

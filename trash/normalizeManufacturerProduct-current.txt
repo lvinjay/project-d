@@ -1,0 +1,127 @@
+﻿export type ManufacturerRawProduct = {
+  url?: string;
+
+  title?: string;
+
+  brand?: string;
+
+  manufacturer?: string;
+
+  modelName?: string;
+
+  originalPrice?: string | number;
+
+  finalPrice?: string | number;
+
+  imageUrl?: string;
+};
+
+export type NormalizedManufacturerProduct = {
+  canonicalUrl: string;
+
+  title: string;
+
+  brand: string;
+
+  manufacturer: string;
+
+  modelName: string;
+
+  originalPrice: number;
+
+  finalPrice: number;
+
+  imageUrl: string;
+
+  sourceType:
+    "manufacturer";
+};
+
+function numberValue(
+  value: unknown,
+) {
+  if (
+    typeof value === "number" &&
+    Number.isFinite(value)
+  ) {
+    return value;
+  }
+
+  const text =
+    String(value ?? "")
+      .replace(/[^\d.-]/g, "");
+
+  const parsed =
+    Number(text);
+
+  return Number.isFinite(parsed)
+    ? parsed
+    : 0;
+}
+
+export function normalizeManufacturerProduct(
+  raw: ManufacturerRawProduct,
+  fallbackUrl = "",
+): NormalizedManufacturerProduct {
+  const canonicalUrl =
+    String(
+      raw.url ??
+      fallbackUrl,
+    ).trim();
+
+  return {
+    canonicalUrl,
+
+    title:
+      String(
+        raw.title ?? "",
+      ).trim(),
+
+    brand:
+      String(
+        raw.brand ?? "",
+      ).trim(),
+
+    manufacturer:
+      String(
+        raw.manufacturer ?? "",
+      ).trim(),
+
+    modelName:
+      String(
+        raw.modelName ?? "",
+      ).trim(),
+
+    originalPrice:
+      numberValue(
+        raw.originalPrice,
+      ),
+
+    finalPrice:
+      numberValue(
+        raw.finalPrice,
+      ),
+
+    imageUrl:
+      String(
+        raw.imageUrl ?? "",
+      ).trim(),
+
+    sourceType:
+      "manufacturer",
+  };
+}
+
+export function isUsableManufacturerProduct(
+  detail: NormalizedManufacturerProduct,
+) {
+  return (
+    Boolean(
+      detail.canonicalUrl,
+    ) &&
+    Boolean(
+      detail.title,
+    ) &&
+    detail.finalPrice > 0
+  );
+}

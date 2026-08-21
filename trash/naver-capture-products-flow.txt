@@ -1,0 +1,363 @@
+﻿
+  app\api\naver-capture\route.ts:1:import {
+  app\api\naver-capture\route.ts:2:  NextResponse,
+  app\api\naver-capture\route.ts:3:} from "next/server";
+  app\api\naver-capture\route.ts:4:
+  app\api\naver-capture\route.ts:5:export const runtime =
+  app\api\naver-capture\route.ts:6:  "nodejs";
+  app\api\naver-capture\route.ts:7:
+  app\api\naver-capture\route.ts:8:export const dynamic =
+  app\api\naver-capture\route.ts:9:  "force-dynamic";
+  app\api\naver-capture\route.ts:10:
+> app\api\naver-capture\route.ts:11:type CapturedProduct = {
+  app\api\naver-capture\route.ts:12:  name: string;
+  app\api\naver-capture\route.ts:13:  text: string;
+  app\api\naver-capture\route.ts:14:  url: string;
+  app\api\naver-capture\route.ts:15:  imageUrl: string;
+  app\api\naver-capture\route.ts:16:  price: number;
+  app\api\naver-capture\route.ts:17:  reviewCount: number;
+  app\api\naver-capture\route.ts:18:  rating: number;
+  app\api\naver-capture\route.ts:19:};
+  app\api\naver-capture\route.ts:20:
+> app\api\naver-capture\route.ts:21:type CaptureData = {
+  app\api\naver-capture\route.ts:22:  category: string;
+> app\api\naver-capture\route.ts:23:  minBudget: number;
+> app\api\naver-capture\route.ts:24:  maxBudget: number;
+> app\api\naver-capture\route.ts:25:  products: CapturedProdu
+ct[];
+  app\api\naver-capture\route.ts:26:  createdAt: number;
+  app\api\naver-capture\route.ts:27:};
+  app\api\naver-capture\route.ts:28:
+  app\api\naver-capture\route.ts:29:type IncomingProduct = {
+  app\api\naver-capture\route.ts:30:  name?: unknown;
+  app\api\naver-capture\route.ts:31:  text?: unknown;
+  app\api\naver-capture\route.ts:32:  url?: unknown;
+  app\api\naver-capture\route.ts:33:  imageUrl?: unknown;
+  app\api\naver-capture\route.ts:34:  price?: unknown;
+  app\api\naver-capture\route.ts:35:  reviewCount?: unknown;
+  app\api\naver-capture\route.ts:36:  rating?: unknown;
+  app\api\naver-capture\route.ts:37:};
+  app\api\naver-capture\route.ts:38:
+  app\api\naver-capture\route.ts:39:declare global {
+> app\api\naver-capture\route.ts:40:  var projectDNaverCaptur
+es:
+> app\api\naver-capture\route.ts:41:    Map<string, CaptureDa
+ta>
+  app\api\naver-capture\route.ts:42:    | undefined;
+  app\api\naver-capture\route.ts:43:}
+  app\api\naver-capture\route.ts:44:
+> app\api\naver-capture\route.ts:45:function getStore() {
+  app\api\naver-capture\route.ts:46:  if (
+> app\api\naver-capture\route.ts:47:    !globalThis.projectDN
+averCaptures
+  app\api\naver-capture\route.ts:48:  ) {
+> app\api\naver-capture\route.ts:49:    globalThis.projectDNa
+verCaptures =
+> app\api\naver-capture\route.ts:50:      new Map();
+  app\api\naver-capture\route.ts:51:  }
+  app\api\naver-capture\route.ts:52:
+  app\api\naver-capture\route.ts:53:  return globalThis
+> app\api\naver-capture\route.ts:54:    .projectDNaverCapture
+s;
+  app\api\naver-capture\route.ts:55:}
+  app\api\naver-capture\route.ts:56:
+  app\api\naver-capture\route.ts:57:function corsHeaders() {
+  app\api\naver-capture\route.ts:58:  return {
+  app\api\naver-capture\route.ts:59:    "Access-Control-Allow
+-Origin":
+  app\api\naver-capture\route.ts:60:      "*",
+  app\api\naver-capture\route.ts:61:    "Access-Control-Allow
+-Methods":
+> app\api\naver-capture\route.ts:62:      "GET, POST, OPTIONS
+",
+  app\api\naver-capture\route.ts:63:    "Access-Control-Allow
+-Headers":
+  app\api\naver-capture\route.ts:64:      "Content-Type",
+  app\api\naver-capture\route.ts:65:  };
+  app\api\naver-capture\route.ts:66:}
+  app\api\naver-capture\route.ts:67:
+  app\api\naver-capture\route.ts:68:function text(
+  app\api\naver-capture\route.ts:69:  value: unknown,
+  app\api\naver-capture\route.ts:70:) {
+  app\api\naver-capture\route.ts:71:  return String(
+  app\api\naver-capture\route.ts:72:    value ?? "",
+  app\api\naver-capture\route.ts:73:  )
+  app\api\naver-capture\route.ts:74:    .replace(/\s+/g, " ")
+  app\api\naver-capture\route.ts:75:    .trim();
+  app\api\naver-capture\route.ts:76:}
+  app\api\naver-capture\route.ts:77:
+  app\api\naver-capture\route.ts:78:function number(
+  app\api\naver-capture\route.ts:79:  value: unknown,
+  app\api\naver-capture\route.ts:80:) {
+  app\api\naver-capture\route.ts:81:  const result =
+  app\api\naver-capture\route.ts:82:    Number(value ?? 0);
+  app\api\naver-capture\route.ts:83:
+  app\api\naver-capture\route.ts:84:  return Number.isFinite(
+  app\api\naver-capture\route.ts:85:    result,
+  app\api\naver-capture\route.ts:86:  )
+  app\api\naver-capture\route.ts:87:    ? result
+  app\api\naver-capture\route.ts:88:    : 0;
+  app\api\naver-capture\route.ts:89:}
+  app\api\naver-capture\route.ts:90:
+  app\api\naver-capture\route.ts:91:export async function OPT
+IONS() {
+  app\api\naver-capture\route.ts:92:  return new Response(
+  app\api\naver-capture\route.ts:93:    null,
+  app\api\naver-capture\route.ts:94:    {
+  app\api\naver-capture\route.ts:95:      status: 204,
+  app\api\naver-capture\route.ts:96:      headers:
+  app\api\naver-capture\route.ts:97:        corsHeaders(),
+  app\api\naver-capture\route.ts:98:    },
+  app\api\naver-capture\route.ts:99:  );
+  app\api\naver-capture\route.ts:100:}
+  app\api\naver-capture\route.ts:101:
+> app\api\naver-capture\route.ts:102:export async function PO
+ST(
+  app\api\naver-capture\route.ts:103:  request: Request,
+  app\api\naver-capture\route.ts:104:) {
+  app\api\naver-capture\route.ts:105:  try {
+  app\api\naver-capture\route.ts:106:    const body =
+  app\api\naver-capture\route.ts:107:      await request.json
+();
+  app\api\naver-capture\route.ts:108:
+  app\api\naver-capture\route.ts:109:    const incoming =
+  app\api\naver-capture\route.ts:110:      Array.isArray(
+> app\api\naver-capture\route.ts:111:        body.products,
+  app\api\naver-capture\route.ts:112:      )
+> app\api\naver-capture\route.ts:113:        ? body.products
+  app\api\naver-capture\route.ts:114:        : [];
+  app\api\naver-capture\route.ts:115:
+> app\api\naver-capture\route.ts:116:    const products:
+> app\api\naver-capture\route.ts:117:      CapturedProduct[] 
+=
+  app\api\naver-capture\route.ts:118:      incoming
+> app\api\naver-capture\route.ts:119:        .slice(0, 100)
+> app\api\naver-capture\route.ts:120:        .map(
+  app\api\naver-capture\route.ts:121:          (
+  app\api\naver-capture\route.ts:122:            raw:
+  app\api\naver-capture\route.ts:123:              IncomingPr
+oduct,
+  app\api\naver-capture\route.ts:124:          ) => ({
+  app\api\naver-capture\route.ts:125:            name:
+  app\api\naver-capture\route.ts:126:              text(
+  app\api\naver-capture\route.ts:127:                raw.name
+,
+  app\api\naver-capture\route.ts:128:              ),
+  app\api\naver-capture\route.ts:129:
+  app\api\naver-capture\route.ts:130:            text:
+  app\api\naver-capture\route.ts:131:              text(
+  app\api\naver-capture\route.ts:132:                raw.text
+,
+  app\api\naver-capture\route.ts:133:              ),
+  app\api\naver-capture\route.ts:134:
+  app\api\naver-capture\route.ts:135:            url:
+  app\api\naver-capture\route.ts:136:              text(
+  app\api\naver-capture\route.ts:137:                raw.url,
+  app\api\naver-capture\route.ts:138:              ),
+  app\api\naver-capture\route.ts:139:
+  app\api\naver-capture\route.ts:140:            imageUrl:
+  app\api\naver-capture\route.ts:141:              text(
+  app\api\naver-capture\route.ts:142:                raw.imag
+eUrl,
+  app\api\naver-capture\route.ts:143:              ),
+  app\api\naver-capture\route.ts:144:
+  app\api\naver-capture\route.ts:145:            price:
+  app\api\naver-capture\route.ts:146:              number(
+  app\api\naver-capture\route.ts:147:                raw.pric
+e,
+  app\api\naver-capture\route.ts:148:              ),
+  app\api\naver-capture\route.ts:149:
+  app\api\naver-capture\route.ts:150:            reviewCount:
+  app\api\naver-capture\route.ts:151:              number(
+  app\api\naver-capture\route.ts:152:                raw.revi
+ewCount,
+  app\api\naver-capture\route.ts:153:              ),
+  app\api\naver-capture\route.ts:154:
+  app\api\naver-capture\route.ts:155:            rating:
+  app\api\naver-capture\route.ts:156:              number(
+  app\api\naver-capture\route.ts:157:                raw.rati
+ng,
+  app\api\naver-capture\route.ts:158:              ),
+  app\api\naver-capture\route.ts:159:          }),
+  app\api\naver-capture\route.ts:160:        )
+> app\api\naver-capture\route.ts:161:        .filter(
+  app\api\naver-capture\route.ts:162:          (
+  app\api\naver-capture\route.ts:163:            product:
+> app\api\naver-capture\route.ts:164:              CapturedPr
+oduct,
+  app\api\naver-capture\route.ts:165:          ) =>
+  app\api\naver-capture\route.ts:166:            Boolean(
+  app\api\naver-capture\route.ts:167:              product.na
+me,
+  app\api\naver-capture\route.ts:168:            ) &&
+  app\api\naver-capture\route.ts:169:            Boolean(
+  app\api\naver-capture\route.ts:170:              product.ur
+l,
+  app\api\naver-capture\route.ts:171:            ) &&
+  app\api\naver-capture\route.ts:172:            product.pric
+e >
+  app\api\naver-capture\route.ts:173:              0,
+  app\api\naver-capture\route.ts:174:        );
+  app\api\naver-capture\route.ts:175:
+  app\api\naver-capture\route.ts:176:    if (
+> app\api\naver-capture\route.ts:177:      products.length ==
+=
+  app\api\naver-capture\route.ts:178:      0
+  app\api\naver-capture\route.ts:179:    ) {
+  app\api\naver-capture\route.ts:180:      return NextRespons
+e.json(
+  app\api\naver-capture\route.ts:181:        {
+  app\api\naver-capture\route.ts:182:          success: false
+,
+  app\api\naver-capture\route.ts:183:          message:
+  app\api\naver-capture\route.ts:184:            "수집 상품이 없습니다
+.",
+  app\api\naver-capture\route.ts:185:        },
+  app\api\naver-capture\route.ts:186:        {
+  app\api\naver-capture\route.ts:187:          status: 400,
+  app\api\naver-capture\route.ts:188:          headers:
+  app\api\naver-capture\route.ts:189:            corsHeaders(
+),
+  app\api\naver-capture\route.ts:190:        },
+  app\api\naver-capture\route.ts:191:      );
+  app\api\naver-capture\route.ts:192:    }
+  app\api\naver-capture\route.ts:193:
+  app\api\naver-capture\route.ts:194:    const id =
+  app\api\naver-capture\route.ts:195:      crypto.randomUUID(
+);
+  app\api\naver-capture\route.ts:196:
+> app\api\naver-capture\route.ts:197:    getStore().set(
+  app\api\naver-capture\route.ts:198:      id,
+  app\api\naver-capture\route.ts:199:      {
+  app\api\naver-capture\route.ts:200:        category:
+  app\api\naver-capture\route.ts:201:          text(
+  app\api\naver-capture\route.ts:202:            body.categor
+y,
+  app\api\naver-capture\route.ts:203:          ),
+  app\api\naver-capture\route.ts:204:
+> app\api\naver-capture\route.ts:205:        minBudget:
+  app\api\naver-capture\route.ts:206:          number(
+> app\api\naver-capture\route.ts:207:            body.minBudg
+et,
+  app\api\naver-capture\route.ts:208:          ),
+  app\api\naver-capture\route.ts:209:
+> app\api\naver-capture\route.ts:210:        maxBudget:
+  app\api\naver-capture\route.ts:211:          number(
+> app\api\naver-capture\route.ts:212:            body.maxBudg
+et,
+  app\api\naver-capture\route.ts:213:          ),
+  app\api\naver-capture\route.ts:214:
+> app\api\naver-capture\route.ts:215:        products,
+  app\api\naver-capture\route.ts:216:
+  app\api\naver-capture\route.ts:217:        createdAt:
+  app\api\naver-capture\route.ts:218:          Date.now(),
+  app\api\naver-capture\route.ts:219:      },
+  app\api\naver-capture\route.ts:220:    );
+  app\api\naver-capture\route.ts:221:
+  app\api\naver-capture\route.ts:222:    return NextResponse.
+json(
+  app\api\naver-capture\route.ts:223:      {
+  app\api\naver-capture\route.ts:224:        success: true,
+  app\api\naver-capture\route.ts:225:        id,
+  app\api\naver-capture\route.ts:226:        count:
+> app\api\naver-capture\route.ts:227:          products.lengt
+h,
+  app\api\naver-capture\route.ts:228:      },
+  app\api\naver-capture\route.ts:229:      {
+  app\api\naver-capture\route.ts:230:        headers:
+  app\api\naver-capture\route.ts:231:          corsHeaders(),
+  app\api\naver-capture\route.ts:232:      },
+  app\api\naver-capture\route.ts:233:    );
+  app\api\naver-capture\route.ts:234:  } catch (error) {
+  app\api\naver-capture\route.ts:235:    return NextResponse.
+json(
+  app\api\naver-capture\route.ts:236:      {
+  app\api\naver-capture\route.ts:237:        success: false,
+  app\api\naver-capture\route.ts:238:        message:
+  app\api\naver-capture\route.ts:239:          error instance
+of Error
+  app\api\naver-capture\route.ts:240:            ? error.mess
+age
+  app\api\naver-capture\route.ts:241:            : "후보 저장 실패"
+,
+  app\api\naver-capture\route.ts:242:      },
+  app\api\naver-capture\route.ts:243:      {
+  app\api\naver-capture\route.ts:244:        status: 500,
+  app\api\naver-capture\route.ts:245:        headers:
+  app\api\naver-capture\route.ts:246:          corsHeaders(),
+  app\api\naver-capture\route.ts:247:      },
+  app\api\naver-capture\route.ts:248:    );
+  app\api\naver-capture\route.ts:249:  }
+  app\api\naver-capture\route.ts:250:}
+  app\api\naver-capture\route.ts:251:
+> app\api\naver-capture\route.ts:252:export async function GE
+T(
+  app\api\naver-capture\route.ts:253:  request: Request,
+  app\api\naver-capture\route.ts:254:) {
+  app\api\naver-capture\route.ts:255:  const url =
+  app\api\naver-capture\route.ts:256:    new URL(
+  app\api\naver-capture\route.ts:257:      request.url,
+  app\api\naver-capture\route.ts:258:    );
+  app\api\naver-capture\route.ts:259:
+  app\api\naver-capture\route.ts:260:  const id =
+> app\api\naver-capture\route.ts:261:    url.searchParams.get
+(
+  app\api\naver-capture\route.ts:262:      "id",
+  app\api\naver-capture\route.ts:263:    );
+  app\api\naver-capture\route.ts:264:
+  app\api\naver-capture\route.ts:265:  if (!id) {
+  app\api\naver-capture\route.ts:266:    return NextResponse.
+json(
+  app\api\naver-capture\route.ts:267:      {
+  app\api\naver-capture\route.ts:268:        success: false,
+  app\api\naver-capture\route.ts:269:        message:
+  app\api\naver-capture\route.ts:270:          "수집 ID가 없습니다."
+,
+  app\api\naver-capture\route.ts:271:      },
+  app\api\naver-capture\route.ts:272:      {
+  app\api\naver-capture\route.ts:273:        status: 400,
+  app\api\naver-capture\route.ts:274:      },
+  app\api\naver-capture\route.ts:275:    );
+  app\api\naver-capture\route.ts:276:  }
+  app\api\naver-capture\route.ts:277:
+> app\api\naver-capture\route.ts:278:  const capture =
+> app\api\naver-capture\route.ts:279:    getStore().get(id);
+  app\api\naver-capture\route.ts:280:
+> app\api\naver-capture\route.ts:281:  if (!capture) {
+  app\api\naver-capture\route.ts:282:    return NextResponse.
+json(
+  app\api\naver-capture\route.ts:283:      {
+  app\api\naver-capture\route.ts:284:        success: false,
+  app\api\naver-capture\route.ts:285:        message:
+  app\api\naver-capture\route.ts:286:          "수집 데이터를 찾을 수 
+없습니다.",
+  app\api\naver-capture\route.ts:287:      },
+  app\api\naver-capture\route.ts:288:      {
+  app\api\naver-capture\route.ts:289:        status: 404,
+  app\api\naver-capture\route.ts:290:      },
+  app\api\naver-capture\route.ts:291:    );
+  app\api\naver-capture\route.ts:292:  }
+  app\api\naver-capture\route.ts:293:
+  app\api\naver-capture\route.ts:294:  return NextResponse.js
+on({
+  app\api\naver-capture\route.ts:295:    success: true,
+  app\api\naver-capture\route.ts:296:
+  app\api\naver-capture\route.ts:297:    category:
+> app\api\naver-capture\route.ts:298:      capture.category,
+  app\api\naver-capture\route.ts:299:
+> app\api\naver-capture\route.ts:300:    minBudget:
+> app\api\naver-capture\route.ts:301:      capture.minBudget,
+  app\api\naver-capture\route.ts:302:
+> app\api\naver-capture\route.ts:303:    maxBudget:
+> app\api\naver-capture\route.ts:304:      capture.maxBudget,
+  app\api\naver-capture\route.ts:305:
+  app\api\naver-capture\route.ts:306:    count:
+> app\api\naver-capture\route.ts:307:      capture.products.l
+ength,
+  app\api\naver-capture\route.ts:308:
+> app\api\naver-capture\route.ts:309:    products:
+> app\api\naver-capture\route.ts:310:      capture.products,
+  app\api\naver-capture\route.ts:311:  });
+  app\api\naver-capture\route.ts:312:}
+
+

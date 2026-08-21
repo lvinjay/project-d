@@ -1,0 +1,59 @@
+﻿shopping_results: 8
+
+===== RESULT 1 =====
+{
+  "position": 1,
+  "title": "LG?덈큸 濡쒕큸泥?냼湲?RONi 濡쒕땲 N95TWU",
+  "link": "https://ader.naver.com/v1/PQs510bo5ZWnZy9G3tOOBIzFWeal8qnsjJqmVrk1w1S1Z6KVh3Kp__bmwjIZftU6wb9zDVwSoFNo4DWkFRyEG82LjZ5Eyyc_arz685tsjFedf-b-YeOr7KomQO1fDrfX7UOPuqghn1d-u2PpgzofO4NU1UHtWhaO0CWO9Gmhw5UdXLlxjDOQXaHPF1Q9P1y1Nf2aYeOoT9U6oOAKBOn4FNM6r2ZMotxBBEwCHPawI6f-6ELd4ATO9eeDVJMAa3HkOvcVKg0zJOUR3YW59UhO3yx-ve_AbFsmvwmTf3SCN1r_7gtgrPcBnuMjOoCBFQmM_2eNsp2Jv0ihDIO0iWbw4A==?c=naver.search.pc.npla&t=0&ui=GUIDE",
+  "thumbnail": "https://searchad-phinf.pstatic.net/MjAyNjA3MDZfNjgg/MDAxNzgzMzI3NjUzMjY3.gh27tlBsk8n6yHrxyf-EpjfXoPWtFZopoGjTIYaKJGgg.J2o_W8ktdGjcb5Jn08CjuqnIxwvpToqd-8bs-wcYQYQg.PNG/1490239-a0365634-5696-43f3-acac-9d226b87ee30.png?type=f300",
+  "price": 2300000,
+  "rating": 5,
+  "reviews": 402,
+  "stores": "LG?꾩옄"
+}
+
+===== RESULT 2 =====
+{
+  "position": 2,
+  "title": "濡쒕낫??S10 MaxV Slim 濡쒕큸泥?냼湲?,
+  "link": "https://ader.naver.com/v1/5wiw1QUztpwjFk6CrlTEYHbjFgQLeHvi5FxsXWgVc_LYOWx24UDfNJHCA2ZDHsbM--gykJWleu3oQ0GLq-3-tsV-He8ZAdrjJraIU6xoFbAbofD2f9yWAY_ocBhmC0bl6TrZ4OVKJQJDFrjibWL9AHlWNzn5T9MCxPlPEVB2tZcdORxxHAHhDN5_FHjXodNryHyuMrORofxzUAnaCowq0Ak8AMweM8Gm8aiw6yuUlRq_Zpn4_YJ4kdecTBCMSY2T0QJxp2lGVlR1rcCzOoDovWjGI-aTI2M4VBEgvxCG5_2XTiOb5L1XUyIH4kkzoC9yjodWmnP_flpxp9CG6B2VTUo0eIoJMGk_EFykGgZEFmUx6siTRnO-bRRG-2wYkcPxoB8lf_IdPp-9wN4QrR19ISj5zYtzQObCYRn7m9x3teK8vU6DMF4WjQA1Gq4Lt-Wf1PKa5FBbBm07Us9Tr9lyBGjukG-yqXAV0ECtoLcrKK5SfCd1VVoiRtQD5NwUYhvJdoZVAIA6tn7JAIY5GMs0flmybkYp-k5QPb8A-1KkHlcNLYxZYDicYTkDZMGLuIyX?c=naver.search.pc.npla&t=0&ui=GUIDE",
+  "thumbnail": "https://searchad-phinf.pstatic.net/MjAyNjA0MzBfMTg5/MDAxNzc3NTMwNjk5OTAx.y4BD8AvwnEM_TgWVX2ro5on10ITuIaxmmC6IFQuQdoMg.nl07XOqPgBkO_HXgHMr9q5TGzOrIA5YiDYP9o89JiI4g.PNG/1654034-676783e8-0ded-4815-9f46-818bb968fd32.png?type=f300",
+  "price": 1690000,
+  "stores": "濡쒕낫??怨듭떇 ?ㅽ넗??
+}
+
+===== RESULT 3 =====
+{
+  "position": 3,
+  "title": "?먮툕由щ큸 TS450 ?곕━?ㅽ? ?щ┝ 臾쇨구??濡쒕큸泥?냼湲?26??NEW",
+  "link": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=90381860933&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0&t=mszjthv7&h=9e61adc89ebfc62bccb1f23abda11a89387352d2&frm=NVSCSPN",
+  "thumbnail": "https://shopping-phinf.pstatic.net/main_9038186/90381860933.13.jpg?type=f300",
+  "price": 448000,
+  "rating": 4.8,
+  "reviews": 2053,
+  "stores": "?먮툕由щ큸 怨듭떇?쇳븨紐?
+}
+
+===== RESULT 4 =====
+{
+  "position": 4,
+  "title": "?쇱꽦 2026 ?좎젣??鍮꾩뒪?ы겕 AI ?ㅽ? ?명듃??臾쇨구???ъ씤?먮줈遊뉗껌?뚭린 ?덊떞 洹몃젅?댁?",
+  "link": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=90574795333&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0&t=mszjthwv&h=64d128051eb5d2bb45efa40c4b5a0dde902ac84a&frm=NVSCPRO",
+  "thumbnail": "https://shopping-phinf.pstatic.net/main_9057479/90574795333.3.jpg?type=f300",
+  "price": 1910000,
+  "rating": 4.85,
+  "reviews": 3581,
+  "stores": "?쇱꽦怨듭떇?뚰듃???곗＜"
+}
+
+===== RESULT 5 =====
+{
+  "position": 5,
+  "title": "?쒕━誘??ъ씤??濡쒕큸泥?냼湲?X60 Master ?ㅽ? 吏곷같?섑삎, ?붿씠??,
+  "link": "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59204433943&cat_id=50015541&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0&t=mszjthww&h=8ecb542d0f83e7a8ac26a1c1a39d36fa106bb4b6&frm=NVSCPRO",
+  "thumbnail": "https://shopping-phinf.pstatic.net/main_5920443/59204433943.20260310171023.jpg?type=f300",
+  "price": 1090000,
+  "rating": 4.82,
+  "reviews": 1135,
+  "stores": "?먮ℓ泥?23"
+}

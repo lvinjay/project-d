@@ -1,0 +1,17 @@
+{
+  "searchParameters": {
+    "query": "로봇청소기",
+    "engine": "naver",
+    "device": "desktop",
+    "where": "nexearch"
+  },
+  "pagination": {
+    "next": "https://search.naver.com/search.naver?nso=&page=2&qdt=0&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0&sm=tab_pge&start=1&where=web",
+    "other_pages": {}
+  },
+  "serpapiPagination": {
+    "next_link": "https://serpapi.com/search.json?device=desktop&engine=naver&page=2&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0&start=1&where=web",
+    "next": "https://serpapi.com/search.json?device=desktop&engine=naver&page=2&query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0&start=1&where=web"
+  },
+  "shoppingResultsCount": 5
+}

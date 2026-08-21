@@ -1,0 +1,429 @@
+﻿import OpenAI from "openai";
+import { NextResponse } from "next/server";
+import { supabase } from "../../../lib/supabase";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+type ReviewCollectionStats = {
+  total: number;
+  ranking: number;
+  latest: number;
+  lowScore: number;
+};
+
+type ReviewAnalysisRequest = {
+  productName?: string;
+  category?: string;
+  reviews?: string[];
+  collectionStats?: unknown;
+};
+
+type DynamicCriterion = {
+  key?: string;
+  label?: string;
+  shortDescription?: string;
+};
+
+type CriterionEvidence = {
+  reviewEvidenceCount: number;
+  summary: string;
+};
+
+
+type CriterionKey =
+  | "cooling_capacity"
+  | "noise"
+  | "power_consumption"
+  | "installation"
+  | "special_features";
+
+const CRITERION_KEYS: CriterionKey[] = [
+  "cooling_capacity",
+  "noise",
+  "power_consumption",
+  "installation",
+  "special_features",
+];
+
+function extractJson(text: string) {
+  const cleaned = text
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+
+  return JSON.parse(cleaned) as Record<string, unknown>;
+}
+
+function normalizeScore(value: unknown) {
+  if (value === null) {
+    return null;
+  }
+
+  const numberValue = Number(value);
+
+  if (!Number.isFinite(numberValue)) {
+    return null;
+  }
+
+  return Math.max(0, Math.min(100, Math.round(numberValue)));
+}
+
+function normalizeAnalysis(raw: Record<string, unknown>) {
+  const rawScores =
+    raw.criterionScores &&
+    typeof raw.criterionScores === "object" &&
+    !Array.isArray(raw.criterionScores)
+      ? (raw.criterionScores as Record<string, unknown>)
+      : {};
+
+  const rawReasons =
+    raw.criterionReasons &&
+    typeof raw.criterionReasons === "object" &&
+    !Array.isArray(raw.criterionReasons)
+      ? (raw.criterionReasons as Record<string, unknown>)
+      : {};
+
+  const criterionScores = Object.fromEntries(
+    CRITERION_KEYS.map((key) => [
+      key,
+      normalizeScore(rawScores[key]),
+    ]),
+  );
+
+  const criterionReasons = Object.fromEntries(
+    CRITERION_KEYS.map((key) => [
+      key,
+      typeof rawReasons[key] === "string"
+        ? rawReasons[key].trim()
+        : "由щ럭?먯꽌 ?먮떒??洹쇨굅媛 異⑸텇?섏? ?딆뒿?덈떎.",
+    ]),
+  );
+
+  return {
+    ...raw,
+    criterionScores,
+    criterionReasons,
+  };
+}
+
+function normalizeCriterionEvidence(
+  raw: unknown,
+  criterionKeys: string[],
+  reviewCount: number,
+) {
+  const row =
+    raw && typeof raw === "object" && !Array.isArray(raw)
+      ? (raw as Record<string, unknown>)
+      : {};
+
+  const result: Record<string, CriterionEvidence> = {};
+
+  for (const key of criterionKeys) {
+    const item =
+      row[key] && typeof row[key] === "object" && !Array.isArray(row[key])
+        ? (row[key] as Record<string, unknown>)
+        : {};
+
+    const rawCount = Number(item.reviewEvidenceCount);
+    const reviewEvidenceCount =
+      Number.isFinite(rawCount) && rawCount >= 0
+        ? Math.min(reviewCount, Math.round(rawCount))
+        : 0;
+
+    const summary =
+      typeof item.summary === "string"
+        ? item.summary.trim()
+        : "";
+
+    result[key] = {
+      reviewEvidenceCount,
+      summary:
+        summary ||
+        (reviewEvidenceCount > 0
+          ? "??援щℓ湲곗?怨?愿?⑤맂 ?ㅼ젣 由щ럭媛 諛섎났 ?뺤씤?섏뿀?듬땲??"
+          : "??援щℓ湲곗???吏곸젒 ?먮떒??由щ럭 洹쇨굅媛 異⑸텇?섏? ?딆뒿?덈떎."),
+    };
+  }
+
+  return result;
+}
+
+function normalizeCollectionStats(
+  value: unknown,
+  fallbackTotal: number,
+): ReviewCollectionStats {
+  const row =
+    value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+
+  const safeCount = (raw: unknown) => {
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed >= 0
+      ? Math.floor(parsed)
+      : 0;
+  };
+
+  const ranking = safeCount(row.ranking);
+  const latest = safeCount(row.latest);
+  const lowScore = safeCount(row.lowScore);
+  const reportedTotal = safeCount(row.total);
+
+  return {
+    total: reportedTotal > 0 ? reportedTotal : fallbackTotal,
+    ranking,
+    latest,
+    lowScore,
+  };
+}
+
+export async function POST(request: Request) {
+  try {
+    const apiKey = process.env.OPENAI_API_KEY;
+
+    if (!apiKey) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "OPENAI_API_KEY媛 ?ㅼ젙?섏? ?딆븯?듬땲??",
+        },
+        { status: 500 },
+      );
+    }
+
+    const body =
+      (await request.json()) as ReviewAnalysisRequest;
+
+    const productName =
+      typeof body.productName === "string"
+        ? body.productName.trim()
+        : "";
+
+    const category =
+      typeof body.category === "string"
+        ? body.category.trim()
+        : "移댄뀒怨좊━ 誘몄???;
+
+    const reviews = Array.isArray(body.reviews)
+      ? body.reviews
+          .filter(
+            (review): review is string =>
+              typeof review === "string" &&
+              review.trim().length > 0,
+          )
+          .map((review) => review.trim())
+          .slice(0, 200) // ?꾩옱 ?섏쭛 ?곹븳怨??숈씪?섍쾶 理쒕? 200媛?由щ럭 遺꾩꽍
+      : [];
+
+    const collectionStats =
+      normalizeCollectionStats(
+        body.collectionStats,
+        reviews.length,
+      );
+
+    if (!productName) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "?쒗뭹紐낆씠 ?꾩슂?⑸땲??",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (reviews.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "遺꾩꽍??由щ럭媛 ?놁뒿?덈떎.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from("category_profiles")
+      .select("criteria")
+      .eq("category", category)
+      .maybeSingle();
+
+    if (profileError) throw profileError;
+
+    const dynamicCriteria = Array.isArray(profile?.criteria)
+      ? (profile.criteria as DynamicCriterion[])
+          .map((criterion) => ({
+            key:
+              typeof criterion.key === "string"
+                ? criterion.key.trim()
+                : "",
+            label:
+              typeof criterion.label === "string"
+                ? criterion.label.trim()
+                : "",
+            shortDescription:
+              typeof criterion.shortDescription === "string"
+                ? criterion.shortDescription.trim()
+                : "",
+          }))
+          .filter((criterion) => criterion.key && criterion.label)
+          .slice(0, 5)
+      : [];
+
+    const dynamicCriterionKeys = dynamicCriteria.map(
+      (criterion) => criterion.key,
+    );
+
+    const client = new OpenAI({ apiKey });
+
+    const prompt = `
+?뱀떊? ?ㅼ젣 援щℓ 由щ럭瑜?洹쇨굅濡??쒗뭹???됯??섎뒗 遺꾩꽍媛?낅땲??
+
+移댄뀒怨좊━: ${category}
+?쒗뭹紐? ${productName}
+由щ럭 ?? ${reviews.length}
+
+?꾩옱 ??移댄뀒怨좊━???듭떖 援щℓ湲곗?:
+${JSON.stringify(dynamicCriteria, null, 2)}
+
+遺꾩꽍 ???由щ럭:
+${reviews
+  .map((review, index) => `${index + 1}. ${review}`)
+  .join("\n")}
+
+?먯튃:
+- ?쒓났??由щ럭???녿뒗 ?ъ떎?대굹 ?쒗뭹 ?ъ뼇??留뚮뱾吏 留덉꽭??
+- 諛곗넚, ?ъ옣, ?먮ℓ???묐?留??멸툒??由щ럭???쒗뭹 ?됯??먯꽌 ?쒖쇅?섏꽭??
+- 諛섎났?곸쑝濡??멸툒???섍껄???곗꽑?섏꽭??
+- positivePoints? negativePoints?먮뒗 理쒖냼 2媛??댁긽???쒕줈 ?ㅻⅨ 由щ럭?먯꽌 諛섎났 ?뺤씤??二쇱젣留??ｌ쑝?몄슂.
+- 媛?point??evidenceCount???대떦 二쇱젣瑜??ㅼ젣濡?吏吏?섍굅??吏곸젒 ?멸툒??"?쒕줈 ?ㅻⅨ 由щ럭 ?됱쓽 媛쒖닔"?낅땲??
+- evidenceCount瑜??꾩쓽濡?0?쇰줈 ?먯? 留덉꽭?? 異쒕젰?섎뒗 ?μ젏/?⑥젏? 諛섎뱶??由щ럭 踰덊샇瑜??ㅼ떆 ?뺤씤???ㅼ젣 愿??由щ럭 ?섎? ?몄뼱 2 ?댁긽 ${reviews.length} ?댄븯???뺤닔濡??묒꽦?섏꽭??
+- ??由щ럭媛 ?щ윭 二쇱젣瑜?吏곸젒 ?멸툒?섎㈃ 媛?二쇱젣??evidenceCount??媛곴컖 ?ы븿?????덉뒿?덈떎.
+- evidenceCount???꾩껜 由щ럭 ?섎굹 異붿젙 鍮꾩쑉???꾨땲?? ?쒓났??由щ럭 紐⑸줉?먯꽌 洹??섍껄??洹쇨굅媛 ?섎뒗 由щ럭 媛쒖닔?낅땲??
+- criterionEvidence????"?듭떖 援щℓ湲곗?" 媛곴컖??????ㅼ젣濡?愿???댁슜??吏곸젒 ?멸툒???쒕줈 ?ㅻⅨ 由щ럭 ?됱쓽 媛쒖닔瑜??몃뒗 ??ぉ?낅땲??
+- criterionEvidence.reviewEvidenceCount??異붿젙移섎굹 鍮꾩쑉???꾨땲???쒓났??由щ럭 踰덊샇瑜??ㅼ떆 ?뺤씤?????ㅼ젣 愿??由щ럭 ??媛쒖닔濡??묒꽦?섏꽭??
+- ?섎굹??由щ럭媛 ?щ윭 援щℓ湲곗???吏곸젒 ?멸툒?섎㈃ 媛?湲곗???媛곴컖 ?ы븿?????덉뒿?덈떎.
+- ?대떦 援щℓ湲곗???吏곸젒 ?먮떒??由щ럭媛 ?녿떎硫?reviewEvidenceCount??0?쇰줈 ?묒꽦?섏꽭??
+- criterionEvidence.summary?먮뒗 洹?湲곗??먯꽌 由щ럭?ㅼ씠 諛섎났?곸쑝濡?留먰븳 ?듭떖 洹쇨굅瑜???臾몄옣?쇰줈 ?붿빟?섏꽭??
+- 湲띿젙怨?遺???섍껄???욎씠硫??묒そ??紐⑤몢 諛섏쁺?섏꽭??
+- 媛?criterionScores??0~100???먮뒗 null?낅땲??
+- ?먯닔媛 ?믪쓣?섎줉 ?대떦 湲곗??먯꽌 援щℓ??留뚯”?꾧? ?믩떎???살엯?덈떎.
+- 由щ럭留뚯쑝濡??먮떒?????녿뒗 湲곗?? 諛섎뱶??null濡??묒꽦?섏꽭??
+- ?뱁엳 BTU, W, dB 媛숈? 媛앷????ъ뼇 ?섏튂瑜?由щ럭??洹쇨굅 ?놁씠 異붿젙?섏? 留덉꽭??
+- cooling_capacity??由щ럭?먯꽌 泥닿컧 ?됰갑 ?깅뒫?????援ъ껜???멸툒???덉쓣 ?뚮쭔 ?됯??섏꽭?? BTU ?섏튂瑜?異붿젙?섎뒗 ??ぉ???꾨떃?덈떎.
+- power_consumption? ?꾨젰 ?ъ슜, 罹좏븨???꾨젰 ?쒗븳, ?뚯썙諭낇겕 ?ъ슜 ?깆뿉 ????ㅼ젣 由щ럭 洹쇨굅媛 ?덉쓣 ?뚮쭔 ?됯??섏꽭?? W ?섏튂瑜?異붿젙?섏? 留덉꽭??
+- noise???ㅼ젣 泥닿컧 ?뚯쓬?????由щ럭瑜??됯??섎릺 dB ?섏튂瑜?異붿젙?섏? 留덉꽭??
+- installation? ?ㅼ튂 諛?諛곌린 援ъ꽦???ㅼ젣 ?몄쓽?깆뿉 ???由щ럭瑜??됯??섏꽭??
+- special_features????쇰뜒?? ?몃쾭?? ?쒖뒿, ?먮룞諛곗닔, 由щえ而? 諛고꽣由??????李⑤퀎 湲곕뒫???ㅼ젣 由щ럭?먯꽌 諛섎났?곸쑝濡?湲띿젙 ?됯????뚮쭔 ?먯닔?뷀븯?몄슂.
+- criterionReasons?먮뒗 ?먯닔 ?먮뒗 null??洹쇨굅瑜???臾몄옣?쇰줈 ?묒꽦?섏꽭??
+- 諛섎뱶???꾨옒 JSON留?異쒕젰?섍퀬 留덊겕?ㅼ슫 肄붾뱶 釉붾줉???ъ슜?섏? 留덉꽭??
+
+{
+  "productName": "?쒗뭹紐?,
+  "reviewCount": ${reviews.length},
+  "summary": "?꾩껜 由щ럭瑜?醫낇빀??2~3臾몄옣 ?붿빟",
+  "positivePoints": [
+    {
+      "topic": "?μ젏 ??ぉ",
+      "summary": "諛섎났?곸쑝濡??멸툒???댁슜",
+      "evidenceCount": "?ㅼ젣 愿??由щ럭 媛쒖닔(2 ?댁긽 ?뺤닔)"
+    }
+  ],
+  "negativePoints": [
+    {
+      "topic": "?⑥젏 ??ぉ",
+      "summary": "諛섎났?곸쑝濡??멸툒???댁슜",
+      "evidenceCount": "?ㅼ젣 愿??由щ럭 媛쒖닔(2 ?댁긽 ?뺤닔)"
+    }
+  ],
+  "cautions": ["援щℓ ?꾩뿉 ?뺤씤?댁빞 ???ы빆"],
+  "bestFor": ["???쒗뭹????留욌뒗 ?ъ슜??],
+  "notFor": ["???쒗뭹????留욎? ?딅뒗 ?ъ슜??],
+  "confidenceScore": 0,
+  "criterionEvidence": {
+    "?꾩옱 ?듭떖 援щℓ湲곗????ㅼ젣 key": {
+      "reviewEvidenceCount": 0,
+      "summary": "??湲곗???????ㅼ젣 由щ럭?먯꽌 諛섎났 ?뺤씤???듭떖 洹쇨굅"
+    }
+  },
+  "criterionScores": {
+    "cooling_capacity": null,
+    "noise": null,
+    "power_consumption": null,
+    "installation": null,
+    "special_features": null
+  },
+  "criterionReasons": {
+    "cooling_capacity": "?됰갑 ?깅뒫 ?먯닔??由щ럭 洹쇨굅 ?먮뒗 洹쇨굅 遺議??ㅻ챸",
+    "noise": "?뚯쓬 ?먯닔??由щ럭 洹쇨굅 ?먮뒗 洹쇨굅 遺議??ㅻ챸",
+    "power_consumption": "?꾨젰 ?ъ슜???먯닔??由щ럭 洹쇨굅 ?먮뒗 洹쇨굅 遺議??ㅻ챸",
+    "installation": "?ㅼ튂쨌諛곌린 諛⑹떇 ?먯닔??由щ럭 洹쇨굅 ?먮뒗 洹쇨굅 遺議??ㅻ챸",
+    "special_features": "?듭떖 ?뱀옣???먯닔??由щ럭 洹쇨굅 ?먮뒗 洹쇨굅 遺議??ㅻ챸"
+  }
+}
+
+confidenceScore??由щ럭 媛쒖닔, 援ъ껜?? ?섍껄 ?쇨??깆쓣 怨좊젮??0~100 ?뺤닔濡??묒꽦?섏꽭??
+`;
+
+    const response = await client.responses.create({
+      model: "gpt-5",
+      input: prompt,
+    });
+
+    const outputText = response.output_text?.trim();
+
+    if (!outputText) {
+      throw new Error(
+        "AI媛 遺꾩꽍 寃곌낵瑜?諛섑솚?섏? ?딆븯?듬땲??",
+      );
+    }
+
+    try {
+      const parsed = extractJson(outputText);
+      const analysis = {
+        ...normalizeAnalysis(parsed),
+        criterionEvidence: normalizeCriterionEvidence(
+          parsed.criterionEvidence,
+          dynamicCriterionKeys,
+          reviews.length,
+        ),
+        collectionStats,
+      };
+
+      return NextResponse.json({
+        success: true,
+        analysis,
+      });
+    } catch {
+      console.error(
+        "Review analysis JSON parsing failed:",
+        outputText,
+      );
+
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "AI 遺꾩꽍 寃곌낵瑜?援ъ“?뷀븯?????ㅽ뙣?덉뒿?덈떎.",
+          rawResult: outputText,
+        },
+        { status: 502 },
+      );
+    }
+  } catch (error) {
+    console.error("Review analysis API error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : "由щ럭 遺꾩꽍 以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.",
+      },
+      { status: 500 },
+    );
+  }
+}
+

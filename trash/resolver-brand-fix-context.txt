@@ -1,0 +1,204 @@
+﻿    add(match);
+  }
+
+  return [
+    ...candidates.values(),
+  ];
+}
+
+function extractBrandName(
+  data: SerpApiResult,
+) {
+  for (
+    const result of
+    data.web_results ?? []
+  ) {
+    const combined =
+      [
+        result.title,
+        result.snippet,
+      ]
+        .filter(Boolean)
+        .join(" ");
+
+    const match =
+      combined.match(
+        /브랜드\s*[:：]\s*([가-힣A-Za-z0-9._+-]+)/,
+      );
+
+    if (match?.[1]) {
+      return match[1].trim();
+    }
+  }
+
+  return "";
+}
+
+function getProductId(
+  productUrl: string,
+) {
+  /*
+    1. smartstore / brand 상품 URL
+
+    예:
+    /products/10775617216
+    /main/products/10775617216
+  */
+  const pathMatch =
+    productUrl.match(
+      /\/(?:main\/)?products\/(\d+)/,
+    );
+
+
+===== BRAND CANDIDATE =====
+
+export async function resolveNaverBrandProductUrl(
+  productUrl: string,
+  productName: string,
+) {
+  /*
+    direct smartstore/brand URL이면
+    여기서 상품번호가 바로 잡힌다.
+
+    ader/cr3 같은 중간 URL이면
+    productId는 빈 문자열로 시작하고,
+    아래 SerpApi 공식상품 검색에서
+    실제 productId를 다시 확보한다.
+  */
+  const inputProductId =
+    getProductId(
+      productUrl,
+    );
+
+  const cleanedName =
+    cleanProductName(
+      productName,
+    );
+
+  const usefulTokens =
+    getUsefulTokens(
+      productName,
+    );
+
+  const initialBrandCandidate =
+    getBrandCandidate(
+      productName,
+    );
+
+  /*
+    브랜드명만으로도 기존에 학습된
+    공식 브랜드스토어 매핑을 미리 조회한다.
+
+    bridge URL처럼 inputProductId가 없어도
+    이후 검색 결과 후보의 브랜드스토어를
+    판별하는 데 사용한다.
+  */
+  const learnedBrandMapping =
+    initialBrandCandidate
+      ? await findBrandStoreMapping([
+          initialBrandCandidate,
+        ])
+      : null;
+
+  /*
+    direct smartstore/brand URL처럼
+    신뢰 가능한 productId가 이미 있으면
+
+===== FINAL RESOLUTION =====
+
+  }
+
+  /*
+    공식 상품 URL 후보가 확보됐으면
+    상품번호 일치 또는 상품명 토큰 일치도가
+    가장 높은 후보를 선택한다.
+  */
+  const rankedCandidates =
+    [...canonicalCandidates]
+      .map(
+        (candidate) => ({
+          candidate,
+          score:
+            candidateScore(
+              candidate,
+              productName,
+              inputProductId,
+            ) +
+            (
+              learnedBrandMapping
+                ?.brandSite ===
+              candidate.brandSite
+                ? 1000
+                : 0
+            ),
+        }),
+      )
+      .sort(
+        (a, b) =>
+          b.score -
+          a.score,
+      );
+
+  const best =
+    rankedCandidates[0];
+
+  if (
+    best &&
+    (
+      inputProductId
+        ? best.candidate
+            .productId ===
+          inputProductId
+        : best.score > 0 ||
+          canonicalCandidates.length ===
+            1
+    )
+  ) {
+    const resolvedBrandName =
+      brandName ||
+      initialBrandCandidate;
+
+    try {
+      await saveBrandStoreMapping(
+        [
+          initialBrandCandidate,
+          brandName,
+          resolvedBrandName,
+        ],
+        best.candidate
+          .brandSite,
+        {
+          source:
+            "serpapi_product_match",
+          confidence:
+            100,
+        },
+      );
+    } catch (error) {
+      console.warn(
+        "Brand mapping save warning:",
+        error,
+      );
+    }
+
+    return {
+      success: true as const,
+
+      productId:
+        best.candidate
+          .productId,
+
+      brandName:
+        resolvedBrandName,
+
+      brandSite:
+        best.candidate
+          .brandSite,
+
+      canonicalUrl:
+        best.candidate
+          .canonicalUrl,
+
+      triedQueries,
+    };
+  }

@@ -1,0 +1,91 @@
+﻿              market.name,
+
+            stage:
+              "brightdata",
+
+            reason,
+          },
+        };
+        }
+      }
+
+      if (!usedCache) {
+        console.log(
+          `[ENRICH ${position}] Bright Data 완료`,
+        `${Math.round(
+          (
+            Date.now() -
+            brightDataStartedAt
+          ) /
+            1000,
+        )}초`,
+        );
+      }
+
+      if (!detail) {
+        return {
+          success: false,
+
+          resolverAttempts:
+            candidateResolverAttempts,
+
+          brightDataCalls:
+            usedCache
+              ? 0
+              : 1,
+
+          failure: {
+            position,
+
+            marketProduct:
+              market.name,
+
+            stage:
+              "brightdata",
+
+            reason:
+              "상품 상세정보를 확보하지 못했습니다.",
+          },
+        };
+      }
+
+      const usable =
+        Boolean(
+          detail.productId,
+        ) &&
+        Boolean(
+          detail.title,
+        ) &&
+        detail.finalPrice >
+          0;
+
+      if (!usable) {
+        const reason =
+          "상세수집은 완료됐지만 필수 상품정보가 없습니다.";
+
+        console.log(
+          `[ENRICH ${position}] 탈락(validation)`,
+          reason,
+        );
+
+        return {
+          success: false,
+
+          resolverAttempts:
+            candidateResolverAttempts,
+
+          brightDataCalls:
+            usedCache
+              ? 0
+              : 1,
+
+          failure: {
+            position,
+
+            marketProduct:
+              market.name,
+
+            stage:
+              "validation",
+
+            reason,

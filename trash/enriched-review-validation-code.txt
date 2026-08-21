@@ -1,0 +1,127 @@
+﻿============================================================
+FILE: C:\Projects\frontend\app\api\market-candidates-enriched\route.ts
+MATCH LINE: 1910
+RANGE: 1830 ~ 1950
+============================================================
+ 1830:             usedCache
+ 1831:               ? 0
+ 1832:               : 1,
+ 1833: 
+ 1834:           failure: {
+ 1835:             position,
+ 1836: 
+ 1837:             marketProduct:
+ 1838:               market.name,
+ 1839: 
+ 1840:             stage:
+ 1841:               "brightdata",
+ 1842: 
+ 1843:             reason:
+ 1844:               "상품 상세정보를 확보하지 못했습니다.",
+ 1845:           },
+ 1846:         };
+ 1847:       }
+ 1848: 
+ 1849:       const matchValidation =
+ 1850:         validateProductMatch(
+ 1851:           market.name,
+ 1852:           detail.title,
+ 1853:           detail.modelName,
+ 1854:         );
+ 1855: 
+ 1856:       const usable =
+ 1857:         Boolean(
+ 1858:           detail.title,
+ 1859:         ) &&
+ 1860:         detail.finalPrice >
+ 1861:           0 &&
+ 1862:         matchValidation.matched &&
+ 1863:         (
+ 1864:           canonicalSourceType ===
+ 1865:             "manufacturer" ||
+ 1866:           Boolean(
+ 1867:             detail.productId,
+ 1868:           )
+ 1869:         );
+ 1870: 
+ 1871:       if (!usable) {
+ 1872:         const reason =
+ 1873:           "상세수집은 완료됐지만 필수 상품정보가 없습니다.";
+ 1874: 
+ 1875:         console.log(
+ 1876:           `[ENRICH ${position}] 탈락(validation)`,
+ 1877:           reason,
+ 1878:         );
+ 1879: 
+ 1880:         return {
+ 1881:           success: false,
+ 1882: 
+ 1883:           resolverAttempts:
+ 1884:             candidateResolverAttempts,
+ 1885: 
+ 1886:           brightDataCalls:
+ 1887:             usedCache
+ 1888:               ? 0
+ 1889:               : 1,
+ 1890: 
+ 1891:           failure: {
+ 1892:             position,
+ 1893: 
+ 1894:             marketProduct:
+ 1895:               market.name,
+ 1896: 
+ 1897:             stage:
+ 1898:               "validation",
+ 1899: 
+ 1900:             reason,
+ 1901:           },
+ 1902:         };
+ 1903:       }
+ 1904: 
+ 1905:       if (
+ 1906:         detail.topReviews.length <
+ 1907:         5
+ 1908:       ) {
+ 1909:         const reason =
+ 1910:           `분석 가능한 리뷰가 부족합니다. (${detail.topReviews.length}개)`;
+ 1911: 
+ 1912:         console.log(
+ 1913:           `[ENRICH ${position}] 탈락(validation)`,
+ 1914:           reason,
+ 1915:         );
+ 1916: 
+ 1917:         return {
+ 1918:           success: false,
+ 1919: 
+ 1920:           resolverAttempts:
+ 1921:             candidateResolverAttempts,
+ 1922: 
+ 1923:           brightDataCalls:
+ 1924:             usedCache
+ 1925:               ? 0
+ 1926:               : 1,
+ 1927: 
+ 1928:           failure: {
+ 1929:             position,
+ 1930: 
+ 1931:             marketProduct:
+ 1932:               market.name,
+ 1933: 
+ 1934:             stage:
+ 1935:               "validation",
+ 1936: 
+ 1937:             reason,
+ 1938:           },
+ 1939:         };
+ 1940:       }
+ 1941: 
+ 1942:       /*
+ 1943:         실제 판매가 기준 예산 검증.
+ 1944: 
+ 1945:         시장목록 가격부터 예산 밖이었던 상품은
+ 1946:         "후보 수 부족 시 사용하는 근접 fallback"이므로
+ 1947:         실제 판매가가 예산 밖이어도 계속 진행한다.
+ 1948: 
+ 1949:         반대로 시장목록에서는 예산 안이었는데
+ 1950:         상세 실제 판매가가 예산 밖으로 바뀐 경우에는
+

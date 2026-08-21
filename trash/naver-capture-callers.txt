@@ -1,0 +1,827 @@
+﻿
+  app\advisor\questions\QuestionsClient.tsx:164:             
+   typeof question.key === "string" &&
+  app\advisor\questions\QuestionsClient.tsx:165:             
+   typeof question.question === "string" &&
+  app\advisor\questions\QuestionsClient.tsx:166:             
+   Array.isArray(question.options) &&
+  app\advisor\questions\QuestionsClient.tsx:167:             
+   question.options.length >= 2,
+  app\advisor\questions\QuestionsClient.tsx:168:            )
+  app\advisor\questions\QuestionsClient.tsx:169:          : [
+];
+  app\advisor\questions\QuestionsClient.tsx:170:
+  app\advisor\questions\QuestionsClient.tsx:171:        if (l
+oaded.length === 0) {
+  app\advisor\questions\QuestionsClient.tsx:172:          thr
+ow new Error(
+  app\advisor\questions\QuestionsClient.tsx:173:            "
+이 카테고리의 AI 맞춤 질문이 아직 생성되지 않았습니다.",
+  app\advisor\questions\QuestionsClient.tsx:174:          );
+  app\advisor\questions\QuestionsClient.tsx:175:        }
+  app\advisor\questions\QuestionsClient.tsx:176:
+  app\advisor\questions\QuestionsClient.tsx:177:        if (c
+ancelled) return;
+  app\advisor\questions\QuestionsClient.tsx:178:
+> app\advisor\questions\QuestionsClient.tsx:179:        const
+ activeQuestions = loaded.slice(0, 3);
+  app\advisor\questions\QuestionsClient.tsx:180:        setQu
+estions(activeQuestions);
+  app\advisor\questions\QuestionsClient.tsx:181:
+  app\advisor\questions\QuestionsClient.tsx:182:        const
+ loadedCriteria = Array.isArray(data.profile?.criteria)
+  app\advisor\questions\QuestionsClient.tsx:183:          ? d
+ata.profile.criteria
+  app\advisor\questions\QuestionsClient.tsx:184:             
+ .filter(
+  app\advisor\questions\QuestionsClient.tsx:185:             
+   (criterion) =>
+  app\advisor\questions\QuestionsClient.tsx:186:             
+     criterion &&
+  app\advisor\questions\QuestionsClient.tsx:187:             
+     typeof criterion.key === "string" &&
+  app\advisor\questions\QuestionsClient.tsx:188:             
+     typeof criterion.label === "string",
+  app\advisor\questions\QuestionsClient.tsx:189:             
+ )
+> app\advisor\questions\QuestionsClient.tsx:190:             
+ .slice(0, 5)
+  app\advisor\questions\QuestionsClient.tsx:191:          : [
+];
+  app\advisor\questions\QuestionsClient.tsx:192:        setCr
+iteria(loadedCriteria);
+  app\advisor\questions\QuestionsClient.tsx:193:
+  app\advisor\questions\QuestionsClient.tsx:194:        let s
+toredAnswers: Record<string, string> = {};
+  app\advisor\questions\QuestionsClient.tsx:195:        let s
+toredBudgetChoice = "";
+  app\advisor\questions\QuestionsClient.tsx:196:        let s
+toredCustomPreference = "";
+  app\advisor\questions\QuestionsClient.tsx:197:        let s
+toredWeights: WeightMap = {};
+  app\advisor\questions\QuestionsClient.tsx:198:
+  app\advisor\questions\QuestionsClient.tsx:199:        try {
+  app\advisor\questions\QuestionsClient.tsx:200:          con
+st savedRaw = window.sessionStorage.getItem(
+  app\advisor\questions\QuestionsClient.tsx:201:            "
+projectDAdvisorAnswers",
+  app\advisor\questions\QuestionsClient.tsx:202:          );
+  app\advisor\questions\QuestionsClient.tsx:203:
+  app\advisor\questions\QuestionsClient.tsx:204:          if 
+(savedRaw) {
+  app\advisor\questions\QuestionsClient.tsx:205:            c
+onst saved = JSON.parse(savedRaw) as {
+  app\advisor\questions\QuestionsClient.tsx:206:             
+ category?: unknown;
+  app\advisor\questions\QuestionsClient.tsx:207:             
+ answers?: unknown;
+  app\advisor\questions\QuestionsClient.tsx:208:             
+ budgetChoice?: unknown;
+  app\advisor\questions\QuestionsClient.tsx:209:             
+ customPreference?: unknown;
+  app\advisor\questions\QuestionsClient.tsx:210:             
+ weights?: unknown;
+  app\advisor\AdvisorClient.tsx:298:            ),
+  app\advisor\AdvisorClient.tsx:299:          );
+  app\advisor\AdvisorClient.tsx:300:
+  app\advisor\AdvisorClient.tsx:301:        setProfile(
+  app\advisor\AdvisorClient.tsx:302:          nextProfile,
+  app\advisor\AdvisorClient.tsx:303:        );
+  app\advisor\AdvisorClient.tsx:304:
+  app\advisor\AdvisorClient.tsx:305:        setWeights(
+  app\advisor\AdvisorClient.tsx:306:          nextWeights,
+  app\advisor\AdvisorClient.tsx:307:        );
+  app\advisor\AdvisorClient.tsx:308:
+  app\advisor\AdvisorClient.tsx:309:        setRepresentative
+Products(
+  app\advisor\AdvisorClient.tsx:310:          (
+  app\advisor\AdvisorClient.tsx:311:            catalogResult
+.products ??
+  app\advisor\AdvisorClient.tsx:312:            []
+> app\advisor\AdvisorClient.tsx:313:          ).slice(0, 5),
+  app\advisor\AdvisorClient.tsx:314:        );
+  app\advisor\AdvisorClient.tsx:315:      } catch (error) {
+  app\advisor\AdvisorClient.tsx:316:        if (
+  app\advisor\AdvisorClient.tsx:317:          error instanceo
+f Error &&
+  app\advisor\AdvisorClient.tsx:318:          error.name ===
+  app\advisor\AdvisorClient.tsx:319:            "AbortError"
+  app\advisor\AdvisorClient.tsx:320:        ) {
+  app\advisor\AdvisorClient.tsx:321:          return;
+  app\advisor\AdvisorClient.tsx:322:        }
+  app\advisor\AdvisorClient.tsx:323:
+  app\advisor\AdvisorClient.tsx:324:        setErrorMessage(
+  app\advisor\AdvisorClient.tsx:325:          error instanceo
+f Error
+  app\advisor\AdvisorClient.tsx:326:            ? error.messa
+ge
+  app\advisor\AdvisorClient.tsx:327:            : "구매 가이드를 불러
+오지 못했습니다.",
+  app\advisor\AdvisorClient.tsx:328:        );
+  app\advisor\AdvisorClient.tsx:329:      } finally {
+  app\advisor\AdvisorClient.tsx:330:        if (
+  app\advisor\AdvisorClient.tsx:331:          !controller.sig
+nal.aborted
+  app\advisor\AdvisorClient.tsx:332:        ) {
+  app\advisor\AdvisorClient.tsx:333:          setIsLoading(
+  app\advisor\AdvisorClient.tsx:347:    useMemo(() => {
+  app\advisor\AdvisorClient.tsx:348:      if (!profile) {
+  app\advisor\AdvisorClient.tsx:349:        return [];
+  app\advisor\AdvisorClient.tsx:350:      }
+  app\advisor\AdvisorClient.tsx:351:
+  app\advisor\AdvisorClient.tsx:352:      return [
+  app\advisor\AdvisorClient.tsx:353:        ...profile.criter
+ia,
+  app\advisor\AdvisorClient.tsx:354:      ]
+  app\advisor\AdvisorClient.tsx:355:        .sort(
+  app\advisor\AdvisorClient.tsx:356:          (a, b) =>
+  app\advisor\AdvisorClient.tsx:357:            (weights[b.ke
+y] ??
+  app\advisor\AdvisorClient.tsx:358:              b.defaultWe
+ight) -
+  app\advisor\AdvisorClient.tsx:359:            (weights[a.ke
+y] ??
+  app\advisor\AdvisorClient.tsx:360:              a.defaultWe
+ight),
+  app\advisor\AdvisorClient.tsx:361:        )
+> app\advisor\AdvisorClient.tsx:362:        .slice(0, 3);
+  app\advisor\AdvisorClient.tsx:363:    }, [profile, weights]
+);
+  app\advisor\AdvisorClient.tsx:364:
+  app\advisor\AdvisorClient.tsx:365:  function searchCategory
+(
+  app\advisor\AdvisorClient.tsx:366:    event:
+  app\advisor\AdvisorClient.tsx:367:      FormEvent<HTMLFormE
+lement>,
+  app\advisor\AdvisorClient.tsx:368:  ) {
+  app\advisor\AdvisorClient.tsx:369:    event.preventDefault(
+);
+  app\advisor\AdvisorClient.tsx:370:
+  app\advisor\AdvisorClient.tsx:371:    const normalized =
+  app\advisor\AdvisorClient.tsx:372:      categoryInput.trim(
+);
+  app\advisor\AdvisorClient.tsx:373:
+  app\advisor\AdvisorClient.tsx:374:    if (!normalized) {
+  app\advisor\AdvisorClient.tsx:375:      return;
+  app\advisor\AdvisorClient.tsx:376:    }
+  app\advisor\AdvisorClient.tsx:377:
+  app\advisor\AdvisorClient.tsx:378:    setActiveCategory(
+  app\advisor\AdvisorClient.tsx:379:      normalized,
+  app\advisor\AdvisorClient.tsx:380:    );
+  app\advisor\AdvisorClient.tsx:381:
+  app\advisor\AdvisorClient.tsx:382:    router.replace(
+  app\advisor\AdvisorClient.tsx:773:                      이런 
+점을
+  app\advisor\AdvisorClient.tsx:774:                      비교해
+야 합니다.
+  app\advisor\AdvisorClient.tsx:775:                    </h2>
+  app\advisor\AdvisorClient.tsx:776:                  </div>
+  app\advisor\AdvisorClient.tsx:777:
+  app\advisor\AdvisorClient.tsx:778:                  <p>
+  app\advisor\AdvisorClient.tsx:779:                    모르는 용
+어는
+  app\advisor\AdvisorClient.tsx:780:                    ‘쉽게 설
+명’ 버튼으로
+  app\advisor\AdvisorClient.tsx:781:                    바로 확인
+할 수
+  app\advisor\AdvisorClient.tsx:782:                    있습니다.
+  app\advisor\AdvisorClient.tsx:783:                  </p>
+  app\advisor\AdvisorClient.tsx:784:                </div>
+  app\advisor\AdvisorClient.tsx:785:
+  app\advisor\AdvisorClient.tsx:786:                <div clas
+sName="criteriaGrid">
+  app\advisor\AdvisorClient.tsx:787:                  {profil
+e.criteria
+> app\advisor\AdvisorClient.tsx:788:                    .slic
+e(0, 5)
+  app\advisor\AdvisorClient.tsx:789:                    .map(
+  app\advisor\AdvisorClient.tsx:790:                      (
+  app\advisor\AdvisorClient.tsx:791:                        c
+riterion,
+  app\advisor\AdvisorClient.tsx:792:                      ) =
+> {
+  app\advisor\AdvisorClient.tsx:793:                        c
+onst isOpen =
+  app\advisor\AdvisorClient.tsx:794:                         
+ openHelpKey ===
+  app\advisor\AdvisorClient.tsx:795:                         
+ criterion.key;
+  app\advisor\AdvisorClient.tsx:796:
+  app\advisor\AdvisorClient.tsx:797:                        r
+eturn (
+  app\advisor\AdvisorClient.tsx:798:                         
+ <article
+  app\advisor\AdvisorClient.tsx:799:                         
+   className="criterionCard"
+  app\advisor\AdvisorClient.tsx:800:                         
+   key={
+  app\advisor\AdvisorClient.tsx:801:                         
+     criterion.key
+  app\advisor\AdvisorClient.tsx:802:                         
+   }
+  app\advisor\AdvisorClient.tsx:803:                         
+ >
+  app\advisor\AdvisorClient.tsx:804:                         
+   <div className="criterionHeader">
+  app\advisor\AdvisorClient.tsx:805:                         
+     <div>
+  app\advisor\AdvisorClient.tsx:806:                         
+       <h3>
+  app\advisor\AdvisorClient.tsx:807:                         
+         {
+  app\advisor\AdvisorClient.tsx:808:                         
+           criterion.label
+  app\api\advisor-recommendations\route.ts:1239:            ]
+  app\api\advisor-recommendations\route.ts:1240:             
+ .filter(
+  app\api\advisor-recommendations\route.ts:1241:             
+   (item) =>
+  app\api\advisor-recommendations\route.ts:1242:             
+     item.effectiveScore !==
+  app\api\advisor-recommendations\route.ts:1243:             
+     null,
+  app\api\advisor-recommendations\route.ts:1244:             
+ )
+  app\api\advisor-recommendations\route.ts:1245:             
+ .sort(
+  app\api\advisor-recommendations\route.ts:1246:             
+   (a, b) =>
+  app\api\advisor-recommendations\route.ts:1247:             
+     (b.effectiveScore ??
+  app\api\advisor-recommendations\route.ts:1248:             
+       0) *
+  app\api\advisor-recommendations\route.ts:1249:             
+       b.weight -
+  app\api\advisor-recommendations\route.ts:1250:             
+     (a.effectiveScore ??
+  app\api\advisor-recommendations\route.ts:1251:             
+       0) *
+  app\api\advisor-recommendations\route.ts:1252:             
+       a.weight,
+  app\api\advisor-recommendations\route.ts:1253:             
+ )
+> app\api\advisor-recommendations\route.ts:1254:             
+ .slice(0, 3);
+  app\api\advisor-recommendations\route.ts:1255:
+  app\api\advisor-recommendations\route.ts:1256:          con
+st weakest =
+  app\api\advisor-recommendations\route.ts:1257:            [
+  app\api\advisor-recommendations\route.ts:1258:             
+ ...criterionBreakdown,
+  app\api\advisor-recommendations\route.ts:1259:            ]
+  app\api\advisor-recommendations\route.ts:1260:             
+ .filter(
+  app\api\advisor-recommendations\route.ts:1261:             
+   (item) =>
+  app\api\advisor-recommendations\route.ts:1262:             
+     item.effectiveScore !==
+  app\api\advisor-recommendations\route.ts:1263:             
+     null,
+  app\api\advisor-recommendations\route.ts:1264:             
+ )
+  app\api\advisor-recommendations\route.ts:1265:             
+ .sort(
+  app\api\advisor-recommendations\route.ts:1266:             
+   (a, b) =>
+  app\api\advisor-recommendations\route.ts:1267:             
+     (a.effectiveScore ??
+  app\api\advisor-recommendations\route.ts:1268:             
+       0) -
+  app\api\advisor-recommendations\route.ts:1269:             
+     (b.effectiveScore ??
+  app\api\advisor-recommendations\route.ts:1270:             
+       0),
+  app\api\advisor-recommendations\route.ts:1271:             
+ )
+  app\api\advisor-recommendations\route.ts:1272:             
+ .slice(0, 2);
+  app\api\advisor-recommendations\route.ts:1273:
+  app\api\advisor-recommendations\route.ts:1274:          con
+st productName =
+  app\api\advisor-recommendations\route.ts:1336:             
+       affectedCount:
+  app\api\advisor-recommendations\route.ts:1337:             
+         Number.isFinite(
+  app\api\advisor-recommendations\route.ts:1338:             
+           affectedCount,
+  app\api\advisor-recommendations\route.ts:1339:             
+         )
+  app\api\advisor-recommendations\route.ts:1340:             
+           ? affectedCount
+  app\api\advisor-recommendations\route.ts:1341:             
+           : 0,
+  app\api\advisor-recommendations\route.ts:1342:             
+       affectedProducts,
+  app\api\advisor-recommendations\route.ts:1343:             
+     };
+  app\api\advisor-recommendations\route.ts:1344:             
+   },
+  app\api\advisor-recommendations\route.ts:1345:             
+ )
+  app\api\advisor-recommendations\route.ts:1346:             
+ .filter(
+  app\api\advisor-recommendations\route.ts:1347:             
+   (item) =>
+  app\api\advisor-recommendations\route.ts:1348:             
+     item.title ||
+  app\api\advisor-recommendations\route.ts:1349:             
+     item.description,
+  app\api\advisor-recommendations\route.ts:1350:             
+ )
+> app\api\advisor-recommendations\route.ts:1351:             
+ .slice(0, 3);
+  app\api\advisor-recommendations\route.ts:1352:
+  app\api\advisor-recommendations\route.ts:1353:          con
+st rawCautions =
+  app\api\advisor-recommendations\route.ts:1354:            r
+awProductCautions(
+  app\api\advisor-recommendations\route.ts:1355:             
+ product,
+  app\api\advisor-recommendations\route.ts:1356:            )
+;
+  app\api\advisor-recommendations\route.ts:1357:
+  app\api\advisor-recommendations\route.ts:1358:          con
+st productCautions =
+  app\api\advisor-recommendations\route.ts:1359:            r
+awCautions
+  app\api\advisor-recommendations\route.ts:1360:             
+ .filter(
+  app\api\advisor-recommendations\route.ts:1361:             
+   (issue) =>
+  app\api\advisor-recommendations\route.ts:1362:             
+     !commonCautions.some(
+  app\api\advisor-recommendations\route.ts:1363:             
+       (
+  app\api\advisor-recommendations\route.ts:1364:             
+         commonIssue,
+  app\api\advisor-recommendations\route.ts:1365:             
+       ) =>
+  app\api\advisor-recommendations\route.ts:1366:             
+         issuesAreSimilar(
+  app\api\advisor-recommendations\route.ts:1367:             
+           issue,
+  app\api\advisor-recommendations\route.ts:1368:             
+           [
+  app\api\advisor-recommendations\route.ts:1369:             
+             commonIssue.title,
+  app\api\advisor-recommendations\route.ts:1370:             
+             commonIssue.description,
+  app\api\advisor-recommendations\route.ts:1371:             
+           ]
+  app\api\advisor-recommendations\route.ts:1372:             
+             .filter(
+  app\api\advisor-recommendations\route.ts:1373:             
+               Boolean,
+  app\api\advisor-recommendations\route.ts:1374:             
+             )
+  app\api\advisor-recommendations\route.ts:1375:             
+             .join(
+  app\api\advisor-recommendations\route.ts:1376:             
+               " ",
+  app\api\advisor-recommendations\route.ts:1377:             
+             ),
+  app\api\advisor-recommendations\route.ts:1378:             
+         ),
+  app\api\advisor-recommendations\route.ts:1379:             
+     ),
+  app\api\advisor-recommendations\route.ts:1380:             
+ )
+> app\api\advisor-recommendations\route.ts:1381:             
+ .slice(0, 3);
+  app\api\advisor-recommendations\route.ts:1382:
+  app\api\advisor-recommendations\route.ts:1383:          ret
+urn {
+  app\api\advisor-recommendations\route.ts:1384:            i
+d: product.id,
+  app\api\advisor-recommendations\route.ts:1385:            p
+roductName:
+  app\api\advisor-recommendations\route.ts:1386:             
+ product.product_name,
+  app\api\advisor-recommendations\route.ts:1387:            s
+ourceUrl:
+  app\api\advisor-recommendations\route.ts:1388:             
+ product.source_url,
+  app\api\advisor-recommendations\route.ts:1389:
+  app\api\advisor-recommendations\route.ts:1390:            m
+atchScore,
+  app\api\advisor-recommendations\route.ts:1391:            b
+aseMatchScore,
+  app\api\advisor-recommendations\route.ts:1392:            b
+lendedMatchScore,
+  app\api\advisor-recommendations\route.ts:1393:
+  app\api\advisor-recommendations\route.ts:1394:            p
+ersonalAdjustment:
+  app\api\advisor-recommendations\route.ts:1395:             
+ blendedMatchScore -
+  app\api\advisor-recommendations\route.ts:1396:             
+ baseMatchScore,
+  app\api\advisor-recommendations\route.ts:1397:
+  app\api\advisor-recommendations\route.ts:1398:            c
+onfidence,
+  app\api\advisor-recommendations\route.ts:1399:            d
+ataCoverage,
+  app\api\advisor-recommendations\route.ts:1400:            r
+equestedWeightTotal,
+  app\api\advisor-recommendations\route.ts:1401:            k
+nownWeightTotal,
+  app\api\advisor-recommendations\route.ts:1492:             
+     (item) =>
+  app\api\advisor-recommendations\route.ts:1493:             
+       `${item.label}: 비교 제품 중 상대적으로 아쉬운 편이에요.`,
+  app\api\advisor-recommendations\route.ts:1494:             
+   ),
+  app\api\advisor-recommendations\route.ts:1495:             
+ ]
+  app\api\advisor-recommendations\route.ts:1496:             
+   .filter(
+  app\api\advisor-recommendations\route.ts:1497:             
+     (
+  app\api\advisor-recommendations\route.ts:1498:             
+       value,
+  app\api\advisor-recommendations\route.ts:1499:             
+       index,
+  app\api\advisor-recommendations\route.ts:1500:             
+       array,
+  app\api\advisor-recommendations\route.ts:1501:             
+     ) =>
+  app\api\advisor-recommendations\route.ts:1502:             
+       array.indexOf(
+  app\api\advisor-recommendations\route.ts:1503:             
+         value,
+  app\api\advisor-recommendations\route.ts:1504:             
+       ) ===
+  app\api\advisor-recommendations\route.ts:1505:             
+       index,
+  app\api\advisor-recommendations\route.ts:1506:             
+   )
+> app\api\advisor-recommendations\route.ts:1507:             
+   .slice(0, 3),
+  app\api\advisor-recommendations\route.ts:1508:
+  app\api\advisor-recommendations\route.ts:1509:            c
+ommonCautions,
+  app\api\advisor-recommendations\route.ts:1510:
+  app\api\advisor-recommendations\route.ts:1511:            c
+autions:
+  app\api\advisor-recommendations\route.ts:1512:             
+ [
+  app\api\advisor-recommendations\route.ts:1513:             
+   ...productCautions,
+  app\api\advisor-recommendations\route.ts:1514:
+  app\api\advisor-recommendations\route.ts:1515:             
+   ...commonCautions.map(
+  app\api\advisor-recommendations\route.ts:1516:             
+     (item) =>
+  app\api\advisor-recommendations\route.ts:1517:             
+       [
+  app\api\advisor-recommendations\route.ts:1518:             
+         item.title,
+  app\api\advisor-recommendations\route.ts:1519:             
+         item.description,
+  app\api\advisor-recommendations\route.ts:1520:             
+       ]
+  app\api\advisor-recommendations\route.ts:1521:             
+         .filter(
+  app\api\advisor-recommendations\route.ts:1522:             
+           Boolean,
+  app\api\advisor-recommendations\route.ts:1523:             
+         )
+  app\api\advisor-recommendations\route.ts:1524:             
+         .join(
+  app\api\advisor-recommendations\route.ts:1525:             
+           ": ",
+  app\api\advisor-recommendations\route.ts:1526:             
+         ),
+  app\api\advisor-recommendations\route.ts:1527:             
+   ),
+  app\api\advisor-recommendations\route.ts:1673:            (
+item, index) => [
+  app\api\advisor-recommendations\route.ts:1674:             
+ item.id,
+  app\api\advisor-recommendations\route.ts:1675:             
+ index + 1,
+  app\api\advisor-recommendations\route.ts:1676:            ]
+),
+  app\api\advisor-recommendations\route.ts:1677:      );
+  app\api\advisor-recommendations\route.ts:1678:
+  app\api\advisor-recommendations\route.ts:1679:    const rec
+ommendations =
+  app\api\advisor-recommendations\route.ts:1680:      withVal
+ueScores
+  app\api\advisor-recommendations\route.ts:1681:        .sort
+(
+  app\api\advisor-recommendations\route.ts:1682:          (a,
+ b) =>
+  app\api\advisor-recommendations\route.ts:1683:            b
+.matchScore -
+  app\api\advisor-recommendations\route.ts:1684:             
+ a.matchScore ||
+  app\api\advisor-recommendations\route.ts:1685:            b
+.confidence -
+  app\api\advisor-recommendations\route.ts:1686:             
+ a.confidence,
+  app\api\advisor-recommendations\route.ts:1687:        )
+> app\api\advisor-recommendations\route.ts:1688:        .slic
+e(0, 5)
+  app\api\advisor-recommendations\route.ts:1689:        .map(
+  app\api\advisor-recommendations\route.ts:1690:          (it
+em, index) => ({
+  app\api\advisor-recommendations\route.ts:1691:            .
+..item,
+  app\api\advisor-recommendations\route.ts:1692:            r
+ank:
+  app\api\advisor-recommendations\route.ts:1693:             
+ index + 1,
+  app\api\advisor-recommendations\route.ts:1694:            v
+alueRank:
+  app\api\advisor-recommendations\route.ts:1695:             
+ valueRankMap.get(
+  app\api\advisor-recommendations\route.ts:1696:             
+   item.id,
+  app\api\advisor-recommendations\route.ts:1697:             
+ ) ?? null,
+  app\api\advisor-recommendations\route.ts:1698:          }),
+  app\api\advisor-recommendations\route.ts:1699:        );
+  app\api\advisor-recommendations\route.ts:1700:
+  app\api\advisor-recommendations\route.ts:1701:    if (
+  app\api\advisor-recommendations\route.ts:1702:      recomme
+ndations.length ===
+  app\api\advisor-recommendations\route.ts:1703:      0
+  app\api\advisor-recommendations\route.ts:1704:    ) {
+  app\api\advisor-recommendations\route.ts:1705:      return 
+NextResponse.json(
+  app\api\advisor-recommendations\route.ts:1706:        {
+  app\api\advisor-recommendations\route.ts:1707:          suc
+cess: false,
+  app\api\advisor-recommendations\route.ts:1708:          nee
+dsScoreGeneration:
+  app\api\market-candidates-enriched\route.ts:592:    if (!ca
+ptureId) {
+  app\api\market-candidates-enriched\route.ts:593:      retur
+n NextResponse.json(
+  app\api\market-candidates-enriched\route.ts:594:        {
+  app\api\market-candidates-enriched\route.ts:595:          s
+uccess: false,
+  app\api\market-candidates-enriched\route.ts:596:          m
+essage:
+  app\api\market-candidates-enriched\route.ts:597:           
+ "captureId가 필요합니다.",
+  app\api\market-candidates-enriched\route.ts:598:        },
+  app\api\market-candidates-enriched\route.ts:599:        {
+  app\api\market-candidates-enriched\route.ts:600:          s
+tatus: 400,
+  app\api\market-candidates-enriched\route.ts:601:        },
+  app\api\market-candidates-enriched\route.ts:602:      );
+  app\api\market-candidates-enriched\route.ts:603:    }
+  app\api\market-candidates-enriched\route.ts:604:
+  app\api\market-candidates-enriched\route.ts:605:    const c
+aptureUrl =
+  app\api\market-candidates-enriched\route.ts:606:      new U
+RL(
+> app\api\market-candidates-enriched\route.ts:607:        "/a
+pi/naver-capture",
+  app\api\market-candidates-enriched\route.ts:608:        req
+uestUrl.origin,
+  app\api\market-candidates-enriched\route.ts:609:      );
+  app\api\market-candidates-enriched\route.ts:610:
+  app\api\market-candidates-enriched\route.ts:611:    capture
+Url.searchParams.set(
+  app\api\market-candidates-enriched\route.ts:612:      "id",
+  app\api\market-candidates-enriched\route.ts:613:      captu
+reId,
+  app\api\market-candidates-enriched\route.ts:614:    );
+  app\api\market-candidates-enriched\route.ts:615:
+  app\api\market-candidates-enriched\route.ts:616:    const c
+aptureResponse =
+  app\api\market-candidates-enriched\route.ts:617:      await
+ fetch(
+  app\api\market-candidates-enriched\route.ts:618:        cap
+tureUrl,
+  app\api\market-candidates-enriched\route.ts:619:        {
+  app\api\market-candidates-enriched\route.ts:620:          c
+ache:
+  app\api\market-candidates-enriched\route.ts:621:           
+ "no-store",
+  app\api\market-candidates-enriched\route.ts:622:        },
+  app\api\market-candidates-enriched\route.ts:623:      );
+  app\api\market-candidates-enriched\route.ts:624:
+  app\api\market-candidates-enriched\route.ts:625:    const c
+aptureData =
+  app\api\market-candidates-enriched\route.ts:626:      (
+  app\api\market-candidates-enriched\route.ts:627:        awa
+it captureResponse.json()
+  app\search\page.tsx:63:  return new Intl.DateTimeFormat("ko
+-KR", {
+  app\search\page.tsx:64:    year: "numeric",
+  app\search\page.tsx:65:    month: "2-digit",
+  app\search\page.tsx:66:    day: "2-digit",
+  app\search\page.tsx:67:  }).format(date);
+  app\search\page.tsx:68:}
+  app\search\page.tsx:69:
+  app\search\page.tsx:70:function getPositiveSummary(
+  app\search\page.tsx:71:  analysis: ReviewAnalysis | null,
+  app\search\page.tsx:72:) {
+  app\search\page.tsx:73:  if (!analysis) {
+  app\search\page.tsx:74:    return [];
+  app\search\page.tsx:75:  }
+  app\search\page.tsx:76:
+  app\search\page.tsx:77:  return analysis.positivePoints
+> app\search\page.tsx:78:    .slice(0, 3)
+  app\search\page.tsx:79:    .map((point) => point.topic);
+  app\search\page.tsx:80:}
+  app\search\page.tsx:81:
+  app\search\page.tsx:82:function getNegativeSummary(
+  app\search\page.tsx:83:  analysis: ReviewAnalysis | null,
+  app\search\page.tsx:84:) {
+  app\search\page.tsx:85:  if (!analysis) {
+  app\search\page.tsx:86:    return [];
+  app\search\page.tsx:87:  }
+  app\search\page.tsx:88:
+  app\search\page.tsx:89:  return analysis.negativePoints
+  app\search\page.tsx:90:    .slice(0, 2)
+  app\search\page.tsx:91:    .map((point) => point.topic);
+  app\search\page.tsx:92:}
+  app\search\page.tsx:93:
+  app\search\page.tsx:94:function SearchContent() {
+  app\search\page.tsx:95:  const router = useRouter();
+  app\search\page.tsx:96:  const searchParams = useSearchPara
+ms();
+  app\search\page.tsx:97:
+  app\search\page.tsx:98:  const initialQuery =
+  app\search\page.tsx:293:      if (current.length >= 5) {
+  app\search\page.tsx:294:        alert(
+  app\search\page.tsx:295:          "최대 5개까지 선택할 수 있습니다.",
+  app\search\page.tsx:296:        );
+  app\search\page.tsx:297:
+  app\search\page.tsx:298:        return current;
+  app\search\page.tsx:299:      }
+  app\search\page.tsx:300:
+  app\search\page.tsx:301:      return [...current, id];
+  app\search\page.tsx:302:    });
+  app\search\page.tsx:303:  }
+  app\search\page.tsx:304:
+  app\search\page.tsx:305:  function selectAllCandidates() {
+  app\search\page.tsx:306:    setSelected(
+  app\search\page.tsx:307:      sortedProducts
+> app\search\page.tsx:308:        .slice(0, 5)
+  app\search\page.tsx:309:        .map((product) => product.i
+d),
+  app\search\page.tsx:310:    );
+  app\search\page.tsx:311:  }
+  app\search\page.tsx:312:
+  app\search\page.tsx:313:  function next() {
+  app\search\page.tsx:314:    if (selected.length < 2) {
+  app\search\page.tsx:315:      alert(
+  app\search\page.tsx:316:        "비교할 제품을 2개 이상 선택하세요. 현재는 등
+록 제품이 1개라면 추가 제품 등록이 필요합니다.",
+  app\search\page.tsx:317:      );
+  app\search\page.tsx:318:
+  app\search\page.tsx:319:      return;
+  app\search\page.tsx:320:    }
+  app\search\page.tsx:321:
+  app\search\page.tsx:322:    router.push(
+  app\search\page.tsx:323:      `/question?ids=${encodeURICom
+ponent(
+  app\search\page.tsx:324:        selected.join(","),
+  app\search\page.tsx:325:      )}`,
+  app\search\page.tsx:326:    );
+  app\search\page.tsx:327:  }
+  app\search\page.tsx:328:
+  components\ProjectDAutomationPanel.tsx:345:              Nu
+mber(
+  components\ProjectDAutomationPanel.tsx:346:                
+candidate.reviewCount ??
+  components\ProjectDAutomationPanel.tsx:347:                
+  0,
+  components\ProjectDAutomationPanel.tsx:348:              ),
+  components\ProjectDAutomationPanel.tsx:349:
+  components\ProjectDAutomationPanel.tsx:350:            rati
+ng:
+  components\ProjectDAutomationPanel.tsx:351:              Nu
+mber(
+  components\ProjectDAutomationPanel.tsx:352:                
+candidate.rating ??
+  components\ProjectDAutomationPanel.tsx:353:                
+  0,
+  components\ProjectDAutomationPanel.tsx:354:              ),
+  components\ProjectDAutomationPanel.tsx:355:          }),
+  components\ProjectDAutomationPanel.tsx:356:        );
+  components\ProjectDAutomationPanel.tsx:357:
+  components\ProjectDAutomationPanel.tsx:358:      const capt
+ureResponse =
+  components\ProjectDAutomationPanel.tsx:359:        await fe
+tch(
+> components\ProjectDAutomationPanel.tsx:360:          "/api/
+naver-capture",
+  components\ProjectDAutomationPanel.tsx:361:          {
+  components\ProjectDAutomationPanel.tsx:362:            meth
+od: "POST",
+  components\ProjectDAutomationPanel.tsx:363:
+  components\ProjectDAutomationPanel.tsx:364:            head
+ers: {
+  components\ProjectDAutomationPanel.tsx:365:              "C
+ontent-Type":
+  components\ProjectDAutomationPanel.tsx:366:                
+"application/json",
+  components\ProjectDAutomationPanel.tsx:367:            },
+  components\ProjectDAutomationPanel.tsx:368:
+  components\ProjectDAutomationPanel.tsx:369:            body
+: JSON.stringify({
+  components\ProjectDAutomationPanel.tsx:370:              ca
+tegory:
+  components\ProjectDAutomationPanel.tsx:371:                
+normalizedCategory,
+  components\ProjectDAutomationPanel.tsx:372:
+  components\ProjectDAutomationPanel.tsx:373:              mi
+nBudget:
+  components\ProjectDAutomationPanel.tsx:374:                
+min,
+  components\ProjectDAutomationPanel.tsx:375:
+  components\ProjectDAutomationPanel.tsx:376:              ma
+xBudget:
+  components\ProjectDAutomationPanel.tsx:377:                
+max,
+  components\ProjectDAutomationPanel.tsx:378:
+  components\ProjectDAutomationPanel.tsx:379:              pr
+oducts:
+  components\ProjectDAutomationPanel.tsx:380:                
+captureProducts,
+  lib\recommendation.ts:51:        }
+  lib\recommendation.ts:52:      }
+  lib\recommendation.ts:53:
+  lib\recommendation.ts:54:      if (options.budget === 0 || 
+product.price <= options.budget) {
+  lib\recommendation.ts:55:        reasons.unshift("설정한 예산 범위
+에 들어옵니다.");
+  lib\recommendation.ts:56:      } else {
+  lib\recommendation.ts:57:        cautions.push(`예산보다 ${(pro
+duct.price - options.budget).toLocaleString()}원 높습니다.`);
+  lib\recommendation.ts:58:      }
+  lib\recommendation.ts:59:
+  lib\recommendation.ts:60:      product.cons.slice(0, 2).for
+Each((item) => cautions.push(item));
+  lib\recommendation.ts:61:
+  lib\recommendation.ts:62:      return {
+  lib\recommendation.ts:63:        ...product,
+  lib\recommendation.ts:64:        score: Math.round(score * 
+10) / 10,
+  lib\recommendation.ts:65:        reasons: reasons.slice(0, 
+4),
+> lib\recommendation.ts:66:        cautions: cautions.slice(0
+, 3),
+  lib\recommendation.ts:67:      };
+  lib\recommendation.ts:68:    })
+  lib\recommendation.ts:69:    .sort((a, b) => b.score - a.sc
+ore);
+  lib\recommendation.ts:70:}
+  lib\resolveNaverBrandProductUrl.ts:642:      (token) =>
+  lib\resolveNaverBrandProductUrl.ts:643:        /[a-zA-Z]/.t
+est(
+  lib\resolveNaverBrandProductUrl.ts:644:          token,
+  lib\resolveNaverBrandProductUrl.ts:645:        ) ||
+  lib\resolveNaverBrandProductUrl.ts:646:        /\d/.test(
+  lib\resolveNaverBrandProductUrl.ts:647:          token,
+  lib\resolveNaverBrandProductUrl.ts:648:        ),
+  lib\resolveNaverBrandProductUrl.ts:649:    );
+  lib\resolveNaverBrandProductUrl.ts:650:
+  lib\resolveNaverBrandProductUrl.ts:651:  if (
+  lib\resolveNaverBrandProductUrl.ts:652:    initialBrandCand
+idate &&
+  lib\resolveNaverBrandProductUrl.ts:653:    modelLike.length
+ > 0
+  lib\resolveNaverBrandProductUrl.ts:654:  ) {
+  lib\resolveNaverBrandProductUrl.ts:655:    await tryQuery(
+  lib\resolveNaverBrandProductUrl.ts:656:      `${initialBran
+dCandidate} ${modelLike
+> lib\resolveNaverBrandProductUrl.ts:657:        .slice(0, 3)
+  lib\resolveNaverBrandProductUrl.ts:658:        .join(" ")} 
+공식`,
+  lib\resolveNaverBrandProductUrl.ts:659:    );
+  lib\resolveNaverBrandProductUrl.ts:660:  }
+  lib\resolveNaverBrandProductUrl.ts:661:
+  lib\resolveNaverBrandProductUrl.ts:662:  /*
+  lib\resolveNaverBrandProductUrl.ts:663:    공식 상품 URL 후보가 확보
+됐으면
+  lib\resolveNaverBrandProductUrl.ts:664:    상품번호 일치 또는 상품명 토
+큰 일치도가
+  lib\resolveNaverBrandProductUrl.ts:665:    가장 높은 후보를 선택한다.
+  lib\resolveNaverBrandProductUrl.ts:666:  */
+  lib\resolveNaverBrandProductUrl.ts:667:  const rankedCandid
+ates =
+  lib\resolveNaverBrandProductUrl.ts:668:    [...canonicalCan
+didates]
+  lib\resolveNaverBrandProductUrl.ts:669:      .map(
+  lib\resolveNaverBrandProductUrl.ts:670:        (candidate) 
+=> ({
+  lib\resolveNaverBrandProductUrl.ts:671:          candidate,
+  lib\resolveNaverBrandProductUrl.ts:672:          score:
+  lib\resolveNaverBrandProductUrl.ts:673:            candidat
+eScore(
+  lib\resolveNaverBrandProductUrl.ts:674:              candid
+ate,
+  lib\resolveNaverBrandProductUrl.ts:675:              produc
+tName,
+  lib\resolveNaverBrandProductUrl.ts:676:              inputP
+roductId,
+  lib\resolveNaverBrandProductUrl.ts:677:            ),
+
+

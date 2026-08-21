@@ -1,0 +1,47 @@
+﻿import {
+  supabaseAdmin,
+} from "../lib/supabaseAdmin";
+
+async function main() {
+  const {
+    data,
+    error,
+  } =
+    await supabaseAdmin
+      .from(
+        "brand_store_mappings",
+      )
+      .select(
+        "brand_key, brand_name, brand_slug, brand_site, source, confidence, created_at, updated_at",
+      )
+      .order(
+        "created_at",
+        {
+          ascending: true,
+        },
+      );
+
+  if (error) {
+    console.error(
+      "ERROR:",
+      error,
+    );
+
+    return;
+  }
+
+  console.log(
+    "저장된 매핑 수:",
+    data?.length ?? 0,
+  );
+
+  console.log(
+    JSON.stringify(
+      data,
+      null,
+      2,
+    ),
+  );
+}
+
+main().catch(console.error);

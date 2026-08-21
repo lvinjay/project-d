@@ -1,0 +1,212 @@
+﻿{
+    "success":  true,
+    "category":  "ë¡ë´ì²­ìê¸°",
+    "count":  12,
+    "candidates":  [
+                       {
+                           "id":  "candidate-5",
+                           "searchPosition":  5,
+                           "productName":  "ë¡ë³´ë½ ë¡ë´ì²­ìê¸° S10 MaxV Ultra RRE0VES+EWFD55HRR ìë ë¬¼íµí, íì´í¸",
+                           "seller":  "íë§¤ì² 46",
+                           "price":  1640000,
+                           "imageUrl":  "https://shopping-phinf.pstatic.net/main_5907774/59077746157.20260227155822.jpg?type=f300",
+                           "sourceUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59077746157\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0\u0026t=mt2bcd6h\u0026h=6ed842b699fd7165b3874ab9a97a6fd5ad2e129c\u0026frm=NVSCDIG",
+                           "reviewCount":  7986,
+                           "rating":  4.85,
+                           "preliminaryScore":  88.2,
+                           "preliminaryReason":  [
+                                                     "ë¦¬ë·° 7,986ê°",
+                                                     "íì  4.85",
+                                                     "ê°ê²© 1,640,000ì"
+                                                 ]
+                       },
+                       {
+                           "id":  "candidate-4",
+                           "searchPosition":  4,
+                           "productName":  "ì¼ì± 2026 ì ì í ë¹ì¤í¬í¬ AI ì¤í ì¸í¸ë¼ ë¬¼ê±¸ë  ì¬ì¸ìë¡ë´ì²­ìê¸° ìí´ ê·¸ë ì´ì§",
+                           "seller":  "ì¼ì±ê³µìíí¸ë ì°ì£¼",
+                           "price":  1910000,
+                           "imageUrl":  "https://shopping-phinf.pstatic.net/main_9057479/90574795333.3.jpg?type=f300",
+                           "sourceUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=90574795333\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0\u0026t=mt2bcd6g\u0026h=2c27e3ac4364eeed0287e8f2165e242083a5df09\u0026frm=NVSCDIG",
+                           "reviewCount":  3646,
+                           "rating":  4.85,
+                           "preliminaryScore":  72,
+                           "preliminaryReason":  [
+                                                     "ë¦¬ë·° 3,646ê°",
+                                                     "íì  4.85",
+                                                     "ê°ê²© 1,910,000ì"
+                                                 ]
+                       },
+                       {
+                           "id":  "candidate-3",
+                           "searchPosition":  3,
+                           "productName":  "ìë¸ë¦¬ë´ TS450 ì°ë¦¬ì¤í ì¬ë¦¼ ë¬¼ê±¸ë  ë¡ë´ì²­ìê¸° 26ë\u0085 NEW",
+                           "seller":  "ìë¸ë¦¬ë´ ê³µìì¼íëª°",
+                           "price":  448000,
+                           "imageUrl":  "https://shopping-phinf.pstatic.net/main_9038186/90381860933.13.jpg?type=f300",
+                           "sourceUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=90381860933\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0\u0026t=mt2bcd66\u0026h=1c8902b953dc419950817d601f5221053406c9e4\u0026frm=NVSCSPE",
+                           "reviewCount":  2069,
+                           "rating":  4.8,
+                           "preliminaryScore":  67.7,
+                           "preliminaryReason":  [
+                                                     "ë¦¬ë·° 2,069ê°",
+                                                     "íì  4.8",
+                                                     "ê°ê²© 448,000ì"
+                                                 ]
+                       },
+                       {
+                           "id":  "candidate-1",
+                           "searchPosition":  1,
+                           "productName":  "LGíë´ ë¡ë´ì²­ìê¸° RONi ë¡ë N95TWU",
+                           "seller":  "í¬ì¸í¸ ìµë 22,900ì",
+                           "price":  2300000,
+                           "imageUrl":  "https://searchad-phinf.pstatic.net/MjAyNjA3MDZfNjgg/MDAxNzgzMzI3NjUzMjY3.gh27tlBsk8n6yHrxyf-EpjfXoPWtFZopoGjTIYaKJGgg.J2o_W8ktdGjcb5Jn08CjuqnIxwvpToqd-8bs-wcYQYQg.PNG/1490239-a0365634-5696-43f3-acac-9d226b87ee30.png?type=f300",
+                           "sourceUrl":  "https://ader.naver.com/v1/IxVsBoJLw7zwF0vnPBoqMb54w79565TIvwWz9gk8nsITFHENzW9ArIain2btkTQNVIo7pwUiaCxOONSNFQUEredk7Qa6KE1RKYleBrzmO8TnejOmy3daQ5nAuG_KtwlTlTg20KsTHnfU1WrKzgAeqEZMSNXSPqPWxW8zP7yNVsiFk90t3Ye1VvVYwV_BNDSVZ5U7V8_kC0FCKaYABgjgoqHGqtWrWG9RG0Ih3wOP2H0J-Mp8y9uHnEUkQDjgy8vwAJijMvxx-RluPM1YVun6GGdzuniPWIaC-cw_Z-PKqckIIUw1VBOB5i7cxuM-573abrd0hdvDaWN986Ow-mSvRQ==?c=naver.search.pc.npla\u0026t=0\u0026ui=LIST_FINDER",
+                           "reviewCount":  424,
+                           "rating":  5,
+                           "preliminaryScore":  66.9,
+                           "preliminaryReason":  [
+                                                     "ë¦¬ë·° 424ê°",
+                                                     "íì  5",
+                                                     "ê°ê²© 2,300,000ì"
+                                                 ]
+                       },
+                       {
+                           "id":  "candidate-2",
+                           "searchPosition":  2,
+                           "productName":  "ëª¨ë° V70 Ultra Complete ë¡ë´ì²­ìê¸° RGB AIì¼ì 17cm íì¥ ì¬ì¸ì",
+                           "seller":  "í¬ì¸í¸ ìµë 9,990ì",
+                           "price":  1199000,
+                           "imageUrl":  "https://shopping-phinf.pstatic.net/main_9110188/91101888174.1.jpg?type=f300",
+                           "sourceUrl":  "https://ader.naver.com/v1/xv8AOWx4D5R6Z-Xp_-sIEGdYQcN6Pd2Mf-SjfQRdDn4Do2WbDTI8haqGQBViaLWzUUQDq-legW5oGNeZf0CzDg2Mk7Z2z1MrCtaDZnc5_3KkbjmGnp1Y9wqsK3cR7-Mr0ObtWobGXqOSXbEyyViWYN_vlV7IF4xzYCEFJqPiaO5EjuCyxK0Lq7pB1Lg4iJgWrY8KtAn9WT2UN_zMv6HhfA9CkummWJjkbug6tDo7DIEUUMgOuhH8N69kkRCjF2nYB7k40Xgok396uVQJUs04Lbh5RhkCZ2_JTx0kdThBh3RRmY1SdZvAc0pYyCE2N0CuqTKmAOfZopBhkoLsuL5z9HKgBtZPUuZqgLMLkA6sh1chzE_rt6sjigAXSJm2Eo2g17Hrk3dT4y5Ybpkcjs6v6YU3wgfkIDOQMSAK4KQMtSJtFzkW3Wrb3I-sM9mxHrvoxB14YUSAPoY5kod72Qy7sGm7Z4REJk6gb1g3gyZcnW91O7vLcokDLNihhf4ztuMmdKL5rBu5HuHDoVOZT31ZCqZ2g_9eJ34A527CL9Dg_08=?c=naver.search.pc.npla\u0026t=0\u0026ui=LIST_FINDER",
+                           "reviewCount":  128,
+                           "rating":  4.91,
+                           "preliminaryScore":  62.4,
+                           "preliminaryReason":  [
+                                                     "ë¦¬ë·° 128ê°",
+                                                     "íì  4.91",
+                                                     "ê°ê²© 1,199,000ì"
+                                                 ]
+                       },
+                       {
+                           "id":  "candidate-9",
+                           "searchPosition":  9,
+                           "productName":  "ëª¨ë° ë¡ë´ì²­ìê¸° P70 Pro Ultra RLP54HE AIì¼ì ìëì¸ì² íì´í¸, ë¨í",
+                           "seller":  "íë§¤ì² 10",
+                           "price":  548900,
+                           "imageUrl":  "https://shopping-phinf.pstatic.net/main_5976091/59760912197.20260422124547.jpg?type=f300",
+                           "sourceUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59760912197\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0\u0026t=mt2bchm2\u0026h=7be0917cfd5f011fe146152037824702091d944a\u0026frm=NVSCPRO",
+                           "reviewCount":  3545,
+                           "rating":  4.95,
+                           "preliminaryScore":  57.9,
+                           "preliminaryReason":  [
+                                                     "ë¦¬ë·° 3,545ê°",
+                                                     "íì  4.95",
+                                                     "ê°ê²© 548,900ì"
+                                                 ]
+                       },
+                       {
+                           "id":  "candidate-12",
+                           "searchPosition":  12,
+                           "productName":  "ë¡ë³´ë½ S10 MaxV Ultra ë¡ë´ì²­ìê¸°",
+                           "seller":  "í¬ì¸í¸ ìµë 16,900ì",
+                           "price":  1890000,
+                           "imageUrl":  "https://searchad-phinf.pstatic.net/MjAyNjA1MTFfMiAg/MDAxNzc4NDc0OTkzNDQ4.SRmAgKYn6MMT7uLOmeFbLDACywb-eft4FXK0sPZEDP4g.LStBui87mjDKYnsDZbfuLOmH-aY8I_Q-1EAMlp7yYbwg.PNG/1654034-e21a623d-a6c5-4148-9c78-83494fdf98cf.png?type=f300",
+                           "sourceUrl":  "https://ader.naver.com/v1/evXDd0q1iQRiH39zxdTj7LjHzmEwZjXMcTncAMSsWpUnyaiQhaQI-sK9qTP-yL_5r47Ddjxjyk8mbTyuoyKGSIkC9ldLs42vOjOADVk2eksawSkhF7toDs83FDwM3moEpT9wlQWKPpgAEo3-rAW4GkoasNQlPGDqJWHDXdz0qY8_pDH4wAgsHvvZVY0mqQ26az95Y8OW9lTEcsYtEoOkvpgxS9Vd1FmT7ztQWXwwSTpeQmRxUnlElzcsfLQLGVUA8GshYqz6-ODa-uKwtiv_q5ltITDQ-h5kcWi1T5a9xlZXDul9SQYNKeTcpWse_BkPJNMboE8WusA0_Hg33fgwLD4TnA94rQpne3wTPgNaTHvEXKdskakMj2T5-trdykWbkQg818YceF579YqjWEORcP0qX2O0aqPWkNi7od3b2f98WMQsBsch2Mx5nCNlgKQN3PAAP1e6ktLlDesnKHLO9VvEGvIYB64pp39RL2CZEwgie7x9sbS6U0zCeA2nKkiZRYz1EFOkKuZbw3RmoEzjw2bdkZvo0tQNAed3sIsSprnPcT5SmrGIIvSqAkvmoxtG?c=naver.search.pc.npla\u0026t=0\u0026ui=LIST_FINDER",
+                           "reviewCount":  3953,
+                           "rating":  4.85,
+                           "preliminaryScore":  53.7,
+                           "preliminaryReason":  [
+                                                     "ë¦¬ë·° 3,953ê°",
+                                                     "íì  4.85",
+                                                     "ê°ê²© 1,890,000ì"
+                                                 ]
+                       },
+                       {
+                           "id":  "candidate-6",
+                           "searchPosition":  6,
+                           "productName":  "JONR ì¡´ì ë¡ë´ì²­ìê¸° ì¬ì¸ì ìëì¸ì² ê±´ì¡° ì¤í\u0085ì´ì\u0085 ìµê°í¬ì²­ìê¸° X9 PRO, ë¸ë",
+                           "seller":  "í¬ì¸í¸ ìµë 6,990ì",
+                           "price":  999000,
+                           "imageUrl":  "https://shopping-phinf.pstatic.net/main_9094680/90946805498.3.jpg?type=f300",
+                           "sourceUrl":  "https://ader.naver.com/v1/nyybV3ZbSOcFVFoNl8nhL9f34H96DIygEjpFHaDfImp8Z5CQv4umI86uG7Kyy2Q-Wr8T-CbPam9TsRFKl3NByREM4WIEtPKBt3P8vqqi2Ge8SOfUVJsblWYFAPUmKDbNAKkJhRPlXnz2-t9KSSliVJJLNU_aRJLN8JtVMHDwTB1qriqaGqat2cub6VmkRh96HBZzrvCDfakSoUCLlIPB_U5wBcRAj0w5nWN5a_JPnsN8RBtgJkAC3xowxMbBUHinMNNAz-PDNawEHuJMe71HWI-t5M97nbP-juOyWAC383ifaGDFJax9B9ZIPp6HOs2iwp8ngO895IKlYPsZ1oM0G1CSGEOtRErgdqQXsYc_GsI=?c=naver.search.pc.npla\u0026NaPm=1\u0026ui=LIST_FINDER",
+                           "reviewCount":  208,
+                           "rating":  4.6,
+                           "preliminaryScore":  50.3,
+                           "preliminaryReason":  [
+                                                     "ë¦¬ë·° 208ê°",
+                                                     "íì  4.6",
+                                                     "ê°ê²© 999,000ì"
+                                                 ]
+                       },
+                       {
+                           "id":  "candidate-7",
+                           "searchPosition":  7,
+                           "productName":  "LGíë´ ë¡ë´ì²­ìê¸° RONi ë¡ë N95TWU",
+                           "seller":  "LGì ì",
+                           "price":  2300000,
+                           "imageUrl":  "https://searchad-phinf.pstatic.net/MjAyNjA3MDZfNjgg/MDAxNzgzMzI3NjUzMjY3.gh27tlBsk8n6yHrxyf-EpjfXoPWtFZopoGjTIYaKJGgg.J2o_W8ktdGjcb5Jn08CjuqnIxwvpToqd-8bs-wcYQYQg.PNG/1490239-a0365634-5696-43f3-acac-9d226b87ee30.png?type=f300",
+                           "sourceUrl":  "https://ader.naver.com/v1/aX69Qd6oltON8bsaT_GqsD925QJi7xB5qkUrfOvIGWzvwCEEi0xw-UEtqNT3Q6-DR03AOoqB3q8uMmUN1b7vCkBqYCsQilJejbebB8RTu1r2qRhvplhL4J0XmIsbF0eTBm3SWjnqxgP_TnaipUUU8Lzz41QSPGFBQpG8bFyuylM0VQ5XlyNfGxUGs8tODWg6DMe4ENuu_0_T_7HbvgpmMDka4cIEi6D2RMuXRSoF_TyKuKhM3N6tecYx0No3qOBFXNhWFEtz4duF6RRnhoG0CZAgdfeby8W2XdaPeuNKHFhDnJHVcVElJn5z2GnXIsvUUUHRjtAqZFA6NPaRCHiEsA==?c=naver.search.pc.npla\u0026t=0\u0026ui=GUIDE",
+                           "reviewCount":  424,
+                           "rating":  5,
+                           "preliminaryScore":  50.1,
+                           "preliminaryReason":  [
+                                                     "ë¦¬ë·° 424ê°",
+                                                     "íì  5",
+                                                     "ê°ê²© 2,300,000ì"
+                                                 ]
+                       },
+                       {
+                           "id":  "candidate-11",
+                           "searchPosition":  11,
+                           "productName":  "ë¡ë³´ë½ ë¡ë´ì²­ìê¸° S10 MaxV Ultra RRE0VES+EWFD56HRR ì§ë°°ìí, íì´í¸",
+                           "seller":  "íë§¤ì² 34",
+                           "price":  1760000,
+                           "imageUrl":  "https://shopping-phinf.pstatic.net/main_5907818/59078180743.20260227174858.jpg?type=f300",
+                           "sourceUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59078180743\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0\u0026t=mt2bchm3\u0026h=48588beca82e430b14ce54073fa7014b27fadefc\u0026frm=NVSCPRO",
+                           "reviewCount":  3006,
+                           "rating":  4.86,
+                           "preliminaryScore":  49.6,
+                           "preliminaryReason":  [
+                                                     "ë¦¬ë·° 3,006ê°",
+                                                     "íì  4.86",
+                                                     "ê°ê²© 1,760,000ì"
+                                                 ]
+                       },
+                       {
+                           "id":  "candidate-8",
+                           "searchPosition":  8,
+                           "productName":  "LGíë´ ë¡ë´ì²­ìê¸° RONi ë¡ë N95THU",
+                           "seller":  "LGì ì",
+                           "price":  2300000,
+                           "imageUrl":  "https://searchad-phinf.pstatic.net/MjAyNjA3MjlfMTQ3/MDAxNzg1Mjg3MjQ1ODI5.S3cIjXAx-7gWBvGU1eLX5vuztNvfbZEWvcTY9CVuB6gg.8nsjMOKnLkCGcPocMupGDI5ND11m7u_3WxFYC7vjvD0g.PNG/1490239-db54d5d9-c772-43d5-84a1-10ca969d680f.png?type=f300",
+                           "sourceUrl":  "https://ader.naver.com/v1/aX69Qd6oltON8bsaT_GqsD925QJi7xB5qkUrfOvIGWzvwCEEi0xw-UEtqNT3Q6-DT9hkULTc3vy51sLwPDv0Vk25_V5RjsiKbHtU2nTanfeW1GzX-nAuCWX9PYKmY79NId-lQu9IVt2to9kAEfDuSfCmFarAyxuFEq79gNnb_4lIlTRBgVlKf9wJmJ9c8ChgwHxOSPxiR0BKdhwL2GS-tOK1sl2PFIlV6rqxCC3gUR5YqLrKi7f1R0X8JiGV1bsIdlpuUKVQxIB3HK2L178KI4OVj0-C4q0psJUXaBGfRJR8bS6tvgQALvY5XNAJykhQdpTCsDqpCh0KJpnCcsM8HA==?c=naver.search.pc.npla\u0026t=0\u0026ui=GUIDE",
+                           "reviewCount":  424,
+                           "rating":  5,
+                           "preliminaryScore":  47.3,
+                           "preliminaryReason":  [
+                                                     "ë¦¬ë·° 424ê°",
+                                                     "íì  5",
+                                                     "ê°ê²© 2,300,000ì"
+                                                 ]
+                       },
+                       {
+                           "id":  "candidate-10",
+                           "searchPosition":  10,
+                           "productName":  "ëë¦¬ë¯¸ ì¬ì¸ì ë¡ë´ì²­ìê¸° X60 Master ì¤í ì§ë°°ìí, íì´í¸",
+                           "seller":  "íë§¤ì² 21",
+                           "price":  1090000,
+                           "imageUrl":  "https://shopping-phinf.pstatic.net/main_5920443/59204433943.20260310171023.jpg?type=f300",
+                           "sourceUrl":  "https://cr3.shopping.naver.com/v2/bridge/searchGate?nv_mid=59204433943\u0026cat_id=50015541\u0026query=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0%20%EC%9D%B8%EA%B8%B0\u0026t=mt2bchm3\u0026h=dd7e1e497f36728189f39fa8abbf48df62332d99\u0026frm=NVSCPRO",
+                           "reviewCount":  1170,
+                           "rating":  4.82,
+                           "preliminaryScore":  44.2,
+                           "preliminaryReason":  [
+                                                     "ë¦¬ë·° 1,170ê°",
+                                                     "íì  4.82",
+                                                     "ê°ê²© 1,090,000ì"
+                                                 ]
+                       }
+                   ],
+    "message":  "\"ë¡ë´ì²­ìê¸°\" íë³´ 12ê°ë¥¼ ê²ìíìµëë¤."
+}

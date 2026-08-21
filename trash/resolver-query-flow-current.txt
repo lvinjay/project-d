@@ -1,0 +1,211 @@
+﻿      .filter(
+        (token) =>
+          token !==
+          initialBrandCandidate,
+      )
+      .slice(
+        0,
+        3,
+      );
+
+  const triedQueries:
+    string[] = [];
+
+  let brandName = "";
+
+  const canonicalCandidates:
+    CanonicalCandidate[] = [];
+
+  const brandSites =
+    new Set<string>();
+
+  const tryQuery =
+    async (
+      query: string,
+    ) => {
+      const normalized =
+        query
+          .replace(
+            /\s+/g,
+            " ",
+          )
+          .trim();
+
+      if (
+        !normalized ||
+        triedQueries.includes(
+          normalized,
+        )
+      ) {
+        return;
+      }
+
+      triedQueries.push(
+        normalized,
+      );
+
+      const data =
+        await searchNaver(
+          normalized,
+        );
+
+      for (
+        const site of
+        extractBrandSites(
+          data,
+        )
+      ) {
+        brandSites.add(site);
+      }
+
+      for (
+        const candidate of
+        extractCanonicalCandidates(
+          data,
+        )
+      ) {
+        if (
+          !canonicalCandidates.some(
+            (existing) =>
+              existing.canonicalUrl ===
+              candidate.canonicalUrl,
+          )
+        ) {
+          canonicalCandidates.push(
+            candidate,
+          );
+        }
+      }
+
+      if (!brandName) {
+        brandName =
+          extractBrandName(
+            data,
+          );
+      }
+    };
+
+  /*
+    상품번호가 이미 있으면
+    기존에 성공했던 강한 검색부터 사용.
+  */
+  if (inputProductId) {
+    await tryQuery(
+      `${inputProductId} ${cleanedName}`,
+    );
+  }
+
+  /*
+    중간 URL 또는 상품번호 미확보 상황에서는
+    상품명 자체로 공식 브랜드 상품을 찾는다.
+  */
+  await tryQuery(
+    `${cleanedName} brand.naver.com`,
+  );
+
+  if (
+    initialBrandCandidate
+  ) {
+    const shortModel =
+      modelTokens
+        .slice(0, 2)
+        .join(" ");
+
+    await tryQuery(
+      `site:brand.naver.com ${initialBrandCandidate} ${shortModel}`,
+    );
+  }
+
+  const modelLike =
+    usefulTokens.filter(
+      (token) =>
+        /[a-zA-Z]/.test(
+          token,
+        ) ||
+        /\d/.test(
+          token,
+        ),
+    );
+
+  if (
+    initialBrandCandidate &&
+    modelLike.length > 0
+  ) {
+    await tryQuery(
+      `${initialBrandCandidate} ${modelLike
+        .slice(0, 3)
+        .join(" ")} 공식`,
+    );
+  }
+
+  /*
+    Naver 검색만으로 공식 상품 URL을 확보하지 못했으면
+    남은 검색 예산 1회를 Google broad fallback에 사용한다.
+
+    전체 SerpApi 검색 횟수는
+    MAX_SERPAPI_QUERIES_PER_PRODUCT 한도를 공유한다.
+  */
+  if (
+    canonicalCandidates.length ===
+      0 &&
+    triedQueries.length <
+      MAX_SERPAPI_QUERIES_PER_PRODUCT
+  ) {
+    /*
+      Google broad 검색은 모델 토큰을 과하게 넣지 않는다.
+
+      예:
+      X60 Ultra X60ULTRA
+      → X60 Ultra
+
+      같은 모델의 중복 표기가 검색어를 지나치게
+      구체화해서 공식 상품 URL이 포함된
+      제3자 검색결과를 놓치는 문제를 방지한다.
+    */
+    const googleModelTokens =
+      modelLike.length > 0
+        ? modelLike
+            .slice(0, 2)
+            .join(" ")
+        : modelTokens
+            .slice(0, 2)
+            .join(" ");
+
+    const googleQuery =
+      [
+        initialBrandCandidate,
+        googleModelTokens,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+
+    if (googleQuery) {
+      const labeledQuery =
+        `[google-broad] "${googleQuery}" "brand.naver.com"`;
+
+      triedQueries.push(
+        labeledQuery,
+      );
+
+      try {
+        const googleData =
+          await searchGoogle(
+            `"${googleQuery}" "brand.naver.com"`,
+          );
+
+        for (
+          const candidate of
+          extractGoogleCanonicalCandidates(
+            googleData,
+          )
+        ) {
+          if (
+            !canonicalCandidates.some(
+              (existing) =>
+                existing.canonicalUrl ===
+                candidate.canonicalUrl,
+            )
+          ) {
+            canonicalCandidates.push(
+              candidate,

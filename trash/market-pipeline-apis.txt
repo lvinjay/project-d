@@ -1,0 +1,1434 @@
+﻿import { NextResponse } from "next/server";
+import {
+  searchMarketProducts,
+} from "../../../lib/marketSearch";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export async function GET(
+  request: Request,
+) {
+  try {
+    const {
+      searchParams,
+    } = new URL(
+      request.url,
+    );
+
+    const category =
+      (
+        searchParams.get("category") ??
+        ""
+      ).trim();
+
+    if (!category) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "검색할 상품군을 입력하세요.",
+          count: 0,
+          candidates: [],
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    const products =
+      await searchMarketProducts(
+        category,
+      );
+
+    /*
+      현재 단계의 점수는
+      '대표제품 최종 선정점수'가 아니다.
+
+      검색 직후 후보를 보기 쉽게 정렬하기 위한
+      1차 참고점수만 계산한다.
+
+      이후:
+      - 시장 인기/인지도
+      - 리뷰 신뢰도
+      - 제품 경쟁력
+      - 가격 경쟁력
+      - 정보 충실도
+      - 판매 안정성
+
+      6개 기준의 실제 선정 로직을 별도로 붙인다.
+    */
+    const maximumReviews =
+      Math.max(
+        1,
+        ...products.map(
+          (product) =>
+            product.reviewCount,
+        ),
+      );
+
+    const candidates =
+      products
+        .map(
+          (
+            product,
+            index,
+          ) => {
+            const reviewScore =
+              Math.min(
+                100,
+                (
+                  product.reviewCount /
+                  maximumReviews
+                ) *
+                  100,
+              );
+
+            const ratingScore =
+              product.rating > 0
+                ? Math.min(
+                    100,
+                    (
+                      product.rating /
+                      5
+                    ) *
+                      100,
+                  )
+                : 0;
+
+            const dataScore =
+              [
+                product.name,
+                product.price > 0,
+                product.image,
+                product.url,
+                product.reviewCount >
+                  0,
+                product.rating > 0,
+              ].filter(Boolean)
+                .length /
+              6 *
+              100;
+
+            const searchExposureScore =
+              Math.max(
+                20,
+                100 -
+                  index * 8,
+              );
+
+            const preliminaryScore =
+              Math.round(
+                (
+                  searchExposureScore *
+                    0.35 +
+                  reviewScore *
+                    0.35 +
+                  ratingScore *
+                    0.2 +
+                  dataScore *
+                    0.1
+                ) *
+                  10,
+              ) / 10;
+
+            return {
+              id:
+                `candidate-${index + 1}`,
+
+              searchPosition:
+                index + 1,
+
+              productName:
+                product.name,
+
+              seller:
+                product.brand,
+
+              price:
+                product.price,
+
+              imageUrl:
+                product.image,
+
+              sourceUrl:
+                product.url,
+
+              reviewCount:
+                product.reviewCount,
+
+              rating:
+                product.rating,
+
+              preliminaryScore,
+
+              preliminaryReason: [
+                product.reviewCount >
+                0
+                  ? `리뷰 ${product.reviewCount.toLocaleString(
+                      "ko-KR",
+                    )}개`
+                  : "리뷰 정보 없음",
+
+                product.rating > 0
+                  ? `평점 ${product.rating}`
+                  : "평점 정보 없음",
+
+                product.price > 0
+                  ? `가격 ${product.price.toLocaleString(
+                      "ko-KR",
+                    )}원`
+                  : "가격 정보 없음",
+              ],
+            };
+          },
+        )
+        .sort(
+          (a, b) =>
+            b.preliminaryScore -
+            a.preliminaryScore,
+        );
+
+    return NextResponse.json({
+      success: true,
+      category,
+      count:
+        candidates.length,
+      candidates,
+      message:
+        `"${category}" 후보 ${candidates.length}개를 검색했습니다.`,
+    });
+  } catch (error) {
+    console.error(
+      "Market candidates API error:",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        success: false,
+        count: 0,
+        candidates: [],
+        message:
+          error instanceof Error
+            ? error.message
+            : "시장 후보상품 검색 중 오류가 발생했습니다.",
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+}
+import {
+  NextResponse,
+} from "next/server";
+
+import {
+  collectNaverProduct,
+} from "../../../lib/brightDataProduct";
+
+import {
+  resolveNaverBrandProductUrl,
+} from "../../../lib/resolveNaverBrandProductUrl";
+
+export const runtime =
+  "nodejs";
+
+export const dynamic =
+  "force-dynamic";
+
+const TARGET_COUNT = 5;
+
+type CapturedProduct = {
+  name: string;
+  text: string;
+  url: string;
+  imageUrl: string;
+  price: number;
+  reviewCount: number;
+  rating: number;
+};
+
+type CaptureResponse = {
+  success: boolean;
+  message?: string;
+  category?: string;
+  minBudget?: number;
+  maxBudget?: number;
+  products?: CapturedProduct[];
+};
+
+type FailureItem = {
+  position: number;
+  marketProduct: string;
+  stage:
+    | "resolve"
+    | "brightdata"
+    | "validation"
+    | "budget"
+    | "duplicate";
+  reason: string;
+};
+
+function isWithinBudget(
+  price: number,
+  minBudget: number,
+  maxBudget: number,
+) {
+  if (
+    minBudget > 0 &&
+    price < minBudget
+  ) {
+    return false;
+  }
+
+  if (
+    maxBudget > 0 &&
+    price > maxBudget
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function cleanName(
+  value: string,
+) {
+  return value
+    .toLowerCase()
+    .replace(
+      /\[[^\]]*\]/g,
+      " ",
+    )
+    .replace(
+      /\([^)]*\)/g,
+      " ",
+    )
+    .replace(
+      /\b(화이트|블랙|실버|그레이|단품|정품|공식|무료배송)\b/g,
+      " ",
+    )
+    .replace(
+      /[^a-z0-9가-힣]+/g,
+      " ",
+    )
+    .replace(
+      /\s+/g,
+      " ",
+    )
+    .trim();
+}
+
+function nameSimilarity(
+  a: string,
+  b: string,
+) {
+  const ignored =
+    new Set([
+      "로봇청소기",
+      "청소기",
+      "로봇",
+      "자동",
+      "공식",
+    ]);
+
+  const toTokens = (
+    value: string,
+  ) =>
+    new Set(
+      cleanName(value)
+        .split(" ")
+        .filter(
+          (token) =>
+            token.length >= 2 &&
+            !ignored.has(token),
+        ),
+    );
+
+  const aTokens =
+    toTokens(a);
+
+  const bTokens =
+    toTokens(b);
+
+  if (
+    aTokens.size === 0 ||
+    bTokens.size === 0
+  ) {
+    return 0;
+  }
+
+  let common = 0;
+
+  for (
+    const token of aTokens
+  ) {
+    if (
+      bTokens.has(token)
+    ) {
+      common++;
+    }
+  }
+
+  return (
+    common /
+    Math.min(
+      aTokens.size,
+      bTokens.size,
+    )
+  );
+}
+
+function removeMarketDuplicates(
+  products: CapturedProduct[],
+) {
+  const result:
+    CapturedProduct[] = [];
+
+  const sorted =
+    [...products].sort(
+      (a, b) =>
+        b.reviewCount -
+        a.reviewCount,
+    );
+
+  for (
+    const product of sorted
+  ) {
+    const duplicate =
+      result.some(
+        (existing) =>
+          nameSimilarity(
+            product.name,
+            existing.name,
+          ) >= 0.78,
+      );
+
+    if (!duplicate) {
+      result.push(
+        product,
+      );
+    }
+  }
+
+  return result;
+}
+
+export async function GET(
+  request: Request,
+) {
+  try {
+    const requestUrl =
+      new URL(
+        request.url,
+      );
+
+    const captureId =
+      (
+        requestUrl.searchParams.get(
+          "captureId",
+        ) ?? ""
+      ).trim();
+
+    if (!captureId) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "captureId가 필요합니다.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    const captureUrl =
+      new URL(
+        "/api/naver-capture",
+        requestUrl.origin,
+      );
+
+    captureUrl.searchParams.set(
+      "id",
+      captureId,
+    );
+
+    const captureResponse =
+      await fetch(
+        captureUrl,
+        {
+          cache:
+            "no-store",
+        },
+      );
+
+    const captureData =
+      (
+        await captureResponse.json()
+      ) as CaptureResponse;
+
+    if (
+      !captureResponse.ok ||
+      !captureData.success
+    ) {
+      throw new Error(
+        captureData.message ??
+          "후보 데이터를 불러오지 못했습니다.",
+      );
+    }
+
+    const category =
+      captureData.category ??
+      "";
+
+    const minBudget =
+      Number(
+        captureData.minBudget ??
+          0,
+      ) || 0;
+
+    const maxBudget =
+      Number(
+        captureData.maxBudget ??
+          0,
+      ) || 0;
+
+    /*
+      네이버 목록가격 기준으로
+      사용자 예산 안에 들어오는 상품을
+      먼저 대상으로 사용.
+
+      목록단계 동일제품도 한 번 더 제거.
+    */
+    const marketCandidates =
+      removeMarketDuplicates(
+        captureData.products ??
+          [],
+      )
+        .filter(
+          (product) =>
+            isWithinBudget(
+              product.price,
+              minBudget,
+              maxBudget,
+            ),
+        )
+        .sort(
+          (a, b) => {
+            if (
+              b.reviewCount !==
+              a.reviewCount
+            ) {
+              return (
+                b.reviewCount -
+                a.reviewCount
+              );
+            }
+
+            return (
+              b.rating -
+              a.rating
+            );
+          },
+        )
+        .slice(
+          0,
+          15,
+        );
+
+    const finalCandidates:
+      {
+        position: number;
+
+        market: {
+          productName: string;
+          listedPrice: number;
+          reviewCount: number;
+          rating: number;
+          imageUrl: string;
+          sourceUrl: string;
+        };
+
+        resolution: {
+          productId: string;
+          brandName: string;
+          brandSite: string;
+          canonicalUrl: string;
+        };
+
+        detail: {
+          productId: string;
+          productName: string;
+          brand: string;
+          manufacturer: string;
+          modelName: string;
+
+          originalPrice: number;
+
+          /*
+            최종 가격은 이것을 사용.
+          */
+          finalPrice: number;
+
+          discountRate: number;
+
+          reviewCount: number;
+          rating: number | null;
+
+          sellerName: string;
+
+          categoryName: string;
+
+          imageUrl: string;
+
+          reviewSamples: number;
+
+          reviews: {
+            rating: number;
+            date: string;
+            text: string;
+            helpfulCount: number;
+          }[];
+
+          sourceUrl: string;
+        };
+      }[] = [];
+
+    const failures:
+      FailureItem[] = [];
+
+    const seenProductIds =
+      new Set<string>();
+
+    let resolverAttempts = 0;
+    let brightDataCalls = 0;
+
+    /*
+      최대 15개까지 순서대로 검사.
+
+      실제 유효한 서로 다른 상품
+      5개가 확보되면 즉시 종료.
+    */
+    for (
+      let index = 0;
+      index <
+      marketCandidates.length;
+      index++
+    ) {
+      if (
+        finalCandidates.length >=
+        TARGET_COUNT
+      ) {
+        break;
+      }
+
+      const market =
+        marketCandidates[index];
+
+      resolverAttempts++;
+
+      /*
+        1단계:
+        공식 brand.naver.com URL 해결
+      */
+      let resolved;
+
+      try {
+        resolved =
+          await resolveNaverBrandProductUrl(
+            market.url,
+            market.name,
+          );
+      } catch (error) {
+        failures.push({
+          position:
+            index + 1,
+
+          marketProduct:
+            market.name,
+
+          stage:
+            "resolve",
+
+          reason:
+            error instanceof Error
+              ? error.message
+              : "URL resolver 오류",
+        });
+
+        continue;
+      }
+
+      if (
+        !resolved.success ||
+        !resolved.canonicalUrl
+      ) {
+        failures.push({
+          position:
+            index + 1,
+
+          marketProduct:
+            market.name,
+
+          stage:
+            "resolve",
+
+          reason:
+            resolved.reason ??
+            "공식 상품 URL을 찾지 못했습니다.",
+        });
+
+        continue;
+      }
+
+      /*
+        resolver에서 이미 동일 상품번호가
+        나온 경우 Bright Data 호출 전 차단.
+      */
+      if (
+        seenProductIds.has(
+          resolved.productId,
+        )
+      ) {
+        failures.push({
+          position:
+            index + 1,
+
+          marketProduct:
+            market.name,
+
+          stage:
+            "duplicate",
+
+          reason:
+            `동일 상품번호 중복: ${resolved.productId}`,
+        });
+
+        continue;
+      }
+
+      /*
+        2단계:
+        실제 Bright Data 상세수집
+      */
+      brightDataCalls++;
+
+      let detail;
+
+      try {
+        detail =
+          await collectNaverProduct(
+            resolved.canonicalUrl,
+          );
+      } catch (error) {
+        failures.push({
+          position:
+            index + 1,
+
+          marketProduct:
+            market.name,
+
+          stage:
+            "brightdata",
+
+          reason:
+            error instanceof Error
+              ? error.message
+              : "Bright Data 상세수집 실패",
+        });
+
+        continue;
+      }
+
+      const usable =
+        Boolean(
+          detail.productId,
+        ) &&
+        Boolean(
+          detail.title,
+        ) &&
+        detail.finalPrice >
+          0;
+
+      if (!usable) {
+        failures.push({
+          position:
+            index + 1,
+
+          marketProduct:
+            market.name,
+
+          stage:
+            "validation",
+
+          reason:
+            "상세수집은 완료됐지만 필수 상품정보가 없습니다.",
+        });
+
+        continue;
+      }
+
+      /*
+        다음 단계에서 실제 리뷰 분석을 해야 하므로
+        리뷰 샘플이 너무 적은 제품은
+        최종 5개에 포함하지 않는다.
+
+        Bright Data가 보통 20개를 반환하지만
+        일부 상품은 0개일 수 있다.
+      */
+      if (
+        detail.topReviews.length <
+        5
+      ) {
+        failures.push({
+          position:
+            index + 1,
+
+          marketProduct:
+            market.name,
+
+          stage:
+            "validation",
+
+          reason:
+            `분석 가능한 리뷰가 부족합니다. (${detail.topReviews.length}개)`,
+        });
+
+        continue;
+      }
+
+      /*
+        Bright Data가 돌려준 실제 상품번호로
+        다시 중복검사.
+      */
+      if (
+        seenProductIds.has(
+          detail.productId,
+        )
+      ) {
+        failures.push({
+          position:
+            index + 1,
+
+          marketProduct:
+            market.name,
+
+          stage:
+            "duplicate",
+
+          reason:
+            `Bright Data 기준 동일상품 중복: ${detail.productId}`,
+        });
+
+        continue;
+      }
+
+      /*
+        중요:
+        네이버 목록가격이 아니라
+        Bright Data finalPrice 기준으로
+        사용자 예산을 다시 판정.
+      */
+      if (
+        !isWithinBudget(
+          detail.finalPrice,
+          minBudget,
+          maxBudget,
+        )
+      ) {
+        failures.push({
+          position:
+            index + 1,
+
+          marketProduct:
+            market.name,
+
+          stage:
+            "budget",
+
+          reason:
+            `실제 판매가 ${detail.finalPrice.toLocaleString(
+              "ko-KR",
+            )}원이 설정 예산 범위를 벗어났습니다.`,
+        });
+
+        continue;
+      }
+
+      seenProductIds.add(
+        detail.productId,
+      );
+
+      finalCandidates.push({
+        position:
+          index + 1,
+
+        market: {
+          productName:
+            market.name,
+
+          listedPrice:
+            market.price,
+
+          reviewCount:
+            market.reviewCount,
+
+          rating:
+            market.rating,
+
+          imageUrl:
+            market.imageUrl,
+
+          sourceUrl:
+            market.url,
+        },
+
+        resolution: {
+          productId:
+            resolved.productId,
+
+          brandName:
+            resolved.brandName,
+
+          brandSite:
+            resolved.brandSite,
+
+          canonicalUrl:
+            resolved.canonicalUrl,
+        },
+
+        detail: {
+          productId:
+            detail.productId,
+
+          productName:
+            detail.title,
+
+          brand:
+            detail.brand,
+
+          manufacturer:
+            detail.manufacturer,
+
+          modelName:
+            detail.modelName,
+
+          originalPrice:
+            detail.originalPrice,
+
+          finalPrice:
+            detail.finalPrice,
+
+          discountRate:
+            detail.discountRate,
+
+          reviewCount:
+            detail.totalReviews,
+
+          rating:
+            detail.averageRating,
+
+          sellerName:
+            detail.sellerName,
+
+          categoryName:
+            detail.categoryName,
+
+          imageUrl:
+            detail.imageUrl,
+
+          reviewSamples:
+            detail.topReviews.length,
+
+          reviews:
+            detail.topReviews,
+
+          sourceUrl:
+            detail.url,
+        },
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+
+      category,
+
+      budget: {
+        minBudget,
+        maxBudget,
+      },
+
+      targetCount:
+        TARGET_COUNT,
+
+      marketCandidateCount:
+        marketCandidates.length,
+
+      resolverAttempts,
+
+      brightDataCalls,
+
+      finalCandidateCount:
+        finalCandidates.length,
+
+      targetReached:
+        finalCandidates.length >=
+        TARGET_COUNT,
+
+      finalCandidates,
+
+      failureCount:
+        failures.length,
+
+      failures,
+    });
+  } catch (error) {
+    console.error(
+      "Market candidates enriched error:",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        success: false,
+
+        message:
+          error instanceof Error
+            ? error.message
+            : "후보상품 상세검증 중 오류가 발생했습니다.",
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+}
+
+
+import {
+  NextResponse,
+} from "next/server";
+
+import {
+  supabase,
+} from "../../../lib/supabase";
+
+export const runtime =
+  "nodejs";
+
+export const dynamic =
+  "force-dynamic";
+
+type ReviewItem = {
+  rating?: number;
+  date?: string;
+  text?: string;
+  helpfulCount?: number;
+};
+
+type CandidateDetail = {
+  productId?: string;
+  productName?: string;
+  brand?: string;
+  manufacturer?: string;
+  modelName?: string;
+  originalPrice?: number;
+  finalPrice?: number;
+  discountRate?: number;
+  reviewCount?: number;
+  rating?: number | null;
+  sellerName?: string;
+  categoryName?: string;
+  imageUrl?: string;
+  reviewSamples?: number;
+  reviews?: ReviewItem[];
+  sourceUrl?: string;
+};
+
+type Candidate = {
+  market?: {
+    productName?: string;
+    listedPrice?: number;
+    reviewCount?: number;
+    rating?: number;
+    imageUrl?: string;
+    sourceUrl?: string;
+  };
+
+  detail?: CandidateDetail;
+};
+
+type ImportRequest = {
+  category?: string;
+  candidates?: Candidate[];
+};
+
+function normalizeText(
+  value: unknown,
+) {
+  return typeof value === "string"
+    ? value
+        .replace(/\s+/g, " ")
+        .trim()
+    : "";
+}
+
+export async function POST(
+  request: Request,
+) {
+  try {
+    const body =
+      (await request.json()) as ImportRequest;
+
+    const category =
+      normalizeText(
+        body.category,
+      );
+
+    const candidates =
+      Array.isArray(
+        body.candidates,
+      )
+        ? body.candidates
+        : [];
+
+    if (!category) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "카테고리가 필요합니다.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    if (
+      candidates.length === 0
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "등록할 후보가 없습니다.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    const results = [];
+
+    for (
+      const candidate of
+      candidates
+    ) {
+      const detail =
+        candidate.detail ?? {};
+
+      const productId =
+        normalizeText(
+          detail.productId,
+        );
+
+      const productName =
+        normalizeText(
+          detail.productName,
+        );
+
+      const sourceUrl =
+        normalizeText(
+          detail.sourceUrl,
+        );
+
+      const originProductNo =
+        Number(
+          productId,
+        );
+
+      if (
+        !productId ||
+        !productName ||
+        !sourceUrl ||
+        !Number.isSafeInteger(
+          originProductNo,
+        )
+      ) {
+        results.push({
+          productName,
+          productId,
+          success: false,
+          reason:
+            "필수 상품정보가 부족합니다.",
+        });
+
+        continue;
+      }
+
+      /*
+        새 자동수집 파이프라인에서
+        확보한 상세정보를 기존 Project D의
+        product_detail_analysis에 저장한다.
+
+        따라서 별도의 상세페이지 재수집 없이
+        category criteria 생성에 사용할 수 있다.
+      */
+      const productDetailAnalysis = {
+        source:
+          "market_candidate_brightdata",
+
+        productId,
+
+        productName,
+
+        brand:
+          normalizeText(
+            detail.brand,
+          ),
+
+        manufacturer:
+          normalizeText(
+            detail.manufacturer,
+          ),
+
+        modelName:
+          normalizeText(
+            detail.modelName,
+          ),
+
+        price: {
+          originalPrice:
+            Number(
+              detail.originalPrice ??
+                0,
+            ),
+
+          finalPrice:
+            Number(
+              detail.finalPrice ??
+                0,
+            ),
+
+          discountRate:
+            Number(
+              detail.discountRate ??
+                0,
+            ),
+        },
+
+        reviewCount:
+          Number(
+            detail.reviewCount ??
+              0,
+          ),
+
+        rating:
+          detail.rating ??
+          null,
+
+        sellerName:
+          normalizeText(
+            detail.sellerName,
+          ),
+
+        categoryName:
+          normalizeText(
+            detail.categoryName,
+          ),
+
+        imageUrl:
+          normalizeText(
+            detail.imageUrl,
+          ),
+
+        marketListedPrice:
+          Number(
+            candidate.market
+              ?.listedPrice ??
+              0,
+          ),
+
+        collectedReviewSamples:
+          Array.isArray(
+            detail.reviews,
+          )
+            ? detail.reviews.length
+            : 0,
+
+        sourceUrl,
+
+        collectedAt:
+          new Date()
+            .toISOString(),
+      };
+
+      const {
+        data: existing,
+        error:
+          existingError,
+      } =
+        await supabase
+          .from("products")
+          .select("id")
+          .or(
+            `origin_product_no.eq.${originProductNo},source_url.eq.${sourceUrl}`,
+          )
+          .limit(1);
+
+      if (existingError) {
+        throw existingError;
+      }
+
+      const existingId =
+        Array.isArray(
+          existing,
+        ) &&
+        existing.length > 0
+          ? existing[0].id
+          : null;
+
+      if (existingId) {
+        const {
+          data,
+          error,
+        } =
+          await supabase
+            .from("products")
+            .update({
+              category,
+
+              product_name:
+                productName,
+
+              source_url:
+                sourceUrl,
+
+              checkout_merchant_no:
+                null,
+
+              origin_product_no:
+                originProductNo,
+
+              product_detail_analysis:
+                productDetailAnalysis,
+
+              updated_at:
+                new Date()
+                  .toISOString(),
+            })
+            .eq(
+              "id",
+              existingId,
+            )
+            .select(
+              "id, product_name, origin_product_no",
+            )
+            .single();
+
+        if (error) {
+          throw error;
+        }
+
+        results.push({
+          success: true,
+          created: false,
+          product: data,
+        });
+
+        continue;
+      }
+
+      const {
+        data,
+        error,
+      } =
+        await supabase
+          .from("products")
+          .insert({
+            category,
+
+            product_name:
+              productName,
+
+            source_url:
+              sourceUrl,
+
+            checkout_merchant_no:
+              null,
+
+            origin_product_no:
+              originProductNo,
+
+            product_detail_analysis:
+              productDetailAnalysis,
+          })
+          .select(
+            "id, product_name, origin_product_no",
+          )
+          .single();
+
+      if (error) {
+        throw error;
+      }
+
+      results.push({
+        success: true,
+        created: true,
+        product: data,
+      });
+    }
+
+    const successful =
+      results.filter(
+        (item) =>
+          item.success,
+      );
+
+    return NextResponse.json({
+      success:
+        successful.length >
+        0,
+
+      category,
+
+      requestedCount:
+        candidates.length,
+
+      successCount:
+        successful.length,
+
+      failureCount:
+        results.length -
+        successful.length,
+
+      results,
+    });
+  } catch (error) {
+    console.error(
+      "Import market candidates error:",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        success: false,
+
+        message:
+          error instanceof Error
+            ? error.message
+            : "후보상품 DB 등록 중 오류가 발생했습니다.",
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+}

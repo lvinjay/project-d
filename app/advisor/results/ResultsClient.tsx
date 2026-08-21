@@ -34,6 +34,9 @@ type Recommendation = {
   matchScore: number;
   baseMatchScore?: number;
   blendedMatchScore?: number;
+  valueScore?: number;
+  valueRank?: number | null;
+  valuePriceScore?: number | null;
   personalAdjustment?: number;
   confidence: number;
   dataCoverage: number;
@@ -2039,17 +2042,46 @@ export default function ResultsClient() {
                               justifyContent: "flex-end",
                             }}
                           >
-                            <div className="advisorRankScore">
-                              <strong>
-                                {
-                                  item.matchScore
-                                }
-                              </strong>
+                            <div
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+  }}
+>
+  {item.valueRank === 1 ? (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "6px 10px",
+        borderRadius: 999,
+        background: "#ECFDF3",
+        color: "#067647",
+        fontSize: 12,
+        fontWeight: 800,
+        whiteSpace: "nowrap",
+      }}
+    >
+      가성비 1위
+      {typeof item.valueScore === "number"
+        ? ` · ${item.valueScore}점`
+        : ""}
+    </span>
+  ) : null}
 
-                              <span>
-                                점
-                              </span>
-                            </div>
+  <div className="advisorRankScore">
+    <strong>
+      {item.matchScore}
+    </strong>
+
+    <span>
+      점
+    </span>
+  </div>
+</div>
 
                             <a
                               href={
@@ -2387,6 +2419,8 @@ export default function ResultsClient() {
     </main>
   );
 }
+
+
 
 
 

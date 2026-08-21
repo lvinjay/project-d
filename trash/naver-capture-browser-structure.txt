@@ -1,0 +1,5389 @@
+﻿
+============================================================
+FILE: .\components\NaverCaptureAutomation.tsx
+============================================================
+
+LINE: 15
+  name: string;
+  text: string;
+  url: string;
+  imageUrl: string;
+  price: number;
+  reviewCount: number;
+  rating: number;
+};
+
+type Props = {
+  captureId: string;
+  category: string;
+  finalists: Candidate[];
+};
+
+type StepStatus =
+  | "idle"
+  | "working"
+
+LINE: 16
+  text: string;
+  url: string;
+  imageUrl: string;
+  price: number;
+  reviewCount: number;
+  rating: number;
+};
+
+type Props = {
+  captureId: string;
+  category: string;
+  finalists: Candidate[];
+};
+
+type StepStatus =
+  | "idle"
+  | "working"
+  | "done"
+
+LINE: 20
+  reviewCount: number;
+  rating: number;
+};
+
+type Props = {
+  captureId: string;
+  category: string;
+  finalists: Candidate[];
+};
+
+type StepStatus =
+  | "idle"
+  | "working"
+  | "done"
+  | "error";
+
+type Step = {
+  key: string;
+
+LINE: 58
+    label: "3. 1차 구매기준 생성",
+    status: "idle",
+    message: "",
+  },
+  {
+    key: "reviews",
+    label: "4. 리뷰 AI 분석",
+    status: "idle",
+    message: "",
+  },
+  {
+    key: "save-reviews",
+    label: "5. 리뷰 분석 DB 저장",
+    status: "idle",
+    message: "",
+  },
+  {
+    key: "criteria-final",
+
+LINE: 64
+    label: "4. 리뷰 AI 분석",
+    status: "idle",
+    message: "",
+  },
+  {
+    key: "save-reviews",
+    label: "5. 리뷰 분석 DB 저장",
+    status: "idle",
+    message: "",
+  },
+  {
+    key: "criteria-final",
+    label: "6. 구매기준 최종 보정",
+    status: "idle",
+    message: "",
+  },
+  {
+    key: "scores",
+
+LINE: 112
+      )}`,
+    );
+  }
+}
+
+export default function NaverCaptureAutomation({
+  captureId,
+  category,
+  finalists,
+}: Props) {
+  const startedRef =
+    useRef(false);
+
+  const [
+    steps,
+    setSteps,
+  ] = useState<Step[]>(
+    INITIAL_STEPS,
+
+LINE: 113
+    );
+  }
+}
+
+export default function NaverCaptureAutomation({
+  captureId,
+  category,
+  finalists,
+}: Props) {
+  const startedRef =
+    useRef(false);
+
+  const [
+    steps,
+    setSteps,
+  ] = useState<Step[]>(
+    INITIAL_STEPS,
+  );
+
+LINE: 155
+  }
+
+  useEffect(() => {
+    if (
+      startedRef.current ||
+      !captureId ||
+      !category ||
+      finalists.length === 0
+    ) {
+      return;
+    }
+
+    startedRef.current =
+      true;
+
+    async function run() {
+      try {
+        updateStep(
+
+LINE: 174
+          "working",
+          "공식 상품 URL·실제 판매가·리뷰·중복을 검증하는 중...",
+        );
+
+        const enrichedResponse =
+          await fetch(
+            `/api/market-candidates-enriched?captureId=${encodeURIComponent(
+              captureId,
+            )}`,
+            {
+              cache: "no-store",
+            },
+          );
+
+        const enriched =
+          await readJson(
+            enrichedResponse,
+          );
+
+LINE: 175
+          "공식 상품 URL·실제 판매가·리뷰·중복을 검증하는 중...",
+        );
+
+        const enrichedResponse =
+          await fetch(
+            `/api/market-candidates-enriched?captureId=${encodeURIComponent(
+              captureId,
+            )}`,
+            {
+              cache: "no-store",
+            },
+          );
+
+        const enriched =
+          await readJson(
+            enrichedResponse,
+          );
+
+
+LINE: 176
+        );
+
+        const enrichedResponse =
+          await fetch(
+            `/api/market-candidates-enriched?captureId=${encodeURIComponent(
+              captureId,
+            )}`,
+            {
+              cache: "no-store",
+            },
+          );
+
+        const enriched =
+          await readJson(
+            enrichedResponse,
+          );
+
+        if (
+
+LINE: 230
+          "working",
+          "최종 후보를 DB에 등록하는 중...",
+        );
+
+        const importResponse =
+          await fetch(
+            "/api/import-market-candidates",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+              body: JSON.stringify({
+                category,
+                candidates:
+                  finalCandidates,
+              }),
+
+LINE: 271
+            importResult.results,
+          )
+            ? importResult.results
+            : [];
+
+        const importedProductIds =
+          [
+            ...new Set(
+              importedResults
+                .map(
+                  (item) => {
+                    if (
+                      !item ||
+                      typeof item !==
+                        "object" ||
+                      Array.isArray(
+                        item,
+                      )
+
+LINE: 297
+                      >;
+
+                    if (
+                      row.success !==
+                      true ||
+                      !row.product ||
+                      typeof row.product !==
+                        "object" ||
+                      Array.isArray(
+                        row.product,
+                      )
+                    ) {
+                      return "";
+                    }
+
+                    return cleanText(
+                      (
+                        row.product as Record<
+
+LINE: 298
+
+                    if (
+                      row.success !==
+                      true ||
+                      !row.product ||
+                      typeof row.product !==
+                        "object" ||
+                      Array.isArray(
+                        row.product,
+                      )
+                    ) {
+                      return "";
+                    }
+
+                    return cleanText(
+                      (
+                        row.product as Record<
+                          string,
+
+LINE: 301
+                      true ||
+                      !row.product ||
+                      typeof row.product !==
+                        "object" ||
+                      Array.isArray(
+                        row.product,
+                      )
+                    ) {
+                      return "";
+                    }
+
+                    return cleanText(
+                      (
+                        row.product as Record<
+                          string,
+                          unknown
+                        >
+                      ).id,
+
+LINE: 309
+                      return "";
+                    }
+
+                    return cleanText(
+                      (
+                        row.product as Record<
+                          string,
+                          unknown
+                        >
+                      ).id,
+                    );
+                  },
+                )
+                .filter(Boolean),
+            ),
+          ];
+
+        if (
+
+LINE: 322
+                .filter(Boolean),
+            ),
+          ];
+
+        if (
+          importedProductIds.length !==
+          finalCandidates.length
+        ) {
+          throw new Error(
+            `최종 후보 ${finalCandidates.length}개 중 DB 제품 ID는 ${importedProductIds.length}개만 확인됐습니다.`,
+          );
+        }
+
+        updateStep(
+          "import",
+          "done",
+          `${importedProductIds.length}개 등록/갱신 완료`,
+        );
+
+LINE: 326
+        if (
+          importedProductIds.length !==
+          finalCandidates.length
+        ) {
+          throw new Error(
+            `최종 후보 ${finalCandidates.length}개 중 DB 제품 ID는 ${importedProductIds.length}개만 확인됐습니다.`,
+          );
+        }
+
+        updateStep(
+          "import",
+          "done",
+          `${importedProductIds.length}개 등록/갱신 완료`,
+        );
+
+        updateStep(
+          "criteria-first",
+          "working",
+
+LINE: 333
+        }
+
+        updateStep(
+          "import",
+          "done",
+          `${importedProductIds.length}개 등록/갱신 완료`,
+        );
+
+        updateStep(
+          "criteria-first",
+          "working",
+          "리뷰 분석용 1차 구매기준을 생성하는 중...",
+        );
+
+        const firstCriteriaResponse =
+          await fetch(
+            "/api/generate-category-criteria",
+            {
+
+LINE: 343
+          "working",
+          "리뷰 분석용 1차 구매기준을 생성하는 중...",
+        );
+
+        const firstCriteriaResponse =
+          await fetch(
+            "/api/generate-category-criteria",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+              body: JSON.stringify({
+                category,
+              }),
+            },
+          );
+
+LINE: 382
+          "done",
+          "1차 구매기준 생성 완료",
+        );
+
+        updateStep(
+          "reviews",
+          "working",
+          "제품별 리뷰 AI 분석 중...",
+        );
+
+        const analyzedProducts: Array<{
+          productId: string;
+          productName: string;
+          analysis: unknown;
+          reviews: string[];
+          collectionStats: {
+            total: number;
+            ranking: number;
+
+LINE: 387
+          "reviews",
+          "working",
+          "제품별 리뷰 AI 분석 중...",
+        );
+
+        const analyzedProducts: Array<{
+          productId: string;
+          productName: string;
+          analysis: unknown;
+          reviews: string[];
+          collectionStats: {
+            total: number;
+            ranking: number;
+            latest: number;
+            lowScore: number;
+          };
+        }> = [];
+
+
+LINE: 388
+          "working",
+          "제품별 리뷰 AI 분석 중...",
+        );
+
+        const analyzedProducts: Array<{
+          productId: string;
+          productName: string;
+          analysis: unknown;
+          reviews: string[];
+          collectionStats: {
+            total: number;
+            ranking: number;
+            latest: number;
+            lowScore: number;
+          };
+        }> = [];
+
+        const REVIEW_BATCH_SIZE = 2;
+
+LINE: 389
+          "제품별 리뷰 AI 분석 중...",
+        );
+
+        const analyzedProducts: Array<{
+          productId: string;
+          productName: string;
+          analysis: unknown;
+          reviews: string[];
+          collectionStats: {
+            total: number;
+            ranking: number;
+            latest: number;
+            lowScore: number;
+          };
+        }> = [];
+
+        const REVIEW_BATCH_SIZE = 2;
+
+
+LINE: 391
+
+        const analyzedProducts: Array<{
+          productId: string;
+          productName: string;
+          analysis: unknown;
+          reviews: string[];
+          collectionStats: {
+            total: number;
+            ranking: number;
+            latest: number;
+            lowScore: number;
+          };
+        }> = [];
+
+        const REVIEW_BATCH_SIZE = 2;
+
+        for (
+          let batchStart = 0;
+
+LINE: 400
+            latest: number;
+            lowScore: number;
+          };
+        }> = [];
+
+        const REVIEW_BATCH_SIZE = 2;
+
+        for (
+          let batchStart = 0;
+          batchStart <
+          finalCandidates.length;
+          batchStart +=
+            REVIEW_BATCH_SIZE
+        ) {
+          const batch =
+            finalCandidates.slice(
+              batchStart,
+              batchStart +
+
+LINE: 407
+        for (
+          let batchStart = 0;
+          batchStart <
+          finalCandidates.length;
+          batchStart +=
+            REVIEW_BATCH_SIZE
+        ) {
+          const batch =
+            finalCandidates.slice(
+              batchStart,
+              batchStart +
+                REVIEW_BATCH_SIZE,
+            );
+
+          updateStep(
+            "reviews",
+            "working",
+            `${batchStart + 1}~${Math.min(
+
+LINE: 413
+        ) {
+          const batch =
+            finalCandidates.slice(
+              batchStart,
+              batchStart +
+                REVIEW_BATCH_SIZE,
+            );
+
+          updateStep(
+            "reviews",
+            "working",
+            `${batchStart + 1}~${Math.min(
+              batchStart +
+                batch.length,
+              finalCandidates.length,
+            )}/${finalCandidates.length} · 리뷰 AI 병렬 분석 중`,
+          );
+
+
+LINE: 417
+              batchStart +
+                REVIEW_BATCH_SIZE,
+            );
+
+          updateStep(
+            "reviews",
+            "working",
+            `${batchStart + 1}~${Math.min(
+              batchStart +
+                batch.length,
+              finalCandidates.length,
+            )}/${finalCandidates.length} · 리뷰 AI 병렬 분석 중`,
+          );
+
+          const batchResults =
+            await Promise.all(
+              batch.map(
+                async (
+
+LINE: 455
+                    ) as Record<
+                      string,
+                      unknown
+                    >;
+
+                  const productId =
+                    cleanText(
+                      detail.productId,
+                    );
+
+                  const productName =
+                    cleanText(
+                      detail.productName,
+                    );
+
+                  const reviewObjects =
+                    Array.isArray(
+                      detail.reviews,
+
+LINE: 457
+                      unknown
+                    >;
+
+                  const productId =
+                    cleanText(
+                      detail.productId,
+                    );
+
+                  const productName =
+                    cleanText(
+                      detail.productName,
+                    );
+
+                  const reviewObjects =
+                    Array.isArray(
+                      detail.reviews,
+                    )
+                      ? detail.reviews
+
+LINE: 460
+                  const productId =
+                    cleanText(
+                      detail.productId,
+                    );
+
+                  const productName =
+                    cleanText(
+                      detail.productName,
+                    );
+
+                  const reviewObjects =
+                    Array.isArray(
+                      detail.reviews,
+                    )
+                      ? detail.reviews
+                      : [];
+
+                  const reviews =
+
+LINE: 462
+                      detail.productId,
+                    );
+
+                  const productName =
+                    cleanText(
+                      detail.productName,
+                    );
+
+                  const reviewObjects =
+                    Array.isArray(
+                      detail.reviews,
+                    )
+                      ? detail.reviews
+                      : [];
+
+                  const reviews =
+                    reviewObjects
+                      .map(
+
+LINE: 465
+                  const productName =
+                    cleanText(
+                      detail.productName,
+                    );
+
+                  const reviewObjects =
+                    Array.isArray(
+                      detail.reviews,
+                    )
+                      ? detail.reviews
+                      : [];
+
+                  const reviews =
+                    reviewObjects
+                      .map(
+                        (review) =>
+                          cleanText(
+                            (
+
+LINE: 467
+                      detail.productName,
+                    );
+
+                  const reviewObjects =
+                    Array.isArray(
+                      detail.reviews,
+                    )
+                      ? detail.reviews
+                      : [];
+
+                  const reviews =
+                    reviewObjects
+                      .map(
+                        (review) =>
+                          cleanText(
+                            (
+                              review as Record<
+                                string,
+
+LINE: 469
+
+                  const reviewObjects =
+                    Array.isArray(
+                      detail.reviews,
+                    )
+                      ? detail.reviews
+                      : [];
+
+                  const reviews =
+                    reviewObjects
+                      .map(
+                        (review) =>
+                          cleanText(
+                            (
+                              review as Record<
+                                string,
+                                unknown
+                              >
+
+LINE: 472
+                      detail.reviews,
+                    )
+                      ? detail.reviews
+                      : [];
+
+                  const reviews =
+                    reviewObjects
+                      .map(
+                        (review) =>
+                          cleanText(
+                            (
+                              review as Record<
+                                string,
+                                unknown
+                              >
+                            ).text,
+                          ),
+                      )
+
+LINE: 473
+                    )
+                      ? detail.reviews
+                      : [];
+
+                  const reviews =
+                    reviewObjects
+                      .map(
+                        (review) =>
+                          cleanText(
+                            (
+                              review as Record<
+                                string,
+                                unknown
+                              >
+                            ).text,
+                          ),
+                      )
+                      .filter(Boolean);
+
+LINE: 475
+                      : [];
+
+                  const reviews =
+                    reviewObjects
+                      .map(
+                        (review) =>
+                          cleanText(
+                            (
+                              review as Record<
+                                string,
+                                unknown
+                              >
+                            ).text,
+                          ),
+                      )
+                      .filter(Boolean);
+
+                  const lowScore =
+
+LINE: 478
+                    reviewObjects
+                      .map(
+                        (review) =>
+                          cleanText(
+                            (
+                              review as Record<
+                                string,
+                                unknown
+                              >
+                            ).text,
+                          ),
+                      )
+                      .filter(Boolean);
+
+                  const lowScore =
+                    reviewObjects.filter(
+                      (review) => {
+                        const rating =
+
+LINE: 488
+                          ),
+                      )
+                      .filter(Boolean);
+
+                  const lowScore =
+                    reviewObjects.filter(
+                      (review) => {
+                        const rating =
+                          Number(
+                            (
+                              review as Record<
+                                string,
+                                unknown
+                              >
+                            ).rating ??
+                              0,
+                          );
+
+
+LINE: 489
+                      )
+                      .filter(Boolean);
+
+                  const lowScore =
+                    reviewObjects.filter(
+                      (review) => {
+                        const rating =
+                          Number(
+                            (
+                              review as Record<
+                                string,
+                                unknown
+                              >
+                            ).rating ??
+                              0,
+                          );
+
+                        return (
+
+LINE: 490
+                      .filter(Boolean);
+
+                  const lowScore =
+                    reviewObjects.filter(
+                      (review) => {
+                        const rating =
+                          Number(
+                            (
+                              review as Record<
+                                string,
+                                unknown
+                              >
+                            ).rating ??
+                              0,
+                          );
+
+                        return (
+                          rating > 0 &&
+
+LINE: 493
+                    reviewObjects.filter(
+                      (review) => {
+                        const rating =
+                          Number(
+                            (
+                              review as Record<
+                                string,
+                                unknown
+                              >
+                            ).rating ??
+                              0,
+                          );
+
+                        return (
+                          rating > 0 &&
+                          rating <= 3
+                        );
+                      },
+
+LINE: 497
+                            (
+                              review as Record<
+                                string,
+                                unknown
+                              >
+                            ).rating ??
+                              0,
+                          );
+
+                        return (
+                          rating > 0 &&
+                          rating <= 3
+                        );
+                      },
+                    ).length;
+
+                  console.log(
+                    `[REVIEW AI ${index + 1}/${finalCandidates.length}] 시작 ${productName}`,
+
+LINE: 502
+                            ).rating ??
+                              0,
+                          );
+
+                        return (
+                          rating > 0 &&
+                          rating <= 3
+                        );
+                      },
+                    ).length;
+
+                  console.log(
+                    `[REVIEW AI ${index + 1}/${finalCandidates.length}] 시작 ${productName}`,
+                  );
+
+                  const startedAt =
+                    Date.now();
+
+
+LINE: 503
+                              0,
+                          );
+
+                        return (
+                          rating > 0 &&
+                          rating <= 3
+                        );
+                      },
+                    ).length;
+
+                  console.log(
+                    `[REVIEW AI ${index + 1}/${finalCandidates.length}] 시작 ${productName}`,
+                  );
+
+                  const startedAt =
+                    Date.now();
+
+                  const analyzeResponse =
+
+LINE: 509
+                        );
+                      },
+                    ).length;
+
+                  console.log(
+                    `[REVIEW AI ${index + 1}/${finalCandidates.length}] 시작 ${productName}`,
+                  );
+
+                  const startedAt =
+                    Date.now();
+
+                  const analyzeResponse =
+                    await fetch(
+                      "/api/analyze-reviews",
+                      {
+                        method:
+                          "POST",
+                        headers: {
+
+LINE: 516
+
+                  const startedAt =
+                    Date.now();
+
+                  const analyzeResponse =
+                    await fetch(
+                      "/api/analyze-reviews",
+                      {
+                        method:
+                          "POST",
+                        headers: {
+                          "Content-Type":
+                            "application/json",
+                        },
+                        body:
+                          JSON.stringify({
+                            productName,
+                            category,
+
+LINE: 517
+                  const startedAt =
+                    Date.now();
+
+                  const analyzeResponse =
+                    await fetch(
+                      "/api/analyze-reviews",
+                      {
+                        method:
+                          "POST",
+                        headers: {
+                          "Content-Type":
+                            "application/json",
+                        },
+                        body:
+                          JSON.stringify({
+                            productName,
+                            category,
+                            reviews,
+
+LINE: 527
+                          "Content-Type":
+                            "application/json",
+                        },
+                        body:
+                          JSON.stringify({
+                            productName,
+                            category,
+                            reviews,
+                            collectionStats:
+                              {
+                                total:
+                                  reviews.length,
+                                ranking:
+                                  0,
+                                latest:
+                                  reviews.length,
+                                lowScore,
+                              },
+
+LINE: 529
+                        },
+                        body:
+                          JSON.stringify({
+                            productName,
+                            category,
+                            reviews,
+                            collectionStats:
+                              {
+                                total:
+                                  reviews.length,
+                                ranking:
+                                  0,
+                                latest:
+                                  reviews.length,
+                                lowScore,
+                              },
+                          }),
+                      },
+
+LINE: 533
+                            category,
+                            reviews,
+                            collectionStats:
+                              {
+                                total:
+                                  reviews.length,
+                                ranking:
+                                  0,
+                                latest:
+                                  reviews.length,
+                                lowScore,
+                              },
+                          }),
+                      },
+                    );
+
+                  const analyzeResult =
+                    await readJson(
+
+LINE: 537
+                                total:
+                                  reviews.length,
+                                ranking:
+                                  0,
+                                latest:
+                                  reviews.length,
+                                lowScore,
+                              },
+                          }),
+                      },
+                    );
+
+                  const analyzeResult =
+                    await readJson(
+                      analyzeResponse,
+                    );
+
+                  if (
+
+LINE: 555
+                    !analyzeResponse.ok ||
+                    analyzeResult.success !==
+                      true
+                  ) {
+                    throw new Error(
+                      `${productName}: ${
+                        cleanText(
+                          analyzeResult.message,
+                        ) ||
+                        "리뷰 AI 분석 실패"
+                      }`,
+                    );
+                  }
+
+                  console.log(
+                    `[REVIEW AI ${index + 1}/${finalCandidates.length}] 완료 ${Math.round(
+                      (Date.now() -
+                        startedAt) /
+
+LINE: 565
+                      }`,
+                    );
+                  }
+
+                  console.log(
+                    `[REVIEW AI ${index + 1}/${finalCandidates.length}] 완료 ${Math.round(
+                      (Date.now() -
+                        startedAt) /
+                        1000,
+                    )}초 ${productName}`,
+                  );
+
+                  return {
+                    productId,
+                    productName,
+                    analysis:
+                      analyzeResult.analysis,
+                    reviews,
+
+LINE: 569
+                  console.log(
+                    `[REVIEW AI ${index + 1}/${finalCandidates.length}] 완료 ${Math.round(
+                      (Date.now() -
+                        startedAt) /
+                        1000,
+                    )}초 ${productName}`,
+                  );
+
+                  return {
+                    productId,
+                    productName,
+                    analysis:
+                      analyzeResult.analysis,
+                    reviews,
+                    collectionStats: {
+                      total:
+                        reviews.length,
+                      ranking: 0,
+
+LINE: 573
+                        1000,
+                    )}초 ${productName}`,
+                  );
+
+                  return {
+                    productId,
+                    productName,
+                    analysis:
+                      analyzeResult.analysis,
+                    reviews,
+                    collectionStats: {
+                      total:
+                        reviews.length,
+                      ranking: 0,
+                      latest:
+                        reviews.length,
+                      lowScore,
+                    },
+
+LINE: 574
+                    )}초 ${productName}`,
+                  );
+
+                  return {
+                    productId,
+                    productName,
+                    analysis:
+                      analyzeResult.analysis,
+                    reviews,
+                    collectionStats: {
+                      total:
+                        reviews.length,
+                      ranking: 0,
+                      latest:
+                        reviews.length,
+                      lowScore,
+                    },
+                  };
+
+LINE: 577
+                  return {
+                    productId,
+                    productName,
+                    analysis:
+                      analyzeResult.analysis,
+                    reviews,
+                    collectionStats: {
+                      total:
+                        reviews.length,
+                      ranking: 0,
+                      latest:
+                        reviews.length,
+                      lowScore,
+                    },
+                  };
+                },
+              ),
+            );
+
+LINE: 580
+                    analysis:
+                      analyzeResult.analysis,
+                    reviews,
+                    collectionStats: {
+                      total:
+                        reviews.length,
+                      ranking: 0,
+                      latest:
+                        reviews.length,
+                      lowScore,
+                    },
+                  };
+                },
+              ),
+            );
+
+          analyzedProducts.push(
+            ...batchResults,
+
+LINE: 583
+                    collectionStats: {
+                      total:
+                        reviews.length,
+                      ranking: 0,
+                      latest:
+                        reviews.length,
+                      lowScore,
+                    },
+                  };
+                },
+              ),
+            );
+
+          analyzedProducts.push(
+            ...batchResults,
+          );
+        }
+        updateStep(
+
+LINE: 591
+                  };
+                },
+              ),
+            );
+
+          analyzedProducts.push(
+            ...batchResults,
+          );
+        }
+        updateStep(
+          "reviews",
+          "done",
+          `${analyzedProducts.length}개 리뷰 AI 분석 완료`,
+        );
+
+        updateStep(
+          "save-reviews",
+          "working",
+
+LINE: 596
+          analyzedProducts.push(
+            ...batchResults,
+          );
+        }
+        updateStep(
+          "reviews",
+          "done",
+          `${analyzedProducts.length}개 리뷰 AI 분석 완료`,
+        );
+
+        updateStep(
+          "save-reviews",
+          "working",
+          "리뷰 분석 결과를 DB에 저장하는 중...",
+        );
+
+        const saveResponse =
+          await fetch(
+
+LINE: 598
+          );
+        }
+        updateStep(
+          "reviews",
+          "done",
+          `${analyzedProducts.length}개 리뷰 AI 분석 완료`,
+        );
+
+        updateStep(
+          "save-reviews",
+          "working",
+          "리뷰 분석 결과를 DB에 저장하는 중...",
+        );
+
+        const saveResponse =
+          await fetch(
+            "/api/save-review-analysis-batch",
+            {
+
+LINE: 602
+          "done",
+          `${analyzedProducts.length}개 리뷰 AI 분석 완료`,
+        );
+
+        updateStep(
+          "save-reviews",
+          "working",
+          "리뷰 분석 결과를 DB에 저장하는 중...",
+        );
+
+        const saveResponse =
+          await fetch(
+            "/api/save-review-analysis-batch",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/json",
+
+LINE: 608
+          "working",
+          "리뷰 분석 결과를 DB에 저장하는 중...",
+        );
+
+        const saveResponse =
+          await fetch(
+            "/api/save-review-analysis-batch",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+              body: JSON.stringify({
+                category,
+                products:
+                  analyzedProducts,
+              }),
+
+LINE: 609
+          "리뷰 분석 결과를 DB에 저장하는 중...",
+        );
+
+        const saveResponse =
+          await fetch(
+            "/api/save-review-analysis-batch",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+              body: JSON.stringify({
+                category,
+                products:
+                  analyzedProducts,
+              }),
+            },
+
+LINE: 618
+                "Content-Type":
+                  "application/json",
+              },
+              body: JSON.stringify({
+                category,
+                products:
+                  analyzedProducts,
+              }),
+            },
+          );
+
+        const saveResult =
+          await readJson(
+            saveResponse,
+          );
+
+        if (
+          !saveResponse.ok ||
+
+LINE: 619
+                  "application/json",
+              },
+              body: JSON.stringify({
+                category,
+                products:
+                  analyzedProducts,
+              }),
+            },
+          );
+
+        const saveResult =
+          await readJson(
+            saveResponse,
+          );
+
+        if (
+          !saveResponse.ok ||
+          saveResult.success !==
+
+LINE: 643
+              "리뷰 분석 DB 저장에 실패했습니다.",
+          );
+        }
+
+        updateStep(
+          "save-reviews",
+          "done",
+          `${Number(
+            saveResult.successCount ??
+              0,
+          )}개 저장 완료`,
+        );
+
+        updateStep(
+          "criteria-final",
+          "working",
+          "리뷰 근거까지 반영해 구매기준을 최종 보정하는 중...",
+        );
+
+LINE: 658
+          "working",
+          "리뷰 근거까지 반영해 구매기준을 최종 보정하는 중...",
+        );
+
+        const finalCriteriaResponse =
+          await fetch(
+            "/api/generate-category-criteria",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+              body: JSON.stringify({
+                category,
+              }),
+            },
+          );
+
+LINE: 703
+          "working",
+          "제품별 최종 비교 점수를 생성하는 중...",
+        );
+
+        const scoreResponse =
+          await fetch(
+            "/api/generate-product-scores",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+              body: JSON.stringify({
+                category,
+                productIds:
+                  importedProductIds,
+              }),
+
+LINE: 704
+          "제품별 최종 비교 점수를 생성하는 중...",
+        );
+
+        const scoreResponse =
+          await fetch(
+            "/api/generate-product-scores",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+              body: JSON.stringify({
+                category,
+                productIds:
+                  importedProductIds,
+              }),
+            },
+
+LINE: 713
+                "Content-Type":
+                  "application/json",
+              },
+              body: JSON.stringify({
+                category,
+                productIds:
+                  importedProductIds,
+              }),
+            },
+          );
+
+        const scoreResult =
+          await readJson(
+            scoreResponse,
+          );
+
+        if (
+          !scoreResponse.ok ||
+
+LINE: 714
+                  "application/json",
+              },
+              body: JSON.stringify({
+                category,
+                productIds:
+                  importedProductIds,
+              }),
+            },
+          );
+
+        const scoreResult =
+          await readJson(
+            scoreResponse,
+          );
+
+        if (
+          !scoreResponse.ok ||
+          scoreResult.success !==
+
+LINE: 741
+
+        updateStep(
+          "scores",
+          "done",
+          `${Number(
+            scoreResult.productCount ??
+              5,
+          )}개 제품 비교 점수 생성 완료`,
+        );
+
+        setFinalMessage(
+          "완료 · 후보 수집 이후 추천 준비가 모두 끝났습니다.",
+        );
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "자동 처리 중 오류가 발생했습니다.";
+
+LINE: 792
+      }
+    }
+
+    void run();
+  }, [
+    captureId,
+    category,
+    finalists,
+  ]);
+
+  return (
+    <section
+      style={{
+        marginTop: 30,
+        padding: 22,
+        borderRadius: 16,
+        border:
+          "1px solid #c7d7fe",
+
+============================================================
+FILE: .\components\MarketCandidateSetup.tsx
+============================================================
+
+LINE: 170
+      targetUrl =
+        "https://search.shopping.naver.com/search/all?" +
+        params.toString();
+    }
+
+    window.open(
+      targetUrl,
+      "_blank",
+    );
+  }
+
+  return (
+    <div
+      className="card"
+      style={{
+        marginTop: 28,
+        padding: 28,
+        border:
+
+============================================================
+FILE: .\components\ProjectDAutomationPanel.tsx
+============================================================
+
+LINE: 8
+import {
+  useState,
+} from "react";
+
+type MarketCandidate = {
+  productName?: string;
+  seller?: string;
+  price?: number;
+  imageUrl?: string;
+  sourceUrl?: string;
+  reviewCount?: number;
+  rating?: number;
+};
+
+type FinalCandidate = {
+  detail?: {
+    productId?: string;
+    productName?: string;
+
+LINE: 13
+  productName?: string;
+  seller?: string;
+  price?: number;
+  imageUrl?: string;
+  sourceUrl?: string;
+  reviewCount?: number;
+  rating?: number;
+};
+
+type FinalCandidate = {
+  detail?: {
+    productId?: string;
+    productName?: string;
+    reviews?: Array<{
+      rating?: number;
+      date?: string;
+      text?: string;
+      helpfulCount?: number;
+
+LINE: 14
+  seller?: string;
+  price?: number;
+  imageUrl?: string;
+  sourceUrl?: string;
+  reviewCount?: number;
+  rating?: number;
+};
+
+type FinalCandidate = {
+  detail?: {
+    productId?: string;
+    productName?: string;
+    reviews?: Array<{
+      rating?: number;
+      date?: string;
+      text?: string;
+      helpfulCount?: number;
+    }>;
+
+LINE: 19
+  rating?: number;
+};
+
+type FinalCandidate = {
+  detail?: {
+    productId?: string;
+    productName?: string;
+    reviews?: Array<{
+      rating?: number;
+      date?: string;
+      text?: string;
+      helpfulCount?: number;
+    }>;
+  };
+};
+
+type StepStatus =
+  | "idle"
+
+LINE: 20
+};
+
+type FinalCandidate = {
+  detail?: {
+    productId?: string;
+    productName?: string;
+    reviews?: Array<{
+      rating?: number;
+      date?: string;
+      text?: string;
+      helpfulCount?: number;
+    }>;
+  };
+};
+
+type StepStatus =
+  | "idle"
+  | "working"
+
+LINE: 21
+
+type FinalCandidate = {
+  detail?: {
+    productId?: string;
+    productName?: string;
+    reviews?: Array<{
+      rating?: number;
+      date?: string;
+      text?: string;
+      helpfulCount?: number;
+    }>;
+  };
+};
+
+type StepStatus =
+  | "idle"
+  | "working"
+  | "done"
+
+LINE: 22
+type FinalCandidate = {
+  detail?: {
+    productId?: string;
+    productName?: string;
+    reviews?: Array<{
+      rating?: number;
+      date?: string;
+      text?: string;
+      helpfulCount?: number;
+    }>;
+  };
+};
+
+type StepStatus =
+  | "idle"
+  | "working"
+  | "done"
+  | "error";
+
+LINE: 69
+    label: "4. 1차 구매기준 생성",
+    status: "idle",
+    message: "",
+  },
+  {
+    key: "reviews",
+    label: "5. 리뷰 AI 분석",
+    status: "idle",
+    message: "",
+  },
+  {
+    key: "save-reviews",
+    label: "6. 리뷰 분석 DB 저장",
+    status: "idle",
+    message: "",
+  },
+  {
+    key: "criteria-final",
+
+LINE: 75
+    label: "5. 리뷰 AI 분석",
+    status: "idle",
+    message: "",
+  },
+  {
+    key: "save-reviews",
+    label: "6. 리뷰 분석 DB 저장",
+    status: "idle",
+    message: "",
+  },
+  {
+    key: "criteria-final",
+    label: "7. 구매기준 최종 보정",
+    status: "idle",
+    message: "",
+  },
+  {
+    key: "scores",
+
+LINE: 266
+        "working",
+        `"${normalizedCategory}" 시장 후보를 자동 검색하는 중...`,
+      );
+
+      const marketResponse =
+        await fetch(
+          `/api/market-candidates?category=${encodeURIComponent(
+            normalizedCategory,
+          )}`,
+          {
+            cache: "no-store",
+          },
+        );
+
+      const marketResult =
+        await readJson(
+          marketResponse,
+        );
+
+LINE: 316
+        "done",
+        `${marketCandidates.length}개 시장 후보 수집 완료`,
+      );
+
+      /*
+        naver-capture는 이제 사용자에게
+        보이지 않는 내부 임시 저장소로만 사용한다.
+      */
+      const captureProducts =
+        marketCandidates.map(
+          (candidate) => ({
+            name:
+              cleanText(
+                candidate.productName,
+              ),
+
+            text: "",
+
+
+LINE: 319
+
+      /*
+        naver-capture는 이제 사용자에게
+        보이지 않는 내부 임시 저장소로만 사용한다.
+      */
+      const captureProducts =
+        marketCandidates.map(
+          (candidate) => ({
+            name:
+              cleanText(
+                candidate.productName,
+              ),
+
+            text: "",
+
+            seller:
+              cleanText(
+                candidate.seller,
+
+LINE: 324
+      const captureProducts =
+        marketCandidates.map(
+          (candidate) => ({
+            name:
+              cleanText(
+                candidate.productName,
+              ),
+
+            text: "",
+
+            seller:
+              cleanText(
+                candidate.seller,
+              ),
+
+            url:
+              cleanText(
+                candidate.sourceUrl,
+
+LINE: 350
+              Number(
+                candidate.price ??
+                  0,
+              ),
+
+            reviewCount:
+              Number(
+                candidate.reviewCount ??
+                  0,
+              ),
+
+            rating:
+              Number(
+                candidate.rating ??
+                  0,
+              ),
+          }),
+        );
+
+LINE: 352
+                  0,
+              ),
+
+            reviewCount:
+              Number(
+                candidate.reviewCount ??
+                  0,
+              ),
+
+            rating:
+              Number(
+                candidate.rating ??
+                  0,
+              ),
+          }),
+        );
+
+      const captureResponse =
+
+LINE: 356
+              Number(
+                candidate.reviewCount ??
+                  0,
+              ),
+
+            rating:
+              Number(
+                candidate.rating ??
+                  0,
+              ),
+          }),
+        );
+
+      const captureResponse =
+        await fetch(
+          "/api/naver-capture",
+          {
+            method: "POST",
+
+LINE: 358
+                  0,
+              ),
+
+            rating:
+              Number(
+                candidate.rating ??
+                  0,
+              ),
+          }),
+        );
+
+      const captureResponse =
+        await fetch(
+          "/api/naver-capture",
+          {
+            method: "POST",
+
+            headers: {
+
+LINE: 364
+                  0,
+              ),
+          }),
+        );
+
+      const captureResponse =
+        await fetch(
+          "/api/naver-capture",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              category:
+
+LINE: 365
+              ),
+          }),
+        );
+
+      const captureResponse =
+        await fetch(
+          "/api/naver-capture",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+
+LINE: 366
+          }),
+        );
+
+      const captureResponse =
+        await fetch(
+          "/api/naver-capture",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+
+
+LINE: 385
+                min,
+
+              maxBudget:
+                max,
+
+              products:
+                captureProducts,
+            }),
+          },
+        );
+
+      const captureResult =
+        await readJson(
+          captureResponse,
+        );
+
+      if (
+        !captureResponse.ok ||
+
+LINE: 386
+
+              maxBudget:
+                max,
+
+              products:
+                captureProducts,
+            }),
+          },
+        );
+
+      const captureResult =
+        await readJson(
+          captureResponse,
+        );
+
+      if (
+        !captureResponse.ok ||
+        captureResult.success !== true
+
+LINE: 391
+                captureProducts,
+            }),
+          },
+        );
+
+      const captureResult =
+        await readJson(
+          captureResponse,
+        );
+
+      if (
+        !captureResponse.ok ||
+        captureResult.success !== true
+      ) {
+        throw new Error(
+          cleanText(
+            captureResult.message,
+          ) ||
+
+LINE: 393
+          },
+        );
+
+      const captureResult =
+        await readJson(
+          captureResponse,
+        );
+
+      if (
+        !captureResponse.ok ||
+        captureResult.success !== true
+      ) {
+        throw new Error(
+          cleanText(
+            captureResult.message,
+          ) ||
+            "후보 임시 저장에 실패했습니다.",
+        );
+
+LINE: 397
+        await readJson(
+          captureResponse,
+        );
+
+      if (
+        !captureResponse.ok ||
+        captureResult.success !== true
+      ) {
+        throw new Error(
+          cleanText(
+            captureResult.message,
+          ) ||
+            "후보 임시 저장에 실패했습니다.",
+        );
+      }
+
+      const captureId =
+        cleanText(
+
+LINE: 398
+          captureResponse,
+        );
+
+      if (
+        !captureResponse.ok ||
+        captureResult.success !== true
+      ) {
+        throw new Error(
+          cleanText(
+            captureResult.message,
+          ) ||
+            "후보 임시 저장에 실패했습니다.",
+        );
+      }
+
+      const captureId =
+        cleanText(
+          captureResult.id,
+
+LINE: 402
+        !captureResponse.ok ||
+        captureResult.success !== true
+      ) {
+        throw new Error(
+          cleanText(
+            captureResult.message,
+          ) ||
+            "후보 임시 저장에 실패했습니다.",
+        );
+      }
+
+      const captureId =
+        cleanText(
+          captureResult.id,
+        );
+
+      if (!captureId) {
+        throw new Error(
+
+LINE: 408
+          ) ||
+            "후보 임시 저장에 실패했습니다.",
+        );
+      }
+
+      const captureId =
+        cleanText(
+          captureResult.id,
+        );
+
+      if (!captureId) {
+        throw new Error(
+          "내부 후보 ID가 생성되지 않았습니다.",
+        );
+      }
+
+      /*
+        2단계
+
+LINE: 410
+        );
+      }
+
+      const captureId =
+        cleanText(
+          captureResult.id,
+        );
+
+      if (!captureId) {
+        throw new Error(
+          "내부 후보 ID가 생성되지 않았습니다.",
+        );
+      }
+
+      /*
+        2단계
+        최대 15개 후보를
+        공식 URL + Bright Data로 상세 검증해
+
+LINE: 413
+      const captureId =
+        cleanText(
+          captureResult.id,
+        );
+
+      if (!captureId) {
+        throw new Error(
+          "내부 후보 ID가 생성되지 않았습니다.",
+        );
+      }
+
+      /*
+        2단계
+        최대 15개 후보를
+        공식 URL + Bright Data로 상세 검증해
+        최종 5개를 확보한다.
+      */
+      updateStep(
+
+LINE: 432
+        "working",
+        "최대 15개 후보의 실제 판매가·리뷰·중복·공식 상품 URL을 검증하는 중...",
+      );
+
+      const enrichedResponse =
+        await fetch(
+          `/api/market-candidates-enriched?captureId=${encodeURIComponent(
+            captureId,
+          )}`,
+          {
+            cache: "no-store",
+          },
+        );
+
+      const enriched =
+        await readJson(
+          enrichedResponse,
+        );
+
+LINE: 433
+        "최대 15개 후보의 실제 판매가·리뷰·중복·공식 상품 URL을 검증하는 중...",
+      );
+
+      const enrichedResponse =
+        await fetch(
+          `/api/market-candidates-enriched?captureId=${encodeURIComponent(
+            captureId,
+          )}`,
+          {
+            cache: "no-store",
+          },
+        );
+
+      const enriched =
+        await readJson(
+          enrichedResponse,
+        );
+
+
+LINE: 434
+      );
+
+      const enrichedResponse =
+        await fetch(
+          `/api/market-candidates-enriched?captureId=${encodeURIComponent(
+            captureId,
+          )}`,
+          {
+            cache: "no-store",
+          },
+        );
+
+      const enriched =
+        await readJson(
+          enrichedResponse,
+        );
+
+      if (
+
+LINE: 488
+        )}회`,
+      );
+
+      /*
+        3단계
+        최종 5개를 products에 등록/갱신.
+      */
+      updateStep(
+        "import",
+        "working",
+        "최종 후보를 제품 DB에 등록하는 중...",
+      );
+
+      const importResponse =
+        await fetch(
+          "/api/import-market-candidates",
+          {
+            method: "POST",
+
+LINE: 497
+        "working",
+        "최종 후보를 제품 DB에 등록하는 중...",
+      );
+
+      const importResponse =
+        await fetch(
+          "/api/import-market-candidates",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+
+LINE: 556
+        "working",
+        "리뷰 분석용 1차 구매기준을 생성하는 중...",
+      );
+
+      const firstCriteriaResponse =
+        await fetch(
+          "/api/generate-category-criteria",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+
+LINE: 603
+        5단계
+        Bright Data에서 확보한 리뷰를
+        제품별로 AI 분석.
+      */
+      updateStep(
+        "reviews",
+        "working",
+        "제품 5개의 리뷰를 순서대로 AI 분석 중...",
+      );
+
+      const analyzedProducts:
+        Array<{
+          productId: string;
+          productName: string;
+          analysis: unknown;
+        }> = [];
+
+      for (
+
+LINE: 608
+        "reviews",
+        "working",
+        "제품 5개의 리뷰를 순서대로 AI 분석 중...",
+      );
+
+      const analyzedProducts:
+        Array<{
+          productId: string;
+          productName: string;
+          analysis: unknown;
+        }> = [];
+
+      for (
+        let index = 0;
+        index <
+        finalCandidates.length;
+        index++
+      ) {
+
+LINE: 610
+        "제품 5개의 리뷰를 순서대로 AI 분석 중...",
+      );
+
+      const analyzedProducts:
+        Array<{
+          productId: string;
+          productName: string;
+          analysis: unknown;
+        }> = [];
+
+      for (
+        let index = 0;
+        index <
+        finalCandidates.length;
+        index++
+      ) {
+        const candidate =
+          finalCandidates[index];
+
+LINE: 611
+      );
+
+      const analyzedProducts:
+        Array<{
+          productId: string;
+          productName: string;
+          analysis: unknown;
+        }> = [];
+
+      for (
+        let index = 0;
+        index <
+        finalCandidates.length;
+        index++
+      ) {
+        const candidate =
+          finalCandidates[index];
+
+
+LINE: 627
+          finalCandidates[index];
+
+        const detail =
+          candidate.detail ?? {};
+
+        const productId =
+          cleanText(
+            detail.productId,
+          );
+
+        const productName =
+          cleanText(
+            detail.productName,
+          );
+
+        const reviewObjects =
+          Array.isArray(
+            detail.reviews,
+
+LINE: 629
+        const detail =
+          candidate.detail ?? {};
+
+        const productId =
+          cleanText(
+            detail.productId,
+          );
+
+        const productName =
+          cleanText(
+            detail.productName,
+          );
+
+        const reviewObjects =
+          Array.isArray(
+            detail.reviews,
+          )
+            ? detail.reviews
+
+LINE: 632
+        const productId =
+          cleanText(
+            detail.productId,
+          );
+
+        const productName =
+          cleanText(
+            detail.productName,
+          );
+
+        const reviewObjects =
+          Array.isArray(
+            detail.reviews,
+          )
+            ? detail.reviews
+            : [];
+
+        const reviews =
+
+LINE: 634
+            detail.productId,
+          );
+
+        const productName =
+          cleanText(
+            detail.productName,
+          );
+
+        const reviewObjects =
+          Array.isArray(
+            detail.reviews,
+          )
+            ? detail.reviews
+            : [];
+
+        const reviews =
+          reviewObjects
+            .map(
+
+LINE: 637
+        const productName =
+          cleanText(
+            detail.productName,
+          );
+
+        const reviewObjects =
+          Array.isArray(
+            detail.reviews,
+          )
+            ? detail.reviews
+            : [];
+
+        const reviews =
+          reviewObjects
+            .map(
+              (review) =>
+                cleanText(
+                  review.text,
+
+LINE: 639
+            detail.productName,
+          );
+
+        const reviewObjects =
+          Array.isArray(
+            detail.reviews,
+          )
+            ? detail.reviews
+            : [];
+
+        const reviews =
+          reviewObjects
+            .map(
+              (review) =>
+                cleanText(
+                  review.text,
+                ),
+            )
+
+LINE: 641
+
+        const reviewObjects =
+          Array.isArray(
+            detail.reviews,
+          )
+            ? detail.reviews
+            : [];
+
+        const reviews =
+          reviewObjects
+            .map(
+              (review) =>
+                cleanText(
+                  review.text,
+                ),
+            )
+            .filter(Boolean);
+
+
+LINE: 644
+            detail.reviews,
+          )
+            ? detail.reviews
+            : [];
+
+        const reviews =
+          reviewObjects
+            .map(
+              (review) =>
+                cleanText(
+                  review.text,
+                ),
+            )
+            .filter(Boolean);
+
+        const lowScore =
+          reviewObjects.filter(
+            (review) => {
+
+LINE: 645
+          )
+            ? detail.reviews
+            : [];
+
+        const reviews =
+          reviewObjects
+            .map(
+              (review) =>
+                cleanText(
+                  review.text,
+                ),
+            )
+            .filter(Boolean);
+
+        const lowScore =
+          reviewObjects.filter(
+            (review) => {
+              const rating =
+
+LINE: 647
+            : [];
+
+        const reviews =
+          reviewObjects
+            .map(
+              (review) =>
+                cleanText(
+                  review.text,
+                ),
+            )
+            .filter(Boolean);
+
+        const lowScore =
+          reviewObjects.filter(
+            (review) => {
+              const rating =
+                Number(
+                  review.rating ??
+
+LINE: 649
+        const reviews =
+          reviewObjects
+            .map(
+              (review) =>
+                cleanText(
+                  review.text,
+                ),
+            )
+            .filter(Boolean);
+
+        const lowScore =
+          reviewObjects.filter(
+            (review) => {
+              const rating =
+                Number(
+                  review.rating ??
+                    0,
+                );
+
+LINE: 655
+                ),
+            )
+            .filter(Boolean);
+
+        const lowScore =
+          reviewObjects.filter(
+            (review) => {
+              const rating =
+                Number(
+                  review.rating ??
+                    0,
+                );
+
+              return (
+                rating > 0 &&
+                rating <= 3
+              );
+            },
+
+LINE: 656
+            )
+            .filter(Boolean);
+
+        const lowScore =
+          reviewObjects.filter(
+            (review) => {
+              const rating =
+                Number(
+                  review.rating ??
+                    0,
+                );
+
+              return (
+                rating > 0 &&
+                rating <= 3
+              );
+            },
+          ).length;
+
+LINE: 657
+            .filter(Boolean);
+
+        const lowScore =
+          reviewObjects.filter(
+            (review) => {
+              const rating =
+                Number(
+                  review.rating ??
+                    0,
+                );
+
+              return (
+                rating > 0 &&
+                rating <= 3
+              );
+            },
+          ).length;
+
+
+LINE: 659
+        const lowScore =
+          reviewObjects.filter(
+            (review) => {
+              const rating =
+                Number(
+                  review.rating ??
+                    0,
+                );
+
+              return (
+                rating > 0 &&
+                rating <= 3
+              );
+            },
+          ).length;
+
+        updateStep(
+          "reviews",
+
+LINE: 664
+                  review.rating ??
+                    0,
+                );
+
+              return (
+                rating > 0 &&
+                rating <= 3
+              );
+            },
+          ).length;
+
+        updateStep(
+          "reviews",
+          "working",
+          `${index + 1}/${finalCandidates.length} · ${productName}`,
+        );
+
+        const analyzeResponse =
+
+LINE: 665
+                    0,
+                );
+
+              return (
+                rating > 0 &&
+                rating <= 3
+              );
+            },
+          ).length;
+
+        updateStep(
+          "reviews",
+          "working",
+          `${index + 1}/${finalCandidates.length} · ${productName}`,
+        );
+
+        const analyzeResponse =
+          await fetch(
+
+LINE: 671
+              );
+            },
+          ).length;
+
+        updateStep(
+          "reviews",
+          "working",
+          `${index + 1}/${finalCandidates.length} · ${productName}`,
+        );
+
+        const analyzeResponse =
+          await fetch(
+            "/api/analyze-reviews",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+
+LINE: 673
+          ).length;
+
+        updateStep(
+          "reviews",
+          "working",
+          `${index + 1}/${finalCandidates.length} · ${productName}`,
+        );
+
+        const analyzeResponse =
+          await fetch(
+            "/api/analyze-reviews",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+
+LINE: 677
+          "working",
+          `${index + 1}/${finalCandidates.length} · ${productName}`,
+        );
+
+        const analyzeResponse =
+          await fetch(
+            "/api/analyze-reviews",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+
+              body: JSON.stringify({
+                productName,
+
+
+LINE: 678
+          `${index + 1}/${finalCandidates.length} · ${productName}`,
+        );
+
+        const analyzeResponse =
+          await fetch(
+            "/api/analyze-reviews",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+
+              body: JSON.stringify({
+                productName,
+
+                category:
+
+LINE: 688
+                "Content-Type":
+                  "application/json",
+              },
+
+              body: JSON.stringify({
+                productName,
+
+                category:
+                  normalizedCategory,
+
+                reviews,
+
+                collectionStats: {
+                  total:
+                    reviews.length,
+
+                  ranking: 0,
+
+
+LINE: 693
+                productName,
+
+                category:
+                  normalizedCategory,
+
+                reviews,
+
+                collectionStats: {
+                  total:
+                    reviews.length,
+
+                  ranking: 0,
+
+                  latest:
+                    reviews.length,
+
+                  lowScore,
+                },
+
+LINE: 697
+
+                reviews,
+
+                collectionStats: {
+                  total:
+                    reviews.length,
+
+                  ranking: 0,
+
+                  latest:
+                    reviews.length,
+
+                  lowScore,
+                },
+              }),
+            },
+          );
+
+
+LINE: 702
+                    reviews.length,
+
+                  ranking: 0,
+
+                  latest:
+                    reviews.length,
+
+                  lowScore,
+                },
+              }),
+            },
+          );
+
+        const analyzeResult =
+          await readJson(
+            analyzeResponse,
+          );
+
+
+LINE: 721
+          !analyzeResponse.ok ||
+          analyzeResult.success !==
+            true
+        ) {
+          throw new Error(
+            `${productName}: ${
+              cleanText(
+                analyzeResult.message,
+              ) ||
+              "리뷰 AI 분석 실패"
+            }`,
+          );
+        }
+
+        analyzedProducts.push({
+          productId,
+
+          productName,
+
+LINE: 730
+              "리뷰 AI 분석 실패"
+            }`,
+          );
+        }
+
+        analyzedProducts.push({
+          productId,
+
+          productName,
+
+          analysis:
+            analyzeResult.analysis,
+        });
+      }
+
+      updateStep(
+        "reviews",
+        "done",
+
+LINE: 731
+            }`,
+          );
+        }
+
+        analyzedProducts.push({
+          productId,
+
+          productName,
+
+          analysis:
+            analyzeResult.analysis,
+        });
+      }
+
+      updateStep(
+        "reviews",
+        "done",
+        `${analyzedProducts.length}개 제품 리뷰 AI 분석 완료`,
+
+LINE: 733
+        }
+
+        analyzedProducts.push({
+          productId,
+
+          productName,
+
+          analysis:
+            analyzeResult.analysis,
+        });
+      }
+
+      updateStep(
+        "reviews",
+        "done",
+        `${analyzedProducts.length}개 제품 리뷰 AI 분석 완료`,
+      );
+
+
+LINE: 741
+            analyzeResult.analysis,
+        });
+      }
+
+      updateStep(
+        "reviews",
+        "done",
+        `${analyzedProducts.length}개 제품 리뷰 AI 분석 완료`,
+      );
+
+      /*
+        6단계
+        리뷰 분석 저장.
+      */
+      updateStep(
+        "save-reviews",
+        "working",
+        "리뷰 분석 결과를 DB에 저장하는 중...",
+
+LINE: 743
+      }
+
+      updateStep(
+        "reviews",
+        "done",
+        `${analyzedProducts.length}개 제품 리뷰 AI 분석 완료`,
+      );
+
+      /*
+        6단계
+        리뷰 분석 저장.
+      */
+      updateStep(
+        "save-reviews",
+        "working",
+        "리뷰 분석 결과를 DB에 저장하는 중...",
+      );
+
+
+LINE: 751
+      /*
+        6단계
+        리뷰 분석 저장.
+      */
+      updateStep(
+        "save-reviews",
+        "working",
+        "리뷰 분석 결과를 DB에 저장하는 중...",
+      );
+
+      const saveResponse =
+        await fetch(
+          "/api/save-review-analysis-batch",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+
+LINE: 757
+        "working",
+        "리뷰 분석 결과를 DB에 저장하는 중...",
+      );
+
+      const saveResponse =
+        await fetch(
+          "/api/save-review-analysis-batch",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+
+LINE: 758
+        "리뷰 분석 결과를 DB에 저장하는 중...",
+      );
+
+      const saveResponse =
+        await fetch(
+          "/api/save-review-analysis-batch",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+
+
+LINE: 771
+
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+
+              products:
+                analyzedProducts,
+            }),
+          },
+        );
+
+      const saveResult =
+        await readJson(
+          saveResponse,
+        );
+
+      if (
+        !saveResponse.ok ||
+
+LINE: 772
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+
+              products:
+                analyzedProducts,
+            }),
+          },
+        );
+
+      const saveResult =
+        await readJson(
+          saveResponse,
+        );
+
+      if (
+        !saveResponse.ok ||
+        saveResult.success !==
+
+LINE: 796
+            "리뷰 분석 DB 저장에 실패했습니다.",
+        );
+      }
+
+      updateStep(
+        "save-reviews",
+        "done",
+        `${Number(
+          saveResult.successCount ??
+            0,
+        )}개 저장 완료`,
+      );
+
+      /*
+        7단계
+        상세정보 + 리뷰 분석을 모두 사용해
+        최종 구매기준 재생성.
+      */
+
+LINE: 816
+        "working",
+        "상세정보와 리뷰 근거를 함께 사용해 구매기준을 최종 보정하는 중...",
+      );
+
+      const finalCriteriaResponse =
+        await fetch(
+          "/api/generate-category-criteria",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+
+LINE: 868
+        "working",
+        "최종 제품 비교 점수를 계산하는 중...",
+      );
+
+      const scoreResponse =
+        await fetch(
+          "/api/generate-product-scores",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+
+LINE: 869
+        "최종 제품 비교 점수를 계산하는 중...",
+      );
+
+      const scoreResponse =
+        await fetch(
+          "/api/generate-product-scores",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              category:
+                normalizedCategory,
+            }),
+
+LINE: 907
+
+      updateStep(
+        "scores",
+        "done",
+        `${Number(
+          scoreResult.productCount ??
+            5,
+        )}개 제품 비교 점수 생성 완료`,
+      );
+
+      setFinalMessage(
+        `완료 · ${normalizedCategory} 최종 후보 5개와 추천 데이터 준비가 모두 끝났습니다.`,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "자동 실행 중 오류가 발생했습니다.";
+
+============================================================
+FILE: .\app\admin\naver-capture\page.tsx
+============================================================
+
+LINE: 9
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import NaverCaptureAutomation from "../../../components/NaverCaptureAutomation";
+
+type CapturedProduct = {
+  name: string;
+  text: string;
+  url: string;
+  imageUrl: string;
+  price: number;
+  reviewCount: number;
+  rating: number;
+};
+
+type BudgetStatus =
+
+LINE: 11
+  useState,
+} from "react";
+
+import NaverCaptureAutomation from "../../../components/NaverCaptureAutomation";
+
+type CapturedProduct = {
+  name: string;
+  text: string;
+  url: string;
+  imageUrl: string;
+  price: number;
+  reviewCount: number;
+  rating: number;
+};
+
+type BudgetStatus =
+  | "within"
+  | "below"
+
+LINE: 17
+  name: string;
+  text: string;
+  url: string;
+  imageUrl: string;
+  price: number;
+  reviewCount: number;
+  rating: number;
+};
+
+type BudgetStatus =
+  | "within"
+  | "below"
+  | "above"
+  | "unlimited";
+
+type RankedProduct =
+  CapturedProduct & {
+    candidateScore: number;
+
+LINE: 18
+  text: string;
+  url: string;
+  imageUrl: string;
+  price: number;
+  reviewCount: number;
+  rating: number;
+};
+
+type BudgetStatus =
+  | "within"
+  | "below"
+  | "above"
+  | "unlimited";
+
+type RankedProduct =
+  CapturedProduct & {
+    candidateScore: number;
+    scoreReasons: string[];
+
+LINE: 27
+  | "within"
+  | "below"
+  | "above"
+  | "unlimited";
+
+type RankedProduct =
+  CapturedProduct & {
+    candidateScore: number;
+    scoreReasons: string[];
+    budgetStatus: BudgetStatus;
+    budgetDistance: number;
+  };
+
+function formatPrice(
+  value: number,
+) {
+  if (!value) {
+    return "-";
+
+LINE: 28
+  | "below"
+  | "above"
+  | "unlimited";
+
+type RankedProduct =
+  CapturedProduct & {
+    candidateScore: number;
+    scoreReasons: string[];
+    budgetStatus: BudgetStatus;
+    budgetDistance: number;
+  };
+
+function formatPrice(
+  value: number,
+) {
+  if (!value) {
+    return "-";
+  }
+
+LINE: 174
+        smaller
+    : 0;
+}
+
+function isLikelyDuplicate(
+  a: CapturedProduct,
+  b: CapturedProduct,
+) {
+  const nameSimilarity =
+    similarity(
+      a.name,
+      b.name,
+    );
+
+  /*
+    판매처별 가격 차이가 있어도
+    모델명이 거의 같으면 같은 제품으로 본다.
+
+
+LINE: 175
+    : 0;
+}
+
+function isLikelyDuplicate(
+  a: CapturedProduct,
+  b: CapturedProduct,
+) {
+  const nameSimilarity =
+    similarity(
+      a.name,
+      b.name,
+    );
+
+  /*
+    판매처별 가격 차이가 있어도
+    모델명이 거의 같으면 같은 제품으로 본다.
+
+    기존처럼 가격차 8% 조건을 걸면
+
+LINE: 198
+    0.78
+  );
+}
+
+function removeDuplicates(
+  products:
+    CapturedProduct[],
+) {
+  const unique:
+    CapturedProduct[] = [];
+
+  /*
+    동일 제품이면
+    리뷰가 많은 판매등록을 대표로 사용.
+  */
+  const sorted =
+    [...products].sort(
+      (a, b) =>
+
+LINE: 199
+  );
+}
+
+function removeDuplicates(
+  products:
+    CapturedProduct[],
+) {
+  const unique:
+    CapturedProduct[] = [];
+
+  /*
+    동일 제품이면
+    리뷰가 많은 판매등록을 대표로 사용.
+  */
+  const sorted =
+    [...products].sort(
+      (a, b) =>
+        b.reviewCount -
+
+LINE: 202
+function removeDuplicates(
+  products:
+    CapturedProduct[],
+) {
+  const unique:
+    CapturedProduct[] = [];
+
+  /*
+    동일 제품이면
+    리뷰가 많은 판매등록을 대표로 사용.
+  */
+  const sorted =
+    [...products].sort(
+      (a, b) =>
+        b.reviewCount -
+        a.reviewCount,
+    );
+
+
+LINE: 209
+  /*
+    동일 제품이면
+    리뷰가 많은 판매등록을 대표로 사용.
+  */
+  const sorted =
+    [...products].sort(
+      (a, b) =>
+        b.reviewCount -
+        a.reviewCount,
+    );
+
+  for (
+    const product of
+    sorted
+  ) {
+    const duplicate =
+      unique.some(
+        (existing) =>
+
+LINE: 211
+    리뷰가 많은 판매등록을 대표로 사용.
+  */
+  const sorted =
+    [...products].sort(
+      (a, b) =>
+        b.reviewCount -
+        a.reviewCount,
+    );
+
+  for (
+    const product of
+    sorted
+  ) {
+    const duplicate =
+      unique.some(
+        (existing) =>
+          isLikelyDuplicate(
+            existing,
+
+LINE: 212
+  */
+  const sorted =
+    [...products].sort(
+      (a, b) =>
+        b.reviewCount -
+        a.reviewCount,
+    );
+
+  for (
+    const product of
+    sorted
+  ) {
+    const duplicate =
+      unique.some(
+        (existing) =>
+          isLikelyDuplicate(
+            existing,
+            product,
+
+LINE: 216
+        b.reviewCount -
+        a.reviewCount,
+    );
+
+  for (
+    const product of
+    sorted
+  ) {
+    const duplicate =
+      unique.some(
+        (existing) =>
+          isLikelyDuplicate(
+            existing,
+            product,
+          ),
+      );
+
+    if (duplicate) {
+
+LINE: 224
+    const duplicate =
+      unique.some(
+        (existing) =>
+          isLikelyDuplicate(
+            existing,
+            product,
+          ),
+      );
+
+    if (duplicate) {
+      continue;
+    }
+
+    unique.push(
+      product,
+    );
+  }
+
+
+LINE: 233
+    if (duplicate) {
+      continue;
+    }
+
+    unique.push(
+      product,
+    );
+  }
+
+  return unique;
+}
+
+function getBudgetStatus(
+  price: number,
+  minBudget: number,
+  maxBudget: number,
+): {
+  status: BudgetStatus;
+
+LINE: 292
+      "within",
+    distance: 0,
+  };
+}
+
+function rankProducts(
+  products:
+    CapturedProduct[],
+  minBudget: number,
+  maxBudget: number,
+): RankedProduct[] {
+  if (
+    products.length === 0
+  ) {
+    return [];
+  }
+
+  const maximumReviews =
+
+LINE: 293
+    distance: 0,
+  };
+}
+
+function rankProducts(
+  products:
+    CapturedProduct[],
+  minBudget: number,
+  maxBudget: number,
+): RankedProduct[] {
+  if (
+    products.length === 0
+  ) {
+    return [];
+  }
+
+  const maximumReviews =
+    Math.max(
+
+LINE: 294
+  };
+}
+
+function rankProducts(
+  products:
+    CapturedProduct[],
+  minBudget: number,
+  maxBudget: number,
+): RankedProduct[] {
+  if (
+    products.length === 0
+  ) {
+    return [];
+  }
+
+  const maximumReviews =
+    Math.max(
+      1,
+
+LINE: 297
+function rankProducts(
+  products:
+    CapturedProduct[],
+  minBudget: number,
+  maxBudget: number,
+): RankedProduct[] {
+  if (
+    products.length === 0
+  ) {
+    return [];
+  }
+
+  const maximumReviews =
+    Math.max(
+      1,
+      ...products.map(
+        (product) =>
+          product.reviewCount,
+
+LINE: 299
+    CapturedProduct[],
+  minBudget: number,
+  maxBudget: number,
+): RankedProduct[] {
+  if (
+    products.length === 0
+  ) {
+    return [];
+  }
+
+  const maximumReviews =
+    Math.max(
+      1,
+      ...products.map(
+        (product) =>
+          product.reviewCount,
+      ),
+    );
+
+LINE: 304
+    products.length === 0
+  ) {
+    return [];
+  }
+
+  const maximumReviews =
+    Math.max(
+      1,
+      ...products.map(
+        (product) =>
+          product.reviewCount,
+      ),
+    );
+
+  const maximumReviewLog =
+    Math.log10(
+      maximumReviews + 1,
+    );
+
+LINE: 307
+  }
+
+  const maximumReviews =
+    Math.max(
+      1,
+      ...products.map(
+        (product) =>
+          product.reviewCount,
+      ),
+    );
+
+  const maximumReviewLog =
+    Math.log10(
+      maximumReviews + 1,
+    );
+
+  return products
+    .map(
+
+LINE: 308
+
+  const maximumReviews =
+    Math.max(
+      1,
+      ...products.map(
+        (product) =>
+          product.reviewCount,
+      ),
+    );
+
+  const maximumReviewLog =
+    Math.log10(
+      maximumReviews + 1,
+    );
+
+  return products
+    .map(
+      (product) => {
+
+LINE: 309
+  const maximumReviews =
+    Math.max(
+      1,
+      ...products.map(
+        (product) =>
+          product.reviewCount,
+      ),
+    );
+
+  const maximumReviewLog =
+    Math.log10(
+      maximumReviews + 1,
+    );
+
+  return products
+    .map(
+      (product) => {
+        const reviewScore =
+
+LINE: 313
+        (product) =>
+          product.reviewCount,
+      ),
+    );
+
+  const maximumReviewLog =
+    Math.log10(
+      maximumReviews + 1,
+    );
+
+  return products
+    .map(
+      (product) => {
+        const reviewScore =
+          maximumReviewLog >
+          0
+            ? (
+                Math.log10(
+
+LINE: 315
+      ),
+    );
+
+  const maximumReviewLog =
+    Math.log10(
+      maximumReviews + 1,
+    );
+
+  return products
+    .map(
+      (product) => {
+        const reviewScore =
+          maximumReviewLog >
+          0
+            ? (
+                Math.log10(
+                  product.reviewCount +
+                    1,
+
+LINE: 318
+  const maximumReviewLog =
+    Math.log10(
+      maximumReviews + 1,
+    );
+
+  return products
+    .map(
+      (product) => {
+        const reviewScore =
+          maximumReviewLog >
+          0
+            ? (
+                Math.log10(
+                  product.reviewCount +
+                    1,
+                ) /
+                maximumReviewLog
+              ) *
+
+LINE: 320
+      maximumReviews + 1,
+    );
+
+  return products
+    .map(
+      (product) => {
+        const reviewScore =
+          maximumReviewLog >
+          0
+            ? (
+                Math.log10(
+                  product.reviewCount +
+                    1,
+                ) /
+                maximumReviewLog
+              ) *
+              100
+            : 0;
+
+LINE: 321
+    );
+
+  return products
+    .map(
+      (product) => {
+        const reviewScore =
+          maximumReviewLog >
+          0
+            ? (
+                Math.log10(
+                  product.reviewCount +
+                    1,
+                ) /
+                maximumReviewLog
+              ) *
+              100
+            : 0;
+
+
+LINE: 322
+
+  return products
+    .map(
+      (product) => {
+        const reviewScore =
+          maximumReviewLog >
+          0
+            ? (
+                Math.log10(
+                  product.reviewCount +
+                    1,
+                ) /
+                maximumReviewLog
+              ) *
+              100
+            : 0;
+
+        const ratingScore =
+
+LINE: 326
+        const reviewScore =
+          maximumReviewLog >
+          0
+            ? (
+                Math.log10(
+                  product.reviewCount +
+                    1,
+                ) /
+                maximumReviewLog
+              ) *
+              100
+            : 0;
+
+        const ratingScore =
+          product.rating >
+          0
+            ? Math.min(
+                100,
+
+LINE: 329
+            ? (
+                Math.log10(
+                  product.reviewCount +
+                    1,
+                ) /
+                maximumReviewLog
+              ) *
+              100
+            : 0;
+
+        const ratingScore =
+          product.rating >
+          0
+            ? Math.min(
+                100,
+                (
+                  product.rating /
+                  5
+
+LINE: 334
+                maximumReviewLog
+              ) *
+              100
+            : 0;
+
+        const ratingScore =
+          product.rating >
+          0
+            ? Math.min(
+                100,
+                (
+                  product.rating /
+                  5
+                ) *
+                  100,
+              )
+            : 0;
+
+
+LINE: 335
+              ) *
+              100
+            : 0;
+
+        const ratingScore =
+          product.rating >
+          0
+            ? Math.min(
+                100,
+                (
+                  product.rating /
+                  5
+                ) *
+                  100,
+              )
+            : 0;
+
+        const dataScore =
+
+LINE: 340
+          product.rating >
+          0
+            ? Math.min(
+                100,
+                (
+                  product.rating /
+                  5
+                ) *
+                  100,
+              )
+            : 0;
+
+        const dataScore =
+          [
+            Boolean(
+              product.name,
+            ),
+
+
+LINE: 350
+            : 0;
+
+        const dataScore =
+          [
+            Boolean(
+              product.name,
+            ),
+
+            product.price >
+              0,
+
+            Boolean(
+              product.imageUrl,
+            ),
+
+            Boolean(
+              product.url,
+            ),
+
+LINE: 353
+          [
+            Boolean(
+              product.name,
+            ),
+
+            product.price >
+              0,
+
+            Boolean(
+              product.imageUrl,
+            ),
+
+            Boolean(
+              product.url,
+            ),
+
+            product.reviewCount >
+              0,
+
+LINE: 357
+
+            product.price >
+              0,
+
+            Boolean(
+              product.imageUrl,
+            ),
+
+            Boolean(
+              product.url,
+            ),
+
+            product.reviewCount >
+              0,
+
+            product.rating >
+              0,
+          ].filter(
+
+LINE: 361
+            Boolean(
+              product.imageUrl,
+            ),
+
+            Boolean(
+              product.url,
+            ),
+
+            product.reviewCount >
+              0,
+
+            product.rating >
+              0,
+          ].filter(
+            Boolean,
+          ).length /
+          6 *
+          100;
+
+LINE: 364
+
+            Boolean(
+              product.url,
+            ),
+
+            product.reviewCount >
+              0,
+
+            product.rating >
+              0,
+          ].filter(
+            Boolean,
+          ).length /
+          6 *
+          100;
+
+        /*
+          가격 자체는 점수에 넣지 않는다.
+
+LINE: 367
+            ),
+
+            product.reviewCount >
+              0,
+
+            product.rating >
+              0,
+          ].filter(
+            Boolean,
+          ).length /
+          6 *
+          100;
+
+        /*
+          가격 자체는 점수에 넣지 않는다.
+
+          싼 제품이라고 무조건 고득점,
+          비싼 제품이라고 무조건 고득점이
+
+LINE: 386
+
+          가격은 아래 후보 구성 단계에서
+          사용자의 예산 조건으로 처리한다.
+        */
+        const score =
+          reviewScore *
+            0.55 +
+          ratingScore *
+            0.3 +
+          dataScore *
+            0.15;
+
+        const budget =
+          getBudgetStatus(
+            product.price,
+            minBudget,
+            maxBudget,
+          );
+
+LINE: 388
+          사용자의 예산 조건으로 처리한다.
+        */
+        const score =
+          reviewScore *
+            0.55 +
+          ratingScore *
+            0.3 +
+          dataScore *
+            0.15;
+
+        const budget =
+          getBudgetStatus(
+            product.price,
+            minBudget,
+            maxBudget,
+          );
+
+        return {
+
+LINE: 395
+          dataScore *
+            0.15;
+
+        const budget =
+          getBudgetStatus(
+            product.price,
+            minBudget,
+            maxBudget,
+          );
+
+        return {
+          ...product,
+
+          candidateScore:
+            Math.round(
+              score *
+                10,
+            ) / 10,
+
+LINE: 401
+            minBudget,
+            maxBudget,
+          );
+
+        return {
+          ...product,
+
+          candidateScore:
+            Math.round(
+              score *
+                10,
+            ) / 10,
+
+          scoreReasons: [
+            `리뷰 ${product.reviewCount.toLocaleString(
+              "ko-KR",
+            )}개`,
+
+
+LINE: 410
+              score *
+                10,
+            ) / 10,
+
+          scoreReasons: [
+            `리뷰 ${product.reviewCount.toLocaleString(
+              "ko-KR",
+            )}개`,
+
+            product.rating >
+            0
+              ? `평점 ${product.rating}`
+              : "평점 정보 없음",
+
+            `데이터 충실도 ${Math.round(
+              dataScore,
+            )}%`,
+          ],
+
+LINE: 414
+          scoreReasons: [
+            `리뷰 ${product.reviewCount.toLocaleString(
+              "ko-KR",
+            )}개`,
+
+            product.rating >
+            0
+              ? `평점 ${product.rating}`
+              : "평점 정보 없음",
+
+            `데이터 충실도 ${Math.round(
+              dataScore,
+            )}%`,
+          ],
+
+          budgetStatus:
+            budget.status,
+
+
+LINE: 416
+              "ko-KR",
+            )}개`,
+
+            product.rating >
+            0
+              ? `평점 ${product.rating}`
+              : "평점 정보 없음",
+
+            `데이터 충실도 ${Math.round(
+              dataScore,
+            )}%`,
+          ],
+
+          budgetStatus:
+            budget.status,
+
+          budgetDistance:
+            budget.distance,
+
+LINE: 441
+    );
+}
+
+function selectFinalists(
+  ranked:
+    RankedProduct[],
+  minBudget: number,
+  maxBudget: number,
+) {
+  /*
+    예산을 입력하지 않은 경우
+    기존처럼 상위 15개.
+  */
+  if (
+    minBudget <= 0 &&
+    maxBudget <= 0
+  ) {
+    return ranked.slice(
+
+LINE: 465
+    1순위:
+    예산 범위 안의 제품.
+  */
+  const withinBudget =
+    ranked.filter(
+      (product) =>
+        product.budgetStatus ===
+        "within",
+    );
+
+  if (
+    withinBudget.length >=
+    15
+  ) {
+    return withinBudget.slice(
+      0,
+      15,
+    );
+
+LINE: 466
+    예산 범위 안의 제품.
+  */
+  const withinBudget =
+    ranked.filter(
+      (product) =>
+        product.budgetStatus ===
+        "within",
+    );
+
+  if (
+    withinBudget.length >=
+    15
+  ) {
+    return withinBudget.slice(
+      0,
+      15,
+    );
+  }
+
+LINE: 490
+    같은 거리면 후보점수가 높은 제품 우선.
+  */
+  const outsideBudget =
+    ranked
+      .filter(
+        (product) =>
+          product.budgetStatus !==
+          "within",
+      )
+      .sort(
+        (a, b) => {
+          if (
+            a.budgetDistance !==
+            b.budgetDistance
+          ) {
+            return (
+              a.budgetDistance -
+              b.budgetDistance
+
+LINE: 491
+  */
+  const outsideBudget =
+    ranked
+      .filter(
+        (product) =>
+          product.budgetStatus !==
+          "within",
+      )
+      .sort(
+        (a, b) => {
+          if (
+            a.budgetDistance !==
+            b.budgetDistance
+          ) {
+            return (
+              a.budgetDistance -
+              b.budgetDistance
+            );
+
+LINE: 527
+    ),
+  ];
+}
+
+function budgetLabel(
+  product:
+    RankedProduct,
+) {
+  if (
+    product.budgetStatus ===
+    "within"
+  ) {
+    return "예산 내";
+  }
+
+  if (
+    product.budgetStatus ===
+    "above"
+
+LINE: 528
+  ];
+}
+
+function budgetLabel(
+  product:
+    RankedProduct,
+) {
+  if (
+    product.budgetStatus ===
+    "within"
+  ) {
+    return "예산 내";
+  }
+
+  if (
+    product.budgetStatus ===
+    "above"
+  ) {
+
+LINE: 531
+function budgetLabel(
+  product:
+    RankedProduct,
+) {
+  if (
+    product.budgetStatus ===
+    "within"
+  ) {
+    return "예산 내";
+  }
+
+  if (
+    product.budgetStatus ===
+    "above"
+  ) {
+    return `예산 초과 +${formatPrice(
+      product.budgetDistance,
+    )}`;
+
+LINE: 538
+  ) {
+    return "예산 내";
+  }
+
+  if (
+    product.budgetStatus ===
+    "above"
+  ) {
+    return `예산 초과 +${formatPrice(
+      product.budgetDistance,
+    )}`;
+  }
+
+  if (
+    product.budgetStatus ===
+    "below"
+  ) {
+    return `예산 미달 -${formatPrice(
+
+LINE: 542
+  if (
+    product.budgetStatus ===
+    "above"
+  ) {
+    return `예산 초과 +${formatPrice(
+      product.budgetDistance,
+    )}`;
+  }
+
+  if (
+    product.budgetStatus ===
+    "below"
+  ) {
+    return `예산 미달 -${formatPrice(
+      product.budgetDistance,
+    )}`;
+  }
+
+
+LINE: 547
+      product.budgetDistance,
+    )}`;
+  }
+
+  if (
+    product.budgetStatus ===
+    "below"
+  ) {
+    return `예산 미달 -${formatPrice(
+      product.budgetDistance,
+    )}`;
+  }
+
+  return "예산 제한 없음";
+}
+
+export default function NaverCapturePage() {
+  const [
+
+LINE: 551
+  if (
+    product.budgetStatus ===
+    "below"
+  ) {
+    return `예산 미달 -${formatPrice(
+      product.budgetDistance,
+    )}`;
+  }
+
+  return "예산 제한 없음";
+}
+
+export default function NaverCapturePage() {
+  const [
+    captureId,
+    setCaptureId,
+  ] = useState("");
+
+
+LINE: 558
+  }
+
+  return "예산 제한 없음";
+}
+
+export default function NaverCapturePage() {
+  const [
+    captureId,
+    setCaptureId,
+  ] = useState("");
+
+  const [
+    products,
+    setProducts,
+  ] =
+    useState<
+      CapturedProduct[]
+    >([]);
+
+LINE: 560
+  return "예산 제한 없음";
+}
+
+export default function NaverCapturePage() {
+  const [
+    captureId,
+    setCaptureId,
+  ] = useState("");
+
+  const [
+    products,
+    setProducts,
+  ] =
+    useState<
+      CapturedProduct[]
+    >([]);
+
+  const [
+
+LINE: 561
+}
+
+export default function NaverCapturePage() {
+  const [
+    captureId,
+    setCaptureId,
+  ] = useState("");
+
+  const [
+    products,
+    setProducts,
+  ] =
+    useState<
+      CapturedProduct[]
+    >([]);
+
+  const [
+    category,
+
+LINE: 565
+    captureId,
+    setCaptureId,
+  ] = useState("");
+
+  const [
+    products,
+    setProducts,
+  ] =
+    useState<
+      CapturedProduct[]
+    >([]);
+
+  const [
+    category,
+    setCategory,
+  ] =
+    useState("");
+
+
+LINE: 566
+    setCaptureId,
+  ] = useState("");
+
+  const [
+    products,
+    setProducts,
+  ] =
+    useState<
+      CapturedProduct[]
+    >([]);
+
+  const [
+    category,
+    setCategory,
+  ] =
+    useState("");
+
+  const [
+
+LINE: 569
+  const [
+    products,
+    setProducts,
+  ] =
+    useState<
+      CapturedProduct[]
+    >([]);
+
+  const [
+    category,
+    setCategory,
+  ] =
+    useState("");
+
+  const [
+    minBudget,
+    setMinBudget,
+  ] =
+
+LINE: 602
+
+  useEffect(() => {
+    async function load() {
+      const params =
+        new URLSearchParams(
+          window.location
+            .search,
+        );
+
+      const id =
+        params.get("id");
+
+      if (!id) {
+        setMessage(
+          "네이버쇼핑에서 Project D 후보 수집 북마크를 실행하세요.",
+        );
+
+        return;
+
+LINE: 617
+        );
+
+        return;
+      }
+
+      setCaptureId(id);
+
+      try {
+        const response =
+          await fetch(
+            `/api/naver-capture?id=${encodeURIComponent(
+              id,
+            )}`,
+            {
+              cache:
+                "no-store",
+            },
+          );
+
+LINE: 621
+
+      setCaptureId(id);
+
+      try {
+        const response =
+          await fetch(
+            `/api/naver-capture?id=${encodeURIComponent(
+              id,
+            )}`,
+            {
+              cache:
+                "no-store",
+            },
+          );
+
+        const data =
+          await response.json();
+
+
+LINE: 622
+      setCaptureId(id);
+
+      try {
+        const response =
+          await fetch(
+            `/api/naver-capture?id=${encodeURIComponent(
+              id,
+            )}`,
+            {
+              cache:
+                "no-store",
+            },
+          );
+
+        const data =
+          await response.json();
+
+        if (
+
+LINE: 646
+          );
+        }
+
+        const incoming =
+          Array.isArray(
+            data.products,
+          )
+            ? data.products
+            : [];
+
+        setCategory(
+          data.category ??
+            "",
+        );
+
+        setMinBudget(
+          Number(
+            data.minBudget ??
+
+LINE: 648
+
+        const incoming =
+          Array.isArray(
+            data.products,
+          )
+            ? data.products
+            : [];
+
+        setCategory(
+          data.category ??
+            "",
+        );
+
+        setMinBudget(
+          Number(
+            data.minBudget ??
+              0,
+          ) || 0,
+
+LINE: 670
+            data.maxBudget ??
+              0,
+          ) || 0,
+        );
+
+        setProducts(
+          incoming,
+        );
+
+        setMessage(
+          `${incoming.length}개 상품을 수집했습니다.`,
+        );
+      } catch (error) {
+        setMessage(
+          error instanceof
+          Error
+            ? error.message
+            : "수집 데이터를 불러오지 못했습니다.",
+
+LINE: 690
+    }
+
+    void load();
+  }, []);
+
+  const uniqueProducts =
+    useMemo(
+      () =>
+        removeDuplicates(
+          products,
+        ),
+      [products],
+    );
+
+  const rankedProducts =
+    useMemo(
+      () =>
+        rankProducts(
+
+LINE: 694
+
+  const uniqueProducts =
+    useMemo(
+      () =>
+        removeDuplicates(
+          products,
+        ),
+      [products],
+    );
+
+  const rankedProducts =
+    useMemo(
+      () =>
+        rankProducts(
+          uniqueProducts,
+          minBudget,
+          maxBudget,
+        ),
+
+LINE: 696
+    useMemo(
+      () =>
+        removeDuplicates(
+          products,
+        ),
+      [products],
+    );
+
+  const rankedProducts =
+    useMemo(
+      () =>
+        rankProducts(
+          uniqueProducts,
+          minBudget,
+          maxBudget,
+        ),
+      [
+        uniqueProducts,
+
+LINE: 699
+          products,
+        ),
+      [products],
+    );
+
+  const rankedProducts =
+    useMemo(
+      () =>
+        rankProducts(
+          uniqueProducts,
+          minBudget,
+          maxBudget,
+        ),
+      [
+        uniqueProducts,
+        minBudget,
+        maxBudget,
+      ],
+
+LINE: 702
+    );
+
+  const rankedProducts =
+    useMemo(
+      () =>
+        rankProducts(
+          uniqueProducts,
+          minBudget,
+          maxBudget,
+        ),
+      [
+        uniqueProducts,
+        minBudget,
+        maxBudget,
+      ],
+    );
+
+  const finalists =
+
+LINE: 703
+
+  const rankedProducts =
+    useMemo(
+      () =>
+        rankProducts(
+          uniqueProducts,
+          minBudget,
+          maxBudget,
+        ),
+      [
+        uniqueProducts,
+        minBudget,
+        maxBudget,
+      ],
+    );
+
+  const finalists =
+    useMemo(
+
+LINE: 708
+          uniqueProducts,
+          minBudget,
+          maxBudget,
+        ),
+      [
+        uniqueProducts,
+        minBudget,
+        maxBudget,
+      ],
+    );
+
+  const finalists =
+    useMemo(
+      () =>
+        selectFinalists(
+          rankedProducts,
+          minBudget,
+          maxBudget,
+
+LINE: 718
+
+  const finalists =
+    useMemo(
+      () =>
+        selectFinalists(
+          rankedProducts,
+          minBudget,
+          maxBudget,
+        ),
+      [
+        rankedProducts,
+        minBudget,
+        maxBudget,
+      ],
+    );
+
+  const withinBudgetCount =
+    rankedProducts.filter(
+
+LINE: 723
+          rankedProducts,
+          minBudget,
+          maxBudget,
+        ),
+      [
+        rankedProducts,
+        minBudget,
+        maxBudget,
+      ],
+    );
+
+  const withinBudgetCount =
+    rankedProducts.filter(
+      (product) =>
+        product.budgetStatus ===
+        "within",
+    ).length;
+
+
+LINE: 730
+        maxBudget,
+      ],
+    );
+
+  const withinBudgetCount =
+    rankedProducts.filter(
+      (product) =>
+        product.budgetStatus ===
+        "within",
+    ).length;
+
+  const supplementCount =
+    finalists.filter(
+      (product) =>
+        product.budgetStatus !==
+          "within" &&
+        product.budgetStatus !==
+          "unlimited",
+
+LINE: 731
+      ],
+    );
+
+  const withinBudgetCount =
+    rankedProducts.filter(
+      (product) =>
+        product.budgetStatus ===
+        "within",
+    ).length;
+
+  const supplementCount =
+    finalists.filter(
+      (product) =>
+        product.budgetStatus !==
+          "within" &&
+        product.budgetStatus !==
+          "unlimited",
+    ).length;
+
+LINE: 732
+    );
+
+  const withinBudgetCount =
+    rankedProducts.filter(
+      (product) =>
+        product.budgetStatus ===
+        "within",
+    ).length;
+
+  const supplementCount =
+    finalists.filter(
+      (product) =>
+        product.budgetStatus !==
+          "within" &&
+        product.budgetStatus !==
+          "unlimited",
+    ).length;
+
+
+LINE: 738
+        "within",
+    ).length;
+
+  const supplementCount =
+    finalists.filter(
+      (product) =>
+        product.budgetStatus !==
+          "within" &&
+        product.budgetStatus !==
+          "unlimited",
+    ).length;
+
+  const hasBudget =
+    minBudget > 0 ||
+    maxBudget > 0;
+
+  return (
+    <main
+
+LINE: 739
+    ).length;
+
+  const supplementCount =
+    finalists.filter(
+      (product) =>
+        product.budgetStatus !==
+          "within" &&
+        product.budgetStatus !==
+          "unlimited",
+    ).length;
+
+  const hasBudget =
+    minBudget > 0 ||
+    maxBudget > 0;
+
+  return (
+    <main
+      style={{
+
+LINE: 741
+  const supplementCount =
+    finalists.filter(
+      (product) =>
+        product.budgetStatus !==
+          "within" &&
+        product.budgetStatus !==
+          "unlimited",
+    ).length;
+
+  const hasBudget =
+    minBudget > 0 ||
+    maxBudget > 0;
+
+  return (
+    <main
+      style={{
+        maxWidth: 1200,
+        margin: "0 auto",
+
+LINE: 776
+              "0.12em",
+            marginBottom:
+              10,
+          }}
+        >
+          NAVER SHOPPING CAPTURE
+        </div>
+
+        <h1
+          style={{
+            fontSize: 32,
+            margin: 0,
+          }}
+        >
+          네이버쇼핑 후보 수집
+        </h1>
+
+        <p
+
+LINE: 864
+        >
+          <div>
+            수집{" "}
+            <strong>
+              {
+                products.length
+              }
+            </strong>
+            개
+          </div>
+
+          <div>
+            동일제품 제거 후{" "}
+            <strong>
+              {
+                uniqueProducts.length
+              }
+            </strong>
+
+LINE: 874
+
+          <div>
+            동일제품 제거 후{" "}
+            <strong>
+              {
+                uniqueProducts.length
+              }
+            </strong>
+            개
+          </div>
+
+          {hasBudget ? (
+            <div>
+              예산 내{" "}
+              <strong>
+                {
+                  withinBudgetCount
+                }
+
+LINE: 995
+            gap: 14,
+          }}
+        >
+          {finalists.map(
+            (
+              product,
+              index,
+            ) => (
+              <article
+                key={
+                  product.url +
+                  index
+                }
+                style={{
+                  display:
+                    "grid",
+                  gridTemplateColumns:
+                    "55px 90px 1fr 170px",
+
+LINE: 1000
+              product,
+              index,
+            ) => (
+              <article
+                key={
+                  product.url +
+                  index
+                }
+                style={{
+                  display:
+                    "grid",
+                  gridTemplateColumns:
+                    "55px 90px 1fr 170px",
+                  gap: 16,
+                  alignItems:
+                    "center",
+                  border:
+                    "1px solid #e2e8f0",
+
+LINE: 1046
+                >
+                  {index + 1}
+                </div>
+
+                <div>
+                  {product.imageUrl ? (
+                    <img
+                      src={
+                        product.imageUrl
+                      }
+                      alt=""
+                      style={{
+                        width:
+                          80,
+                        height:
+                          80,
+                        objectFit:
+                          "contain",
+
+LINE: 1049
+
+                <div>
+                  {product.imageUrl ? (
+                    <img
+                      src={
+                        product.imageUrl
+                      }
+                      alt=""
+                      style={{
+                        width:
+                          80,
+                        height:
+                          80,
+                        objectFit:
+                          "contain",
+                        borderRadius:
+                          10,
+                      }}
+
+LINE: 1089
+                        fontSize:
+                          16,
+                      }}
+                    >
+                      {
+                        product.name
+                      }
+                    </div>
+
+                    {hasBudget ? (
+                      <span
+                        style={{
+                          padding:
+                            "4px 8px",
+                          borderRadius:
+                            999,
+                          fontSize:
+                            12,
+
+LINE: 1106
+                            12,
+                          fontWeight:
+                            800,
+
+                          background:
+                            product.budgetStatus ===
+                            "within"
+                              ? "#ecfdf3"
+                              : "#fff7ed",
+
+                          color:
+                            product.budgetStatus ===
+                            "within"
+                              ? "#067647"
+                              : "#c2410c",
+                        }}
+                      >
+                        {budgetLabel(
+
+LINE: 1112
+                            "within"
+                              ? "#ecfdf3"
+                              : "#fff7ed",
+
+                          color:
+                            product.budgetStatus ===
+                            "within"
+                              ? "#067647"
+                              : "#c2410c",
+                        }}
+                      >
+                        {budgetLabel(
+                          product,
+                        )}
+                      </span>
+                    ) : null}
+                  </div>
+
+
+LINE: 1119
+                              ? "#067647"
+                              : "#c2410c",
+                        }}
+                      >
+                        {budgetLabel(
+                          product,
+                        )}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div
+                    style={{
+                      color:
+                        "#64748b",
+                      fontSize:
+                        14,
+                      lineHeight:
+
+LINE: 1135
+                        14,
+                      lineHeight:
+                        1.7,
+                    }}
+                  >
+                    {product.scoreReasons.join(
+                      " · ",
+                    )}
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop:
+                        6,
+                      color:
+                        "#2563eb",
+                      fontWeight:
+                        700,
+
+LINE: 1154
+                        13,
+                    }}
+                  >
+                    1차 점수{" "}
+                    {
+                      product.candidateScore
+                    }
+                    점
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    textAlign:
+                      "right",
+                  }}
+                >
+                  <div
+
+LINE: 1177
+                      marginBottom:
+                        10,
+                    }}
+                  >
+                    {formatPrice(
+                      product.price,
+                    )}
+                  </div>
+
+                  <a
+                    href={
+                      product.url
+                    }
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      color:
+                        "#2563eb",
+
+LINE: 1183
+                    )}
+                  </div>
+
+                  <a
+                    href={
+                      product.url
+                    }
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      color:
+                        "#2563eb",
+                      fontWeight:
+                        700,
+                    }}
+                  >
+                    상품 열기
+                  </a>
+
+LINE: 1203
+            ),
+          )}
+        </div>
+      )}
+
+      {captureId &&
+      category &&
+      finalists.length > 0 ? (
+        <NaverCaptureAutomation
+          captureId={captureId}
+          category={category}
+          finalists={finalists}
+        />
+      ) : null}
+    </main>
+  );
+}
+
+
+LINE: 1206
+      )}
+
+      {captureId &&
+      category &&
+      finalists.length > 0 ? (
+        <NaverCaptureAutomation
+          captureId={captureId}
+          category={category}
+          finalists={finalists}
+        />
+      ) : null}
+    </main>
+  );
+}
+
+
+LINE: 1207
+
+      {captureId &&
+      category &&
+      finalists.length > 0 ? (
+        <NaverCaptureAutomation
+          captureId={captureId}
+          category={category}
+          finalists={finalists}
+        />
+      ) : null}
+    </main>
+  );
+}
+

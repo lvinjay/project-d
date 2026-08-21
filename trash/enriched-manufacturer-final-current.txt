@@ -1,0 +1,471 @@
+﻿              );
+            }
+          }
+        }
+      }
+
+      console.log(
+        `[ENRICH ${position}] 검증 통과`,
+        `${Math.round(
+          (
+            Date.now() -
+            startedAt
+          ) /
+            1000,
+        )}초`,
+        detail.title,
+      );
+
+      return {
+        success: true,
+
+        position,
+
+        productId:
+          finalProductId,
+
+        resolverAttempts:
+          candidateResolverAttempts,
+
+        brightDataCalls:
+          (
+            usedCache
+              ? 0
+              : 1
+          ) +
+          extraReviewBrightDataCalls,
+
+        candidate: {
+          position,
+
+          canonicalSource: {
+            productId:
+              finalProductId,
+
+            brandName:
+              resolvedBrandName ||
+              detail.brand,
+
+            brandSite:
+              resolvedBrandSite,
+
+            url:
+              resolvedUrl,
+          },
+
+          reviewSource:
+            selectedReviewSource
+              ? {
+                  productName:
+                    selectedReviewSource.name,
+
+                  seller:
+                    selectedReviewSource.brand,
+
+                  price:
+                    selectedReviewSource.price,
+
+                  reviewCount:
+                    selectedReviewSource.reviewCount,
+
+                  rating:
+                    selectedReviewSource.rating,
+
+                  url:
+                    selectedReviewSource.url,
+
+                  resolvedUrl:
+                    selectedReviewSource.resolvedUrl,
+
+                  sourceType:
+                    selectedReviewSource.sourceType,
+
+                  isIndividualSeller:
+                    selectedReviewSource.isIndividualSeller,
+
+                  matchScore:
+                    selectedReviewSource.matchScore,
+
+                  reviewTextSource,
+
+                  status:
+                    "selected" as const,
+                }
+              : {
+                  productName:
+                    detail.title,
+
+                  seller:
+                    detail.sellerName,
+
+                  price:
+                    detail.finalPrice,
+
+                  reviewCount:
+                    detail.totalReviews,
+
+                  rating:
+                    detail.averageRating ??
+                    0,
+
+                  url:
+                    resolvedUrl,
+
+                  resolvedUrl:
+                    resolvedUrl,
+
+                  sourceType:
+                    "naver-store" as const,
+
+                  isIndividualSeller:
+                    true,
+
+                  matchScore:
+                    0,
+
+                  reviewTextSource:
+                    "canonical-fallback" as const,
+
+                  status:
+                    "fallback-canonical" as const,
+                },
+
+          purchaseSource:
+            selectedPurchaseSource
+              ? {
+                  productName:
+                    selectedPurchaseSource.name,
+
+                  seller:
+                    selectedPurchaseSource.brand,
+
+                  price:
+                    selectedPurchaseSource.price,
+
+                  reviewCount:
+                    selectedPurchaseSource.reviewCount,
+
+                  rating:
+                    selectedPurchaseSource.rating,
+
+                  url:
+                    selectedPurchaseSource.url,
+
+                  resolvedUrl:
+                    selectedPurchaseSource.resolvedUrl,
+
+                  sourceType:
+                    selectedPurchaseSource.sourceType,
+
+                  isIndividualSeller:
+                    selectedPurchaseSource.isIndividualSeller,
+
+                  matchScore:
+                    selectedPurchaseSource.matchScore,
+
+                  status:
+                    "selected" as const,
+                }
+              : {
+                  productName:
+                    market.name,
+
+                  seller:
+                    market.seller,
+
+                  price:
+                    market.price,
+
+                  reviewCount:
+                    market.reviewCount,
+
+                  rating:
+                    market.rating,
+
+                  url:
+                    market.url,
+
+                  resolvedUrl:
+                    market.url,
+
+                  sourceType:
+                    "unknown" as const,
+
+                  isIndividualSeller:
+                    false,
+
+                  matchScore:
+                    0,
+
+                  status:
+                    "fallback-market" as const,
+                },
+
+          market: {
+            productName:
+              market.name,
+
+            seller:
+              market.seller,
+
+            listedPrice:
+              market.price,
+
+            reviewCount:
+              market.reviewCount,
+
+            rating:
+              market.rating,
+
+            imageUrl:
+              market.imageUrl,
+
+            sourceUrl:
+              market.url,
+          },
+
+          resolution: {
+            productId:
+              finalProductId,
+
+            brandName:
+              resolvedBrandName,
+
+            brandSite:
+              resolvedBrandSite,
+
+            canonicalUrl:
+              resolvedUrl,
+          },
+
+          detail: {
+            productId:
+              finalProductId,
+
+            productName:
+              detail.title,
+
+            brand:
+              detail.brand,
+
+            manufacturer:
+              detail.manufacturer,
+
+            modelName:
+              detail.modelName,
+
+            originalPrice:
+              detail.originalPrice,
+
+            finalPrice:
+              detail.finalPrice,
+
+            discountRate:
+              detail.discountRate,
+
+            reviewCount:
+              reviewDetail.totalReviews,
+
+            rating:
+              reviewDetail.averageRating,
+
+            sellerName:
+              detail.sellerName,
+
+            categoryName:
+              detail.categoryName,
+
+            imageUrl:
+              detail.imageUrl,
+
+            reviewSamples:
+              reviewDetail.topReviews.length,
+
+            reviews:
+              reviewDetail.topReviews,
+
+            sourceUrl:
+              detail.url,
+
+            reviewSourceUrl,
+
+            detailStatus:
+              "full",
+          },
+        },
+      };
+    }
+
+    /*
+      3개씩 병렬 처리.
+
+      한 묶음이 끝날 때마다 결과를 반영하고,
+      최종 5개가 확보되면 다음 묶음은 시작하지 않는다.
+    */
+    for (
+      let start = 0;
+      start <
+      marketCandidates.length;
+      start +=
+        BATCH_SIZE
+    ) {
+      if (
+        finalCandidates.length >=
+        TARGET_COUNT
+      ) {
+        break;
+      }
+
+      const batch =
+        marketCandidates.slice(
+          start,
+          start +
+            BATCH_SIZE,
+        );
+
+      console.log(
+        `[ENRICH BATCH] ${start + 1}~${start + batch.length}번 병렬 시작`,
+      );
+
+      const results =
+        await Promise.all(
+          batch.map(
+            (
+              market,
+              batchIndex,
+            ) =>
+              processCandidate(
+                market,
+                start +
+                  batchIndex,
+              ),
+          ),
+        );
+
+      for (
+        const result of
+        results
+      ) {
+        resolverAttempts +=
+          result.resolverAttempts;
+
+        brightDataCalls +=
+          result.brightDataCalls;
+
+        if (
+          !result.success
+        ) {
+          failures.push(
+            result.failure,
+          );
+
+          continue;
+        }
+
+        /*
+          같은 배치 안에서
+          동일 상품이 동시에 통과했을 수 있으므로
+          여기서 최종 중복검사.
+        */
+        if (
+          seenProductIds.has(
+            result.productId,
+          )
+        ) {
+          const failure:
+            FailureItem = {
+              position:
+                result.position,
+
+              marketProduct:
+                result.candidate
+                  .market
+                  .productName,
+
+              stage:
+                "duplicate",
+
+              reason:
+                `Bright Data 기준 동일상품 중복: ${result.productId}`,
+            };
+
+          failures.push(
+            failure,
+          );
+
+          console.log(
+            `[ENRICH ${result.position}] 탈락(duplicate)`,
+            failure.reason,
+          );
+
+          continue;
+        }
+
+        if (
+          result.candidate
+            .detail
+            .detailStatus ===
+          "partial-market"
+        ) {
+          /*
+            partial은 예비 후보로만 보관한다.
+            뒤쪽 후보에서 full 상세를 확보할 가능성이 있으므로
+            지금 최종 5개 자리를 차지시키지 않는다.
+          */
+          seenProductIds.add(
+            result.productId,
+          );
+
+          partialCandidates.push(
+            result.candidate,
+          );
+
+          console.log(
+            `[ENRICH ${result.position}] partial 예비 후보 보관`,
+            `${partialCandidates.length}개`,
+            result.candidate
+              .market
+              .productName,
+          );
+
+          continue;
+        }
+
+        if (
+          finalCandidates.length >=
+          TARGET_COUNT
+        ) {
+          /*
+            이 배치에서 이미 full 후보 5개가 찼으면
+            추가 성공 결과는 저장하지 않는다.
+            다음 배치는 호출하지 않는다.
+          */
+          continue;
+        }
+
+        seenProductIds.add(
+          result.productId,
+        );
+
+        finalCandidates.push(
+          result.candidate,
+        );
+
+        console.log(
+          `[ENRICH ${result.position}] full 최종 후보 확정`,
+          `${finalCandidates.length}/${TARGET_COUNT}`,
+          result.candidate
+            .detail
+            .productName,
+        );
+      }
+
+      console.log(
+        `[ENRICH BATCH] 완료`,
+        `현재 최종 ${finalCandidates.length}/${TARGET_COUNT}`,
+      );
+    }
+
+    /*
+      모든 후보를 검사한 뒤에도 full 후보가 5개 미만이면
+      앞서 보관한 partial 후보를 시장 우선순위 순서대로

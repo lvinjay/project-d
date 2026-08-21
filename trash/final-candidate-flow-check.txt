@@ -1,0 +1,271 @@
+﻿
+  app\admin\naver-capture\page.tsx:555:  return "예산 제한 없음";
+  app\admin\naver-capture\page.tsx:556:}
+  app\admin\naver-capture\page.tsx:557:
+  app\admin\naver-capture\page.tsx:558:export default function NaverCapturePage() {
+  app\admin\naver-capture\page.tsx:559:  const [
+> app\admin\naver-capture\page.tsx:560:    captureId,
+> app\admin\naver-capture\page.tsx:561:    setCaptureId,
+  app\admin\naver-capture\page.tsx:562:  ] = useState("");
+  app\admin\naver-capture\page.tsx:563:
+  app\admin\naver-capture\page.tsx:564:  const [
+  app\admin\naver-capture\page.tsx:565:    products,
+  app\admin\naver-capture\page.tsx:566:    setProducts,
+  app\admin\naver-capture\page.tsx:567:  ] =
+  app\admin\naver-capture\page.tsx:568:    useState<
+  app\admin\naver-capture\page.tsx:569:      CapturedProduct[]
+  app\admin\naver-capture\page.tsx:570:    >([]);
+  app\admin\naver-capture\page.tsx:571:
+  app\admin\naver-capture\page.tsx:572:  const [
+  app\admin\naver-capture\page.tsx:573:    category,
+  app\admin\naver-capture\page.tsx:612:        );
+  app\admin\naver-capture\page.tsx:613:
+  app\admin\naver-capture\page.tsx:614:        return;
+  app\admin\naver-capture\page.tsx:615:      }
+  app\admin\naver-capture\page.tsx:616:
+> app\admin\naver-capture\page.tsx:617:      setCaptureId(id);
+  app\admin\naver-capture\page.tsx:618:
+  app\admin\naver-capture\page.tsx:619:      try {
+  app\admin\naver-capture\page.tsx:620:        const response =
+  app\admin\naver-capture\page.tsx:621:          await fetch(
+  app\admin\naver-capture\page.tsx:622:            `/api/naver-capture?id=${encodeURIComponent(
+  app\admin\naver-capture\page.tsx:623:              id,
+  app\admin\naver-capture\page.tsx:624:            )}`,
+  app\admin\naver-capture\page.tsx:625:            {
+  app\admin\naver-capture\page.tsx:626:              cache:
+  app\admin\naver-capture\page.tsx:627:                "no-store",
+  app\admin\naver-capture\page.tsx:628:            },
+  app\admin\naver-capture\page.tsx:629:          );
+  app\admin\naver-capture\page.tsx:1198:            ),
+  app\admin\naver-capture\page.tsx:1199:          )}
+  app\admin\naver-capture\page.tsx:1200:        </div>
+  app\admin\naver-capture\page.tsx:1201:      )}
+  app\admin\naver-capture\page.tsx:1202:
+> app\admin\naver-capture\page.tsx:1203:      {captureId &&
+  app\admin\naver-capture\page.tsx:1204:      category &&
+  app\admin\naver-capture\page.tsx:1205:      finalists.length > 0 ? (
+  app\admin\naver-capture\page.tsx:1206:        <NaverCaptureAutomation
+> app\admin\naver-capture\page.tsx:1207:          captureId={captureId}
+  app\admin\naver-capture\page.tsx:1208:          category={category}
+  app\admin\naver-capture\page.tsx:1209:          finalists={finalists}
+  app\admin\naver-capture\page.tsx:1210:        />
+  app\admin\naver-capture\page.tsx:1211:      ) : null}
+  app\admin\naver-capture\page.tsx:1212:    </main>
+  app\admin\naver-capture\page.tsx:1213:  );
+  app\admin\naver-capture\page.tsx:1214:}
+  app\admin\naver-capture\page.tsx:1215:
+  app\api\market-candidates-enriched\route.ts:62:    | "budget"
+  app\api\market-candidates-enriched\route.ts:63:    | "duplicate";
+  app\api\market-candidates-enriched\route.ts:64:  reason: string;
+  app\api\market-candidates-enriched\route.ts:65:};
+  app\api\market-candidates-enriched\route.ts:66:
+> app\api\market-candidates-enriched\route.ts:67:type FinalCandidate = {
+  app\api\market-candidates-enriched\route.ts:68:  position: number;
+  app\api\market-candidates-enriched\route.ts:69:
+  app\api\market-candidates-enriched\route.ts:70:  market: {
+  app\api\market-candidates-enriched\route.ts:71:    productName: string;
+  app\api\market-candidates-enriched\route.ts:72:    listedPrice: number;
+  app\api\market-candidates-enriched\route.ts:73:    reviewCount: number;
+  app\api\market-candidates-enriched\route.ts:74:    rating: number;
+  app\api\market-candidates-enriched\route.ts:75:    imageUrl: string;
+  app\api\market-candidates-enriched\route.ts:76:    sourceUrl: string;
+  app\api\market-candidates-enriched\route.ts:77:  };
+  app\api\market-candidates-enriched\route.ts:78:
+  app\api\market-candidates-enriched\route.ts:79:  resolution: {
+  app\api\market-candidates-enriched\route.ts:120:
+  app\api\market-candidates-enriched\route.ts:121:  position: number;
+  app\api\market-candidates-enriched\route.ts:122:
+  app\api\market-candidates-enriched\route.ts:123:  productId: string;
+  app\api\market-candidates-enriched\route.ts:124:
+> app\api\market-candidates-enriched\route.ts:125:  candidate: FinalCandidate;
+  app\api\market-candidates-enriched\route.ts:126:
+  app\api\market-candidates-enriched\route.ts:127:  resolverAttempts: number;
+  app\api\market-candidates-enriched\route.ts:128:
+  app\api\market-candidates-enriched\route.ts:129:  brightDataCalls: number;
+  app\api\market-candidates-enriched\route.ts:130:};
+  app\api\market-candidates-enriched\route.ts:131:
+  app\api\market-candidates-enriched\route.ts:132:type ProcessFailure = {
+  app\api\market-candidates-enriched\route.ts:133:  success: false;
+  app\api\market-candidates-enriched\route.ts:134:
+  app\api\market-candidates-enriched\route.ts:135:  failure: FailureItem;
+  app\api\market-candidates-enriched\route.ts:136:
+  app\api\market-candidates-enriched\route.ts:137:  resolverAttempts: number;
+  app\api\market-candidates-enriched\route.ts:358:    const requestUrl =
+  app\api\market-candidates-enriched\route.ts:359:      new URL(
+  app\api\market-candidates-enriched\route.ts:360:        request.url,
+  app\api\market-candidates-enriched\route.ts:361:      );
+  app\api\market-candidates-enriched\route.ts:362:
+> app\api\market-candidates-enriched\route.ts:363:    const captureId =
+  app\api\market-candidates-enriched\route.ts:364:      (
+  app\api\market-candidates-enriched\route.ts:365:        requestUrl.searchParams.get(
+> app\api\market-candidates-enriched\route.ts:366:          "captureId",
+  app\api\market-candidates-enriched\route.ts:367:        ) ?? ""
+  app\api\market-candidates-enriched\route.ts:368:      ).trim();
+  app\api\market-candidates-enriched\route.ts:369:
+> app\api\market-candidates-enriched\route.ts:370:    if (!captureId) {
+  app\api\market-candidates-enriched\route.ts:371:      return NextResponse.json(
+  app\api\market-candidates-enriched\route.ts:372:        {
+  app\api\market-candidates-enriched\route.ts:373:          success: false,
+  app\api\market-candidates-enriched\route.ts:374:          message:
+> app\api\market-candidates-enriched\route.ts:375:            "captureId가 필요합니다.",
+  app\api\market-candidates-enriched\route.ts:376:        },
+  app\api\market-candidates-enriched\route.ts:377:        {
+  app\api\market-candidates-enriched\route.ts:378:          status: 400,
+  app\api\market-candidates-enriched\route.ts:379:        },
+  app\api\market-candidates-enriched\route.ts:380:      );
+  app\api\market-candidates-enriched\route.ts:381:    }
+  app\api\market-candidates-enriched\route.ts:382:
+  app\api\market-candidates-enriched\route.ts:383:    const captureUrl =
+  app\api\market-candidates-enriched\route.ts:384:      new URL(
+  app\api\market-candidates-enriched\route.ts:385:        "/api/naver-capture",
+  app\api\market-candidates-enriched\route.ts:386:        requestUrl.origin,
+  app\api\market-candidates-enriched\route.ts:387:      );
+  app\api\market-candidates-enriched\route.ts:388:
+  app\api\market-candidates-enriched\route.ts:389:    captureUrl.searchParams.set(
+  app\api\market-candidates-enriched\route.ts:390:      "id",
+> app\api\market-candidates-enriched\route.ts:391:      captureId,
+  app\api\market-candidates-enriched\route.ts:392:    );
+  app\api\market-candidates-enriched\route.ts:393:
+  app\api\market-candidates-enriched\route.ts:394:    const captureResponse =
+  app\api\market-candidates-enriched\route.ts:395:      await fetch(
+  app\api\market-candidates-enriched\route.ts:396:        captureUrl,
+  app\api\market-candidates-enriched\route.ts:397:        {
+  app\api\market-candidates-enriched\route.ts:398:          cache:
+  app\api\market-candidates-enriched\route.ts:399:            "no-store",
+  app\api\market-candidates-enriched\route.ts:400:        },
+  app\api\market-candidates-enriched\route.ts:401:      );
+  app\api\market-candidates-enriched\route.ts:402:
+  app\api\market-candidates-enriched\route.ts:403:    const captureData =
+  app\api\market-candidates-enriched\route.ts:476:        .slice(
+  app\api\market-candidates-enriched\route.ts:477:          0,
+  app\api\market-candidates-enriched\route.ts:478:          MAX_CANDIDATE_COUNT,
+  app\api\market-candidates-enriched\route.ts:479:        );
+  app\api\market-candidates-enriched\route.ts:480:
+> app\api\market-candidates-enriched\route.ts:481:    const finalCandidates:
+> app\api\market-candidates-enriched\route.ts:482:      FinalCandidate[] = [];
+  app\api\market-candidates-enriched\route.ts:483:
+  app\api\market-candidates-enriched\route.ts:484:    const failures:
+  app\api\market-candidates-enriched\route.ts:485:      FailureItem[] = [];
+  app\api\market-candidates-enriched\route.ts:486:
+  app\api\market-candidates-enriched\route.ts:487:    const seenProductIds =
+  app\api\market-candidates-enriched\route.ts:488:      new Set<string>();
+  app\api\market-candidates-enriched\route.ts:489:
+  app\api\market-candidates-enriched\route.ts:490:    let resolverAttempts = 0;
+  app\api\market-candidates-enriched\route.ts:491:
+  app\api\market-candidates-enriched\route.ts:492:    let brightDataCalls = 0;
+  app\api\market-candidates-enriched\route.ts:493:
+  app\api\market-candidates-enriched\route.ts:494:    async function processCandidate(
+  app\api\market-candidates-enriched\route.ts:1075:      marketCandidates.length;
+  app\api\market-candidates-enriched\route.ts:1076:      start +=
+  app\api\market-candidates-enriched\route.ts:1077:        BATCH_SIZE
+  app\api\market-candidates-enriched\route.ts:1078:    ) {
+  app\api\market-candidates-enriched\route.ts:1079:      if (
+> app\api\market-candidates-enriched\route.ts:1080:        finalCandidates.length >=
+  app\api\market-candidates-enriched\route.ts:1081:        TARGET_COUNT
+  app\api\market-candidates-enriched\route.ts:1082:      ) {
+  app\api\market-candidates-enriched\route.ts:1083:        break;
+  app\api\market-candidates-enriched\route.ts:1084:      }
+  app\api\market-candidates-enriched\route.ts:1085:
+  app\api\market-candidates-enriched\route.ts:1086:      const batch =
+  app\api\market-candidates-enriched\route.ts:1087:        marketCandidates.slice(
+  app\api\market-candidates-enriched\route.ts:1088:          start,
+  app\api\market-candidates-enriched\route.ts:1089:          start +
+  app\api\market-candidates-enriched\route.ts:1090:            BATCH_SIZE,
+  app\api\market-candidates-enriched\route.ts:1091:        );
+  app\api\market-candidates-enriched\route.ts:1092:
+  app\api\market-candidates-enriched\route.ts:1167:
+  app\api\market-candidates-enriched\route.ts:1168:          continue;
+  app\api\market-candidates-enriched\route.ts:1169:        }
+  app\api\market-candidates-enriched\route.ts:1170:
+  app\api\market-candidates-enriched\route.ts:1171:        if (
+> app\api\market-candidates-enriched\route.ts:1172:          finalCandidates.length >=
+  app\api\market-candidates-enriched\route.ts:1173:          TARGET_COUNT
+  app\api\market-candidates-enriched\route.ts:1174:        ) {
+  app\api\market-candidates-enriched\route.ts:1175:          /*
+  app\api\market-candidates-enriched\route.ts:1176:            이 배치에서 이미 5개가 찼으면
+  app\api\market-candidates-enriched\route.ts:1177:            추가 성공 결과는 저장하지 않는다.
+  app\api\market-candidates-enriched\route.ts:1178:            다음 배치는 호출하지 않는다.
+  app\api\market-candidates-enriched\route.ts:1179:          */
+  app\api\market-candidates-enriched\route.ts:1180:          continue;
+  app\api\market-candidates-enriched\route.ts:1181:        }
+  app\api\market-candidates-enriched\route.ts:1182:
+  app\api\market-candidates-enriched\route.ts:1183:        seenProductIds.add(
+  app\api\market-candidates-enriched\route.ts:1184:          result.productId,
+  app\api\market-candidates-enriched\route.ts:1185:        );
+  app\api\market-candidates-enriched\route.ts:1186:
+> app\api\market-candidates-enriched\route.ts:1187:        finalCandidates.push(
+  app\api\market-candidates-enriched\route.ts:1188:          result.candidate,
+  app\api\market-candidates-enriched\route.ts:1189:        );
+  app\api\market-candidates-enriched\route.ts:1190:
+  app\api\market-candidates-enriched\route.ts:1191:        console.log(
+  app\api\market-candidates-enriched\route.ts:1192:          `[ENRICH ${result.position}] 최종 후보 확정`,
+> app\api\market-candidates-enriched\route.ts:1193:          `${finalCandidates.length}/${TARGET_COUNT}`,
+  app\api\market-candidates-enriched\route.ts:1194:          result.candidate
+  app\api\market-candidates-enriched\route.ts:1195:            .detail
+  app\api\market-candidates-enriched\route.ts:1196:            .productName,
+  app\api\market-candidates-enriched\route.ts:1197:        );
+  app\api\market-candidates-enriched\route.ts:1198:      }
+  app\api\market-candidates-enriched\route.ts:1199:
+  app\api\market-candidates-enriched\route.ts:1200:      console.log(
+  app\api\market-candidates-enriched\route.ts:1201:        `[ENRICH BATCH] 완료`,
+> app\api\market-candidates-enriched\route.ts:1202:        `현재 최종 ${finalCandidates.length}/${TARGET_COUNT}`,
+  app\api\market-candidates-enriched\route.ts:1203:      );
+  app\api\market-candidates-enriched\route.ts:1204:    }
+  app\api\market-candidates-enriched\route.ts:1205:
+  app\api\market-candidates-enriched\route.ts:1206:    console.log(
+  app\api\market-candidates-enriched\route.ts:1207:      "Market candidates enriched summary:",
+  app\api\market-candidates-enriched\route.ts:1208:      {
+  app\api\market-candidates-enriched\route.ts:1209:        category,
+  app\api\market-candidates-enriched\route.ts:1210:
+  app\api\market-candidates-enriched\route.ts:1211:        marketCandidateCount:
+  app\api\market-candidates-enriched\route.ts:1212:          marketCandidates.length,
+  app\api\market-candidates-enriched\route.ts:1213:
+  app\api\market-candidates-enriched\route.ts:1214:        resolverAttempts,
+  app\api\market-candidates-enriched\route.ts:1215:
+  app\api\market-candidates-enriched\route.ts:1216:        brightDataCalls,
+  app\api\market-candidates-enriched\route.ts:1217:
+> app\api\market-candidates-enriched\route.ts:1218:        finalCandidateCount:
+> app\api\market-candidates-enriched\route.ts:1219:          finalCandidates.length,
+  app\api\market-candidates-enriched\route.ts:1220:
+> app\api\market-candidates-enriched\route.ts:1221:        targetReached:
+> app\api\market-candidates-enriched\route.ts:1222:          finalCandidates.length >=
+  app\api\market-candidates-enriched\route.ts:1223:          TARGET_COUNT,
+  app\api\market-candidates-enriched\route.ts:1224:
+  app\api\market-candidates-enriched\route.ts:1225:        failureCount:
+  app\api\market-candidates-enriched\route.ts:1226:          failures.length,
+  app\api\market-candidates-enriched\route.ts:1227:      },
+  app\api\market-candidates-enriched\route.ts:1228:    );
+  app\api\market-candidates-enriched\route.ts:1229:
+  app\api\market-candidates-enriched\route.ts:1230:    if (
+  app\api\market-candidates-enriched\route.ts:1231:      failures.length >
+  app\api\market-candidates-enriched\route.ts:1232:      0
+  app\api\market-candidates-enriched\route.ts:1233:    ) {
+  app\api\market-candidates-enriched\route.ts:1234:      console.log(
+  app\api\market-candidates-enriched\route.ts:1255:
+  app\api\market-candidates-enriched\route.ts:1256:      resolverAttempts,
+  app\api\market-candidates-enriched\route.ts:1257:
+  app\api\market-candidates-enriched\route.ts:1258:      brightDataCalls,
+  app\api\market-candidates-enriched\route.ts:1259:
+> app\api\market-candidates-enriched\route.ts:1260:      finalCandidateCount:
+> app\api\market-candidates-enriched\route.ts:1261:        finalCandidates.length,
+  app\api\market-candidates-enriched\route.ts:1262:
+> app\api\market-candidates-enriched\route.ts:1263:      targetReached:
+> app\api\market-candidates-enriched\route.ts:1264:        finalCandidates.length >=
+  app\api\market-candidates-enriched\route.ts:1265:        TARGET_COUNT,
+  app\api\market-candidates-enriched\route.ts:1266:
+> app\api\market-candidates-enriched\route.ts:1267:      finalCandidates,
+  app\api\market-candidates-enriched\route.ts:1268:
+  app\api\market-candidates-enriched\route.ts:1269:      failureCount:
+  app\api\market-candidates-enriched\route.ts:1270:        failures.length,
+  app\api\market-candidates-enriched\route.ts:1271:
+  app\api\market-candidates-enriched\route.ts:1272:      failures,
+  app\api\market-candidates-enriched\route.ts:1273:    });
+  app\api\market-candidates-enriched\route.ts:1274:  } catch (error) {
+  app\api\market-candidates-enriched\route.ts:1275:    console.error(
+  app\api\market-candidates-enriched\route.ts:1276:      "Market candidates enriched error:",
+  app\api\market-candidates-enriched\route.ts:1277:      error,
+  app\api\market-candidates-enriched\route.ts:1278:    );
+  app\api\market-candidates-enriched\route.ts:1279:
+
+
+
