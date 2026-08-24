@@ -1,4 +1,4 @@
-﻿import type {
+import type {
   ManufacturerRawProduct,
 } from "./normalizeManufacturerProduct";
 
@@ -427,6 +427,39 @@ function extractFallbackModelName(
   );
 }
 
+function extractBodyModelCandidates(
+  html: string,
+) {
+  const text = cleanText(
+    html
+      .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " "),
+  );
+
+  const candidates: string[] = [];
+  const patterns = [
+    /\b([A-Z][A-Z0-9-]*\d[A-Z0-9-]*(?:\s+(?:Master|Ultra|Pro|MaxV|Max|Plus)){1,3})\b/gi,
+    /\b([A-Z]+\d+[A-Z0-9-]*(?:\s+(?:Master|Ultra|Pro|MaxV|Max|Plus)){1,3})\b/gi,
+  ];
+
+  for (const pattern of patterns) {
+    let match: RegExpExecArray | null;
+    while ((match = pattern.exec(text)) !== null) {
+      const value = cleanText(match[1] ?? "");
+      if (value) candidates.push(value);
+    }
+  }
+
+  return [...new Set(candidates)];
+}
+
+function extractFallbackBodyModelName(
+  html: string,
+) {
+  const candidates = extractBodyModelCandidates(html);
+  return candidates.length === 1 ? candidates[0] : "";
+}
+
 export function parseManufacturerProductHtml(
   html: string,
   canonicalUrl: string,
@@ -474,8 +507,13 @@ export function parseManufacturerProductHtml(
       product?.model ??
       product?.mpn ??
       product?.sku ??
-      extractFallbackModelName(
-        html,
+      (
+        extractFallbackModelName(
+          html,
+        ) ||
+        extractFallbackBodyModelName(
+          html,
+        )
       ),
     );
 

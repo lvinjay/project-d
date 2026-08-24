@@ -1,0 +1,76 @@
+﻿import {
+  parseManufacturerProductHtml,
+} from "../lib/parseManufacturerProductHtml";
+
+import {
+  normalizeManufacturerProduct,
+  isUsableManufacturerProduct,
+} from "../lib/normalizeManufacturerProduct";
+
+async function test(url: string) {
+  console.log("");
+  console.log("----------------------------------------");
+  console.log("URL:", url);
+  console.log("----------------------------------------");
+
+  const response =
+    await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0",
+      },
+      redirect: "follow",
+    });
+
+  console.log("HTTP:", response.status);
+
+  const html =
+    await response.text();
+
+  const raw =
+    parseManufacturerProductHtml(
+      html,
+      response.url || url,
+    );
+
+  const detail =
+    normalizeManufacturerProduct(
+      raw,
+      response.url || url,
+    );
+
+  console.log(
+    JSON.stringify(
+      detail,
+      null,
+      2,
+    ),
+  );
+
+  console.log(
+    "usable:",
+    isUsableManufacturerProduct(
+      detail,
+    ),
+  );
+}
+
+async function main() {
+  await test(
+    "https://jonrtech.com/products/x9pro",
+  );
+
+  await test(
+    "https://jonrofficial.com/products/jonr-x9-pro-robot-vacuum-cleaner",
+  );
+
+  console.log("");
+  console.log("SerpApi 호출: 0");
+  console.log("Bright Data 호출: 0");
+  console.log("DB 변경: 0");
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

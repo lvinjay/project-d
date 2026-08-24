@@ -438,26 +438,19 @@ export async function discoverManufacturerProductUrl(
         .toLowerCase();
 
     /*
-      후보 페이지가 요청 모델의 핵심 검색어를 실제로 모두 포함하는지 확인한다.
+      검색어 중 최소 하나가 실제 상세페이지에도
+      존재해야 상품 후보로 인정한다.
 
-      기존에는 terms 중 하나만 있어도 즉시 성공했기 때문에
-      V70 Ultra 탐색 중 "Ultra"만 포함된 Z60 Ultra 페이지가
-      먼저 선택될 수 있었다.
-
-      여기서는 discovery 단계에서도 모든 strong search term을 요구한다.
-      최종 동일상품 검증은 이후 validateProductMatch에서 한 번 더 수행한다.
+      이후 상품 일치 여부는 별도
+      validateProductMatch에서 다시 검증한다.
     */
-    const matchedTerms =
-      terms.filter(
+    const matched =
+      terms.some(
         (term) =>
           text.includes(
             term,
           ),
       );
-
-    const matched =
-      matchedTerms.length ===
-      terms.length;
 
     if (!matched) {
       continue;

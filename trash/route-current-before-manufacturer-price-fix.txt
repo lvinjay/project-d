@@ -2001,24 +2001,25 @@ export async function GET(
           manufacturerDetail.detail;
 
         /*
-          제조사 공식페이지 가격은 최종 국내 판매가로 신뢰하지 않는다.
+          제조사 공식페이지는 가격을 제공하지 않거나
+          0원으로 노출할 수 있다.
 
-          이유:
-          - 해외 공식몰은 다른 통화 가격을 숫자만 노출할 수 있다.
-          - 렌탈/구독형 공식페이지는 월 요금을 본체 가격처럼 노출할 수 있다.
-          - 제조사 페이지의 역할은 canonical identity / 모델명 / 스펙 확인이다.
-
-          따라서 Manufacturer 경로의 기준 가격은 항상
-          이미 시장 후보에서 확보한 국내 시장가격을 사용한다.
-
-          이후 searchProductOffers()가 동일 모델의 실제 개별 판매처를
-          찾으면 reviewSource / purchaseSource 가격은 별도로 갱신된다.
+          제조사 가격이 유효하면 그대로 쓰고,
+          없으면 이미 시장 후보에서 확보한 가격을 사용한다.
+          이후 review/purchase source 검색에서 실제 판매처 가격을
+          확보하면 그 값을 별도로 사용한다.
         */
         const manufacturerResolvedPrice =
-          market.price;
+          manufacturer.finalPrice >
+          0
+            ? manufacturer.finalPrice
+            : market.price;
 
         const manufacturerResolvedOriginalPrice =
-          market.price;
+          manufacturer.originalPrice >
+          0
+            ? manufacturer.originalPrice
+            : manufacturerResolvedPrice;
 
         detail = {
           url:

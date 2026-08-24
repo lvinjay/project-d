@@ -1,0 +1,62 @@
+﻿import {
+  parseManufacturerProductHtml,
+} from "../lib/parseManufacturerProductHtml";
+
+import {
+  normalizeManufacturerProduct,
+  isUsableManufacturerProduct,
+} from "../lib/normalizeManufacturerProduct";
+
+async function main() {
+  const url =
+    "https://www.lge.co.kr/care-solutions/vacuum-cleaners/n95twu?dpType=careTab&subscCategoryKeyId=254760";
+
+  const response =
+    await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0",
+      },
+    });
+
+  console.log("HTTP:", response.status);
+
+  const html =
+    await response.text();
+
+  const raw =
+    parseManufacturerProductHtml(
+      html,
+      url,
+    );
+
+  const detail =
+    normalizeManufacturerProduct(
+      raw,
+      url,
+    );
+
+  console.log(
+    JSON.stringify(
+      detail,
+      null,
+      2,
+    ),
+  );
+
+  console.log("");
+  console.log(
+    "usable:",
+    isUsableManufacturerProduct(detail),
+  );
+
+  console.log("");
+  console.log("SerpApi 호출: 0");
+  console.log("Bright Data 호출: 0");
+  console.log("DB 변경: 0");
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

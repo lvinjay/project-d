@@ -1,0 +1,137 @@
+﻿import fs from "node:fs";
+
+function loadEnv(file: string) {
+  if (!fs.existsSync(file)) {
+    return;
+  }
+
+  const text =
+    fs.readFileSync(
+      file,
+      "utf8",
+    );
+
+  for (const line of text.split(/\r?\n/)) {
+    const trimmed = line.trim();
+
+    if (
+      !trimmed ||
+      trimmed.startsWith("#")
+    ) {
+      continue;
+    }
+
+    const index =
+      trimmed.indexOf("=");
+
+    if (index < 1) {
+      continue;
+    }
+
+    const key =
+      trimmed.slice(0, index).trim();
+
+    let value =
+      trimmed.slice(index + 1).trim();
+
+    value =
+      value.replace(
+        /^["']|["']$/g,
+        "",
+      );
+
+    if (!process.env[key]) {
+      process.env[key] = value;
+    }
+  }
+}
+
+loadEnv(".env.local");
+
+async function main() {
+  const url =
+    process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !key) {
+    throw new Error(
+      "Supabase 환경변수를 찾지 못했습니다.",
+    );
+  }
+
+  const headers = {
+    apikey: key,
+    Authorization: `Bearer ${key}`,
+  };
+
+  for (
+    const table of [
+      "brand_store_mappings",
+      "official_site_mappings",
+    ]
+  ) {
+    console.log("");
+    console.log(
+      "----------------------------------------",
+    );
+    console.log("TABLE:", table);
+    console.log(
+      "----------------------------------------",
+    );
+
+    const response =
+      await fetch(
+        `${url}/rest/v1/${table}?select=*`,
+        {
+          headers,
+        },
+      );
+
+    if (!response.ok) {
+      console.log(
+        "조회 실패:",
+        response.status,
+        await response.text(),
+      );
+
+      continue;
+    }
+
+    const rows =
+      await response.json();
+
+    const matches =
+      rows.filter((row: any) =>
+        JSON.stringify(row)
+          .toLowerCase()
+          .includes("jonr") ||
+        JSON.stringify(row)
+          .toLowerCase()
+          .includes("존알") ||
+        JSON.stringify(row)
+          .toLowerCase()
+          .includes("inic"),
+      );
+
+    console.log(
+      JSON.stringify(
+        matches,
+        null,
+        2,
+      ),
+    );
+  }
+
+  console.log("");
+  console.log("===== 완료 =====");
+  console.log("SerpApi 호출: 0");
+  console.log("Bright Data 호출: 0");
+  console.log("DB 변경: 0");
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

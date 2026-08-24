@@ -1,0 +1,137 @@
+﻿import fs from "node:fs";
+
+function loadEnv(file: string) {
+  if (!fs.existsSync(file)) return;
+
+  for (const raw of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
+    const line = raw.trim();
+
+    if (!line || line.startsWith("#")) continue;
+
+    const index = line.indexOf("=");
+
+    if (index <= 0) continue;
+
+    const key = line.slice(0, index).trim();
+    let value = line.slice(index + 1).trim();
+
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+
+    if (!(key in process.env)) {
+      process.env[key] = value;
+    }
+  }
+}
+
+async function main() {
+  loadEnv(".env.local");
+  loadEnv(".env");
+
+  const {
+    supabaseAdmin,
+  } = await import("../lib/supabaseAdmin");
+
+  const {
+    saveOfficialSiteMapping,
+    findOfficialSiteMapping,
+  } = await import("../lib/officialSiteMappingsDb");
+
+  const {
+    data: before,
+    error: beforeError,
+  } =
+    await supabaseAdmin
+      .from("brand_store_mappings")
+      .select("*")
+      .eq("brand_key", "jonr")
+      .eq(
+        "brand_site",
+        "https://brand.naver.com/inic",
+      );
+
+  if (beforeError) {
+    throw beforeError;
+  }
+
+  console.log("삭제 대상:");
+  console.log(
+    JSON.stringify(
+      before,
+      null,
+      2,
+    ),
+  );
+
+  const {
+    data: deleted,
+    error: deleteError,
+  } =
+    await supabaseAdmin
+      .from("brand_store_mappings")
+      .delete()
+      .eq("brand_key", "jonr")
+      .eq(
+        "brand_site",
+        "https://brand.naver.com/inic",
+      )
+      .select();
+
+  if (deleteError) {
+    throw deleteError;
+  }
+
+  console.log("");
+  console.log("삭제 완료:");
+  console.log(
+    JSON.stringify(
+      deleted,
+      null,
+      2,
+    ),
+  );
+
+  console.log("");
+  console.log("===== 2. JONR 공식사이트 등록 =====");
+
+  await saveOfficialSiteMapping(
+    [
+      "JONR",
+      "존알",
+    ],
+    "https://jonrtech.com",
+    {
+      source: "verified",
+      confidence: 100,
+    },
+  );
+
+  const mapping =
+    await findOfficialSiteMapping(
+      [
+        "JONR",
+        "존알",
+      ],
+    );
+
+  console.log(
+    JSON.stringify(
+      mapping,
+      null,
+      2,
+    ),
+  );
+
+  console.log("");
+  console.log("SerpApi 호출: 0");
+  console.log("Bright Data 호출: 0");
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

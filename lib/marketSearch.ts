@@ -287,6 +287,110 @@ function getVariantTokens(
   );
 }
 
+
+function getPrimaryModelIdentity(
+  productName: string,
+) {
+  const tokens =
+    normalizedMatchText(
+      productName,
+    )
+      .split(" ")
+      .filter(Boolean);
+
+  for (
+    let index = 0;
+    index < tokens.length;
+    index++
+  ) {
+    const token =
+      tokens[index];
+
+    /*
+      첫 번째 숫자 포함 토큰을 모델 코어로 본다.
+      예: X60 / P70 / S10 / N95TWU
+    */
+    if (!/\d/.test(token)) {
+      continue;
+    }
+
+    const next =
+      tokens[index + 1] ??
+      "";
+
+    /*
+      모델 코어 바로 뒤의 영문 토큰만
+      서브모델 식별자로 사용한다.
+      예: X60 Master / X60 Ultra
+          P70 Pro / S10 MaxV
+
+      뒤쪽의 17cm 같은 치수/마케팅 숫자는
+      모델 identity 충돌 판정에 사용하지 않는다.
+    */
+    const suffix =
+      next &&
+      /^[a-z][a-z0-9_-]*$/i.test(
+        next,
+      )
+        ? compactToken(next)
+        : "";
+
+    return {
+      core:
+        compactToken(token),
+
+      suffix,
+    };
+  }
+
+  return {
+    core: "",
+    suffix: "",
+  };
+}
+
+function hasConflictingModelIdentity(
+  targetName: string,
+  offerName: string,
+) {
+  const target =
+    getPrimaryModelIdentity(
+      targetName,
+    );
+
+  const offer =
+    getPrimaryModelIdentity(
+      offerName,
+    );
+
+  /*
+    모델 코어가 다르면 이 함수에서는 충돌로 단정하지 않는다.
+    기존 offerMatchScore가 모델 토큰 일치도를 별도로 검증한다.
+  */
+  if (
+    !target.core ||
+    !offer.core ||
+    target.core !==
+      offer.core
+  ) {
+    return false;
+  }
+
+  /*
+    양쪽 모두 명시적인 서브모델이 있을 때만 충돌 판정한다.
+
+    X60 Master vs X60 Ultra => 충돌
+    S10 MaxV vs S10 MaxV Ultra => 충돌 아님
+    X60 Master vs X60(서브모델 미표기) => 여기서는 보류
+  */
+  return Boolean(
+    target.suffix &&
+    offer.suffix &&
+    target.suffix !==
+      offer.suffix,
+  );
+}
+
 function hasConflictingVariant(
   targetName: string,
   offerName: string,
@@ -382,6 +486,10 @@ function offerMatchScore(
   }
 
   if (
+    hasConflictingModelIdentity(
+      targetName,
+      offerName,
+    ) ||
     hasConflictingVariant(
       targetName,
       offerName,

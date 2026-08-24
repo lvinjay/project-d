@@ -1,0 +1,34 @@
+﻿import {
+  collectManufacturerProduct,
+} from "../lib/manufacturerProductCollector";
+
+async function main() {
+  const result =
+    await collectManufacturerProduct({
+      officialSite:
+        "https://kr.mova.tech",
+
+      searchTerms: [
+        "V70",
+        "Ultra",
+      ],
+    });
+
+  console.log(
+    JSON.stringify(
+      result,
+      null,
+      2,
+    ),
+  );
+
+  console.log("");
+  console.log("SerpApi 호출: 0");
+  console.log("Bright Data 호출: 0");
+  console.log("DB 변경: 0");
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

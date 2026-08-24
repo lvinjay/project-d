@@ -814,182 +814,6 @@ function getNaverProductUrlInfo(
 }
 
 
-
-/*
-  과거에 검증/저장한 Naver Brand canonical은
-  상세 TTL과 별개로 재사용할 수 있다.
-
-  목적:
-  - 같은 모델을 매 실행마다 Resolver/SerpApi로 다시 찾지 않는다.
-  - 상품 상세의 최신성은 기존 getCachedProductDetail()의 24시간 TTL이 담당한다.
-  - 즉 canonical URL은 재사용하되, 상세가 오래됐으면 Bright Data만 새로 수집한다.
-
-  안전장치:
-  - 강한 모델 토큰으로 DB 후보를 먼저 좁힌다.
-  - 저장된 source_url이 실제 brand.naver.com /products/{id} 형식이어야 한다.
-  - validateProductMatch()가 동일 모델이라고 확인한 경우만 사용한다.
-*/
-async function getReusableCachedCanonicalResolution(
-  marketName: string,
-): Promise<{
-  productId: string;
-  canonicalUrl: string;
-  brandName: string;
-  brandSite: string;
-} | null> {
-  const marketTokens =
-    marketName
-      .split(/\s+/)
-      .map(
-        (value) =>
-          value.trim(),
-      )
-      .filter(Boolean);
-
-  const strongModelTokens =
-    getStrongSearchModelTokens(
-      marketTokens,
-    );
-
-  const primaryModelToken =
-    strongModelTokens[0] ??
-    "";
-
-  if (!primaryModelToken) {
-    return null;
-  }
-
-  const {
-    data,
-    error,
-  } =
-    await supabaseAdmin
-      .from("products")
-      .select(
-        "product_name,origin_product_no,source_url,product_detail_analysis",
-      )
-      .ilike(
-        "product_name",
-        `%${primaryModelToken}%`,
-      )
-      .not(
-        "origin_product_no",
-        "is",
-        null,
-      )
-      .not(
-        "source_url",
-        "is",
-        null,
-      )
-      .limit(20);
-
-  if (error) {
-    console.warn(
-      "Reusable canonical cache lookup warning:",
-      error,
-    );
-
-    return null;
-  }
-
-  for (const row of data ?? []) {
-    const sourceUrl =
-      String(
-        row.source_url ??
-          "",
-      ).trim();
-
-    const urlInfo =
-      getNaverProductUrlInfo(
-        sourceUrl,
-      );
-
-    if (
-      !urlInfo ||
-      urlInfo.type !==
-        "brand"
-    ) {
-      continue;
-    }
-
-    const storedDetail =
-      row.product_detail_analysis &&
-      typeof row.product_detail_analysis ===
-        "object" &&
-      !Array.isArray(
-        row.product_detail_analysis,
-      )
-        ? (
-            row.product_detail_analysis as Record<
-              string,
-              unknown
-            >
-          )
-        : {};
-
-    const storedProductName =
-      String(
-        row.product_name ??
-          storedDetail.productName ??
-          "",
-      );
-
-    const storedModelName =
-      String(
-        storedDetail.modelName ??
-          "",
-      );
-
-    const matchValidation =
-      validateProductMatch(
-        marketName,
-        storedProductName,
-        storedModelName,
-      );
-
-    if (
-      !matchValidation.matched
-    ) {
-      continue;
-    }
-
-    const productId =
-      String(
-        row.origin_product_no ??
-          urlInfo.productId,
-      );
-
-    if (
-      productId !==
-      urlInfo.productId
-    ) {
-      continue;
-    }
-
-    return {
-      productId,
-
-      canonicalUrl:
-        urlInfo.canonicalUrl,
-
-      brandName:
-        String(
-          storedDetail.brand ??
-            "",
-        ),
-
-      brandSite:
-        urlInfo.canonicalUrl.replace(
-          /\/products\/\d+.*$/i,
-          "",
-        ),
-    };
-  }
-
-  return null;
-}
-
 function createPartialMarketCandidate(
   market: CapturedProduct,
   position: number,
@@ -1478,42 +1302,18 @@ export async function GET(
           resolvedUrl,
         );
       } else {
-        const cachedCanonical =
-          await getReusableCachedCanonicalResolution(
-            market.name,
-          );
+        candidateResolverAttempts =
+          1;
 
-        if (cachedCanonical) {
-          resolvedProductId =
-            cachedCanonical.productId;
+        const resolverStartedAt =
+          Date.now();
 
-          resolvedUrl =
-            cachedCanonical.canonicalUrl;
+        console.log(
+          `[ENRICH ${position}] Brand URL resolver 시작`,
+          market.url,
+        );
 
-          resolvedBrandName =
-            cachedCanonical.brandName;
-
-          resolvedBrandSite =
-            cachedCanonical.brandSite;
-
-          console.log(
-            `[ENRICH ${position}] DB canonical 선재사용`,
-            resolvedProductId,
-            resolvedUrl,
-          );
-        } else {
-          candidateResolverAttempts =
-            1;
-
-          const resolverStartedAt =
-            Date.now();
-
-          console.log(
-            `[ENRICH ${position}] Brand URL resolver 시작`,
-            market.url,
-          );
-
-          try {
+        try {
           const resolved =
             await resolveNaverBrandProductUrl(
               market.url,
@@ -1911,7 +1711,6 @@ export async function GET(
                 ),
             };
           }
-          }
         }
       }
 
@@ -2001,24 +1800,25 @@ export async function GET(
           manufacturerDetail.detail;
 
         /*
-          제조사 공식페이지 가격은 최종 국내 판매가로 신뢰하지 않는다.
+          제조사 공식페이지는 가격을 제공하지 않거나
+          0원으로 노출할 수 있다.
 
-          이유:
-          - 해외 공식몰은 다른 통화 가격을 숫자만 노출할 수 있다.
-          - 렌탈/구독형 공식페이지는 월 요금을 본체 가격처럼 노출할 수 있다.
-          - 제조사 페이지의 역할은 canonical identity / 모델명 / 스펙 확인이다.
-
-          따라서 Manufacturer 경로의 기준 가격은 항상
-          이미 시장 후보에서 확보한 국내 시장가격을 사용한다.
-
-          이후 searchProductOffers()가 동일 모델의 실제 개별 판매처를
-          찾으면 reviewSource / purchaseSource 가격은 별도로 갱신된다.
+          제조사 가격이 유효하면 그대로 쓰고,
+          없으면 이미 시장 후보에서 확보한 가격을 사용한다.
+          이후 review/purchase source 검색에서 실제 판매처 가격을
+          확보하면 그 값을 별도로 사용한다.
         */
         const manufacturerResolvedPrice =
-          market.price;
+          manufacturer.finalPrice >
+          0
+            ? manufacturer.finalPrice
+            : market.price;
 
         const manufacturerResolvedOriginalPrice =
-          market.price;
+          manufacturer.originalPrice >
+          0
+            ? manufacturer.originalPrice
+            : manufacturerResolvedPrice;
 
         detail = {
           url:
@@ -2081,6 +1881,14 @@ export async function GET(
           detail.title,
         );
       } else {
+        /*
+          Resolver가 시장 후보와 동일한 Naver 상품번호를 확정한 경우,
+          과거에 정상 수집해 둔 상세 데이터가 있으면 먼저 재사용한다.
+
+          getCachedProductDetail 내부의 24시간 TTL + 가격 + 리뷰 5개 조건은
+          그대로 유지하므로 오래되거나 불완전한 데이터는 자동 제외된다.
+          캐시가 없을 때만 아래 Bright Data 수집으로 진행한다.
+        */
         detail =
           await getCachedProductDetail(
             resolvedProductId,
