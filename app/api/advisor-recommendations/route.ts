@@ -9,6 +9,8 @@ type RecommendationRequest = {
   weights?: unknown;
   budgetChoice?: unknown;
   personalProductScores?: unknown;
+  productNames?: unknown;
+  productIds?: unknown;
 };
 
 type PersonalProductScore = {
@@ -769,6 +771,36 @@ export async function POST(
         body.personalProductScores,
       );
 
+    const requestedProductNames =
+      Array.isArray(
+        body.productNames,
+      )
+        ? [
+            ...new Set(
+              body.productNames
+                .map((value) =>
+                  normalizeText(value),
+                )
+                .filter(Boolean),
+            ),
+          ]
+        : [];
+
+    const requestedProductIds =
+      Array.isArray(
+        body.productIds,
+      )
+        ? [
+            ...new Set(
+              body.productIds
+                .map((value) =>
+                  normalizeText(value),
+                )
+                .filter(Boolean),
+            ),
+          ]
+        : [];
+
     if (!category) {
       return NextResponse.json(
         {
@@ -886,23 +918,42 @@ export async function POST(
       );
     }
 
+    let productsQuery =
+      supabase
+        .from("products")
+        .select(
+          "id, category, product_name, source_url, review_analysis, criterion_scores, market_metrics, product_detail_analysis",
+        )
+        .eq(
+          "category",
+          category,
+        )
+        .not(
+          "review_analysis",
+          "is",
+          null,
+        );
+
+    if (requestedProductIds.length > 0) {
+      productsQuery =
+        productsQuery.in(
+          "id",
+          requestedProductIds,
+        );
+    } else if (
+      requestedProductNames.length > 0
+    ) {
+      productsQuery =
+        productsQuery.in(
+          "product_name",
+          requestedProductNames,
+        );
+    }
+
     const {
       data,
       error,
-    } = await supabase
-      .from("products")
-      .select(
-        "id, category, product_name, source_url, review_analysis, criterion_scores, market_metrics, product_detail_analysis",
-      )
-      .eq(
-        "category",
-        category,
-      )
-      .not(
-        "review_analysis",
-        "is",
-        null,
-      );
+    } = await productsQuery;
 
     if (error) {
       throw error;
@@ -910,6 +961,25 @@ export async function POST(
 
     const rows =
       (data ?? []) as ProductRow[];
+
+    const requestedProductCount =
+      requestedProductIds.length > 0
+        ? requestedProductIds.length
+        : requestedProductNames.length;
+
+    if (
+      requestedProductCount > 0 &&
+      rows.length !== requestedProductCount
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            `현재 실행 제품 ${requestedProductCount}개 중 ${rows.length}개만 추천 대상에서 확인됐습니다.`,
+        },
+        { status: 400 },
+      );
+    }
 
     const savedCommonCautions =
       Array.isArray(
