@@ -75,7 +75,13 @@ type NaverProductDetail =
     ReturnType<
       typeof collectNaverProduct
     >
-  >;
+  > & {
+    keySpecs?: Record<string, string>;
+    evaluationEvidence?: Record<
+      string,
+      string[]
+    >;
+  };
 
 type CapturedProduct = {
   name: string;
@@ -105,7 +111,8 @@ type FailureItem = {
     | "brightdata"
     | "validation"
     | "budget"
-    | "duplicate";
+    | "duplicate"
+    | "evidence";
   reason: string;
 };
 
@@ -211,6 +218,13 @@ type FinalCandidate = {
     categoryName: string;
 
     imageUrl: string;
+
+    keySpecs: Record<string, string>;
+
+    evaluationEvidence: Record<
+      string,
+      string[]
+    >;
 
     reviewSamples: number;
 
@@ -759,6 +773,270 @@ async function getCachedProductDetail(
   } as NaverProductDetail;
 }
 
+
+async function getReusableAnalyzedProductFallback(
+  productId: string,
+): Promise<{
+  detail: NaverProductDetail;
+  reviewEvidenceCount: number;
+} | null> {
+  const originProductNo =
+    Number(productId);
+
+  if (
+    !Number.isSafeInteger(
+      originProductNo,
+    )
+  ) {
+    return null;
+  }
+
+  const {
+    data,
+    error,
+  } =
+    await supabaseAdmin
+      .from("products")
+      .select(
+        "product_detail_analysis,review_analysis",
+      )
+      .eq(
+        "origin_product_no",
+        originProductNo,
+      )
+      .limit(1)
+      .maybeSingle();
+
+  if (error) {
+    console.warn(
+      "Analyzed product fallback lookup warning:",
+      error,
+    );
+
+    return null;
+  }
+
+  if (
+    !data?.product_detail_analysis ||
+    typeof data.product_detail_analysis !==
+      "object" ||
+    Array.isArray(
+      data.product_detail_analysis,
+    ) ||
+    !data.review_analysis ||
+    typeof data.review_analysis !==
+      "object" ||
+    Array.isArray(
+      data.review_analysis,
+    )
+  ) {
+    return null;
+  }
+
+  const detail =
+    data.product_detail_analysis as Record<
+      string,
+      unknown
+    >;
+
+  const reviewAnalysis =
+    data.review_analysis as Record<
+      string,
+      unknown
+    >;
+
+  const reviewEvidenceCount =
+    Number(
+      reviewAnalysis.reviewCount ??
+      reviewAnalysis.review_count ??
+      0,
+    ) || 0;
+
+  const criterionReasons =
+    reviewAnalysis.criterionReasons &&
+    typeof reviewAnalysis.criterionReasons ===
+      "object" &&
+    !Array.isArray(
+      reviewAnalysis.criterionReasons,
+    )
+      ? reviewAnalysis.criterionReasons
+      : (
+          reviewAnalysis.criterion_reasons &&
+          typeof reviewAnalysis.criterion_reasons ===
+            "object" &&
+          !Array.isArray(
+            reviewAnalysis.criterion_reasons,
+          )
+            ? reviewAnalysis.criterion_reasons
+            : null
+        );
+
+  if (
+    reviewEvidenceCount < 5 ||
+    !criterionReasons ||
+    Object.keys(
+      criterionReasons,
+    ).length === 0
+  ) {
+    return null;
+  }
+
+  const price =
+    detail.price &&
+    typeof detail.price ===
+      "object" &&
+    !Array.isArray(
+      detail.price,
+    )
+      ? (
+          detail.price as Record<
+            string,
+            unknown
+          >
+        )
+      : {};
+
+  const finalPrice =
+    Number(
+      price.finalPrice ??
+      detail.finalPrice ??
+      0,
+    );
+
+  if (finalPrice <= 0) {
+    return null;
+  }
+
+  const reviews =
+    Array.isArray(
+      detail.reviews,
+    )
+      ? detail.reviews
+      : [];
+
+  return {
+    reviewEvidenceCount,
+
+    detail: {
+      productId:
+        String(
+          detail.productId ??
+          productId,
+        ),
+
+      title:
+        String(
+          detail.productName ??
+          "",
+        ),
+
+      brand:
+        String(
+          detail.brand ??
+          "",
+        ),
+
+      manufacturer:
+        String(
+          detail.manufacturer ??
+          "",
+        ),
+
+      modelName:
+        String(
+          detail.modelName ??
+          "",
+        ),
+
+      originalPrice:
+        Number(
+          price.originalPrice ??
+          detail.originalPrice ??
+          finalPrice,
+        ),
+
+      finalPrice,
+
+      discountRate:
+        Number(
+          price.discountRate ??
+          detail.discountRate ??
+          0,
+        ),
+
+      totalReviews:
+        Number(
+          detail.reviewCount ??
+          reviewEvidenceCount,
+        ),
+
+      averageRating:
+        typeof detail.rating ===
+          "number"
+          ? detail.rating
+          : null,
+
+      sellerName:
+        String(
+          detail.sellerName ??
+          "",
+        ),
+
+      categoryName:
+        String(
+          detail.categoryName ??
+          "",
+        ),
+
+      imageUrl:
+        String(
+          detail.imageUrl ??
+          "",
+        ),
+
+      keySpecs:
+        detail.keySpecs &&
+        typeof detail.keySpecs ===
+          "object" &&
+        !Array.isArray(
+          detail.keySpecs,
+        )
+          ? detail.keySpecs as Record<
+              string,
+              string
+            >
+          : {},
+
+      evaluationEvidence:
+        detail.evaluationEvidence &&
+        typeof detail.evaluationEvidence ===
+          "object" &&
+        !Array.isArray(
+          detail.evaluationEvidence,
+        )
+          ? detail.evaluationEvidence as Record<
+              string,
+              string[]
+            >
+          : {},
+
+      topReviews:
+        reviews as {
+          rating: number;
+          date: string;
+          text: string;
+          helpfulCount: number;
+        }[],
+
+      url:
+        String(
+          detail.sourceUrl ??
+          "",
+        ),
+    } as NaverProductDetail,
+  };
+}
+
 function getNaverProductUrlInfo(
   value: string,
 ) {
@@ -1126,6 +1404,10 @@ function createPartialMarketCandidate(
 
       imageUrl:
         market.imageUrl,
+
+      keySpecs: {},
+
+      evaluationEvidence: {},
 
       reviewSamples:
         0,
@@ -1560,21 +1842,54 @@ export async function GET(
               두 단어 브랜드도 매핑 조회가 가능하도록
               앞쪽 조합을 함께 넣는다.
             */
+            const inferredBrandAliases =
+              marketTokens
+                .flatMap((token) => {
+                  const aliases:
+                    string[] = [];
+
+                  const latinPrefix =
+                    token.match(
+                      /^[A-Za-z]{2,12}/,
+                    )?.[0];
+
+                  if (latinPrefix) {
+                    aliases.push(
+                      latinPrefix,
+                    );
+                  }
+
+                  if (
+                    /^LG/i.test(token)
+                  ) {
+                    aliases.push(
+                      "LG",
+                    );
+                  }
+
+                  return aliases;
+                })
+                .filter(Boolean);
+
             const brandCandidates =
-              [
-                ...marketTokens.slice(
-                  0,
-                  8,
-                ),
+              Array.from(
+                new Set([
+                  ...marketTokens.slice(
+                    0,
+                    8,
+                  ),
 
-                marketTokens
-                  .slice(0, 2)
-                  .join(" "),
+                  ...inferredBrandAliases,
 
-                marketTokens
-                  .slice(0, 3)
-                  .join(" "),
-              ].filter(Boolean);
+                  marketTokens
+                    .slice(0, 2)
+                    .join(" "),
+
+                  marketTokens
+                    .slice(0, 3)
+                    .join(" "),
+                ]),
+              ).filter(Boolean);
 
             const officialMapping =
               await findOfficialSiteMapping(
@@ -1789,21 +2104,54 @@ export async function GET(
                 )
                 .filter(Boolean);
 
+            const inferredBrandAliases =
+              marketTokens
+                .flatMap((token) => {
+                  const aliases:
+                    string[] = [];
+
+                  const latinPrefix =
+                    token.match(
+                      /^[A-Za-z]{2,12}/,
+                    )?.[0];
+
+                  if (latinPrefix) {
+                    aliases.push(
+                      latinPrefix,
+                    );
+                  }
+
+                  if (
+                    /^LG/i.test(token)
+                  ) {
+                    aliases.push(
+                      "LG",
+                    );
+                  }
+
+                  return aliases;
+                })
+                .filter(Boolean);
+
             const brandCandidates =
-              [
-                ...marketTokens.slice(
-                  0,
-                  8,
-                ),
+              Array.from(
+                new Set([
+                  ...marketTokens.slice(
+                    0,
+                    8,
+                  ),
 
-                marketTokens
-                  .slice(0, 2)
-                  .join(" "),
+                  ...inferredBrandAliases,
 
-                marketTokens
-                  .slice(0, 3)
-                  .join(" "),
-              ].filter(Boolean);
+                  marketTokens
+                    .slice(0, 2)
+                    .join(" "),
+
+                  marketTokens
+                    .slice(0, 3)
+                    .join(" "),
+                ]),
+              ).filter(Boolean);
 
             const officialMapping =
               await findOfficialSiteMapping(
@@ -1992,6 +2340,12 @@ export async function GET(
       let usedCache =
         false;
 
+      let usedAnalyzedFallback =
+        false;
+
+      let cachedAnalyzedReviewCount =
+        0;
+
       if (
         canonicalSourceType ===
           "manufacturer" &&
@@ -2073,6 +2427,12 @@ export async function GET(
           categoryName:
             category,
 
+          keySpecs:
+            manufacturer.keySpecs,
+
+          evaluationEvidence:
+            manufacturer.evaluationEvidence,
+
           topReviews: [],
         };
 
@@ -2116,46 +2476,65 @@ export async function GET(
               resolvedUrl,
             );
         } catch (error) {
-        const reason =
-          error instanceof Error
-            ? error.message
-            : "Bright Data 상세수집 실패";
+          const reason =
+            error instanceof Error
+              ? error.message
+              : "Bright Data 상세수집 실패";
 
-        console.log(
-          `[ENRICH ${position}] 탈락(brightdata)`,
-          `${Math.round(
-            (
-              Date.now() -
-              brightDataStartedAt
-            ) /
-              1000,
-          )}초`,
-          reason,
-        );
+          const analyzedFallback =
+            await getReusableAnalyzedProductFallback(
+              resolvedProductId,
+            );
 
-        return {
-          success: false,
+          if (analyzedFallback) {
+            detail =
+              analyzedFallback.detail;
 
-          resolverAttempts:
-            candidateResolverAttempts,
+            cachedAnalyzedReviewCount =
+              analyzedFallback.reviewEvidenceCount;
 
-          brightDataCalls:
-            usedCache
-              ? 0
-              : 1,
+            usedAnalyzedFallback =
+              true;
 
-          failure: {
-            position,
+            console.warn(
+              `[ENRICH ${position}] Bright Data 실패 → 기존 리뷰분석 캐시 재사용`,
+              `reviewAnalysis=${cachedAnalyzedReviewCount}`,
+              resolvedProductId,
+            );
+          } else {
+            console.log(
+              `[ENRICH ${position}] 탈락(brightdata)`,
+              `${Math.round(
+                (
+                  Date.now() -
+                  brightDataStartedAt
+                ) /
+                  1000,
+              )}초`,
+              reason,
+            );
 
-            marketProduct:
-              market.name,
+            return {
+              success: false,
 
-            stage:
-              "brightdata",
+              resolverAttempts:
+                candidateResolverAttempts,
 
-            reason,
-          },
-        };
+              brightDataCalls: 1,
+
+              failure: {
+                position,
+
+                marketProduct:
+                  market.name,
+
+                stage:
+                  "brightdata",
+
+                reason,
+              },
+            };
+          }
         }
       }
 
@@ -2163,6 +2542,7 @@ export async function GET(
         canonicalSourceType ===
           "naver-brand" &&
         !usedCache &&
+        !usedAnalyzedFallback &&
         detail
       ) {
         console.log(
@@ -2559,15 +2939,16 @@ export async function GET(
       }
 
       /*
-        실제 리뷰 본문이 5개 미만이어도
-        상품 자체의 FULL 판정은 유지한다.
+        추천 가능한 FULL 후보 판정.
 
-        이유:
-        - 리뷰 수집 공급자의 특정 상품 timeout/0건 때문에
-          정상 상품 후보 전체를 탈락시키지 않는다.
-        - 리뷰 본문이 충분한 상품만 이후 AI 리뷰 분석을 실행한다.
-        - 리뷰 숫자만으로 AI가 리뷰 내용을 추측하지 않도록
-          reviewTextSource를 unavailable로 명시한다.
+        순서가 중요하다:
+        - 먼저 reviewSource까지 탐색하고 실제 리뷰 본문 확보를 시도한다.
+        - 그 뒤 실제 리뷰 본문이 5개 이상이거나,
+          제조사 공식페이지의 evaluationEvidence가
+          3개 이상의 평가기준에 존재하는 경우만 FULL로 인정한다.
+
+        reviewCount 같은 숫자 메타데이터만으로는 통과시키지 않는다.
+        실제 리뷰 텍스트 또는 공식페이지 평가근거가 있어야 한다.
       */
       if (
         reviewDetail.topReviews.length <
@@ -2575,11 +2956,92 @@ export async function GET(
       ) {
         reviewTextSource =
           "unavailable";
+      }
 
-        console.warn(
-          `[ENRICH ${position}] 리뷰 본문 부족 → 상품 후보 유지`,
-          `${reviewDetail.topReviews.length}개`,
+      const evaluationEvidence =
+        detail.evaluationEvidence &&
+        typeof detail.evaluationEvidence ===
+          "object" &&
+        !Array.isArray(
+          detail.evaluationEvidence,
+        )
+          ? detail.evaluationEvidence
+          : {};
+
+      const evidenceCriterionCount =
+        Object.values(
+          evaluationEvidence,
+        ).filter(
+          (items) =>
+            Array.isArray(items) &&
+            items.some(
+              (item) =>
+                typeof item ===
+                  "string" &&
+                item.trim().length >
+                  0,
+            ),
+        ).length;
+
+      const reviewEvidenceCount =
+        Array.isArray(
+          reviewDetail.topReviews,
+        )
+          ? reviewDetail.topReviews.filter(
+              (review) =>
+                Boolean(
+                  review?.text?.trim(),
+                ),
+            ).length
+          : 0;
+
+      const hasEvaluationEvidence =
+        reviewEvidenceCount >= 5 ||
+        cachedAnalyzedReviewCount >= 5 ||
+        evidenceCriterionCount >= 3;
+
+      if (!hasEvaluationEvidence) {
+        const reason =
+          `추천 평가근거 부족: reviews=${reviewEvidenceCount}, ` +
+          `analyzedReviews=${cachedAnalyzedReviewCount}, ` +
+          `evaluationCriteria=${evidenceCriterionCount}`;
+
+        console.log(
+          `[ENRICH ${position}] 탈락(evidence)`,
+          reason,
         );
+
+        return {
+          success: false,
+
+          resolverAttempts:
+            candidateResolverAttempts,
+
+          brightDataCalls:
+            (
+              canonicalSourceType ===
+                "naver-brand"
+                ? (
+                    usedCache
+                      ? 0
+                      : 1
+                  )
+                : 0
+            ) +
+            extraReviewBrightDataCalls,
+
+          failure: {
+            position,
+
+            marketProduct:
+              market.name,
+
+            stage:
+              "evidence",
+
+            reason,
+          },
+        };
       }
 
       console.log(
@@ -2877,6 +3339,23 @@ export async function GET(
 
             imageUrl:
               detail.imageUrl,
+
+            keySpecs:
+              detail.keySpecs &&
+              typeof detail.keySpecs === "object" &&
+              !Array.isArray(detail.keySpecs)
+                ? detail.keySpecs
+                : {},
+
+            evaluationEvidence:
+              detail.evaluationEvidence &&
+              typeof detail.evaluationEvidence ===
+                "object" &&
+              !Array.isArray(
+                detail.evaluationEvidence,
+              )
+                ? detail.evaluationEvidence
+                : {},
 
             reviewSamples:
               reviewDetail.topReviews.length,

@@ -20,6 +20,7 @@ export const dynamic =
 type RequestBody = {
   category?: unknown;
   productIds?: unknown;
+  productNames?: unknown;
 };
 
 type Criterion = {
@@ -397,6 +398,24 @@ export async function POST(
           ]
         : [];
 
+    const requestedProductNames =
+      Array.isArray(
+        body.productNames,
+      )
+        ? [
+            ...new Set(
+              body.productNames
+                .map(
+                  (value) =>
+                    normalizeText(
+                      value,
+                    ),
+                )
+                .filter(Boolean),
+            ),
+          ]
+        : [];
+
     if (!category) {
       return NextResponse.json(
         {
@@ -555,6 +574,15 @@ export async function POST(
           "id",
           requestedProductIds,
         );
+    } else if (
+      requestedProductNames.length >
+      0
+    ) {
+      productsQuery =
+        productsQuery.in(
+          "product_name",
+          requestedProductNames,
+        );
     }
 
     const {
@@ -589,6 +617,24 @@ export async function POST(
           success: false,
           message:
             `요청한 제품 ${requestedProductIds.length}개 중 ${products.length}개만 확인됐습니다.`,
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    if (
+      requestedProductIds.length === 0 &&
+      requestedProductNames.length > 0 &&
+      products.length !==
+        requestedProductNames.length
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            `현재 실행 제품 ${requestedProductNames.length}개 중 ${products.length}개만 DB에서 확인됐습니다.`,
         },
         {
           status: 400,
@@ -711,6 +757,22 @@ export async function POST(
           productDetailAnalysis:
             product.product_detail_analysis,
 
+          evaluationEvidence:
+            product.product_detail_analysis &&
+            typeof product.product_detail_analysis ===
+              "object" &&
+            !Array.isArray(
+              product.product_detail_analysis,
+            )
+              ? (
+                  product.product_detail_analysis as Record<
+                    string,
+                    unknown
+                  >
+                ).evaluationEvidence ??
+                {}
+              : {},
+
           reviewAnalysis:
             product.review_analysis,
         }),
@@ -749,22 +811,25 @@ ${JSON.stringify(
 중요 원칙:
 
 1. 모든 제품을 같은 기준과 같은 척도로 평가하세요.
-2. productDetailAnalysis와 reviewAnalysis에 있는 근거만 사용하세요.
-3. 근거가 없는 사양이나 성능은 추측하지 마세요.
-4. 제품 상세페이지의 판매 문구보다 실제 리뷰 분석을 중요하게 보세요.
-5. 리뷰에서 반복적으로 확인된 장점과 단점은 점수에 적극 반영하세요.
-6. 한두 리뷰에서만 나타난 문제는 지나치게 크게 반영하지 마세요.
-7. 같은 문제가 여러 제품에 공통적으로 존재한다면 특정 제품만 과도하게 감점하지 마세요.
-8. 특정 제품에서 반복적으로 나타나는 고유한 오류·불편은 해당 기준 점수에 반영하세요.
-9. 현재 5개 제품 사이에서 실제 상대적 차이가 드러나도록 평가하세요.
-10. 점수 차이를 억지로 만들지는 마세요.
-11. 두 제품의 근거 수준과 실제 성능이 비슷하면 비슷한 점수를 줄 수 있습니다.
-12. 현재 확보된 근거만으로 판단할 수 없는 기준은 null을 사용하세요.
-13. 가격 자체는 구매기준에 포함되어 있지 않다면 점수에 임의 반영하지 마세요.
-14. 리뷰 수가 많은 것은 정보 신뢰성을 높이는 보조근거일 뿐, 제품 성능 자체와 동일시하지 마세요.
-15. criterionReasons는 왜 그 점수를 줬는지 제품 간 차이를 중심으로 1~2문장으로 설명하세요.
-16. 반드시 아래 5개의 실제 criteria key만 사용하세요.
-17. JSON만 출력하세요. 마크다운은 사용하지 마세요.
+2. productDetailAnalysis, evaluationEvidence, reviewAnalysis에 있는 근거만 사용하세요.
+3. evaluationEvidence는 제조사 공식 상세페이지에서 추출한 실제 기능/사양 근거이며, 각 key는 현재 criteria key와 직접 대응합니다. 해당 criterion 점수 산정에 적극 사용하세요.
+4. reviewAnalysis가 비어 있더라도 evaluationEvidence에 해당 기준의 구체적인 공식 근거가 있으면 null로 두지 말고 그 근거만으로 보수적으로 점수를 산정하세요.
+5. evaluationEvidence와 reviewAnalysis 모두 해당 기준에 근거가 없을 때만 null을 사용하세요.
+6. 근거가 없는 사양이나 성능은 추측하지 마세요.
+7. 제품 상세페이지의 일반 광고문구보다 구체적 수치·기능 설명과 실제 리뷰 분석을 더 중요하게 보세요.
+8. 리뷰에서 반복적으로 확인된 장점과 단점은 점수에 적극 반영하세요.
+9. 한두 리뷰에서만 나타난 문제는 지나치게 크게 반영하지 마세요.
+10. 같은 문제가 여러 제품에 공통적으로 존재한다면 특정 제품만 과도하게 감점하지 마세요.
+11. 특정 제품에서 반복적으로 나타나는 고유한 오류·불편은 해당 기준 점수에 반영하세요.
+12. 현재 5개 제품 사이에서 실제 상대적 차이가 드러나도록 평가하세요.
+13. 점수 차이를 억지로 만들지는 마세요.
+14. 두 제품의 근거 수준과 실제 성능이 비슷하면 비슷한 점수를 줄 수 있습니다.
+15. 현재 확보된 근거만으로 판단할 수 없는 기준은 null을 사용하세요.
+16. 가격 자체는 구매기준에 포함되어 있지 않다면 점수에 임의 반영하지 마세요.
+17. 리뷰 수가 많은 것은 정보 신뢰성을 높이는 보조근거일 뿐, 제품 성능 자체와 동일시하지 마세요.
+18. criterionReasons는 왜 그 점수를 줬는지 제품 간 차이를 중심으로 1~2문장으로 설명하세요.
+19. 반드시 아래 5개의 실제 criteria key만 사용하세요.
+20. JSON만 출력하세요. 마크다운은 사용하지 마세요.
 
 점수 기준:
 

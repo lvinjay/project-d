@@ -567,6 +567,33 @@ export default function ProjectDAutomationPanel() {
         )}개 제품 등록/갱신 완료`,
       );
 
+      const currentRunProductNames =
+        finalCandidates
+          .map((candidate) =>
+            cleanText(
+              candidate.detail?.productName,
+            ),
+          )
+          .filter(Boolean);
+
+      if (
+        currentRunProductNames.length !== 5
+      ) {
+        throw new Error(
+          `현재 실행의 최종 제품명이 정확히 5개여야 합니다. 현재 ${currentRunProductNames.length}개입니다.`,
+        );
+      }
+
+      window.sessionStorage.setItem(
+        "projectDAutomationProductNames",
+        JSON.stringify({
+          category:
+            normalizedCategory,
+          productNames:
+            currentRunProductNames,
+        }),
+      );
+
       /*
         4단계
         리뷰분석 API가 구매기준을 사용하므로
@@ -946,6 +973,8 @@ export default function ProjectDAutomationPanel() {
             body: JSON.stringify({
               category:
                 normalizedCategory,
+              productNames:
+                currentRunProductNames,
             }),
           },
         );

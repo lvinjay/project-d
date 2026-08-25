@@ -460,6 +460,337 @@ function extractFallbackBodyModelName(
   return candidates.length === 1 ? candidates[0] : "";
 }
 
+function normalizeSpecKey(
+  value: unknown,
+) {
+  return cleanText(value)
+    .replace(/[:：]\s*$/, "")
+    .trim();
+}
+
+function normalizeSpecValue(
+  value: unknown,
+) {
+  return cleanText(value)
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extractKeySpecs(
+  product:
+    Record<string, any> | null,
+  html: string,
+) {
+  const specs =
+    new Map<string, string>();
+
+  const meaningfulSpecKey =
+    /(?:흡입력|흡입|배터리|사용시간|작동시간|청소시간|충전시간|소비전력|정격전력|크기|사이즈|규격|무게|중량|소음|물탱크|먼지통|청수통|오수통|문턱|높이|브러시|걸레|세척|건조|온수|온도|suction|vacuum|battery|runtime|run time|working time|charging time|rated power|power consumption|dimension|size|weight|noise|water tank|dust bin|dust box|clean water|dirty water|threshold|brush|mop|washing|drying|temperature)/i;
+
+  const junkSpecKey =
+    /^(?:log ?in|login|search|site navigation|cart|subscribe|code|app store|google play|shop|menu|account|wishlist|share|facebook|instagram|youtube|tiktok|shipping|delivery|payment|price|sale|discount|off)$/i;
+
+  const add = (
+    rawKey: unknown,
+    rawValue: unknown,
+  ) => {
+    const key =
+      normalizeSpecKey(rawKey);
+    const value =
+      normalizeSpecValue(rawValue);
+
+    if (
+      !key ||
+      !value ||
+      key.length > 80 ||
+      value.length > 500 ||
+      key === value ||
+      junkSpecKey.test(key) ||
+      !meaningfulSpecKey.test(key)
+    ) {
+      return;
+    }
+
+    if (!specs.has(key)) {
+      specs.set(key, value);
+    }
+  };
+
+  const additionalProperty =
+    product?.additionalProperty;
+
+  const properties =
+    Array.isArray(additionalProperty)
+      ? additionalProperty
+      : additionalProperty
+        ? [additionalProperty]
+        : [];
+
+  for (const item of properties) {
+    if (
+      item &&
+      typeof item === "object"
+    ) {
+      add(
+        item.name ??
+          item.propertyID ??
+          item.label,
+        item.value ??
+          item.valueReference ??
+          item.description,
+      );
+    }
+  }
+
+  const tableRowRegex =
+    /<tr\b[^>]*>([\s\S]*?)<\/tr>/gi;
+
+  let tableMatch:
+    RegExpExecArray | null;
+
+  while (
+    specs.size < 40 &&
+    (tableMatch =
+      tableRowRegex.exec(html)) !== null
+  ) {
+    const cells =
+      [
+        ...(tableMatch[1] ?? "").matchAll(
+          /<(?:th|td)\b[^>]*>([\s\S]*?)<\/(?:th|td)>/gi,
+        ),
+      ]
+        .map((match) =>
+          cleanText(match[1] ?? ""),
+        )
+        .filter(Boolean);
+
+    if (cells.length >= 2) {
+      add(
+        cells[0],
+        cells.slice(1).join(" "),
+      );
+    }
+  }
+
+  const definitionRegex =
+    /<dt\b[^>]*>([\s\S]*?)<\/dt>\s*<dd\b[^>]*>([\s\S]*?)<\/dd>/gi;
+
+  let definitionMatch:
+    RegExpExecArray | null;
+
+  while (
+    specs.size < 40 &&
+    (definitionMatch =
+      definitionRegex.exec(html)) !== null
+  ) {
+    add(
+      definitionMatch[1],
+      definitionMatch[2],
+    );
+  }
+
+  const bodyText =
+    cleanText(
+      html
+        .replace(
+          /<script\b[^>]*>[\s\S]*?<\/script>/gi,
+          " ",
+        )
+        .replace(
+          /<style\b[^>]*>[\s\S]*?<\/style>/gi,
+          " ",
+        ),
+    );
+
+  const patterns = [
+    ["흡입력", /(?:흡입력|suction(?:\s+power)?)\s*[:：-]?\s*([0-9,.]+\s*(?:pa|kpa))/i],
+    ["배터리", /(?:배터리(?:\s*용량)?|battery(?:\s+capacity)?)\s*[:：-]?\s*([0-9,.]+\s*mah)/i],
+    ["사용시간", /(?:최대\s*)?(?:사용|청소|작동)\s*시간\s*[:：-]?\s*([0-9,.]+\s*(?:분|시간|min|minutes?|hours?))/i],
+    ["사용시간", /(?:runtime|run\s*time|working\s*time)\s*[:：-]?\s*([0-9,.]+\s*(?:min|minutes?|h|hr|hrs|hours?))/i],
+    ["충전시간", /(?:충전\s*시간|charging\s*time)\s*[:：-]?\s*([0-9,.]+\s*(?:분|시간|min|minutes?|h|hr|hrs|hours?))/i],
+    ["소비전력", /(?:소비\s*전력|정격\s*전력|rated\s*power|power\s*consumption)\s*[:：-]?\s*([0-9,.]+\s*w)/i],
+    ["크기", /(?:제품\s*)?(?:크기|사이즈|규격|dimensions?|product\s*size)\s*[:：-]?\s*([0-9.,x×*\s]+(?:mm|cm))/i],
+    ["무게", /(?:제품\s*)?(?:무게|중량|weight)\s*[:：-]?\s*([0-9,.]+\s*(?:kg|g))/i],
+    ["소음", /(?:소음|noise(?:\s*level)?)\s*[:：-]?\s*([0-9,.]+\s*db)/i],
+    ["물탱크", /(?:물\s*탱크|청수통|clean\s*water\s*tank)(?:\s*용량)?\s*[:：-]?\s*([0-9,.]+\s*(?:ml|l))/i],
+    ["오수통", /(?:오수통|dirty\s*water\s*tank)(?:\s*용량)?\s*[:：-]?\s*([0-9,.]+\s*(?:ml|l))/i],
+    ["먼지통", /(?:먼지\s*통|dust\s*(?:bin|box))(?:\s*용량)?\s*[:：-]?\s*([0-9,.]+\s*(?:ml|l))/i],
+    ["문턱", /(?:문턱|threshold|obstacle\s*crossing)\s*[:：-]?\s*([0-9,.]+\s*(?:mm|cm))/i],
+    ["건조온도", /(?:건조\s*온도|drying\s*temperature)\s*[:：-]?\s*([0-9,.]+\s*°?\s*c)/i],
+    ["세척온도", /(?:세척\s*온도|washing\s*temperature|hot\s*water)\s*[:：-]?\s*([0-9,.]+\s*°?\s*c)/i],
+  ] as const;
+
+  for (
+    const [label, pattern] of patterns
+  ) {
+    const match =
+      bodyText.match(pattern);
+
+    if (match?.[1]) {
+      add(label, match[1]);
+    }
+  }
+
+  return Object.fromEntries(
+    specs.entries(),
+  );
+}
+
+
+function extractEvaluationEvidence(
+  html: string,
+) {
+  const text =
+    cleanText(
+      html
+        .replace(
+          /<script\b[^>]*>[\s\S]*?<\/script>/gi,
+          " ",
+        )
+        .replace(
+          /<style\b[^>]*>[\s\S]*?<\/style>/gi,
+          " ",
+        )
+        .replace(
+          /<!--[\s\S]*?-->/g,
+          " ",
+        ),
+    );
+
+  const junkPattern =
+    /(?:shipping to|로그인|회원가입|장바구니|주문조회|배송비|결제|개인정보|이용약관|사업자정보|고객센터|반품|교환|쿠폰|적립금|무이자|상품문의|world shipping|privacy policy|refund policy|terms of service|app store|google play|copyright|all rights reserved)/i;
+
+  const categoryPatterns = {
+    vacuum_and_hair_pickup:
+      /(?:흡입|pa\b|suction|브러시|brush|머리카락|hair|엉킴|tangle|카펫|carpet)/i,
+
+    mopping_performance_and_coverage:
+      /(?:물걸레|mop|걸레|세척|wash|scrub|오염|stain|edge|corner|가장자리|모서리|rpm|스프레이|spray)/i,
+
+    obstacle_avoidance_and_navigation:
+      /(?:장애물|회피|obstacle|navigation|내비|lidar|lds|센서|sensor|카메라|camera|인식|recognition|문턱|threshold|경로|path|mapping|맵핑|ai)/i,
+
+    maintenance_automation_convenience:
+      /(?:자동\s*먼지|먼지\s*비움|auto.?empty|도크|dock|건조|dry|세제|detergent|자동\s*급수|water refill|세척\s*모듈|self.?clean|자동\s*세척|base station|station|더스트백|dust bag)/i,
+
+    app_experience_and_reliability:
+      /(?:앱|app\b|ota|업데이트|update|스케줄|schedule|맵|map\b|원격|remote|음성|voice|alexa|google assistant|siri|wifi|wi-fi|연결|connect)/i,
+  } as const;
+
+  const evidence:
+    Record<
+      keyof typeof categoryPatterns,
+      string[]
+    > = {
+      vacuum_and_hair_pickup: [],
+      mopping_performance_and_coverage: [],
+      obstacle_avoidance_and_navigation: [],
+      maintenance_automation_convenience: [],
+      app_experience_and_reliability: [],
+    };
+
+  const rawSegments =
+    text
+      .split(
+        /(?<=[.!?。])\s+|\s{2,}|(?:\s*[|•·]\s*)/,
+      )
+      .map((value) =>
+        value
+          .replace(/\s+/g, " ")
+          .trim(),
+      )
+      .filter(
+        (value) =>
+          value.length >= 18 &&
+          value.length <= 420 &&
+          !junkPattern.test(value),
+      );
+
+  const segments: string[] = [];
+
+  for (const segment of rawSegments) {
+    if (
+      segment.length <= 220
+    ) {
+      segments.push(segment);
+      continue;
+    }
+
+    for (
+      let start = 0;
+      start < segment.length;
+      start += 180
+    ) {
+      const chunk =
+        segment
+          .slice(
+            start,
+            start + 220,
+          )
+          .trim();
+
+      if (chunk.length >= 18) {
+        segments.push(chunk);
+      }
+    }
+  }
+
+  for (
+    const [
+      category,
+      pattern,
+    ] of Object.entries(
+      categoryPatterns,
+    ) as Array<
+      [
+        keyof typeof categoryPatterns,
+        RegExp,
+      ]
+    >
+  ) {
+    const seen =
+      new Set<string>();
+
+    for (const segment of segments) {
+      if (!pattern.test(segment)) {
+        continue;
+      }
+
+      const normalized =
+        segment
+          .toLowerCase()
+          .replace(
+            /[^a-z0-9가-힣]+/g,
+            " ",
+          )
+          .replace(/\s+/g, " ")
+          .trim();
+
+      if (
+        !normalized ||
+        seen.has(normalized)
+      ) {
+        continue;
+      }
+
+      seen.add(normalized);
+
+      evidence[category].push(
+        segment,
+      );
+
+      if (
+        evidence[category].length >=
+        8
+      ) {
+        break;
+      }
+    }
+  }
+
+  return evidence;
+}
+
 export function parseManufacturerProductHtml(
   html: string,
   canonicalUrl: string,
@@ -536,6 +867,17 @@ export function parseManufacturerProductHtml(
       html,
     );
 
+  const keySpecs =
+    extractKeySpecs(
+      product,
+      html,
+    );
+
+  const evaluationEvidence =
+    extractEvaluationEvidence(
+      html,
+    );
+
   return {
     url:
       canonicalUrl,
@@ -553,5 +895,9 @@ export function parseManufacturerProductHtml(
     finalPrice,
 
     imageUrl,
+
+    keySpecs,
+
+    evaluationEvidence,
   };
 }

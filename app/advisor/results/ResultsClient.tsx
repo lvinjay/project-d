@@ -649,6 +649,63 @@ export default function ResultsClient() {
         const weights =
           stored.weights ?? {};
 
+        const runProductsRaw =
+          window.sessionStorage.getItem(
+            "projectDAutomationProductNames",
+          );
+
+        let currentRunProductNames:
+          string[] = [];
+
+        if (runProductsRaw) {
+          try {
+            const parsed =
+              JSON.parse(
+                runProductsRaw,
+              ) as {
+                category?: unknown;
+                productNames?: unknown;
+              };
+
+            if (
+              typeof parsed.category ===
+                "string" &&
+              parsed.category.trim() ===
+                nextCategory &&
+              Array.isArray(
+                parsed.productNames,
+              )
+            ) {
+              currentRunProductNames =
+                parsed.productNames
+                  .filter(
+                    (
+                      value,
+                    ): value is string =>
+                      typeof value ===
+                        "string" &&
+                      Boolean(
+                        value.trim(),
+                      ),
+                  )
+                  .map((value) =>
+                    value.trim(),
+                  );
+            }
+          } catch {
+            currentRunProductNames =
+              [];
+          }
+        }
+
+        if (
+          currentRunProductNames.length !== 5
+        ) {
+          throw new Error(
+            "현재 자동화 실행의 최종 5개 제품 정보가 없습니다. 관리자 자동화를 다시 실행해 주세요.",
+          );
+        }
+
         if (!nextCategory) {
           throw new Error(
             "추천할 카테고리 정보가 없습니다.",
@@ -781,6 +838,8 @@ export default function ResultsClient() {
                     personalProductScores:
                       resolvedPersonalResult.productScores ??
                       [],
+                    productNames:
+                      currentRunProductNames,
                   }),
               },
             );
@@ -819,6 +878,8 @@ export default function ResultsClient() {
                   JSON.stringify({
                     category:
                       nextCategory,
+                    productNames:
+                      currentRunProductNames,
                   }),
               },
             );

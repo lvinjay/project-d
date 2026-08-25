@@ -33,6 +33,11 @@ type CandidateDetail = {
   sellerName?: string;
   categoryName?: string;
   imageUrl?: string;
+  keySpecs?: Record<string, string>;
+  evaluationEvidence?: Record<
+    string,
+    string[]
+  >;
   reviewSamples?: number;
   reviews?: ReviewItem[];
   sourceUrl?: string;
@@ -253,6 +258,65 @@ export async function POST(
           normalizeText(
             detail.imageUrl,
           ),
+
+        keySpecs:
+          detail.keySpecs &&
+          typeof detail.keySpecs === "object" &&
+          !Array.isArray(detail.keySpecs)
+            ? Object.fromEntries(
+                Object.entries(
+                  detail.keySpecs,
+                )
+                  .map(
+                    ([key, value]) => [
+                      normalizeText(key),
+                      normalizeText(value),
+                    ],
+                  )
+                  .filter(
+                    ([key, value]) =>
+                      Boolean(key) &&
+                      Boolean(value),
+                  )
+                  .slice(0, 40),
+              )
+            : {},
+
+        evaluationEvidence:
+          detail.evaluationEvidence &&
+          typeof detail.evaluationEvidence ===
+            "object" &&
+          !Array.isArray(
+            detail.evaluationEvidence,
+          )
+            ? Object.fromEntries(
+                Object.entries(
+                  detail.evaluationEvidence,
+                )
+                  .map(
+                    ([key, values]) => [
+                      normalizeText(key),
+                      Array.isArray(values)
+                        ? values
+                            .map(
+                              (value) =>
+                                normalizeText(
+                                  value,
+                                ),
+                            )
+                            .filter(Boolean)
+                            .slice(0, 8)
+                        : [],
+                    ],
+                  )
+                  .filter(
+                    ([key, values]) =>
+                      Boolean(key) &&
+                      Array.isArray(values) &&
+                      values.length > 0,
+                  ),
+              )
+            : {},
 
         marketListedPrice:
           Number(

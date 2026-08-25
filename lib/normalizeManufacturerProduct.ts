@@ -14,6 +14,13 @@ export type ManufacturerRawProduct = {
   finalPrice?: string | number;
 
   imageUrl?: string;
+
+  keySpecs?: Record<string, string>;
+
+  evaluationEvidence?: Record<
+    string,
+    string[]
+  >;
 };
 
 export type NormalizedManufacturerProduct = {
@@ -32,6 +39,13 @@ export type NormalizedManufacturerProduct = {
   finalPrice: number;
 
   imageUrl: string;
+
+  keySpecs: Record<string, string>;
+
+  evaluationEvidence: Record<
+    string,
+    string[]
+  >;
 
   sourceType:
     "manufacturer";
@@ -106,6 +120,53 @@ export function normalizeManufacturerProduct(
       String(
         raw.imageUrl ?? "",
       ).trim(),
+
+    keySpecs:
+      raw.keySpecs &&
+      typeof raw.keySpecs === "object" &&
+      !Array.isArray(raw.keySpecs)
+        ? Object.fromEntries(
+            Object.entries(raw.keySpecs)
+              .map(([key, value]) => [
+                String(key ?? "").trim(),
+                String(value ?? "").trim(),
+              ])
+              .filter(
+                ([key, value]) =>
+                  Boolean(key) &&
+                  Boolean(value),
+              )
+              .slice(0, 40),
+          )
+        : {},
+
+    evaluationEvidence:
+      raw.evaluationEvidence &&
+      typeof raw.evaluationEvidence === "object" &&
+      !Array.isArray(raw.evaluationEvidence)
+        ? Object.fromEntries(
+            Object.entries(raw.evaluationEvidence)
+              .map(([key, values]) => [
+                String(key ?? "").trim(),
+                Array.isArray(values)
+                  ? values
+                      .map((value) =>
+                        String(value ?? "")
+                          .replace(/\s+/g, " ")
+                          .trim(),
+                      )
+                      .filter(Boolean)
+                      .slice(0, 8)
+                  : [],
+              ])
+              .filter(
+                ([key, values]) =>
+                  Boolean(key) &&
+                  Array.isArray(values) &&
+                  values.length > 0,
+              ),
+          )
+        : {},
 
     sourceType:
       "manufacturer",
