@@ -2,7 +2,7 @@ import {
   gotScraping,
 } from "got-scraping";
 
-﻿import {
+import {
   buildResolverSearchPlan,
   getResolverSearchBudget,
   getStrongSearchModelTokens,
@@ -52,6 +52,96 @@ type CanonicalCandidate = {
   canonicalUrl: string;
   title: string;
 };
+
+/*
+  A Brand Store search can return accessories/consumables whose title contains
+  the parent product's model token. Reject those only when the source market
+  product itself does not look like an accessory/consumable.
+  This is intentionally category-agnostic and is used as an identity guard,
+  not as a robot-vacuum-specific rule.
+*/
+const STRONG_ACCESSORY_OR_CONSUMABLE_PATTERNS: RegExp[] = [
+  /(?:replacement|spare|refill|accessor(?:y|ies)|attachment|consumable|replacement\s+part|spare\s+part)/i,
+  /(?:compatible\s+with|made\s+for|designed\s+for)/i,
+  /(?:교체용|리필|소모품|액세서리|악세사리|부속품|부품|호환용|호환품|전용\s*(?:품|부품|소모품|액세서리|악세사리|필터|브러시|브러쉬|패드|걸레|배터리|리모컨|물통|먼지통|먼지봉투))/i,
+  /*
+    Some nouns are strong enough to identify the sold item itself as an
+    accessory even without "replacement"/"dedicated" wording. Keep this list
+    conservative: these are items that are not normally the main product.
+  */
+  /(?:remote\s*control|remote|replacement\s*remote|spare\s*remote)/i,
+  /(?:리모컨|리모콘)/i,
+];
+
+const ACCESSORY_NOUN_PATTERNS: RegExp[] = [
+  /(?:case|cover|bag|pouch|strap|stand|holder|mount|dock|charger|adapter|cable|cord)/i,
+  /(?:filter|brush|pad|mop|cloth|wipe|roller|wheel|battery|remote|tray|tank|bin|dust\s*bag)/i,
+  /(?:cartridge|ink|toner|paper|film|label|blade|bit|nozzle|hose|belt|cap|lid)/i,
+  /(?:케이스|커버|가방|파우치|스트랩|거치대|홀더|마운트|충전기|어댑터|케이블|코드)/i,
+  /(?:필터|브러시|브러쉬|패드|걸레|천|와이프|롤러|바퀴|배터리|리모컨|리모콘|트레이|물통|먼지통|먼지봉투)/i,
+  /(?:카트리지|잉크|토너|용지|필름|라벨|날|비트|노즐|호스|벨트|캡|뚜껑)/i,
+];
+
+const ACCESSORY_PACKAGING_PATTERNS: RegExp[] = [
+  /(?:\bset\b|\bkit\b|\bpack\b|\bpcs?\b|\bpieces?\b)/i,
+  /(?:세트|키트|팩|묶음|\d+\s*(?:개|매|팩|세트))/i,
+];
+
+function hasStrongAccessoryOrConsumableSignal(
+  value: string,
+) {
+  const text = String(value ?? "").trim();
+
+  if (!text) {
+    return false;
+  }
+
+  if (
+    STRONG_ACCESSORY_OR_CONSUMABLE_PATTERNS.some(
+      (pattern) => pattern.test(text),
+    )
+  ) {
+    return true;
+  }
+
+  const hasAccessoryNoun =
+    ACCESSORY_NOUN_PATTERNS.some(
+      (pattern) => pattern.test(text),
+    );
+
+  const hasPackagingSignal =
+    ACCESSORY_PACKAGING_PATTERNS.some(
+      (pattern) => pattern.test(text),
+    );
+
+  return (
+    hasAccessoryNoun &&
+    hasPackagingSignal
+  );
+}
+
+function isAccessoryOrConsumableMismatch(
+  marketProductName: string,
+  candidateTitle: string,
+) {
+  /*
+    Do not reject a main product merely because its title contains a word
+    that can also name an accessory (for example "mop", "filter", "battery",
+    or Korean equivalents). Require stronger accessory evidence such as
+    replacement/compatible/dedicated wording or accessory + pack/set wording.
+
+    This keeps the guard category-agnostic while still rejecting cases such as
+    "model X dedicated mop 6-pack" or "replacement filter set".
+  */
+  return (
+    !hasStrongAccessoryOrConsumableSignal(
+      marketProductName,
+    ) &&
+    hasStrongAccessoryOrConsumableSignal(
+      candidateTitle,
+    )
+  );
+}
 
 function normalizeBrandSite(
   value: unknown,
@@ -1469,9 +1559,16 @@ export async function resolveNaverBrandProductUrl(
                   .toLowerCase(),
               );
 
+          const accessoryOrConsumableMismatch =
+            isAccessoryOrConsumableMismatch(
+              productName,
+              candidate.title,
+            );
+
           return {
             candidate,
             modelTokenMatched,
+            accessoryOrConsumableMismatch,
             score:
               candidateScore(
                 candidate,
@@ -1514,8 +1611,20 @@ export async function resolveNaverBrandProductUrl(
               inputProductId,
           );
 
+        /*
+          Exact productId equality is stronger than title heuristics.
+          This must be checked before the accessory/consumable guard because
+          a main product title can legitimately contain words such as
+          "물걸레", "필터", or "배터리" as part of its product category/features.
+        */
         if (sameProductId) {
           return true;
+        }
+
+        if (
+          item.accessoryOrConsumableMismatch
+        ) {
+          return false;
         }
 
         const trustedBrandSite =
@@ -1664,6 +1773,8 @@ export async function resolveNaverBrandProductUrl(
               item.score,
             modelTokenMatched:
               item.modelTokenMatched,
+            accessoryOrConsumableMismatch:
+              item.accessoryOrConsumableMismatch,
           })),
       discoveredBrandSites:
         [...brandSites],

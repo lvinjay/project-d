@@ -1093,6 +1093,112 @@ function getNaverProductUrlInfo(
 
 
 
+function normalizeBrandLookupValue(
+  value: string,
+) {
+  return value
+    .toLowerCase()
+    .replace(
+      /(공식몰|공식스토어|공식점|브랜드스토어|스토어|store|official)/gi,
+      " ",
+    )
+    .replace(
+      /[^a-z0-9가-힣]+/g,
+      "",
+    )
+    .trim();
+}
+
+/*
+  /main/products/{id} 같은 Naver 공용 라우팅 URL은
+  Bright Data SmartStore collector가 상품 본문을 읽지 못할 수 있다.
+
+  이미 검증/저장된 같은 브랜드의 brand.naver.com URL이 있으면
+  그 URL의 store slug만 재사용하고, 현재 reviewSource의 상품번호를 붙여
+  seller-specific Brand Store URL을 복원한다.
+
+  상품번호는 현재 reviewSource에서 확보한 값을 그대로 사용하므로
+  다른 모델의 productId를 재사용하지 않는다.
+*/
+async function resolveReviewSourceNaverUrl(
+  reviewUrl: string,
+  productName: string,
+  brandCandidates: string[],
+): Promise<string> {
+  const urlInfo =
+    getNaverProductUrlInfo(
+      reviewUrl,
+    );
+
+  if (!urlInfo) {
+    return reviewUrl;
+  }
+
+  if (urlInfo.type === "brand") {
+    return urlInfo.canonicalUrl;
+  }
+
+  /*
+    SmartStore 상품 URL은 Bright Data Naver Product Dataset에
+    직접 전달하지 않는다.
+
+    과거 canonical 파이프라인과 동일하게 Brand resolver를 먼저 거쳐
+    Bright Data가 읽을 수 있는 brand.naver.com 상품 URL을 확보한다.
+
+    안전장치:
+    - resolver가 실제 brand.naver.com canonical 상품 URL을 찾아 성공해야 한다.
+    - 동일 productId는 resolver에서 최우선으로 선택한다.
+    - productId가 다른 경우도 resolver 내부의 강한 모델 토큰/브랜드 검증을
+      통과한 동일 상품 canonical만 허용한다.
+    - route에서는 검증을 중복해 cross-ID 정상 상품을 다시 차단하지 않는다.
+  */
+  try {
+    const resolved =
+      await resolveNaverBrandProductUrl(
+        urlInfo.canonicalUrl,
+        productName,
+        brandCandidates,
+      );
+
+    if (
+      resolved.success &&
+      resolved.canonicalUrl
+    ) {
+      return resolved.canonicalUrl;
+    }
+  } catch (error) {
+    console.warn(
+      "Review source Brand resolver warning:",
+      error,
+    );
+  }
+
+  /*
+    과거에는 DB에서 같은 브랜드의 Brand Store slug를 찾은 뒤
+    현재 SmartStore productId를 그대로 붙여 URL을 만들었다.
+
+    SmartStore와 Brand Store의 동일 상품이 서로 다른 productId를
+    사용할 수 있으므로 그 방식은 제거한다.
+
+    Brand Store 탐색은 resolveNaverBrandProductUrl() 한 곳에서만 수행하고,
+    brandCandidates는 slug-scoped 검색 힌트로만 사용한다.
+    실제 /products/{id} 후보와 모델 검증을 통과하지 못하면 빈 문자열로 끝낸다.
+  */
+
+  /*
+    여기서 SmartStore URL을 그대로 반환하면
+    Bright Data가 dead_page / 404로 실패할 수 있다.
+
+    따라서 Brand URL을 확보하지 못한 SmartStore reviewSource는
+    collector용 URL 없음("")으로 처리한다.
+
+    사용자에게 보여줄 review/purchase URL은 selectedReviewSource의
+    원래 URL을 그대로 유지하므로 판매처 자체를 버리는 것은 아니다.
+  */
+  return "";
+}
+
+
 /*
   과거에 검증/저장한 Naver Brand canonical은
   상세 TTL과 별개로 재사용할 수 있다.
@@ -1739,6 +1845,103 @@ export async function GET(
       let candidateResolverAttempts =
         0;
 
+      /*
+        Brand resolver / Manufacturer fallback이 모두 막힌 경우를 위한
+        마지막 canonical 복구 경로.
+
+        이미 구축된 searchProductOffers()로 동일 모델의 실제 판매처를 찾고,
+        그 판매처 URL을 기존 Brand resolver에 다시 넣는다.
+
+        중요:
+        - 새로운 검색 체계를 만들지 않는다.
+        - reviewSource / purchaseSource 중 Naver Store URL만 사용한다.
+        - 성공한 Brand canonical만 채택한다.
+        - 여기서 수행한 offer 검색 결과는 아래 review/purchase source 선택에서
+          그대로 재사용해 같은 검색을 두 번 호출하지 않는다.
+      */
+      let offerCanonicalRecovered =
+        false;
+
+      let offerSearch:
+        Awaited<
+          ReturnType<
+            typeof searchProductOffers
+          >
+        > | null =
+        null;
+
+      async function tryOfferBasedCanonicalRecovery() {
+        try {
+          if (!offerSearch) {
+            offerSearch =
+              await searchProductOffers(
+                market.name,
+              );
+          }
+
+          const offerCandidates = [
+            offerSearch?.reviewSource,
+            offerSearch?.purchaseSource,
+          ].filter(Boolean);
+
+          const attemptedUrls =
+            new Set<string>();
+
+          for (const offer of offerCandidates) {
+            if (
+              !offer ||
+              offer.sourceType !==
+                "naver-store" ||
+              !offer.resolvedUrl ||
+              attemptedUrls.has(
+                offer.resolvedUrl,
+              )
+            ) {
+              continue;
+            }
+
+            attemptedUrls.add(
+              offer.resolvedUrl,
+            );
+
+            console.log(
+              `[ENRICH ${position}] 판매처 기반 canonical 복구 시도`,
+              offer.resolvedUrl,
+            );
+
+            candidateResolverAttempts++;
+
+            const recovered =
+              await resolveNaverBrandProductUrl(
+                offer.resolvedUrl,
+                market.name,
+              );
+
+            if (
+              !recovered.success ||
+              !recovered.canonicalUrl ||
+              !recovered.productId
+            ) {
+              continue;
+            }
+
+            console.log(
+              `[ENRICH ${position}] 판매처 기반 canonical 복구 성공`,
+              recovered.canonicalUrl,
+            );
+
+            return recovered;
+          }
+        } catch (error) {
+          console.warn(
+            `[ENRICH ${position}] 판매처 기반 canonical 복구 warning`,
+            error,
+          );
+        }
+
+        return null;
+      }
+
       if (
         urlInfo?.type ===
         "brand"
@@ -1968,33 +2171,56 @@ export async function GET(
               !manufacturerDetail ||
               !manufacturerDetail.success
             ) {
-              console.log(
-                `[ENRICH ${position}] partial 유지(resolve 실패)`,
-                naverReason,
-              );
+              const recovered =
+                await tryOfferBasedCanonicalRecovery();
 
-              return {
-                success: true,
+              if (recovered) {
+                resolvedProductId =
+                  recovered.productId;
 
-                position,
+                resolvedUrl =
+                  recovered.canonicalUrl;
 
-                productId:
-                  extractMarketProductId(
-                    market.url,
-                  ) ||
-                  `partial-${position}`,
+                resolvedBrandName =
+                  recovered.brandName;
 
-                resolverAttempts:
-                  candidateResolverAttempts,
+                resolvedBrandSite =
+                  recovered.brandSite;
 
-                brightDataCalls: 0,
+                canonicalSourceType =
+                  "naver-brand";
 
-                candidate:
-                  createPartialMarketCandidate(
-                    market,
-                    position,
-                  ),
-              };
+                offerCanonicalRecovered =
+                  true;
+              } else {
+                console.log(
+                  `[ENRICH ${position}] partial 유지(resolve 실패 + 판매처 복구 실패)`,
+                  naverReason,
+                );
+
+                return {
+                  success: true,
+
+                  position,
+
+                  productId:
+                    extractMarketProductId(
+                      market.url,
+                    ) ||
+                    `partial-${position}`,
+
+                  resolverAttempts:
+                    candidateResolverAttempts,
+
+                  brightDataCalls: 0,
+
+                  candidate:
+                    createPartialMarketCandidate(
+                      market,
+                      position,
+                    ),
+                };
+              }
             }
           }
 
@@ -2008,7 +2234,8 @@ export async function GET(
             서로 다른 제조사 상품이 동일상품으로 오판될 수 있다.
           */
           if (
-            !manufacturerDetail?.success
+            !manufacturerDetail?.success &&
+            !offerCanonicalRecovered
           ) {
             /*
               SmartStore 상품번호와
@@ -2071,7 +2298,9 @@ export async function GET(
             );
           } else {
             console.log(
-              `[ENRICH ${position}] Manufacturer canonical 유지`,
+              offerCanonicalRecovered
+                ? `[ENRICH ${position}] 판매처 기반 Brand canonical 유지`
+                : `[ENRICH ${position}] Manufacturer canonical 유지`,
               resolvedUrl,
             );
           }
@@ -2231,33 +2460,56 @@ export async function GET(
             !manufacturerDetail ||
             !manufacturerDetail.success
           ) {
-            console.log(
-              `[ENRICH ${position}] partial 유지(resolve 오류 + Manufacturer 실패)`,
-              reason,
-            );
+            const recovered =
+              await tryOfferBasedCanonicalRecovery();
 
-            return {
-              success: true,
+            if (recovered) {
+              resolvedProductId =
+                recovered.productId;
 
-              position,
+              resolvedUrl =
+                recovered.canonicalUrl;
 
-              productId:
-                extractMarketProductId(
-                  market.url,
-                ) ||
-                `partial-${position}`,
+              resolvedBrandName =
+                recovered.brandName;
 
-              resolverAttempts:
-                candidateResolverAttempts,
+              resolvedBrandSite =
+                recovered.brandSite;
 
-              brightDataCalls: 0,
+              canonicalSourceType =
+                "naver-brand";
 
-              candidate:
-                createPartialMarketCandidate(
-                  market,
-                  position,
-                ),
-            };
+              offerCanonicalRecovered =
+                true;
+            } else {
+              console.log(
+                `[ENRICH ${position}] partial 유지(resolve 오류 + Manufacturer 실패 + 판매처 복구 실패)`,
+                reason,
+              );
+
+              return {
+                success: true,
+
+                position,
+
+                productId:
+                  extractMarketProductId(
+                    market.url,
+                  ) ||
+                  `partial-${position}`,
+
+                resolverAttempts:
+                  candidateResolverAttempts,
+
+                brightDataCalls: 0,
+
+                candidate:
+                  createPartialMarketCandidate(
+                    market,
+                    position,
+                  ),
+              };
+            }
           }
           }
         }
@@ -2767,23 +3019,17 @@ export async function GET(
           동일 모델/구성 후보 중 최저가 판매처
           → 최종 구매 버튼용 후보.
       */
-      let offerSearch:
-        Awaited<
-          ReturnType<
-            typeof searchProductOffers
-          >
-        > | null =
-        null;
-
       try {
-        offerSearch =
-          await searchProductOffers(
-            canonicalSourceType ===
-              "manufacturer"
-              ? market.name
-              : detail.title ||
-                  market.name,
-          );
+        if (!offerSearch) {
+          offerSearch =
+            await searchProductOffers(
+              canonicalSourceType ===
+                "manufacturer"
+                ? market.name
+                : detail.title ||
+                    market.name,
+            );
+        }
       } catch (error) {
         console.warn(
           `[ENRICH ${position}] 판매처 재검색 warning`,
@@ -2794,8 +3040,40 @@ export async function GET(
       const selectedReviewSource =
         offerSearch?.reviewSource;
 
-      const selectedPurchaseSource =
+      let selectedPurchaseSource =
         offerSearch?.purchaseSource;
+
+      /*
+        최저가라는 이유만으로 다른 모델을 구매처로 선택하지 않는다.
+
+        reviewSource가 더 강한 모델 일치 점수를 가지고 있는데
+        purchaseSource의 matchScore가 더 낮다면,
+        구매처도 reviewSource로 맞춘다.
+
+        JONR X9 Pro에서 X9 Pro(matchScore 100) 리뷰소스를 찾고도
+        더 싼 T5 Pro Gen 2(matchScore 50)가 구매처로 선택되는
+        오매칭을 방지한다.
+      */
+      if (
+        selectedReviewSource &&
+        selectedPurchaseSource &&
+        selectedReviewSource.sourceType ===
+          "naver-store" &&
+        selectedPurchaseSource.matchScore <
+          selectedReviewSource.matchScore
+      ) {
+        console.log(
+          `[ENRICH ${position}] 구매처 모델 일치도 보정`,
+          selectedPurchaseSource.name,
+          selectedPurchaseSource.matchScore,
+          "→",
+          selectedReviewSource.name,
+          selectedReviewSource.matchScore,
+        );
+
+        selectedPurchaseSource =
+          selectedReviewSource;
+      }
 
       const finalProductId =
         canonicalSourceType ===
@@ -2804,6 +3082,56 @@ export async function GET(
               detail.productId,
             )
           : "";
+
+      let normalizedReviewSourceUrl =
+        selectedReviewSource?.resolvedUrl ??
+        "";
+
+      if (
+        selectedReviewSource?.resolvedUrl &&
+        selectedReviewSource.sourceType ===
+          "naver-store"
+      ) {
+        normalizedReviewSourceUrl =
+          await resolveReviewSourceNaverUrl(
+            selectedReviewSource.resolvedUrl,
+            selectedReviewSource.name,
+            [
+              resolvedBrandName,
+              detail.brand,
+              detail.manufacturer,
+              selectedReviewSource.brand,
+              market.seller,
+            ],
+          );
+
+        if (
+          normalizedReviewSourceUrl !==
+          selectedReviewSource.resolvedUrl
+        ) {
+          console.log(
+            `[ENRICH ${position}] 리뷰소스 Store URL 복원`,
+            selectedReviewSource.resolvedUrl,
+            "→",
+            normalizedReviewSourceUrl,
+          );
+        }
+      }
+
+      console.log(
+        `[JONR-DIAG ${position}] review-source-state`,
+        {
+          canonicalSourceType,
+          finalProductId,
+          selectedReviewSourceUrl:
+            selectedReviewSource?.resolvedUrl ?? "",
+          normalizedReviewSourceUrl,
+          selectedReviewSourceType:
+            selectedReviewSource?.sourceType ?? "",
+          selectedReviewMatchScore:
+            selectedReviewSource?.matchScore ?? 0,
+        },
+      );
 
       /*
         실제 리뷰 본문은 reviewSource에서 가져오는 것을 원칙으로 한다.
@@ -2839,7 +3167,8 @@ export async function GET(
       ) {
         const selectedReviewProductId =
           extractMarketProductId(
-            selectedReviewSource.resolvedUrl,
+            normalizedReviewSourceUrl ||
+              selectedReviewSource.resolvedUrl,
           );
 
         if (
@@ -2851,7 +3180,8 @@ export async function GET(
             detail;
 
           reviewSourceUrl =
-            selectedReviewSource.resolvedUrl;
+            normalizedReviewSourceUrl ||
+              selectedReviewSource.resolvedUrl;
 
           reviewTextSource =
             "canonical-reuse";
@@ -2868,10 +3198,33 @@ export async function GET(
           if (
             selectedReviewProductId
           ) {
+            console.log(
+              `[JONR-DIAG ${position}] review-cache-query`,
+              selectedReviewProductId,
+            );
+
             collectedReviewDetail =
               await getCachedProductDetail(
                 selectedReviewProductId,
               );
+
+            console.log(
+              `[JONR-DIAG ${position}] review-cache-result`,
+              {
+                selectedReviewProductId,
+                cacheHit:
+                  Boolean(
+                    collectedReviewDetail,
+                  ),
+                cachedTopReviews:
+                  collectedReviewDetail
+                    ?.topReviews
+                    ?.length ?? 0,
+                cachedUrl:
+                  collectedReviewDetail
+                    ?.url ?? "",
+              },
+            );
           }
 
           if (
@@ -2881,7 +3234,8 @@ export async function GET(
               collectedReviewDetail;
 
             reviewSourceUrl =
-              selectedReviewSource.resolvedUrl;
+              normalizedReviewSourceUrl ||
+                selectedReviewSource.resolvedUrl;
 
             reviewTextSource =
               "selected-source";
@@ -2892,43 +3246,93 @@ export async function GET(
             );
           } else {
             try {
-              console.log(
-                `[ENRICH ${position}] 리뷰소스 Bright Data 시작`,
-                selectedReviewSource.resolvedUrl,
-              );
+              const diagnosticCollectUrl =
+                normalizedReviewSourceUrl;
 
-              const collected =
-                await collectNaverProduct(
-                  selectedReviewSource.resolvedUrl,
-                );
-
-              if (
-                collected.topReviews.length >=
-                5
-              ) {
-                reviewDetail =
-                  collected;
-
-                reviewSourceUrl =
-                  selectedReviewSource.resolvedUrl;
-
-                reviewTextSource =
-                  "selected-source";
-
-                extraReviewBrightDataCalls =
-                  1;
-
-                console.log(
-                  `[ENRICH ${position}] 리뷰소스 Bright Data 완료`,
-                  collected.topReviews.length,
+              if (!diagnosticCollectUrl) {
+                console.warn(
+                  `[ENRICH ${position}] 리뷰소스 Bright Data 건너뜀`,
+                  "SmartStore reviewSource의 Brand URL을 확보하지 못했습니다.",
                 );
               } else {
-                console.warn(
-                  `[ENRICH ${position}] 리뷰소스 샘플 부족 → canonical fallback`,
-                  collected.topReviews.length,
+                console.log(
+                  `[ENRICH ${position}] 리뷰소스 Bright Data 시작`,
+                  diagnosticCollectUrl,
                 );
+
+                console.log(
+                  `[JONR-DIAG ${position}] collector-input`,
+                  {
+                    url:
+                      diagnosticCollectUrl,
+                    selectedReviewProductId,
+                  },
+                );
+
+                const collected =
+                  await collectNaverProduct(
+                    diagnosticCollectUrl,
+                  );
+
+                console.log(
+                  `[JONR-DIAG ${position}] collector-result`,
+                  {
+                    url:
+                      diagnosticCollectUrl,
+                    productId:
+                      collected.productId,
+                    totalReviews:
+                      collected.totalReviews,
+                    topReviews:
+                      collected.topReviews.length,
+                    collectedUrl:
+                      collected.url,
+                  },
+                );
+
+                if (
+                  collected.topReviews.length >=
+                  5
+                ) {
+                  reviewDetail =
+                    collected;
+
+                  reviewSourceUrl =
+                    selectedReviewSource.resolvedUrl;
+
+                  reviewTextSource =
+                    "selected-source";
+
+                  extraReviewBrightDataCalls =
+                    1;
+
+                  console.log(
+                    `[ENRICH ${position}] 리뷰소스 Bright Data 완료`,
+                    collected.topReviews.length,
+                  );
+                } else {
+                  console.warn(
+                    `[ENRICH ${position}] 리뷰소스 샘플 부족 → canonical fallback`,
+                    collected.topReviews.length,
+                  );
+                }
               }
+
             } catch (error) {
+              console.warn(
+                `[JONR-DIAG ${position}] collector-error`,
+                error instanceof Error
+                  ? {
+                      name:
+                        error.name,
+                      message:
+                        error.message,
+                      stack:
+                        error.stack,
+                    }
+                  : error,
+              );
+
               console.warn(
                 `[ENRICH ${position}] 리뷰소스 Bright Data 실패 → canonical fallback`,
                 error,
