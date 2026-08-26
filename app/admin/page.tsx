@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import {
   useCallback,
@@ -8,7 +8,6 @@ import {
 import { useRouter } from "next/navigation";
 
 import Header from "../../components/Header";
-import MarketCandidateSetup from "../../components/MarketCandidateSetup";
 import ProjectDAutomationPanel from "../../components/ProjectDAutomationPanel";
 import BookmarkletCopyButton from "../../components/BookmarkletCopyButton";
 import DetailBookmarkletCopyButton from "../../components/DetailBookmarkletCopyButton";
@@ -900,7 +899,6 @@ export default function AdminPage() {
           상품 URL과 짧은 제품명만 등록하면 됩니다. 네이버 리뷰 수집 번호는 북마크 실행 시 자동으로 확인하고 저장합니다.
         </p>
 
-        <MarketCandidateSetup />
 
         <ProjectDAutomationPanel />
 
