@@ -576,11 +576,39 @@ export default function ProjectDAutomationPanel() {
           )
           .filter(Boolean);
 
+      const importResults =
+        Array.isArray(
+          importResult.results,
+        )
+          ? (
+              importResult.results as Array<{
+                success?: boolean;
+                product?: {
+                  id?: string;
+                };
+              }>
+            )
+          : [];
+
+      const currentRunProductIds =
+        importResults
+          .filter(
+            (result) =>
+              result.success === true,
+          )
+          .map((result) =>
+            cleanText(
+              result.product?.id,
+            ),
+          )
+          .filter(Boolean);
+
       if (
-        currentRunProductNames.length !== 5
+        currentRunProductNames.length !== 5 ||
+        currentRunProductIds.length !== 5
       ) {
         throw new Error(
-          `현재 실행의 최종 제품명이 정확히 5개여야 합니다. 현재 ${currentRunProductNames.length}개입니다.`,
+          `현재 실행의 최종 제품명/UUID가 정확히 5개여야 합니다. 제품명 ${currentRunProductNames.length}개 · UUID ${currentRunProductIds.length}개입니다.`,
         );
       }
 
@@ -591,6 +619,8 @@ export default function ProjectDAutomationPanel() {
             normalizedCategory,
           productNames:
             currentRunProductNames,
+          productIds:
+            currentRunProductIds,
         }),
       );
 

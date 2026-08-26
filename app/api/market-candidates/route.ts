@@ -197,7 +197,7 @@ export async function GET(
         candidates.length,
       candidates,
       message:
-        `"${category}" 후보 ${candidates.length}개를 검색했습니다.`,
+        `"${category}" 네이버 SmartStore 기준 후보 ${candidates.length}개를 검색했습니다.`,
     });
   } catch (error) {
     console.error(
@@ -221,3 +221,5 @@ export async function GET(
     );
   }
 }
+
+

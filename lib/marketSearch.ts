@@ -830,6 +830,7 @@ async function searchNaverShopping(
 
 export async function searchMarketProducts(
   keyword: string,
+  limit = 15,
 ): Promise<MarketSearchResult[]> {
   const normalizedKeyword =
     keyword.trim();
@@ -848,12 +849,14 @@ export async function searchMarketProducts(
   }
 
   /*
-    Naver nexearch의 shopping_results가
-    한 검색어에서 소수만 반환될 수 있으므로
-    일반적인 검색 의도 확장을 사용한다.
+    1차 검색에서는 SmartStore URL 여부로 상품을 버리지 않는다.
 
-    후보 15개가 확보되는 순간
-    추가 SerpApi 호출은 하지 않는다.
+    네이버 검색결과의 대표상품은 cr3/ader 링크로 노출되는 경우가 많아서
+    여기서 SmartStore만 필터링하면 정상 제품 대부분이 사라진다.
+
+    대신 대표제품 풀을 먼저 만들고,
+    searchSmartStoreMarketProducts()에서 동일 모델의 실제
+    SmartStore/BrandStore 리뷰 판매처를 재검증한다.
   */
   const queries = [
     normalizedKeyword,
@@ -865,7 +868,19 @@ export async function searchMarketProducts(
   const uniqueProducts:
     MarketSearchResult[] = [];
 
-  const seen =
+  /*
+    1차 후보의 중복 기준은 판매등록이 아니라 "대표 모델"이다.
+
+    같은 모델이 판매처/가격/광고 문구만 달라 여러 번 노출돼도
+    후보 자리를 여러 개 차지하지 않도록 한다.
+
+    모델 식별자가 없는 상품만 기존
+    상품명 + 판매처 + 가격 키를 fallback으로 사용한다.
+  */
+  const seenModelKeys =
+    new Map<string, number>();
+
+  const seenFallbackKeys =
     new Set<string>();
 
   for (
@@ -873,7 +888,7 @@ export async function searchMarketProducts(
   ) {
     if (
       uniqueProducts.length >=
-      15
+      limit
     ) {
       break;
     }
@@ -947,16 +962,76 @@ export async function searchMarketProducts(
             ),
         };
 
-      const key =
-        createDuplicateKey(
-          product,
+      const identity =
+        getPrimaryModelIdentity(
+          product.name,
         );
 
-      if (seen.has(key)) {
-        continue;
-      }
+      const modelKey =
+        identity.core
+          ? `${identity.core}|${identity.suffix}`
+          : "";
 
-      seen.add(key);
+      if (modelKey) {
+        const existingIndex =
+          seenModelKeys.get(
+            modelKey,
+          );
+
+        if (
+          existingIndex !==
+          undefined
+        ) {
+          /*
+            같은 모델의 판매등록이 여러 개면
+            리뷰 수가 더 많은 대표등록으로 교체한다.
+            리뷰 수가 같으면 평점이 높은 쪽을 사용한다.
+          */
+          const existing =
+            uniqueProducts[
+              existingIndex
+            ];
+
+          if (
+            product.reviewCount >
+              existing.reviewCount ||
+            (
+              product.reviewCount ===
+                existing.reviewCount &&
+              product.rating >
+                existing.rating
+            )
+          ) {
+            uniqueProducts[
+              existingIndex
+            ] = product;
+          }
+
+          continue;
+        }
+
+        seenModelKeys.set(
+          modelKey,
+          uniqueProducts.length,
+        );
+      } else {
+        const fallbackKey =
+          createDuplicateKey(
+            product,
+          );
+
+        if (
+          seenFallbackKeys.has(
+            fallbackKey,
+          )
+        ) {
+          continue;
+        }
+
+        seenFallbackKeys.add(
+          fallbackKey,
+        );
+      }
 
       uniqueProducts.push(
         product,
@@ -964,7 +1039,7 @@ export async function searchMarketProducts(
 
       if (
         uniqueProducts.length >=
-        15
+        limit
       ) {
         break;
       }
@@ -972,6 +1047,165 @@ export async function searchMarketProducts(
   }
 
   return uniqueProducts;
+}
+
+/*
+  Project D의 네이버쇼핑 기준 대표후보 생성.
+
+  흐름:
+  1. 네이버쇼핑에서 대표제품 풀을 넉넉히 확보한다.
+  2. 각 제품의 동일 모델 판매처를 다시 확인한다.
+  3. 리뷰가 있는 SmartStore/BrandStore 판매처가 실제로 존재하는
+     제품만 최종 시장후보로 인정한다.
+  4. 같은 모델/구성은 한 번만 남긴다.
+
+  비용 제한:
+  - 대표제품 풀은 우선 목표 개수만 확인한다.
+  - 판매처 재검색은 제품당 compact query 1회만 사용한다.
+  - 목표 개수가 채워지면 즉시 중단한다.
+
+  limit=15 기준 대표모델 검색은 최대 4회다.
+  SmartStore 판매처 확인은 후보가 15개 채워지는 즉시 중단한다.
+
+  단, 검증 실패가 많으면 최대 30개 대표모델까지 확인할 수 있으므로
+  개발 테스트에서는 호출 수를 확인하면서 사용한다.
+*/
+export async function searchSmartStoreMarketProducts(
+  keyword: string,
+  limit = 15,
+): Promise<MarketSearchResult[]> {
+  /*
+    SmartStore/BrandStore 검증 과정에서 일부 모델이 탈락하므로
+    대표 모델 풀은 목표 개수보다 넓게 확보한다.
+
+    기본 limit=15일 때 최대 30개의 서로 다른 대표 모델을 확보하고,
+    SmartStore 리뷰 후보가 15개 채워지는 즉시 아래 검증 루프를 중단한다.
+  */
+  const poolLimit =
+    Math.max(
+      limit,
+      Math.min(
+        30,
+        limit * 2,
+      ),
+    );
+
+  const marketProducts =
+    await searchMarketProducts(
+      keyword,
+      poolLimit,
+    );
+
+  const candidates:
+    MarketSearchResult[] = [];
+
+  const seenModels =
+    new Set<string>();
+
+  for (
+    const product of marketProducts
+  ) {
+    if (
+      candidates.length >=
+      limit
+    ) {
+      break;
+    }
+
+    const identity =
+      getPrimaryModelIdentity(
+        product.name,
+      );
+
+    const modelKey =
+      identity.core
+        ? `${identity.core}|${identity.suffix}`
+        : compactToken(
+            product.name,
+          );
+
+    if (
+      modelKey &&
+      seenModels.has(modelKey)
+    ) {
+      continue;
+    }
+
+    const directSourceType =
+      getOfferSourceType(
+        product.brand,
+        product.url,
+        product.url,
+      );
+
+    let selected:
+      MarketSearchResult | null =
+      null;
+
+    if (
+      directSourceType ===
+        "naver-store" &&
+      isIndividualSellerName(
+        product.brand,
+      ) &&
+      product.reviewCount > 0
+    ) {
+      selected =
+        product;
+    } else {
+      const offerSearch =
+        await searchProductOffers(
+          product.name,
+          1,
+        );
+
+      const reviewSource =
+        offerSearch.reviewSource;
+
+      if (reviewSource) {
+        selected = {
+          name:
+            product.name,
+
+          brand:
+            reviewSource.brand,
+
+          price:
+            reviewSource.price > 0
+              ? reviewSource.price
+              : product.price,
+
+          image:
+            reviewSource.image ||
+            product.image,
+
+          url:
+            reviewSource.resolvedUrl ||
+            reviewSource.url,
+
+          reviewCount:
+            reviewSource.reviewCount,
+
+          rating:
+            reviewSource.rating,
+        };
+      }
+    }
+
+    if (!selected) {
+      continue;
+    }
+
+    if (modelKey) {
+      seenModels.add(modelKey);
+    }
+
+    candidates.push(
+      selected,
+    );
+  }
+
+  return candidates;
 }
 
 /*
@@ -989,6 +1223,7 @@ export async function searchMarketProducts(
 */
 export async function searchProductOffers(
   productName: string,
+  queryLimit = 2,
 ): Promise<ProductOfferSearchResult> {
   const normalizedName =
     productName.trim();
@@ -1059,7 +1294,18 @@ export async function searchProductOffers(
   const seen =
     new Set<string>();
 
-  for (const query of queries) {
+  for (
+    const query of queries.slice(
+      0,
+      Math.max(
+        1,
+        Math.min(
+          queryLimit,
+          queries.length,
+        ),
+      ),
+    )
+  ) {
     const rawResults =
       await searchNaverShopping(
         query,

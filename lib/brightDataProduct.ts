@@ -16,6 +16,15 @@ type BrightDataReview = {
 type BrightDataRawProduct = {
   url?: string;
   product_id?: string;
+
+  /*
+    include_errors=true 이므로 snapshot에 정상 상품 대신
+    Bright Data 오류 레코드가 포함될 수 있다.
+  */
+  error?: string;
+  error_code?: string;
+  error_message?: string;
+  message?: string;
   title?: string;
   original_price?: string | number;
   final_price?: string | number;
@@ -282,6 +291,52 @@ export async function collectNaverProduct(
       if (!raw) {
         throw new Error(
           "Bright Data가 상품 정보를 반환하지 않았습니다.",
+        );
+      }
+
+      /*
+        include_errors=true 상태에서는 snapshot에 레코드가 존재해도
+        실제 상품이 아니라 blocked/error 레코드일 수 있다.
+
+        기존에는 이런 레코드도 정상 상품으로 파싱되어
+        productId="", totalReviews=0, topReviews=[] 형태로
+        조용히 반환될 수 있었다.
+
+        오류 레코드는 여기서 명시적으로 실패시켜 상위 호출부가
+        canonical fallback 및 진단 로그를 정확히 처리하게 한다.
+      */
+      const rawErrorCode =
+        String(
+          raw.error_code ??
+            "",
+        ).trim();
+
+      const rawErrorMessage =
+        String(
+          raw.error_message ??
+            raw.error ??
+            raw.message ??
+            "",
+        ).trim();
+
+      if (
+        rawErrorCode ||
+        rawErrorMessage
+      ) {
+        throw new Error(
+          [
+            "Bright Data 오류 레코드",
+            rawErrorCode
+              ? `code=${rawErrorCode}`
+              : "",
+            rawErrorMessage
+              ? `message=${rawErrorMessage}`
+              : "",
+            `snapshot=${snapshotId}`,
+            `url=${normalizedUrl}`,
+          ]
+            .filter(Boolean)
+            .join(" | "),
         );
       }
 

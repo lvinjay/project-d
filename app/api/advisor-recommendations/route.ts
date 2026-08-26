@@ -1481,7 +1481,18 @@ export async function POST(
             summary:
               product.review_analysis
                 ?.summary ??
-              "리뷰 분석 요약이 없습니다.",
+              (
+                product.product_detail_analysis &&
+                typeof product.product_detail_analysis ===
+                  "object" &&
+                !Array.isArray(
+                  product.product_detail_analysis,
+                ) &&
+                "evaluationEvidence" in
+                  product.product_detail_analysis
+                  ? "리뷰 요약은 없지만 제조사 공식 상세페이지의 기능·사양 근거로 평가했습니다."
+                  : "현재 확보된 리뷰 분석 요약이 없습니다."
+              ),
 
             personalPreferenceScore:
               personal?.score ??

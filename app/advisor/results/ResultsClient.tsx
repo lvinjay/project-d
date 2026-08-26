@@ -657,6 +657,9 @@ export default function ResultsClient() {
         let currentRunProductNames:
           string[] = [];
 
+        let currentRunProductIds:
+          string[] = [];
+
         if (runProductsRaw) {
           try {
             const parsed =
@@ -665,6 +668,7 @@ export default function ResultsClient() {
               ) as {
                 category?: unknown;
                 productNames?: unknown;
+                productIds?: unknown;
               };
 
             if (
@@ -691,18 +695,43 @@ export default function ResultsClient() {
                   .map((value) =>
                     value.trim(),
                   );
+
+              if (
+                Array.isArray(
+                  parsed.productIds,
+                )
+              ) {
+                currentRunProductIds =
+                  parsed.productIds
+                    .filter(
+                      (
+                        value,
+                      ): value is string =>
+                        typeof value ===
+                          "string" &&
+                        Boolean(
+                          value.trim(),
+                        ),
+                    )
+                    .map((value) =>
+                      value.trim(),
+                    );
+              }
             }
           } catch {
             currentRunProductNames =
+              [];
+            currentRunProductIds =
               [];
           }
         }
 
         if (
-          currentRunProductNames.length !== 5
+          currentRunProductNames.length !== 5 ||
+          currentRunProductIds.length !== 5
         ) {
           throw new Error(
-            "현재 자동화 실행의 최종 5개 제품 정보가 없습니다. 관리자 자동화를 다시 실행해 주세요.",
+            "현재 자동화 실행의 최종 5개 제품명/UUID 정보가 없습니다. 관리자 자동화를 다시 실행해 주세요.",
           );
         }
 
@@ -838,8 +867,8 @@ export default function ResultsClient() {
                     personalProductScores:
                       resolvedPersonalResult.productScores ??
                       [],
-                    productNames:
-                      currentRunProductNames,
+                    productIds:
+                      currentRunProductIds,
                   }),
               },
             );
