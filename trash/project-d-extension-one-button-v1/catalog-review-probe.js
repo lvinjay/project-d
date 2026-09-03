@@ -624,21 +624,38 @@
       );
     };
 
+  const normalizeEvidenceText =
+    (value) =>
+      String(
+        value ||
+        "",
+      )
+        .replace(
+          /<br\s*\/?>/gi,
+          " ",
+        )
+        .replace(
+          /&nbsp;/gi,
+          " ",
+        )
+        .replace(
+          /\s+/g,
+          " ",
+        )
+        .trim()
+        .slice(
+          0,
+          2500,
+        );
+
   const nativeEvidenceKey =
     (review) => {
       const text =
-        firstText(
-          review,
-        )
-          .replace(
-            /\s+/g,
-            " ",
-          )
-          .trim()
-          .slice(
-            0,
-            2500,
-          );
+        normalizeEvidenceText(
+          firstText(
+            review,
+          ),
+        );
 
       if (!text) {
         return "";
