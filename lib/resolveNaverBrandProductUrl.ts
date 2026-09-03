@@ -553,6 +553,97 @@ function extractBrandName(
   return "";
 }
 
+
+function isNaverShoppingBridgeUrl(
+  value: string,
+) {
+  try {
+    const host =
+      new URL(value).hostname
+        .toLowerCase();
+
+    return (
+      host === "ader.naver.com" ||
+      host === "cr.shopping.naver.com" ||
+      host === "cr3.shopping.naver.com"
+    );
+  } catch {
+    return false;
+  }
+}
+
+async function resolveNaverShoppingBridgeUrl(
+  productUrl: string,
+) {
+  if (
+    !isNaverShoppingBridgeUrl(productUrl)
+  ) {
+    return productUrl;
+  }
+
+  try {
+    const response =
+      await gotScraping.get(
+        productUrl,
+        {
+          headers: {
+            "accept-language":
+              "ko-KR,ko;q=0.9,en;q=0.8",
+          },
+          timeout: {
+            request: 15000,
+          },
+          throwHttpErrors: false,
+          followRedirect: true,
+        },
+      );
+
+    /*
+      네이버 광고/쇼핑 bridge는 최종 판매처까지 이동한 뒤
+      429 같은 상태를 반환할 수 있다. 이 경우에도 response.url에
+      실제 redirect 최종 URL이 남아 있으면 그 URL은 재사용한다.
+    */
+    const resolvedUrl =
+      String(
+        response.url ?? "",
+      ).trim();
+
+    if (
+      resolvedUrl &&
+      resolvedUrl !== productUrl
+    ) {
+      return resolvedUrl;
+    }
+  } catch (error) {
+    /*
+      redirect 도중 HTTP 오류가 발생해도 got 계열 오류 객체에
+      최종 response.url이 남아 있을 수 있으므로 먼저 복구한다.
+    */
+    const responseUrl =
+      String(
+        (error as {
+          response?: {
+            url?: string;
+          };
+        })?.response?.url ?? "",
+      ).trim();
+
+    if (
+      responseUrl &&
+      responseUrl !== productUrl
+    ) {
+      return responseUrl;
+    }
+
+    console.warn(
+      "Naver shopping bridge redirect warning:",
+      error,
+    );
+  }
+
+  return productUrl;
+}
+
 function getProductId(
   productUrl: string,
 ) {
@@ -610,27 +701,75 @@ function cleanProductName(
     .trim();
 }
 
+const GENERIC_PRODUCT_NOISE_TOKENS =
+  new Set([
+    "무선",
+    "가정용",
+    "자동",
+    "단품",
+    "화이트",
+    "블랙",
+    "실버",
+    "그레이",
+    "베이지",
+    "공식",
+    "정품",
+    "신제품",
+    "신형",
+    "최신",
+    "인공지능",
+    "올인원",
+    "official",
+    "genuine",
+    "new",
+  ]);
+
+const GENERIC_CATEGORY_TOKENS =
+  new Set([
+    "로봇청소기",
+    "청소기",
+    "로봇",
+    "tv",
+    "텔레비전",
+    "헤드폰",
+    "이어폰",
+    "노트북",
+    "스마트폰",
+    "휴대폰",
+    "공기청정기",
+    "카메라",
+    "프린터",
+  ]);
+
+function isGenericSpecToken(
+  token: string,
+) {
+  const lower =
+    token.toLowerCase();
+
+  if (
+    /^\d{4}$/.test(lower)
+  ) {
+    const year =
+      Number(lower);
+
+    if (
+      year >= 1990 &&
+      year <= 2100
+    ) {
+      return true;
+    }
+  }
+
+  return (
+    /^\d+(?:\.\d+)?(?:mm|cm|m|km|g|kg|ml|l|w|kw|wh|kwh|mah|v|hz|khz|mhz|ghz|mp|gb|tb|inch|in|인치|형|개|매|팩)$/i.test(
+      lower,
+    )
+  );
+}
 function getUsefulTokens(
   productName: string,
 ) {
-  const ignored =
-    new Set([
-      "로봇청소기",
-      "청소기",
-      "로봇",
-      "무선",
-      "가정용",
-      "자동",
-      "단품",
-      "화이트",
-      "블랙",
-      "공식",
-      "정품",
-      "신제품",
-      "인공지능",
-      "올인원",
-    ]);
-
   return cleanProductName(
     productName,
   )
@@ -640,9 +779,23 @@ function getUsefulTokens(
         token.trim(),
     )
     .filter(
-      (token) =>
-        token.length >= 2 &&
-        !ignored.has(token),
+      (token) => {
+        const lower =
+          token.toLowerCase();
+
+        return (
+          token.length >= 2 &&
+          !GENERIC_PRODUCT_NOISE_TOKENS.has(
+            lower,
+          ) &&
+          !GENERIC_CATEGORY_TOKENS.has(
+            lower,
+          ) &&
+          !isGenericSpecToken(
+            lower,
+          )
+        );
+      },
     );
 }
 
@@ -652,21 +805,36 @@ function getBrandCandidate(
   const tokens =
     cleanProductName(
       productName,
-    ).split(" ");
+    )
+      .split(" ")
+      .map(
+        (token) =>
+          token.trim(),
+      )
+      .filter(Boolean);
 
   return (
     tokens.find(
-      (token) =>
-        token.length >= 2 &&
-        ![
-          "로봇청소기",
-          "청소기",
-          "로봇",
-        ].includes(token),
+      (token) => {
+        const lower =
+          token.toLowerCase();
+
+        return (
+          token.length >= 2 &&
+          !GENERIC_PRODUCT_NOISE_TOKENS.has(
+            lower,
+          ) &&
+          !GENERIC_CATEGORY_TOKENS.has(
+            lower,
+          ) &&
+          !isGenericSpecToken(
+            lower,
+          )
+        );
+      },
     ) ?? ""
   );
 }
-
 function candidateScore(
   candidate:
     CanonicalCandidate,
@@ -925,17 +1093,21 @@ export async function resolveNaverBrandProductUrl(
   brandHints: string[] = [],
 ) {
   /*
-    direct smartstore/brand URL이면
-    여기서 상품번호가 바로 잡힌다.
+    ader/cr.shopping 같은 네이버 중간 URL은
+    유료 검색보다 먼저 무료 redirect를 따라 실제 판매처 URL을 복구한다.
 
-    ader/cr3 같은 중간 URL이면
-    productId는 빈 문자열로 시작하고,
-    아래 SerpApi 공식상품 검색에서
-    실제 productId를 다시 확보한다.
+    redirect 최종 응답이 429여도 최종 URL이 확보되면 사용한다.
+    복구에 실패하면 기존 productUrl을 그대로 사용하므로
+    아래 기존 resolver/SerpApi fallback 동작은 유지된다.
   */
+  const resolvedInputUrl =
+    await resolveNaverShoppingBridgeUrl(
+      productUrl,
+    );
+
   const inputProductId =
     getProductId(
-      productUrl,
+      resolvedInputUrl,
     );
 
   const cleanedName =
@@ -1012,6 +1184,38 @@ export async function resolveNaverBrandProductUrl(
           normalizedBrandHints,
         )
       : null;
+
+  /*
+    이미 학습된 공식 brandSite가 있으면 그 slug를
+    무료 Brand Store 직접검색 후보의 최우선에 넣는다.
+
+    예:
+    드리미 -> https://brand.naver.com/dreame
+    이 매핑이 있어도 기존 코드는 한글 브랜드명 "드리미"에서
+    slug를 만들 수 없어 무료 direct search를 건너뛰고
+    SerpApi로 바로 넘어갈 수 있었다.
+
+    여기서는 학습된 URL에서 실제 slug만 추출하며,
+    SmartStore productId를 Brand Store productId로 가정하거나
+    canonical URL을 조합하지 않는다.
+  */
+  const learnedBrandSlug =
+    learnedBrandMapping?.brandSite
+      ?.match(
+        /brand\.naver\.com\/([a-zA-Z0-9_-]+)/i,
+      )?.[1]
+      ?.toLowerCase() ?? "";
+
+  if (
+    learnedBrandSlug &&
+    !brandSlugCandidates.includes(
+      learnedBrandSlug,
+    )
+  ) {
+    brandSlugCandidates.unshift(
+      learnedBrandSlug,
+    );
+  }
 
   /*
     학습된 brandSite만으로 productId를 조합해 즉시 반환하지 않는다.
@@ -1194,9 +1398,28 @@ export async function resolveNaverBrandProductUrl(
     canonicalCandidates.length === 0 &&
     brandSlugCandidates.length > 0
   ) {
+    /*
+      무료 Brand Store 직접검색은 일반 설명어보다
+      모델번호처럼 식별력이 높은 토큰을 우선한다.
+
+      예:
+      "드리미 아쿠아 스팀 로봇청소기 Aqua20 Ultra Roller ..."
+      기존: "아쿠아 스팀"
+      수정: "Aqua20"
+
+      강한 모델 토큰이 없을 때만 기존 modelTokens 앞쪽을 사용한다.
+    */
+    const directStrongModelTokens =
+      getStrongSearchModelTokens(
+        modelTokens,
+      );
+
     const directSearchQuery =
-      modelTokens
-        .slice(0, 2)
+      (
+        directStrongModelTokens.length > 0
+          ? directStrongModelTokens.slice(0, 2)
+          : modelTokens.slice(0, 2)
+      )
         .join(" ")
         .trim() ||
       cleanedName;

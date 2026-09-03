@@ -4,6 +4,18 @@ import {
   useState,
 } from "react";
 
+type BrowserReview = {
+  rating?: number;
+  score?: number;
+  reviewScore?: number;
+  date?: string;
+  createDate?: string;
+  reviewDate?: string;
+  text?: string;
+  reviewContent?: string;
+  helpfulCount?: number;
+};
+
 type MarketCandidate = {
   productName?: string;
   seller?: string;
@@ -12,6 +24,33 @@ type MarketCandidate = {
   sourceUrl?: string;
   reviewCount?: number;
   rating?: number;
+  browserReviews?: BrowserReview[];
+  browserReviewSourceUrl?: string;
+  browserSpecs?: Record<string, string>;
+  browserCatalogTitle?: string;
+};
+
+type BrowserBridgeCandidate = {
+  name?: string;
+  seller?: string;
+  price?: number;
+  imageUrl?: string;
+  url?: string;
+  reviewCount?: number;
+  rating?: number;
+  browserReviews?: BrowserReview[];
+  smartstoreReviewProbe?: {
+    finalUrl?: string;
+    sourceType?: string;
+    reviewCountReturned?: number;
+    specs?: Record<string, string>;
+    catalogTitle?: string;
+  };
+};
+
+type BrowserBridgeResponse = {
+  rawProducts?: number;
+  candidates?: BrowserBridgeCandidate[];
 };
 
 type FinalCandidate = {
@@ -265,54 +304,189 @@ export default function ProjectDAutomationPanel() {
         `"${normalizedCategory}" 시장 후보를 자동 검색하는 중...`,
       );
 
-      const marketResponse =
-        await fetch(
-          `/api/market-candidates?category=${encodeURIComponent(
-            normalizedCategory,
-          )}`,
-          {
-            cache: "no-store",
-          },
-        );
+      const bridgeRequestId =
+        `project-d-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
-      const marketResult =
-        await readJson(
-          marketResponse,
-        );
+      const bridgeResult =
+        await new Promise<BrowserBridgeResponse>((resolve, reject) => {
+          let settled = false;
 
-      if (
-        !marketResponse.ok ||
-        marketResult.success !== true
-      ) {
-        throw new Error(
-          cleanText(
-            marketResult.message,
-          ) ||
-            "시장 후보 검색에 실패했습니다.",
-        );
-      }
+          const cleanup = () => {
+            window.removeEventListener("message", onMessage);
+            window.clearTimeout(timeoutId);
+          };
 
-      const marketCandidates =
-        Array.isArray(
-          marketResult.candidates,
-        )
-          ? (
-              marketResult.candidates as MarketCandidate[]
-            )
+          const onMessage = (event: MessageEvent) => {
+            if (
+              event.source !== window ||
+              !event.data ||
+              event.data.type !== "PROJECT_D_NAVER_CAPTURE_RESULT" ||
+              event.data.requestId !== bridgeRequestId
+            ) {
+              return;
+            }
+
+            if (event.data.success !== true) {
+              settled = true;
+              cleanup();
+              reject(
+                new Error(
+                  cleanText(event.data.message) ||
+                    "Chrome 확장프로그램의 네이버 후보 수집에 실패했습니다.",
+                ),
+              );
+              return;
+            }
+
+            settled = true;
+            cleanup();
+            resolve((event.data.result ?? {}) as BrowserBridgeResponse);
+          };
+
+          const timeoutId = window.setTimeout(() => {
+            if (settled) return;
+            settled = true;
+            cleanup();
+            reject(
+              new Error(
+                "Chrome 확장프로그램 응답 시간이 초과되었습니다. Project D 확장프로그램이 설치·활성화되어 있는지 확인하세요.",
+              ),
+            );
+          }, 900000);
+
+          window.addEventListener("message", onMessage);
+
+          window.postMessage(
+            {
+              type: "PROJECT_D_NAVER_CAPTURE_REQUEST",
+              requestId: bridgeRequestId,
+              payload: {
+                category: normalizedCategory,
+                minBudget: min,
+                maxBudget: max,
+                targetCount: 100,
+              },
+            },
+            window.location.origin,
+          );
+        });
+
+      const browserCandidates =
+        Array.isArray(bridgeResult.candidates)
+          ? bridgeResult.candidates
           : [];
 
-      if (
-        marketCandidates.length === 0
-      ) {
+      const marketCandidates: MarketCandidate[] =
+        browserCandidates
+          .map((candidate) => ({
+            productName: cleanText(candidate.name),
+            seller: cleanText(candidate.seller),
+            price: Number(candidate.price ?? 0),
+            imageUrl: cleanText(candidate.imageUrl),
+            sourceUrl: cleanText(candidate.url),
+            reviewCount: Number(candidate.reviewCount ?? 0),
+            rating: Number(candidate.rating ?? 0),
+
+            browserReviews:
+              Array.isArray(
+                candidate.browserReviews,
+              )
+                ? candidate.browserReviews
+                : [],
+
+            browserReviewSourceUrl:
+              cleanText(
+                candidate
+                  .smartstoreReviewProbe
+                  ?.finalUrl ??
+                  candidate.url,
+              ),
+
+            browserSpecs:
+              candidate
+                .smartstoreReviewProbe
+                ?.specs &&
+              typeof candidate
+                .smartstoreReviewProbe
+                .specs === "object"
+                ? candidate
+                    .smartstoreReviewProbe
+                    .specs
+                : {},
+
+            browserCatalogTitle:
+              cleanText(
+                candidate
+                  .smartstoreReviewProbe
+                  ?.catalogTitle,
+              ),
+          }))
+          .filter(
+            (candidate) =>
+              cleanText(candidate.productName).length > 0 &&
+              Number(candidate.price ?? 0) > 0 &&
+              cleanText(candidate.sourceUrl).length > 0,
+          )
+          .sort((a, b) => {
+            const catalogPriority = (
+              candidate: MarketCandidate,
+            ) => {
+              const sourceUrl =
+                cleanText(
+                  candidate.browserReviewSourceUrl,
+                );
+
+              const catalogTitle =
+                cleanText(
+                  candidate.browserCatalogTitle,
+                );
+
+              const specCount =
+                candidate.browserSpecs &&
+                typeof candidate.browserSpecs ===
+                  "object"
+                  ? Object.keys(
+                      candidate.browserSpecs,
+                    ).length
+                  : 0;
+
+              const browserReviewCount =
+                Array.isArray(
+                  candidate.browserReviews,
+                )
+                  ? candidate.browserReviews.length
+                  : 0;
+
+              return (
+                /^https:\/\/search\.shopping\.naver\.com\/catalog\/\d+/i.test(
+                  sourceUrl,
+                ) &&
+                catalogTitle.length > 0 &&
+                specCount > 0 &&
+                browserReviewCount >= 5
+              )
+                ? 1
+                : 0;
+            };
+
+            return (
+              catalogPriority(b) -
+              catalogPriority(a)
+            );
+          });
+
+      if (marketCandidates.length === 0) {
         throw new Error(
-          "시장 후보를 찾지 못했습니다.",
+          "Chrome 확장프로그램이 유효한 시장 후보를 반환하지 못했습니다.",
         );
       }
 
       updateStep(
         "market",
         "done",
-        `${marketCandidates.length}개 시장 후보 수집 완료`,
+        `${marketCandidates.length}개 시장 후보 수집 완료 · 네이버 원본 ${Number(
+          bridgeResult.rawProducts ?? marketCandidates.length,
+        )}개`,
       );
 
       /*
@@ -360,6 +534,30 @@ export default function ProjectDAutomationPanel() {
               Number(
                 candidate.rating ??
                   0,
+              ),
+
+            browserReviews:
+              Array.isArray(
+                candidate.browserReviews,
+              )
+                ? candidate.browserReviews
+                : [],
+
+            browserReviewSourceUrl:
+              cleanText(
+                candidate
+                  .browserReviewSourceUrl,
+              ),
+
+            browserSpecs:
+              candidate.browserSpecs &&
+              typeof candidate.browserSpecs === "object"
+                ? candidate.browserSpecs
+                : {},
+
+            browserCatalogTitle:
+              cleanText(
+                candidate.browserCatalogTitle,
               ),
           }),
         );

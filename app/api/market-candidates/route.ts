@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import {
   searchMarketProducts,
 } from "../../../lib/marketSearch";
@@ -37,9 +37,54 @@ export async function GET(
       );
     }
 
-    const products =
+    const minBudget =
+      Number(
+        (
+          searchParams.get(
+            "minBudget",
+          ) ?? ""
+        ).replace(
+          /[^\d.]/g,
+          "",
+        ),
+      ) || 0;
+
+    const maxBudget =
+      Number(
+        (
+          searchParams.get(
+            "maxBudget",
+          ) ?? ""
+        ).replace(
+          /[^\d.]/g,
+          "",
+        ),
+      ) || 0;
+
+    /*
+      예산 필터를 적용하기 전에 후보 풀을 넓게 확보한다.
+
+      기본 15개만 먼저 확보한 뒤 예산 필터를 걸면
+      상위 검색결과에 고가 제품이 많은 카테고리에서
+      실제 예산 내 후보가 5개 미만으로 줄어들 수 있다.
+
+      따라서 최대 30개까지 시장 후보를 확보한 뒤
+      예산 범위를 적용하고 최종 15개만 사용한다.
+    */
+    const marketPool =
       await searchMarketProducts(
-        category,
+          category,
+          15,
+          {
+            minBudget,
+            maxBudget,
+          },
+        );
+
+    const products =
+      marketPool.slice(
+        0,
+        15,
       );
 
     /*

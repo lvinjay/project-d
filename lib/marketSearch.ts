@@ -99,6 +99,81 @@ function createDuplicateKey(
   ].join("|");
 }
 
+const ACCESSORY_RELATION_SIGNAL =
+  /교체용|대체용|전용|리필|호환용|호환품|호환(?=\s|$)|replacement|spare|refill|compatible\s+with|made\s+for|designed\s+for/i;
+
+const ACCESSORY_ITEM_SIGNAL =
+  /필터|먼지봉투|먼지백|패드|걸레|브러시|브러쉬|배터리|충전기|세정제|리모컨|리모콘|케이블|어댑터|카트리지|토너|잉크|filter|brush|pad|mop|battery|charger|remote|cable|adapter|cartridge|toner|ink/i;
+
+const ACCESSORY_PACK_SIGNAL =
+  /세트|키트|팩|묶음|\d+\s*(?:개|매|팩|세트)|set|kit|pack|\d+\s*(?:pcs?|pieces?)/i;
+
+const EXPLICIT_ACCESSORY_PRODUCT_SIGNAL =
+  /소모품|부속품|부품\s*(?:전용|세트|묶음)?|액세서리|악세사리|consumable|accessor(?:y|ies)/i;
+
+function isClearlyAccessoryProduct(
+  name: string,
+) {
+  const text =
+    normalizeText(name);
+
+  if (!text) {
+    return false;
+  }
+
+  const hasAccessoryItem =
+    ACCESSORY_ITEM_SIGNAL.test(text);
+
+  const hasRelation =
+    ACCESSORY_RELATION_SIGNAL.test(text);
+
+  const hasPack =
+    ACCESSORY_PACK_SIGNAL.test(text);
+
+  /*
+    초반 후보 단계에서는 확실한 액세서리만 제거한다.
+
+    단순히 "필터", "배터리", "충전기" 등이 제목에
+    포함됐다는 이유만으로는 절대 제거하지 않는다.
+
+    예:
+    - 공기청정기 ABC100 필터 추가 증정 => 유지
+    - 청소기 X20 배터리 2개 포함 => 유지
+    - X20 전용 배터리 => 제외
+    - ABC100 교체용 필터 3개 => 제외
+
+    애매한 후보는 이후 모델/가격/공식 URL/상세 검증으로 넘긴다.
+  */
+  if (
+    hasAccessoryItem &&
+    hasRelation
+  ) {
+    return true;
+  }
+
+  if (
+    hasAccessoryItem &&
+    hasPack &&
+    hasRelation
+  ) {
+    return true;
+  }
+
+  if (
+    EXPLICIT_ACCESSORY_PRODUCT_SIGNAL.test(
+      text,
+    ) &&
+    (
+      hasAccessoryItem ||
+      hasPack
+    )
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 function isUsefulProductName(
   name: string,
   keyword: string,
@@ -121,10 +196,9 @@ function isUsefulProductName(
     return false;
   }
 
-  const banned =
-    /호환|소모품|부품|필터|먼지봉투|먼지백|물걸레\s*(패드|포|천|리필)|브러시|브러쉬|배터리|충전기|세정제|액세서리/i;
-
-  return !banned.test(name);
+  return !isClearlyAccessoryProduct(
+    name,
+  );
 }
 
 function normalizedMatchText(
@@ -154,6 +228,142 @@ function compactToken(
     );
 }
 
+/*
+  상품군별 단어를 하드코딩하지 않고 모델 식별에 불필요한
+  공통 마케팅/상태/색상 표현만 제외한다.
+
+  모델 코어는 숫자를 포함한 토큰을 기본으로 하되,
+  연도/용량/크기/전력처럼 명백한 스펙 숫자는 모델번호로
+  오인하지 않도록 별도로 거른다.
+*/
+const GENERIC_MODEL_IGNORED =
+  new Set([
+    "official",
+    "genuine",
+    "new",
+    "best",
+    "sale",
+    "정품",
+    "공식",
+    "신제품",
+    "신형",
+    "최신",
+    "단품",
+    "화이트",
+    "블랙",
+    "실버",
+    "그레이",
+    "베이지",
+  ]);
+
+const GENERIC_SPEC_UNITS =
+  new Set([
+    "mm",
+    "cm",
+    "m",
+    "km",
+    "g",
+    "kg",
+    "ml",
+    "l",
+    "w",
+    "kw",
+    "wh",
+    "kwh",
+    "mah",
+    "v",
+    "hz",
+    "khz",
+    "mhz",
+    "ghz",
+    "mp",
+    "gb",
+    "tb",
+    "inch",
+    "in",
+    "인치",
+    "형",
+    "개",
+    "매",
+    "팩",
+  ]);
+
+function isLikelySpecNumberToken(
+  tokens: string[],
+  index: number,
+) {
+  const token =
+    tokens[index] ?? "";
+
+  /*
+    512GB / 14인치 / 77inch / 500ml처럼
+    숫자와 규격 단위가 붙어 있는 토큰도
+    모델번호가 아니라 스펙으로 처리한다.
+  */
+  if (
+    /^\d+(?:\.\d+)?(?:mm|cm|m|km|g|kg|ml|l|w|kw|wh|kwh|mah|v|hz|khz|mhz|ghz|mp|gb|tb|inch|in|인치|형|개|매|팩)$/i.test(
+      token,
+    )
+  ) {
+    return true;
+  }
+
+  if (!/^\d+(?:\.\d+)?$/.test(token)) {
+    return false;
+  }
+
+  const numeric =
+    Number(token);
+
+  if (
+    /^\d{4}$/.test(token) &&
+    numeric >= 1990 &&
+    numeric <= 2100
+  ) {
+    return true;
+  }
+
+  const next =
+    (tokens[index + 1] ?? "")
+      .toLowerCase();
+
+  if (GENERIC_SPEC_UNITS.has(next)) {
+    return true;
+  }
+
+  return false;
+}
+
+function isUsableModelCoreToken(
+  tokens: string[],
+  index: number,
+) {
+  const token =
+    tokens[index] ?? "";
+
+  if (
+    token.length < 2 ||
+    GENERIC_MODEL_IGNORED.has(token)
+  ) {
+    return false;
+  }
+
+  if (!/\d/.test(token)) {
+    return false;
+  }
+
+  if (
+    isLikelySpecNumberToken(
+      tokens,
+      index,
+    )
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 function getModelTokens(
   productName: string,
 ) {
@@ -164,31 +374,6 @@ function getModelTokens(
       .split(" ")
       .filter(Boolean);
 
-  const ignored =
-    new Set([
-      "로봇청소기",
-      "청소기",
-      "로봇",
-      "올인원",
-      "자동",
-      "무선",
-      "스마트",
-      "화이트",
-      "블랙",
-      "실버",
-      "그레이",
-      "베이지",
-      "단품",
-      "정품",
-      "공식",
-      "물걸레",
-      "진공",
-      "바닥",
-      "걸레",
-      "흡입",
-      "세척",
-    ]);
-
   const result:
     string[] = [];
 
@@ -197,46 +382,42 @@ function getModelTokens(
     index < tokens.length;
     index++
   ) {
-    const token =
-      tokens[index];
-
     if (
-      ignored.has(token) ||
-      token.length < 2
+      !isUsableModelCoreToken(
+        tokens,
+        index,
+      )
     ) {
       continue;
     }
 
+    const token =
+      tokens[index];
+
+    result.push(token);
+
     /*
-      모델명의 핵심은 보통 숫자가 포함된 토큰
-      (X60, P70, S10, N95TWU 등)이다.
+      X60 Ultra / P70 Pro / S10 MaxV / iPhone 16 Pro처럼
+      모델 코어 바로 뒤의 영문 서브모델도 함께 사용한다.
+      단, 공통 마케팅 표현과 스펙 단위는 제외한다.
     */
-    if (/\d/.test(token)) {
-      result.push(token);
+    const next =
+      tokens[index + 1] ?? "";
 
-      /*
-        X60 Ultra / P70 Pro / S10 MaxV처럼
-        모델번호 바로 뒤 영문 서브모델도 함께 사용한다.
-      */
-      const next =
-        tokens[index + 1];
-
-      if (
-        next &&
-        /^[a-z][a-z0-9_-]*$/i.test(
-          next,
-        ) &&
-        !ignored.has(next)
-      ) {
-        result.push(next);
-      }
+    if (
+      next &&
+      /^[a-z][a-z0-9_-]*$/i.test(
+        next,
+      ) &&
+      !GENERIC_MODEL_IGNORED.has(next) &&
+      !GENERIC_SPEC_UNITS.has(
+        next.toLowerCase(),
+      )
+    ) {
+      result.push(next);
     }
   }
 
-  /*
-    X60 Ultra와 X60ULTRA가 동시에 들어있는 제목처럼
-    같은 의미의 중복 토큰을 제거한다.
-  */
   const unique:
     string[] = [];
 
@@ -260,6 +441,7 @@ function getModelTokens(
 
   return unique.slice(0, 4);
 }
+
 
 function getVariantTokens(
   productName: string,
@@ -303,34 +485,30 @@ function getPrimaryModelIdentity(
     index < tokens.length;
     index++
   ) {
-    const token =
-      tokens[index];
-
-    /*
-      첫 번째 숫자 포함 토큰을 모델 코어로 본다.
-      예: X60 / P70 / S10 / N95TWU
-    */
-    if (!/\d/.test(token)) {
+    if (
+      !isUsableModelCoreToken(
+        tokens,
+        index,
+      )
+    ) {
       continue;
     }
+
+    const token =
+      tokens[index];
 
     const next =
       tokens[index + 1] ??
       "";
 
-    /*
-      모델 코어 바로 뒤의 영문 토큰만
-      서브모델 식별자로 사용한다.
-      예: X60 Master / X60 Ultra
-          P70 Pro / S10 MaxV
-
-      뒤쪽의 17cm 같은 치수/마케팅 숫자는
-      모델 identity 충돌 판정에 사용하지 않는다.
-    */
     const suffix =
       next &&
       /^[a-z][a-z0-9_-]*$/i.test(
         next,
+      ) &&
+      !GENERIC_MODEL_IGNORED.has(next) &&
+      !GENERIC_SPEC_UNITS.has(
+        next.toLowerCase(),
       )
         ? compactToken(next)
         : "";
@@ -780,15 +958,23 @@ function isIndividualSellerName(
 function isBadOfferTitle(
   name: string,
 ) {
-  const banned =
-    /호환|소모품|부품|필터|먼지봉투|먼지백|물걸레\s*(패드|포|천|리필)|브러시|브러쉬|배터리|충전기|세정제|액세서리|악세사리|리퍼|중고|해외직구/i;
+  /*
+    중고/리퍼/해외직구는 액세서리 판정과 별개의
+    판매조건 정책이므로 기존 제외 정책을 유지한다.
+  */
+  const disallowedCondition =
+    /리퍼|중고|해외직구/i;
 
-  return banned.test(name);
+  return (
+    disallowedCondition.test(name) ||
+    isClearlyAccessoryProduct(name)
+  );
 }
 
 async function searchNaverShopping(
   query: string,
   apiKey: string,
+  page = 1,
 ) {
   const params =
     new URLSearchParams({
@@ -798,6 +984,18 @@ async function searchNaverShopping(
       output: "json",
       api_key: apiKey,
     });
+
+  if (page > 1) {
+    params.set(
+      "page",
+      String(page),
+    );
+
+    params.set(
+      "start",
+      "1",
+    );
+  }
 
   const response =
     await fetch(
@@ -831,6 +1029,10 @@ async function searchNaverShopping(
 export async function searchMarketProducts(
   keyword: string,
   limit = 15,
+  options?: {
+    minBudget?: number;
+    maxBudget?: number;
+  },
 ): Promise<MarketSearchResult[]> {
   const normalizedKeyword =
     keyword.trim();
@@ -868,6 +1070,54 @@ export async function searchMarketProducts(
   const uniqueProducts:
     MarketSearchResult[] = [];
 
+  const minBudget =
+    Number.isFinite(
+      options?.minBudget,
+    )
+      ? Math.max(
+          0,
+          options?.minBudget ?? 0,
+        )
+      : 0;
+
+  const maxBudget =
+    Number.isFinite(
+      options?.maxBudget,
+    )
+      ? Math.max(
+          0,
+          options?.maxBudget ?? 0,
+        )
+      : 0;
+
+  const hasBudget =
+    minBudget > 0 ||
+    maxBudget > 0;
+
+  const isWithinBudget = (
+    price: number,
+  ) =>
+    price > 0 &&
+    (
+      minBudget <= 0 ||
+      price >= minBudget
+    ) &&
+    (
+      maxBudget <= 0 ||
+      price <= maxBudget
+    );
+
+  const targetReached = () =>
+    hasBudget
+      ? uniqueProducts.filter(
+          (product) =>
+            isWithinBudget(
+              product.price,
+            ),
+        ).length >= limit
+      : uniqueProducts.length >=
+          limit;
+
   /*
     1차 후보의 중복 기준은 판매등록이 아니라 "대표 모델"이다.
 
@@ -883,22 +1133,10 @@ export async function searchMarketProducts(
   const seenFallbackKeys =
     new Set<string>();
 
-  for (
-    const query of queries
-  ) {
-    if (
-      uniqueProducts.length >=
-      limit
-    ) {
-      break;
-    }
-
-    const rawResults =
-      await searchNaverShopping(
-        query,
-        apiKey,
-      );
-
+  const collectRawResults = (
+    rawResults:
+      SerpApiShoppingResult[],
+  ) => {
     for (
       const item of
       rawResults
@@ -961,6 +1199,23 @@ export async function searchMarketProducts(
               item.rating,
             ),
         };
+
+      /*
+        예산이 지정된 경우에는 예산 밖 판매등록을
+        대표 모델 중복선정에 참여시키지 않는다.
+
+        그렇지 않으면 같은 모델의 예산 내 판매등록이 먼저 있어도,
+        리뷰가 더 많은 예산 밖 등록이 대표 자리를 덮어쓴 뒤
+        마지막 예산 필터에서 모델 전체가 사라질 수 있다.
+      */
+      if (
+        hasBudget &&
+        !isWithinBudget(
+          product.price,
+        )
+      ) {
+        continue;
+      }
 
       const identity =
         getPrimaryModelIdentity(
@@ -1037,16 +1292,80 @@ export async function searchMarketProducts(
         product,
       );
 
-      if (
-        uniqueProducts.length >=
-        limit
-      ) {
+      if (targetReached()) {
         break;
       }
     }
+  };
+
+  /*
+    비용 우선 pagination fallback:
+    - 네 검색어의 1페이지를 먼저 확인한다.
+    - 예산이 있고 목표 후보가 부족할 때만 2페이지를 확인한다.
+    - 목표 개수가 채워지는 즉시 추가 호출을 중단한다.
+    - 예산 없는 기존 호출은 2페이지 fallback을 사용하지 않는다.
+  */
+  for (
+    const query of queries
+  ) {
+    if (targetReached()) {
+      break;
+    }
+
+    const rawResults =
+      await searchNaverShopping(
+        query,
+        apiKey,
+        1,
+      );
+
+    collectRawResults(
+      rawResults,
+    );
   }
 
-  return uniqueProducts;
+  if (
+    hasBudget &&
+    !targetReached()
+  ) {
+    for (
+      const query of queries
+    ) {
+      if (targetReached()) {
+        break;
+      }
+
+      const rawResults =
+        await searchNaverShopping(
+          query,
+          apiKey,
+          2,
+        );
+
+      collectRawResults(
+        rawResults,
+      );
+    }
+  }
+
+  if (!hasBudget) {
+    return uniqueProducts.slice(
+      0,
+      limit,
+    );
+  }
+
+  return uniqueProducts
+    .filter(
+      (product) =>
+        isWithinBudget(
+          product.price,
+        ),
+    )
+    .slice(
+      0,
+      limit,
+    );
 }
 
 /*
@@ -1102,6 +1421,7 @@ export async function searchSmartStoreMarketProducts(
   const seenModels =
     new Set<string>();
 
+
   for (
     const product of marketProducts
   ) {
@@ -1128,6 +1448,7 @@ export async function searchSmartStoreMarketProducts(
       modelKey &&
       seenModels.has(modelKey)
     ) {
+
       continue;
     }
 
@@ -1152,6 +1473,7 @@ export async function searchSmartStoreMarketProducts(
     ) {
       selected =
         product;
+
     } else {
       const offerSearch =
         await searchProductOffers(
@@ -1193,6 +1515,7 @@ export async function searchSmartStoreMarketProducts(
     }
 
     if (!selected) {
+
       continue;
     }
 
@@ -1204,6 +1527,7 @@ export async function searchSmartStoreMarketProducts(
       selected,
     );
   }
+
 
   return candidates;
 }
@@ -1597,4 +1921,5 @@ export async function searchProductOffers(
     purchaseSource,
   };
 }
+
 

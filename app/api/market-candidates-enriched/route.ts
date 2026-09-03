@@ -18,6 +18,10 @@ import {
 } from "../../../lib/officialSiteMappingsDb";
 
 import {
+  discoverOfficialSite,
+} from "../../../lib/officialSiteDiscovery";
+
+import {
   collectManufacturerProduct,
 } from "../../../lib/manufacturerProductCollector";
 
@@ -83,6 +87,13 @@ type NaverProductDetail =
     >;
   };
 
+type CapturedReview = {
+  rating: number;
+  date: string;
+  text: string;
+  helpfulCount: number;
+};
+
 type CapturedProduct = {
   name: string;
   text: string;
@@ -92,6 +103,17 @@ type CapturedProduct = {
   price: number;
   reviewCount: number;
   rating: number;
+
+  browserReviews?: CapturedReview[];
+
+  browserReviewSourceUrl?: string;
+
+  browserSpecs?: Record<
+    string,
+    string
+  >;
+
+  browserCatalogTitle?: string;
 };
 
 type CaptureResponse = {
@@ -127,7 +149,8 @@ type FinalCandidate = {
 
     sourceType?:
       | "naver-brand"
-      | "manufacturer";
+      | "manufacturer"
+      | "naver-catalog";
 
     identityKey?: string;
   };
@@ -195,7 +218,8 @@ type FinalCandidate = {
 
     sourceType?:
       | "naver-brand"
-      | "manufacturer";
+      | "manufacturer"
+      | "naver-catalog";
 
     identityKey?: string;
   };
@@ -318,7 +342,7 @@ function cleanName(
       " ",
     )
     .replace(
-      /\b(화이트|블랙|실버|그레이|베이지|단품|정품|공식|무료배송)\b/g,
+      /(?:^|\s)(화이트|블랙|실버|그레이|베이지|단품|정품|공식|무료배송)(?=\s|$)/g,
       " ",
     )
     .replace(
@@ -336,11 +360,13 @@ function nameSimilarity(
   a: string,
   b: string,
 ) {
+  /*
+    상품군별 단어를 하드코딩하지 않는다.
+    여기서는 모든 카테고리에 공통적인
+    마케팅/상태 표현만 비교 대상에서 제외한다.
+  */
   const ignored =
     new Set([
-      "로봇청소기",
-      "청소기",
-      "로봇",
       "자동",
       "공식",
     ]);
@@ -1599,6 +1625,150 @@ export async function GET(
       captureData.category ??
       "";
 
+    /*
+      Browser review wiring 무료 검증용 dry-run.
+
+      외부 resolver / SerpApi / Bright Data 호출 전에
+      naver-capture에서 복원된 실제 browserReviews가
+      enriched에서 사용할 리뷰 형태로 정상 전달되는지만 확인한다.
+    */
+    if (
+      requestUrl.searchParams.get(
+        "browserReviewDryRun",
+      ) === "1"
+    ) {
+      const products =
+        Array.isArray(
+          captureData.products,
+        )
+          ? captureData.products
+          : [];
+
+      const inspected =
+        products.map(
+          (product, index) => {
+            const browserReviews =
+              Array.isArray(
+                product.browserReviews,
+              )
+                ? product.browserReviews
+                    .filter(
+                      (review) =>
+                        Boolean(
+                          review?.text?.trim(),
+                        ),
+                    )
+                    .slice(0, 20)
+                : [];
+
+            const browserSpecs =
+              product.browserSpecs &&
+              typeof product.browserSpecs ===
+                "object" &&
+              !Array.isArray(
+                product.browserSpecs,
+              )
+                ? product.browserSpecs
+                : {};
+
+            const dryRunKeySpecs = {
+              ...browserSpecs,
+            };
+
+            const reviewDetail = {
+              topReviews:
+                browserReviews,
+
+              totalReviews:
+                Math.max(
+                  Number(
+                    product.reviewCount ??
+                      0,
+                  ),
+                  browserReviews.length,
+                ),
+
+              url:
+                product
+                  .browserReviewSourceUrl ||
+                product.url ||
+                "",
+            };
+
+            return {
+              position:
+                index + 1,
+
+              productName:
+                product.name,
+
+              browserReviewCount:
+                browserReviews.length,
+
+              browserSpecCount:
+                Object.keys(
+                  browserSpecs,
+                ).length,
+
+              keySpecsCount:
+                Object.keys(
+                  dryRunKeySpecs,
+                ).length,
+
+              keySpecs:
+                dryRunKeySpecs,
+
+              topReviewsCount:
+                reviewDetail
+                  .topReviews
+                  .length,
+
+              hasFullReviewEvidence:
+                reviewDetail
+                  .topReviews
+                  .length >= 5,
+
+              reviewSourceUrl:
+                reviewDetail.url,
+
+              firstReview:
+                reviewDetail
+                  .topReviews[0] ??
+                null,
+            };
+          },
+        );
+
+      return NextResponse.json({
+        success: true,
+
+        browserReviewDryRun:
+          true,
+
+        externalApiCalls:
+          0,
+
+        productCount:
+          inspected.length,
+
+        productsWithReviews:
+          inspected.filter(
+            (item) =>
+              item.browserReviewCount >
+              0,
+          ).length,
+
+        productsWithAtLeast5Reviews:
+          inspected.filter(
+            (item) =>
+              item
+                .hasFullReviewEvidence,
+          ).length,
+
+        inspected,
+      });
+    }
+
     const minBudget =
       Number(
         captureData.minBudget ??
@@ -1810,7 +1980,8 @@ export async function GET(
 
       let canonicalSourceType:
         | "naver-brand"
-        | "manufacturer" =
+        | "manufacturer"
+        | "naver-catalog" =
         "naver-brand";
 
       let identityKey =
@@ -1837,6 +2008,64 @@ export async function GET(
         3. 그 외 네이버 중간 URL
            → 기존 resolver 사용
       */
+      const browserCatalogCanonicalSourceUrl =
+        typeof market.browserReviewSourceUrl === "string"
+          ? market.browserReviewSourceUrl.trim()
+          : "";
+
+      const browserCatalogCanonicalMatch =
+        browserCatalogCanonicalSourceUrl.match(
+          /^https:\/\/search\.shopping\.naver\.com\/catalog\/(\d+)/i,
+        );
+
+      const browserCatalogCanonicalProductId =
+        browserCatalogCanonicalMatch?.[1] ?? "";
+
+      const browserCatalogCanonicalUrl =
+        browserCatalogCanonicalProductId
+          ? `https://search.shopping.naver.com/catalog/${browserCatalogCanonicalProductId}`
+          : "";
+
+      const browserCatalogCanonicalTitle =
+        typeof market.browserCatalogTitle === "string"
+          ? market.browserCatalogTitle.trim()
+          : "";
+
+      const browserCatalogCanonicalSpecs =
+        market.browserSpecs &&
+        typeof market.browserSpecs === "object" &&
+        !Array.isArray(market.browserSpecs)
+          ? market.browserSpecs
+          : {};
+
+      const browserCatalogCanonicalReviews =
+        Array.isArray(market.browserReviews)
+          ? market.browserReviews
+              .filter(
+                (review) =>
+                  Boolean(review?.text?.trim()),
+              )
+              .slice(0, 20)
+          : [];
+
+      const browserCatalogCanonicalValidation =
+        browserCatalogCanonicalTitle
+          ? validateProductMatch(
+              market.name,
+              browserCatalogCanonicalTitle,
+              "",
+            )
+          : null;
+
+      const canUseBrowserCatalogCanonical =
+        Boolean(browserCatalogCanonicalProductId) &&
+        Boolean(browserCatalogCanonicalUrl) &&
+        Boolean(browserCatalogCanonicalTitle) &&
+        Object.keys(browserCatalogCanonicalSpecs).length > 0 &&
+        browserCatalogCanonicalReviews.length >= 5 &&
+        market.price > 0 &&
+        browserCatalogCanonicalValidation?.matched === true;
+
       const urlInfo =
         getNaverProductUrlInfo(
           market.url,
@@ -1943,6 +2172,38 @@ export async function GET(
       }
 
       if (
+        canUseBrowserCatalogCanonical
+      ) {
+        canonicalSourceType =
+          "naver-catalog";
+
+        resolvedProductId =
+          browserCatalogCanonicalProductId;
+
+        resolvedUrl =
+          browserCatalogCanonicalUrl;
+
+        resolvedBrandName =
+          browserCatalogCanonicalSpecs["브랜드"] ??
+          browserCatalogCanonicalSpecs["제조사"] ??
+          "";
+
+        resolvedBrandSite =
+          "https://search.shopping.naver.com";
+
+        console.log(
+          `[ENRICH ${position}] Catalog canonical 직접 사용 → resolver/SerpApi 생략`,
+          {
+            productId: resolvedProductId,
+            title: browserCatalogCanonicalTitle,
+            specCount:
+              Object.keys(browserCatalogCanonicalSpecs).length,
+            reviewCount:
+              browserCatalogCanonicalReviews.length,
+            url: resolvedUrl,
+          },
+        );
+      } else if (
         urlInfo?.type ===
         "brand"
       ) {
@@ -2094,10 +2355,48 @@ export async function GET(
                 ]),
               ).filter(Boolean);
 
-            const officialMapping =
+            let officialMapping =
               await findOfficialSiteMapping(
                 brandCandidates,
               );
+
+            if (!officialMapping) {
+              try {
+                const discoveredOfficialSite =
+                  await discoverOfficialSite(
+                    brandCandidates,
+                    market.name,
+                  );
+
+                if (
+                  discoveredOfficialSite.success &&
+                  discoveredOfficialSite.officialSite
+                ) {
+                  officialMapping = {
+                    brandKey: "",
+                    brandName:
+                      discoveredOfficialSite.brandName,
+                    officialSite:
+                      discoveredOfficialSite.officialSite,
+                    source:
+                      discoveredOfficialSite.source,
+                    confidence:
+                      discoveredOfficialSite.confidence,
+                  };
+
+                  console.log(
+                    `[ENRICH ${position}] 공식몰 자동 탐색 성공`,
+                    discoveredOfficialSite.officialSite,
+                    discoveredOfficialSite.source,
+                  );
+                }
+              } catch (error) {
+                console.warn(
+                  `[ENRICH ${position}] 공식몰 자동 탐색 실패`,
+                  error,
+                );
+              }
+            }
 
             const manufacturerSearchTerms =
               getStrongSearchModelTokens(
@@ -2382,10 +2681,48 @@ export async function GET(
                 ]),
               ).filter(Boolean);
 
-            const officialMapping =
+            let officialMapping =
               await findOfficialSiteMapping(
                 brandCandidates,
               );
+
+            if (!officialMapping) {
+              try {
+                const discoveredOfficialSite =
+                  await discoverOfficialSite(
+                    brandCandidates,
+                    market.name,
+                  );
+
+                if (
+                  discoveredOfficialSite.success &&
+                  discoveredOfficialSite.officialSite
+                ) {
+                  officialMapping = {
+                    brandKey: "",
+                    brandName:
+                      discoveredOfficialSite.brandName,
+                    officialSite:
+                      discoveredOfficialSite.officialSite,
+                    source:
+                      discoveredOfficialSite.source,
+                    confidence:
+                      discoveredOfficialSite.confidence,
+                  };
+
+                  console.log(
+                    `[ENRICH ${position}] 공식몰 자동 탐색 성공`,
+                    discoveredOfficialSite.officialSite,
+                    discoveredOfficialSite.source,
+                  );
+                }
+              } catch (error) {
+                console.warn(
+                  `[ENRICH ${position}] 공식몰 자동 탐색 실패`,
+                  error,
+                );
+              }
+            }
 
             const manufacturerSearchTerms =
               getStrongSearchModelTokens(
@@ -2516,35 +2853,41 @@ export async function GET(
       }
 
       /*
-        Naver와 Manufacturer 모두 같은 공용 identity 규칙을 사용한다.
+        Brand / Manufacturer는 기존 공용 identity 규칙을 유지한다.
+        Catalog는 별도 ID 체계이므로 catalog 전용 identity를 사용한다.
       */
-      const canonicalIdentity =
-        buildCanonicalPipelineIdentity({
-          sourceType:
-            canonicalSourceType,
+      if (
+        canonicalSourceType ===
+          "naver-catalog"
+      ) {
+        identityKey =
+          `naver-catalog:${resolvedProductId}`;
+      } else {
+        identityKey =
+          buildCanonicalPipelineIdentity({
+            sourceType:
+              canonicalSourceType,
 
-          canonicalUrl:
-            resolvedUrl,
+            canonicalUrl:
+              resolvedUrl,
 
-          productId:
-            canonicalSourceType ===
-              "naver-brand"
-              ? resolvedProductId
-              : undefined,
+            productId:
+              canonicalSourceType ===
+                "naver-brand"
+                ? resolvedProductId
+                : undefined,
 
-          officialSite:
-            resolvedBrandSite ||
-            resolvedUrl,
+            officialSite:
+              resolvedBrandSite ||
+              resolvedUrl,
 
-          brandName:
-            resolvedBrandName,
+            brandName:
+              resolvedBrandName,
 
-          title:
-            market.name,
-        });
-
-      identityKey =
-        canonicalIdentity.identityKey;
+            title:
+              market.name,
+          }).identityKey;
+      }
 
       /*
         이전 배치에서 이미 확보된 상품이면
@@ -2593,6 +2936,9 @@ export async function GET(
         false;
 
       let usedAnalyzedFallback =
+        false;
+
+      let usedBrowserCatalogDetail =
         false;
 
       let cachedAnalyzedReviewCount =
@@ -2692,7 +3038,10 @@ export async function GET(
           `[ENRICH ${position}] Manufacturer 상세 사용`,
           detail.title,
         );
-      } else {
+      } else if (
+        canonicalSourceType ===
+          "naver-brand"
+      ) {
         detail =
           await getCachedProductDetail(
             resolvedProductId,
@@ -2707,6 +3056,202 @@ export async function GET(
             resolvedProductId,
           );
         }
+      }
+
+      const capturedBrowserCatalogProduct =
+        (
+          captureData.products ??
+          []
+        ).find(
+          (captured) =>
+            captured.url === market.url &&
+            captured.name === market.name,
+        ) ??
+        (
+          captureData.products ??
+          []
+        ).find(
+          (captured) =>
+            captured.url === market.url,
+        );
+
+      const browserCatalogTitleForDetail =
+        typeof capturedBrowserCatalogProduct
+          ?.browserCatalogTitle === "string"
+          ? capturedBrowserCatalogProduct
+              .browserCatalogTitle
+              .trim()
+          : "";
+
+      const browserCatalogSpecsForDetail =
+        capturedBrowserCatalogProduct
+          ?.browserSpecs &&
+        typeof capturedBrowserCatalogProduct
+          .browserSpecs === "object" &&
+        !Array.isArray(
+          capturedBrowserCatalogProduct
+            .browserSpecs,
+        )
+          ? capturedBrowserCatalogProduct
+              .browserSpecs
+          : {};
+
+      const browserCatalogReviewsForDetail =
+        Array.isArray(
+          capturedBrowserCatalogProduct
+            ?.browserReviews,
+        )
+          ? capturedBrowserCatalogProduct
+              .browserReviews
+              .filter(
+                (review) =>
+                  Boolean(
+                    review?.text?.trim(),
+                  ),
+              )
+              .slice(0, 20)
+          : [];
+
+      const browserCatalogUrlForDetail =
+        typeof capturedBrowserCatalogProduct
+          ?.browserReviewSourceUrl === "string"
+          ? capturedBrowserCatalogProduct
+              .browserReviewSourceUrl
+              .trim()
+          : "";
+
+      const browserCatalogUrlValid =
+        /^https:\/\/search\.shopping\.naver\.com\/catalog\/\d+/i.test(
+          browserCatalogUrlForDetail,
+        );
+
+      const browserCatalogDetailValidation =
+        browserCatalogTitleForDetail
+          ? validateProductMatch(
+              market.name,
+              browserCatalogTitleForDetail,
+              "",
+            )
+          : null;
+
+      if (
+        !detail &&
+        (
+          canonicalSourceType ===
+            "naver-brand" ||
+          canonicalSourceType ===
+            "naver-catalog"
+        ) &&
+        Boolean(resolvedProductId) &&
+        browserCatalogUrlValid &&
+        Object.keys(
+          browserCatalogSpecsForDetail,
+        ).length > 0 &&
+        browserCatalogReviewsForDetail
+          .length >= 5 &&
+        market.price > 0 &&
+        browserCatalogDetailValidation
+          ?.matched === true
+      ) {
+        detail = {
+          url:
+            browserCatalogUrlForDetail,
+
+          productId:
+            resolvedProductId,
+
+          title:
+            browserCatalogTitleForDetail,
+
+          originalPrice:
+            market.price,
+
+          finalPrice:
+            market.price,
+
+          discountRate: 0,
+
+          currency: "KRW",
+
+          imageUrl:
+            market.imageUrl,
+
+          totalReviews:
+            Math.max(
+              Number(
+                market.reviewCount ?? 0,
+              ),
+              browserCatalogReviewsForDetail
+                .length,
+            ),
+
+          averageRating:
+            market.rating > 0
+              ? market.rating
+              : null,
+
+          soldOut: false,
+
+          sellerName:
+            market.seller,
+
+          sellers: [],
+
+          purchaseSeller: "",
+
+          purchasePrice: 0,
+
+          purchaseUrl: "",
+
+          brand:
+            browserCatalogSpecsForDetail[
+              "브랜드"
+            ] ?? "",
+
+          manufacturer:
+            browserCatalogSpecsForDetail[
+              "제조사"
+            ] ?? "",
+
+          modelName: "",
+
+          categoryName:
+            category,
+
+          keySpecs:
+            browserCatalogSpecsForDetail,
+
+          evaluationEvidence: {},
+
+          topReviews:
+            browserCatalogReviewsForDetail,
+        } as NaverProductDetail;
+
+        usedBrowserCatalogDetail =
+          true;
+
+        console.log(
+          `[ENRICH ${position}] Catalog 브라우저 상세 사용 → Bright Data 생략`,
+          {
+            title:
+              browserCatalogTitleForDetail,
+
+            specCount:
+              Object.keys(
+                browserCatalogSpecsForDetail,
+              ).length,
+
+            reviewCount:
+              browserCatalogReviewsForDetail
+                .length,
+
+            canonicalProductId:
+              resolvedProductId,
+
+            catalogUrl:
+              browserCatalogUrlForDetail,
+          },
+        );
       }
 
       const brightDataStartedAt =
@@ -2795,6 +3340,7 @@ export async function GET(
           "naver-brand" &&
         !usedCache &&
         !usedAnalyzedFallback &&
+        !usedBrowserCatalogDetail &&
         detail
       ) {
         console.log(
@@ -2817,9 +3363,7 @@ export async function GET(
             candidateResolverAttempts,
 
           brightDataCalls:
-            usedCache
-              ? 0
-              : 1,
+            (usedCache || usedBrowserCatalogDetail) ? 0 : 1,
 
           failure: {
             position,
@@ -2834,6 +3378,102 @@ export async function GET(
               "상품 상세정보를 확보하지 못했습니다.",
           },
         };
+      }
+
+      /*
+        Catalog 브라우저 probe의 구조화 스펙은
+        기존 canonical / 모델 검증을 대체하지 않는다.
+
+        상세정보가 확보된 뒤 keySpecs에만 병합한다.
+      */
+      const capturedBrowserSpecProduct =
+        (
+          captureData.products ??
+          []
+        ).find(
+          (captured) =>
+            captured.url ===
+              market.url &&
+            captured.name ===
+              market.name,
+        ) ??
+        (
+          captureData.products ??
+          []
+        ).find(
+          (captured) =>
+            captured.url ===
+            market.url,
+        );
+
+      const browserSpecs =
+        capturedBrowserSpecProduct
+          ?.browserSpecs &&
+        typeof capturedBrowserSpecProduct
+          .browserSpecs === "object" &&
+        !Array.isArray(
+          capturedBrowserSpecProduct
+            .browserSpecs,
+        )
+          ? capturedBrowserSpecProduct
+              .browserSpecs
+          : {};
+
+      const browserCatalogTitle =
+        typeof capturedBrowserSpecProduct
+          ?.browserCatalogTitle === "string"
+          ? capturedBrowserSpecProduct
+              .browserCatalogTitle
+              .trim()
+          : "";
+
+      const browserCatalogMatchValidation =
+        browserCatalogTitle
+          ? validateProductMatch(
+              market.name,
+              browserCatalogTitle,
+              "",
+            )
+          : null;
+
+      if (
+        Object.keys(
+          browserSpecs,
+        ).length > 0 &&
+        browserCatalogMatchValidation
+          ?.matched === true
+      ) {
+        detail = {
+          ...detail,
+
+          keySpecs: {
+            ...(
+              detail.keySpecs &&
+              typeof detail.keySpecs ===
+                "object" &&
+              !Array.isArray(
+                detail.keySpecs,
+              )
+                ? detail.keySpecs
+                : {}
+            ),
+
+            ...browserSpecs,
+          },
+        } as NaverProductDetail;
+
+        console.log(
+          `[ENRICH ${position}] Catalog 브라우저 스펙 병합`,
+          {
+            specCount:
+              Object.keys(
+                browserSpecs,
+              ).length,
+
+            specs:
+              browserSpecs,
+          },
+        );
       }
 
       const matchValidation =
@@ -2912,9 +3552,7 @@ export async function GET(
             candidateResolverAttempts,
 
           brightDataCalls:
-            usedCache
-              ? 0
-              : 1,
+            (usedCache || usedBrowserCatalogDetail) ? 0 : 1,
 
           failure: {
             position,
@@ -2931,25 +3569,13 @@ export async function GET(
       }
 
       /*
-        실제 판매가 기준 예산 검증.
+        최종 후보의 예산은 상세조회한 실제 판매가를 기준으로
+        반드시 엄수한다.
 
-        시장목록 가격부터 예산 밖이었던 상품은
-        "후보 수 부족 시 사용하는 근접 fallback"이므로
-        실제 판매가가 예산 밖이어도 계속 진행한다.
-
-        반대로 시장목록에서는 예산 안이었는데
-        상세 실제 판매가가 예산 밖으로 바뀐 경우에는
-        가격 정보가 달라진 것이므로 기존처럼 탈락시킨다.
+        시장 검색의 표시가격은 1차 후보 필터에 사용하고,
+        상세가격을 확보한 뒤에는 fallback 예외를 허용하지 않는다.
       */
-      const marketBudgetFallback =
-        !isWithinBudget(
-          market.price,
-          minBudget,
-          maxBudget,
-        );
-
       if (
-        !marketBudgetFallback &&
         !isWithinBudget(
           detail.finalPrice,
           minBudget,
@@ -2973,9 +3599,7 @@ export async function GET(
             candidateResolverAttempts,
 
           brightDataCalls:
-            usedCache
-              ? 0
-              : 1,
+            (usedCache || usedBrowserCatalogDetail) ? 0 : 1,
 
           failure: {
             position,
@@ -2991,16 +3615,6 @@ export async function GET(
         };
       }
 
-      if (
-        marketBudgetFallback
-      ) {
-        console.log(
-          `[ENRICH ${position}] 예산 근접 fallback 후보`,
-          `목록가 ${market.price.toLocaleString(
-            "ko-KR",
-          )}원`,
-        );
-      }
 
       /*
         같은 모델의 네이버 판매처를 다시 검색해
@@ -3020,7 +3634,11 @@ export async function GET(
           → 최종 구매 버튼용 후보.
       */
       try {
-        if (!offerSearch) {
+        if (
+          !offerSearch &&
+          canonicalSourceType !==
+            "naver-catalog"
+        ) {
           offerSearch =
             await searchProductOffers(
               canonicalSourceType ===
@@ -3076,8 +3694,12 @@ export async function GET(
       }
 
       const finalProductId =
-        canonicalSourceType ===
-          "naver-brand"
+        (
+          canonicalSourceType ===
+            "naver-brand" ||
+          canonicalSourceType ===
+            "naver-catalog"
+        )
           ? String(
               detail.productId,
             )
@@ -3119,7 +3741,7 @@ export async function GET(
       }
 
       console.log(
-        `[JONR-DIAG ${position}] review-source-state`,
+        `[REVIEW-DIAG ${position}] review-source-state`,
         {
           canonicalSourceType,
           finalProductId,
@@ -3160,7 +3782,88 @@ export async function GET(
       let extraReviewBrightDataCalls =
         0;
 
+      const capturedBrowserReviewProduct =
+        (
+          captureData.products ??
+          []
+        ).find(
+          (captured) =>
+            captured.url ===
+              market.url &&
+            captured.name ===
+              market.name,
+        ) ??
+        (
+          captureData.products ??
+          []
+        ).find(
+          (captured) =>
+            captured.url ===
+            market.url,
+        );
+
+      const browserReviews =
+        Array.isArray(
+          capturedBrowserReviewProduct
+            ?.browserReviews,
+        )
+          ? capturedBrowserReviewProduct
+              .browserReviews
+              .filter(
+                (review) =>
+                  Boolean(
+                    review?.text?.trim(),
+                  ),
+              )
+              .slice(0, 20)
+          : [];
+
+      const hasBrowserReviewEvidence =
+        browserReviews.length >= 5;
+
+      if (hasBrowserReviewEvidence) {
+        reviewDetail = {
+          ...detail,
+
+          totalReviews:
+            Math.max(
+              Number(
+                detail.totalReviews ??
+                  0,
+              ),
+              Number(
+                market.reviewCount ??
+                  0,
+              ),
+              browserReviews.length,
+            ),
+
+          topReviews:
+            browserReviews,
+        } as NaverProductDetail;
+
+        reviewSourceUrl =
+          capturedBrowserReviewProduct
+            ?.browserReviewSourceUrl ||
+          market.url ||
+          detail.url;
+
+        reviewTextSource =
+          "selected-source";
+
+        console.log(
+          `[ENRICH ${position}] 브라우저 리뷰 재사용`,
+          {
+            count:
+              browserReviews.length,
+            url:
+              reviewSourceUrl,
+          },
+        );
+      }
+
       if (
+        !hasBrowserReviewEvidence &&
         selectedReviewSource?.resolvedUrl &&
         selectedReviewSource.sourceType ===
           "naver-store"
@@ -3199,7 +3902,7 @@ export async function GET(
             selectedReviewProductId
           ) {
             console.log(
-              `[JONR-DIAG ${position}] review-cache-query`,
+              `[REVIEW-DIAG ${position}] review-cache-query`,
               selectedReviewProductId,
             );
 
@@ -3209,7 +3912,7 @@ export async function GET(
               );
 
             console.log(
-              `[JONR-DIAG ${position}] review-cache-result`,
+              `[REVIEW-DIAG ${position}] review-cache-result`,
               {
                 selectedReviewProductId,
                 cacheHit:
@@ -3261,7 +3964,7 @@ export async function GET(
                 );
 
                 console.log(
-                  `[JONR-DIAG ${position}] collector-input`,
+                  `[REVIEW-DIAG ${position}] collector-input`,
                   {
                     url:
                       diagnosticCollectUrl,
@@ -3275,7 +3978,7 @@ export async function GET(
                   );
 
                 console.log(
-                  `[JONR-DIAG ${position}] collector-result`,
+                  `[REVIEW-DIAG ${position}] collector-result`,
                   {
                     url:
                       diagnosticCollectUrl,
@@ -3320,7 +4023,7 @@ export async function GET(
 
             } catch (error) {
               console.warn(
-                `[JONR-DIAG ${position}] collector-error`,
+                `[REVIEW-DIAG ${position}] collector-error`,
                 error instanceof Error
                   ? {
                       name:
@@ -3426,9 +4129,7 @@ export async function GET(
               canonicalSourceType ===
                 "naver-brand"
                 ? (
-                    usedCache
-                      ? 0
-                      : 1
+                    (usedCache || usedBrowserCatalogDetail) ? 0 : 1
                   )
                 : 0
             ) +
@@ -3478,9 +4179,7 @@ export async function GET(
             canonicalSourceType ===
               "naver-brand"
               ? (
-                  usedCache
-                    ? 0
-                    : 1
+                  (usedCache || usedBrowserCatalogDetail) ? 0 : 1
                 )
               : 0
           ) +
@@ -3574,10 +4273,14 @@ export async function GET(
                     canonicalSourceType ===
                       "manufacturer"
                       ? "external-store" as const
-                      : "naver-store" as const,
+                      : canonicalSourceType ===
+                          "naver-catalog"
+                        ? "naver-aggregate" as const
+                        : "naver-store" as const,
 
                   isIndividualSeller:
-                    true,
+                    canonicalSourceType !==
+                    "naver-catalog",
 
                   matchScore:
                     0,

@@ -1,4 +1,4 @@
-﻿import {
+import {
   NextResponse,
 } from "next/server";
 
@@ -19,6 +19,20 @@ type CapturedProduct = {
   rating: number;
 };
 
+type CapturedReview = {
+  rating: number;
+  date: string;
+  text: string;
+  helpfulCount: number;
+};
+
+type BrowserReviewCapture = {
+  browserReviews: CapturedReview[];
+  browserReviewSourceUrl: string;
+  browserSpecs: Record<string, string>;
+  browserCatalogTitle: string;
+};
+
 type CaptureData = {
   category: string;
   minBudget: number;
@@ -36,11 +50,19 @@ type IncomingProduct = {
   price?: unknown;
   reviewCount?: unknown;
   rating?: unknown;
+  browserReviews?: unknown;
+  browserReviewSourceUrl?: unknown;
+  browserSpecs?: unknown;
+  browserCatalogTitle?: unknown;
 };
 
 declare global {
   var projectDNaverCaptures:
     Map<string, CaptureData>
+    | undefined;
+
+  var projectDNaverBrowserReviewCaptures:
+    Map<string, BrowserReviewCapture[]>
     | undefined;
 }
 
@@ -54,6 +76,20 @@ function getStore() {
 
   return globalThis
     .projectDNaverCaptures;
+}
+
+function getBrowserReviewStore() {
+  if (
+    !globalThis
+      .projectDNaverBrowserReviewCaptures
+  ) {
+    globalThis
+      .projectDNaverBrowserReviewCaptures =
+      new Map();
+  }
+
+  return globalThis
+    .projectDNaverBrowserReviewCaptures;
 }
 
 function corsHeaders() {
@@ -88,6 +124,123 @@ function number(
   )
     ? result
     : 0;
+}
+
+function reviewList(
+  value: unknown,
+): CapturedReview[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const reviews:
+    CapturedReview[] = [];
+
+  const seen =
+    new Set<string>();
+
+  for (const item of value) {
+    if (
+      !item ||
+      typeof item !== "object" ||
+      Array.isArray(item)
+    ) {
+      continue;
+    }
+
+    const raw =
+      item as Record<
+        string,
+        unknown
+      >;
+
+    const reviewText =
+      text(
+        raw.text ??
+        raw.reviewContent,
+      );
+
+    if (!reviewText) {
+      continue;
+    }
+
+    const rating =
+      number(
+        raw.rating ??
+        raw.score ??
+        raw.reviewScore,
+      );
+
+    const date =
+      text(
+        raw.date ??
+        raw.createDate ??
+        raw.reviewDate,
+      );
+
+    const helpfulCount =
+      number(
+        raw.helpfulCount,
+      );
+
+    const key =
+      `${rating}|${date}|${reviewText.slice(
+        0,
+        1000,
+      )}`;
+
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+
+    reviews.push({
+      rating,
+      date,
+      text: reviewText,
+      helpfulCount,
+    });
+
+    if (reviews.length >= 20) {
+      break;
+    }
+  }
+
+  return reviews;
+}
+
+function specMap(
+  value: unknown,
+): Record<string, string> {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value)
+  ) {
+    return {};
+  }
+
+  const result:
+    Record<string, string> = {};
+
+  for (
+    const [rawKey, rawValue]
+    of Object.entries(
+      value as Record<string, unknown>,
+    )
+  ) {
+    const key = text(rawKey);
+    const specValue = text(rawValue);
+
+    if (!key || !specValue) {
+      continue;
+    }
+
+    result[key] = specValue;
+  }
+
+  return result;
 }
 
 export async function OPTIONS() {
@@ -198,6 +351,48 @@ export async function POST(
       );
     }
 
+    const browserReviewEntries:
+      BrowserReviewCapture[] =
+      products.map(
+        (product) => {
+          const source =
+            incoming.find(
+              (
+                item:
+                  IncomingProduct,
+              ) =>
+                text(item.name) ===
+                  product.name &&
+                text(item.url) ===
+                  product.url,
+            );
+
+          return {
+            browserReviews:
+              reviewList(
+                source
+                  ?.browserReviews,
+              ),
+
+            browserReviewSourceUrl:
+              text(
+                source
+                  ?.browserReviewSourceUrl,
+              ),
+
+            browserSpecs:
+              specMap(
+                source?.browserSpecs,
+              ),
+
+            browserCatalogTitle:
+              text(
+                source?.browserCatalogTitle,
+              ),
+          };
+        },
+      );
+
     const id =
       crypto.randomUUID();
 
@@ -224,6 +419,11 @@ export async function POST(
         createdAt:
           Date.now(),
       },
+    );
+
+    getBrowserReviewStore().set(
+      id,
+      browserReviewEntries,
     );
 
     return NextResponse.json(
@@ -298,6 +498,11 @@ export async function GET(
     );
   }
 
+  const browserReviewEntries =
+    getBrowserReviewStore()
+      .get(id) ??
+    [];
+
   return NextResponse.json({
     success: true,
 
@@ -314,6 +519,34 @@ export async function GET(
       capture.products.length,
 
     products:
-      capture.products,
+      capture.products.map(
+        (product, index) => ({
+          ...product,
+
+          browserReviews:
+            browserReviewEntries[
+              index
+            ]?.browserReviews ??
+            [],
+
+          browserReviewSourceUrl:
+            browserReviewEntries[
+              index
+            ]?.browserReviewSourceUrl ??
+            "",
+
+          browserSpecs:
+            browserReviewEntries[
+              index
+            ]?.browserSpecs ??
+            {},
+
+          browserCatalogTitle:
+            browserReviewEntries[
+              index
+            ]?.browserCatalogTitle ??
+            "",
+        }),
+      ),
   });
 }
