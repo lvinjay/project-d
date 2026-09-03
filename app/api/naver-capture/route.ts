@@ -29,6 +29,7 @@ type CapturedReview = {
 type BrowserReviewCapture = {
   browserReviews: CapturedReview[];
   browserReviewSourceUrl: string;
+  browserReviewTotalCount: number;
   browserSpecs: Record<string, string>;
   browserCatalogTitle: string;
 };
@@ -52,6 +53,7 @@ type IncomingProduct = {
   rating?: unknown;
   browserReviews?: unknown;
   browserReviewSourceUrl?: unknown;
+  browserReviewTotalCount?: unknown;
   browserSpecs?: unknown;
   browserCatalogTitle?: unknown;
 };
@@ -380,6 +382,12 @@ export async function POST(
                   ?.browserReviewSourceUrl,
               ),
 
+            browserReviewTotalCount:
+              number(
+                source
+                  ?.browserReviewTotalCount,
+              ),
+
             browserSpecs:
               specMap(
                 source?.browserSpecs,
@@ -534,6 +542,12 @@ export async function GET(
               index
             ]?.browserReviewSourceUrl ??
             "",
+
+          browserReviewTotalCount:
+            browserReviewEntries[
+              index
+            ]?.browserReviewTotalCount ??
+            0,
 
           browserSpecs:
             browserReviewEntries[

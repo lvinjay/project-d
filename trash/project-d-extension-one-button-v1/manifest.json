@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Project D One Button Bridge",
-  "version": "0.5.13",
+  "version": "0.5.14",
   "description": "Project D hybrid SmartStore and Brand Store review capture.",
   "permissions": [
     "tabs",

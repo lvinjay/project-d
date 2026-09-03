@@ -26,6 +26,7 @@ type MarketCandidate = {
   rating?: number;
   browserReviews?: BrowserReview[];
   browserReviewSourceUrl?: string;
+  browserReviewTotalCount?: number;
   browserSpecs?: Record<string, string>;
   browserCatalogTitle?: string;
 };
@@ -43,6 +44,7 @@ type BrowserBridgeCandidate = {
     finalUrl?: string;
     sourceType?: string;
     reviewCountReturned?: number;
+    totalAvailableReviews?: number;
     specs?: Record<string, string>;
     catalogTitle?: string;
   };
@@ -188,6 +190,11 @@ export default function ProjectDAutomationPanel() {
   ] = useState(
     "로봇청소기",
   );
+
+  const [
+    safePilotMode,
+    setSafePilotMode,
+  ] = useState(true);
 
   const [
     steps,
@@ -486,6 +493,15 @@ export default function ProjectDAutomationPanel() {
                   candidate.url,
               ),
 
+            browserReviewTotalCount:
+              Number(
+                candidate
+                  .smartstoreReviewProbe
+                  ?.totalAvailableReviews ??
+                  candidate.reviewCount ??
+                  0,
+              ),
+
             browserSpecs:
               candidate
                 .smartstoreReviewProbe
@@ -541,13 +557,21 @@ export default function ProjectDAutomationPanel() {
                   ? candidate.browserReviews.length
                   : 0;
 
+              const browserReviewTotalCount =
+                Number(
+                  candidate.browserReviewTotalCount ??
+                  candidate.reviewCount ??
+                  0,
+                );
+
               return (
                 /^https:\/\/search\.shopping\.naver\.com\/catalog\/\d+/i.test(
                   sourceUrl,
                 ) &&
                 catalogTitle.length > 0 &&
                 specCount > 0 &&
-                browserReviewCount >= 5
+                browserReviewCount >= 5 &&
+                browserReviewTotalCount >= 30
               )
                 ? 1
                 : 0;
@@ -633,6 +657,14 @@ export default function ProjectDAutomationPanel() {
                   .browserReviewSourceUrl,
               ),
 
+            browserReviewTotalCount:
+              Number(
+                candidate
+                  .browserReviewTotalCount ??
+                  candidate.reviewCount ??
+                  0,
+              ),
+
             browserSpecs:
               candidate.browserSpecs &&
               typeof candidate.browserSpecs === "object"
@@ -712,11 +744,21 @@ export default function ProjectDAutomationPanel() {
         "시장 후보의 실제 판매가·리뷰·중복·공식 상품 URL을 검증해 상품 풀을 만드는 중...",
       );
 
+      const enrichedParams =
+        new URLSearchParams({
+          captureId,
+        });
+
+      if (safePilotMode) {
+        enrichedParams.set(
+          "zeroPaidOnly",
+          "1",
+        );
+      }
+
       const enrichedResponse =
         await fetch(
-          `/api/market-candidates-enriched?captureId=${encodeURIComponent(
-            captureId,
-          )}`,
+          `/api/market-candidates-enriched?${enrichedParams.toString()}`,
           {
             cache: "no-store",
           },
@@ -736,6 +778,24 @@ export default function ProjectDAutomationPanel() {
             enriched.message,
           ) ||
             "최종 후보 검증에 실패했습니다.",
+        );
+      }
+
+      if (
+        safePilotMode &&
+        (
+          Number(
+            enriched.resolverAttempts ??
+              0,
+          ) !== 0 ||
+          Number(
+            enriched.brightDataCalls ??
+              0,
+          ) !== 0
+        )
+      ) {
+        throw new Error(
+          "무과금 파일럿 안전장치 위반: resolver 또는 Bright Data 호출이 감지되었습니다.",
         );
       }
 
@@ -905,6 +965,38 @@ export default function ProjectDAutomationPanel() {
             currentRunProductIds,
         }),
       );
+
+      if (safePilotMode) {
+        updateStep(
+          "criteria-first",
+          "done",
+          "무과금 파일럿 모드 · OpenAI 호출 생략",
+        );
+
+        updateStep(
+          "reviews",
+          "done",
+          "무과금 파일럿 모드 · 1,000개 심층수집은 실전 실행에서 수행",
+        );
+
+        updateStep(
+          "save-reviews",
+          "done",
+          "무과금 파일럿 모드 · 리뷰 AI 분석/저장 생략",
+        );
+
+        updateStep(
+          "criteria-final",
+          "done",
+          "무과금 파일럿 모드 · 최종 구매기준 AI 보정 생략",
+        );
+
+        setFinalMessage(
+          `파일럿 완료 · ${normalizedCategory} Catalog 검증 상품 ${finalCandidates.length}개 DB 등록/갱신 · resolver 0회 · Bright Data 0회 · OpenAI 0회`,
+        );
+
+        return;
+      }
 
       /*
         4단계
@@ -1587,6 +1679,57 @@ export default function ProjectDAutomationPanel() {
         />
       </div>
 
+      <label
+        style={{
+          marginTop: 18,
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 10,
+          padding: "12px 14px",
+          borderRadius: 10,
+          border: "1px solid #b2ccff",
+          background: "#eff8ff",
+          cursor: isRunning
+            ? "default"
+            : "pointer",
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={safePilotMode}
+          disabled={isRunning}
+          onChange={(event) =>
+            setSafePilotMode(
+              event.target.checked,
+            )
+          }
+          style={{
+            marginTop: 3,
+          }}
+        />
+
+        <span
+          style={{
+            lineHeight: 1.55,
+          }}
+        >
+          <strong>
+            무과금 파일럿 모드
+          </strong>
+
+          <span
+            style={{
+              display: "block",
+              marginTop: 2,
+              color: "#475467",
+              fontSize: 13,
+            }}
+          >
+            브라우저에서 검증된 Naver Catalog 상품만 사용해 1~3단계까지만 실행합니다. resolver · Bright Data · OpenAI 호출은 0회로 강제합니다.
+          </span>
+        </span>
+      </label>
+
       <div
         style={{
           marginTop: 20,
@@ -1682,8 +1825,12 @@ export default function ProjectDAutomationPanel() {
         }}
       >
         {isRunning
-          ? "Project D 자동 실행 중..."
-          : "카테고리 상품 DB 자동 구축"}
+          ? safePilotMode
+            ? "Project D 무과금 파일럿 실행 중..."
+            : "Project D 자동 실행 중..."
+          : safePilotMode
+            ? "무과금 파일럿 실행"
+            : "카테고리 상품 DB 자동 구축"}
       </button>
 
       {finalMessage ? (

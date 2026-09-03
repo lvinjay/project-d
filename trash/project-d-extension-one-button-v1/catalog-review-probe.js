@@ -1273,9 +1273,16 @@
           specs,
           catalogTitle,
           nativeResponseCaptured:
-            false,
+            nativeResponseCount >
+            0,
+          nativeResponseCount,
+          totalAvailableReviews:
+            nativeTotalCount,
           sourceType:
-            "catalog-dom",
+            nativeResponseCount >
+            0
+              ? "catalog-native-shallow"
+              : "catalog-dom",
           reason:
             "Catalog 리뷰 DOM을 찾지 못했습니다.",
         });
@@ -1305,9 +1312,16 @@
         specs,
         catalogTitle,
         nativeResponseCaptured:
-          false,
+          nativeResponseCount >
+          0,
+        nativeResponseCount,
+        totalAvailableReviews:
+          nativeTotalCount,
         sourceType:
-          "catalog-dom",
+          nativeResponseCount >
+          0
+            ? "catalog-native-shallow"
+            : "catalog-dom",
         deepReview:
           false,
       });

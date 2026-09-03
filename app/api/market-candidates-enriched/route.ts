@@ -110,6 +110,8 @@ type CapturedProduct = {
 
   browserReviewSourceUrl?: string;
 
+  browserReviewTotalCount?: number;
+
   browserSpecs?: Record<
     string,
     string
@@ -1783,6 +1785,85 @@ export async function GET(
           0,
       ) || 0;
 
+    const zeroPaidOnly =
+      requestUrl.searchParams.get(
+        "zeroPaidOnly",
+      ) === "1";
+
+    function isZeroPaidBrowserCatalogCandidate(
+      product: CapturedProduct,
+    ) {
+      const reviewSourceUrl =
+        typeof product.browserReviewSourceUrl ===
+          "string"
+          ? product.browserReviewSourceUrl.trim()
+          : "";
+
+      const catalogMatch =
+        reviewSourceUrl.match(
+          /^https:\/\/search\.shopping\.naver\.com\/catalog\/(\d+)/i,
+        );
+
+      const catalogTitle =
+        typeof product.browserCatalogTitle ===
+          "string"
+          ? product.browserCatalogTitle.trim()
+          : "";
+
+      const browserSpecs =
+        product.browserSpecs &&
+        typeof product.browserSpecs ===
+          "object" &&
+        !Array.isArray(
+          product.browserSpecs,
+        )
+          ? product.browserSpecs
+          : {};
+
+      const browserReviews =
+        Array.isArray(
+          product.browserReviews,
+        )
+          ? product.browserReviews.filter(
+              (review) =>
+                Boolean(
+                  review?.text?.trim(),
+                ),
+            )
+          : [];
+
+      const browserReviewTotalCount =
+        Number(
+          product.browserReviewTotalCount ??
+          product.reviewCount ??
+          0,
+        ) || 0;
+
+      const validation =
+        catalogTitle
+          ? validateProductMatch(
+              product.name,
+              catalogTitle,
+              "",
+            )
+          : null;
+
+      return (
+        Boolean(
+          catalogMatch?.[1],
+        ) &&
+        catalogTitle.length > 0 &&
+        Object.keys(
+          browserSpecs,
+        ).length > 0 &&
+        browserReviews.length >= 5 &&
+        browserReviewTotalCount >=
+          MIN_REVIEW_COUNT_FOR_DB &&
+        product.price > 0 &&
+        validation?.matched === true
+      );
+    }
+
     /*
       캡처 전체에서:
 
@@ -1923,6 +2004,13 @@ export async function GET(
             );
           },
         )
+        .filter(
+          (product) =>
+            !zeroPaidOnly ||
+            isZeroPaidBrowserCatalogCandidate(
+              product,
+            ),
+        )
         .slice(
           0,
           MAX_CANDIDATE_COUNT,
@@ -2049,6 +2137,13 @@ export async function GET(
               )
               .slice(0, 20)
           : [];
+
+      const browserCatalogCanonicalTotalReviews =
+        Number(
+          market.browserReviewTotalCount ??
+          market.reviewCount ??
+          0,
+        ) || 0;
 
       const browserCatalogCanonicalValidation =
         browserCatalogCanonicalTitle
@@ -3114,6 +3209,15 @@ export async function GET(
               .slice(0, 20)
           : [];
 
+      const browserCatalogTotalReviewsForDetail =
+        Number(
+          capturedBrowserCatalogProduct
+            ?.browserReviewTotalCount ??
+          capturedBrowserCatalogProduct
+            ?.reviewCount ??
+          0,
+        ) || 0;
+
       const browserCatalogUrlForDetail =
         typeof capturedBrowserCatalogProduct
           ?.browserReviewSourceUrl === "string"
@@ -3180,6 +3284,8 @@ export async function GET(
 
           totalReviews:
             Math.max(
+              browserCatalogTotalReviewsForDetail,
+              browserCatalogCanonicalTotalReviews,
               Number(
                 market.reviewCount ?? 0,
               ),
@@ -3831,6 +3937,11 @@ export async function GET(
             Math.max(
               Number(
                 detail.totalReviews ??
+                  0,
+              ),
+              Number(
+                capturedBrowserReviewProduct
+                  ?.browserReviewTotalCount ??
                   0,
               ),
               Number(
@@ -4714,10 +4825,24 @@ export async function GET(
         partialCandidates는 응답에 별도로 남긴다.
     */
 
+    if (
+      zeroPaidOnly &&
+      (
+        resolverAttempts !== 0 ||
+        brightDataCalls !== 0
+      )
+    ) {
+      throw new Error(
+        `zeroPaidOnly 안전장치 위반: resolver=${resolverAttempts}, Bright Data=${brightDataCalls}`,
+      );
+    }
+
     console.log(
       "Market candidates enriched summary:",
       {
         category,
+
+        zeroPaidOnly,
 
         marketCandidateCount:
           marketCandidates.length,
@@ -4755,6 +4880,16 @@ export async function GET(
       success: true,
 
       category,
+
+      zeroPaidOnly,
+
+      zeroPaidCatalogQualifiedCount:
+        marketCandidates.filter(
+          (product) =>
+            isZeroPaidBrowserCatalogCandidate(
+              product,
+            ),
+        ).length,
 
       budget: {
         minBudget,
