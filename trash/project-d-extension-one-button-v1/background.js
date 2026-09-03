@@ -1,4 +1,4 @@
-﻿const START = "PROJECT_D_NAVER_CAPTURE_START";
+const START = "PROJECT_D_NAVER_CAPTURE_START";
 const DONE = "PROJECT_D_NAVER_CAPTURE_DONE";
 const DELIVER = "PROJECT_D_NAVER_CAPTURE_DELIVER";
 const SMARTSTORE_PROBE_DONE = "PROJECT_D_SMARTSTORE_PROBE_DONE";
@@ -178,6 +178,75 @@ function openCurrentCandidate(requestId) {
     }
   );
 }
+function openDeepReview(requestId) {
+  const state = pending.get(requestId);
+
+  if (
+    !state ||
+    state.mode !== "deep-reviews"
+  ) {
+    return;
+  }
+
+  const reviewSourceUrl =
+    String(
+      state.reviewSourceUrl ||
+      "",
+    );
+
+  if (!reviewSourceUrl) {
+    pending.delete(requestId);
+
+    deliver(
+      state.adminTabId,
+      requestId,
+      false,
+      null,
+      "심층 리뷰 수집 URL이 없습니다.",
+    );
+
+    return;
+  }
+
+  const separator =
+    reviewSourceUrl.includes("?")
+      ? "&"
+      : "?";
+
+  const probeUrl =
+    reviewSourceUrl +
+    separator +
+    "pd_probe=" +
+    encodeURIComponent(
+      requestId,
+    );
+
+  chrome.tabs.create(
+    {
+      url:
+        probeUrl,
+      active:
+        true,
+    },
+    (tab) => {
+      const latest =
+        pending.get(
+          requestId,
+        );
+
+      if (!latest) {
+        return;
+      }
+
+      latest.probeTabId =
+        tab?.id ||
+        null;
+
+      void chrome.runtime.lastError;
+    },
+  );
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === START) {
     const requestId = String(message.requestId || "");
@@ -189,6 +258,116 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         accepted: false,
         message: "요청 정보가 없습니다.",
       });
+      return;
+    }
+
+    if (
+      payload.mode ===
+      "deep-reviews"
+    ) {
+      const reviewSourceUrl =
+        String(
+          payload.reviewSourceUrl ||
+          "",
+        ).trim();
+
+      const productName =
+        String(
+          payload.productName ||
+          "",
+        ).trim();
+
+      const requestedMax =
+        Number(
+          payload.maxReviews ??
+          1000,
+        );
+
+      const maxReviews =
+        Math.max(
+          1,
+          Math.min(
+            1000,
+            Number.isFinite(
+              requestedMax,
+            )
+              ? Math.floor(
+                  requestedMax,
+                )
+              : 1000,
+          ),
+        );
+
+      const isSmartStore =
+        reviewSourceUrl.startsWith(
+          "https://smartstore.naver.com/",
+        ) ||
+        reviewSourceUrl.startsWith(
+          "https://m.smartstore.naver.com/",
+        );
+
+      const isCatalog =
+        reviewSourceUrl.startsWith(
+          "https://search.shopping.naver.com/catalog/",
+        );
+
+      const isBrandStore =
+        reviewSourceUrl.startsWith(
+          "https://brand.naver.com/",
+        ) ||
+        reviewSourceUrl.startsWith(
+          "https://m.brand.naver.com/",
+        );
+
+      if (
+        !reviewSourceUrl ||
+        (
+          !isSmartStore &&
+          !isCatalog &&
+          !isBrandStore
+        )
+      ) {
+        sendResponse({
+          accepted:
+            false,
+          message:
+            "현재 심층 리뷰 수집기는 SmartStore, Naver Catalog, Brand Store URL을 지원합니다.",
+        });
+
+        return;
+      }
+
+      pending.set(
+        requestId,
+        {
+          mode:
+            "deep-reviews",
+          adminTabId,
+          productName,
+          reviewSourceUrl,
+          maxReviews,
+          sourceType:
+            isCatalog
+              ? "catalog"
+              : isBrandStore
+                ? "brandstore"
+                : "smartstore",
+          probeTabId:
+            null,
+          probeStarted:
+            false,
+        },
+      );
+
+      openDeepReview(
+        requestId,
+      );
+
+      sendResponse({
+        accepted:
+          true,
+      });
+
       return;
     }
 
@@ -254,6 +433,89 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     if (!state) return;
 
+    if (
+      state.mode ===
+        "deep-reviews" &&
+      (
+        message?.type ===
+          SMARTSTORE_PROBE_DONE ||
+        message?.type ===
+          CATALOG_PROBE_DONE ||
+        message?.type ===
+          BRANDSTORE_PROBE_DONE
+      )
+    ) {
+      const probe =
+        message.result || {
+          success:
+            false,
+          reason:
+            message.message ||
+            "SmartStore deep review probe failed",
+          reviews: [],
+        };
+
+      const success =
+        probe?.success ===
+          true &&
+        Array.isArray(
+          probe?.reviews,
+        ) &&
+        probe.reviews.length >
+          0;
+
+      const result = {
+        mode:
+          "deep-reviews",
+        productName:
+          String(
+            state.productName ||
+            "",
+          ),
+        reviewSourceUrl:
+          String(
+            state.reviewSourceUrl ||
+            "",
+          ),
+        requestedMaxReviews:
+          Number(
+            state.maxReviews ||
+            1000,
+          ),
+        reviewCountReturned:
+          Array.isArray(
+            probe?.reviews,
+          )
+            ? probe.reviews.length
+            : 0,
+        probe,
+      };
+
+      pending.delete(
+        requestId,
+      );
+
+      closeProbeTab(
+        state.probeTabId,
+      );
+
+      deliver(
+        state.adminTabId,
+        requestId,
+        success,
+        result,
+        success
+          ? ""
+          : String(
+              probe?.reason ||
+              message.message ||
+              "심층 리뷰 수집에 실패했습니다.",
+            ),
+      );
+
+      return;
+    }
+
     const index = state.currentIndex || 0;
     const candidate =
       state.result?.candidates?.[index];
@@ -306,6 +568,185 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
   const state = pending.get(requestId);
   if (!state) return;
+
+  if (
+    state.mode ===
+    "deep-reviews"
+  ) {
+    if (
+      changeInfo.status !==
+      "complete"
+    ) {
+      return;
+    }
+
+    const currentUrl =
+      String(
+        tab?.url ||
+        changeInfo.url ||
+        "",
+      );
+
+    if (!currentUrl) {
+      return;
+    }
+
+    const isSmartStore =
+      currentUrl.startsWith(
+        "https://smartstore.naver.com/",
+      ) ||
+      currentUrl.startsWith(
+        "https://m.smartstore.naver.com/",
+      );
+
+    const isCatalog =
+      currentUrl.startsWith(
+        "https://search.shopping.naver.com/catalog/",
+      );
+
+    const isBrandStore =
+      currentUrl.startsWith(
+        "https://brand.naver.com/",
+      ) ||
+      currentUrl.startsWith(
+        "https://m.brand.naver.com/",
+      );
+
+    const expectedSourceType =
+      String(
+        state.sourceType ||
+        "",
+      );
+
+    const sourceMatches =
+      (
+        expectedSourceType ===
+          "smartstore" &&
+        isSmartStore
+      ) ||
+      (
+        expectedSourceType ===
+          "catalog" &&
+        isCatalog
+      ) ||
+      (
+        expectedSourceType ===
+          "brandstore" &&
+        isBrandStore
+      );
+
+    if (!sourceMatches) {
+      pending.delete(
+        requestId,
+      );
+
+      closeProbeTab(
+        state.probeTabId,
+      );
+
+      deliver(
+        state.adminTabId,
+        requestId,
+        false,
+        {
+          mode:
+            "deep-reviews",
+          productName:
+            String(
+              state.productName ||
+              "",
+            ),
+          reviewSourceUrl:
+            String(
+              state.reviewSourceUrl ||
+              "",
+            ),
+          finalUrl:
+            currentUrl,
+        },
+        "심층 리뷰 수집 URL이 요청한 네이버 리뷰 소스와 다른 페이지로 이동했습니다.",
+      );
+
+      return;
+    }
+
+    if (
+      state.probeStarted
+    ) {
+      return;
+    }
+
+    state.probeStarted =
+      true;
+
+    const probeType =
+      isCatalog
+        ? "PROJECT_D_CATALOG_REVIEW_PROBE_START"
+        : isBrandStore
+          ? "PROJECT_D_BRANDSTORE_PROBE_START"
+          : "PROJECT_D_SMARTSTORE_PROBE_START";
+
+    chrome.tabs.sendMessage(
+      tabId,
+      {
+        type:
+          probeType,
+        requestId,
+        mode:
+          "deep",
+        deepReview:
+          true,
+        maxReviews:
+          Number(
+            state.maxReviews ||
+            1000,
+          ),
+      },
+      () => {
+        const sendError =
+          chrome.runtime.lastError;
+
+        if (!sendError) {
+          return;
+        }
+
+        const latest =
+          pending.get(
+            requestId,
+          );
+
+        if (!latest) {
+          return;
+        }
+
+        pending.delete(
+          requestId,
+        );
+
+        closeProbeTab(
+          latest.probeTabId,
+        );
+
+        deliver(
+          latest.adminTabId,
+          requestId,
+          false,
+          null,
+          (
+            isCatalog
+              ? "Catalog"
+              : isBrandStore
+                ? "Brand Store"
+                : "SmartStore"
+          ) +
+            " 심층 리뷰 probe START 실패: " +
+            sendError.message,
+        );
+      },
+    );
+
+    return;
+  }
 
   if (state.navigationIndex !== state.currentIndex) {
     return;
@@ -455,12 +896,3 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     },
   );
 });
-
-
-
-
-
-
-
-
-

@@ -47,22 +47,24 @@ export const runtime =
 export const dynamic =
   "force-dynamic";
 
-const TARGET_COUNT = 5;
+const TARGET_COUNT = 30;
+
+const MIN_REVIEW_COUNT_FOR_DB = 30;
 
 /*
-  한 번에 Bright Data를 너무 많이 호출하지 않는다.
+  한 번에 외부 상세 조회를 너무 많이 호출하지 않는다.
   3개씩 병렬 처리하고,
-  최종 5개가 확보되면 다음 묶음은 호출하지 않는다.
+  유효 상품 풀 목표 30개가 확보되면 다음 묶음은 호출하지 않는다.
 */
 const BATCH_SIZE = 3;
 
 /*
-  최초 15개에서 5개가 안 나오면
-  캡처된 다음 후보까지 자동 보충한다.
+  DB 상품 풀 목표는 30개다.
+  검증 실패와 중복을 고려해 캡처 후보 중 최대 60개까지만 검사한다.
 
-  무한 호출 방지를 위해 최대 30개까지만 검사.
+  목표 30개에 못 미쳐도 확보된 full 상품은 응답에 그대로 반환한다.
 */
-const MAX_CANDIDATE_COUNT = 30;
+const MAX_CANDIDATE_COUNT = 60;
 
 /*
   같은 제품의 상세정보를 24시간 안에 이미 수집했다면
@@ -1789,7 +1791,7 @@ export async function GET(
       3. 목표 개수를 채우지 못하면
          예산 범위에서 가장 가까운 상품부터 자동 보충
       4. 같은 우선순위에서는 리뷰 수 / 평점 순 정렬
-      5. 최대 30개까지 보충 후보로 보관
+      5. 최대 60개까지 DB 풀 검증 후보로 보관
 
       중요:
       예산은 "우선 조건"이지 절대 탈락 조건이 아니다.
@@ -1801,7 +1803,7 @@ export async function GET(
       fallback 후보로 이어서 처리한다.
 
       실제 Bright Data 호출은
-      3개씩 하면서 최종 5개가 되면 즉시 중단한다.
+      3개씩 하면서 full 유효 상품 30개가 되면 즉시 중단한다.
     */
     const dedupedMarketProducts =
       removeMarketDuplicates(
@@ -1931,10 +1933,10 @@ export async function GET(
 
     /*
       URL/상세 확보에 실패한 partial 후보는
-      즉시 최종 5개 자리를 차지시키지 않는다.
+      즉시 DB 상품 풀 자리를 차지시키지 않는다.
 
       먼저 가능한 한 full 후보를 끝까지 확보하고,
-      그래도 5개가 부족할 때만 시장 순서대로
+      full 상품과 분리해 시장 순서대로
       partial 후보를 보충한다.
     */
     const partialCandidates:
@@ -4102,16 +4104,58 @@ export async function GET(
             ).length
           : 0;
 
+      const availableReviewCount =
+        Math.max(
+          Number(
+            selectedReviewSource
+              ?.reviewCount ??
+              0,
+          ) || 0,
+          Number(
+            reviewDetail.totalReviews ??
+              0,
+          ) || 0,
+          Number(
+            market.reviewCount ??
+              0,
+          ) || 0,
+          cachedAnalyzedReviewCount,
+        );
+
+      /*
+        고객 추천용 DB 상품은
+        동일 모델의 정상 reviewSource / Catalog / 시장 메타데이터를
+        모두 확인한 뒤 리뷰가 최소 30개 이상인 경우만 허용한다.
+
+        브라우저에서 처음 열린 판매처의 리뷰가 0~3개여도
+        즉시 탈락시키지 않는 이유는 같은 모델의 다른 판매처나
+        Catalog에 충분한 리뷰가 있을 수 있기 때문이다.
+
+        다만 최종적으로 확인 가능한 리뷰 총량이 30개 미만이면
+        제조사 공식 스펙 근거가 충분하더라도 고객 추천용 DB에는
+        포함시키지 않는다.
+      */
+      const hasMinimumReviewVolume =
+        availableReviewCount >=
+        MIN_REVIEW_COUNT_FOR_DB;
+
       const hasEvaluationEvidence =
-        reviewEvidenceCount >= 5 ||
-        cachedAnalyzedReviewCount >= 5 ||
-        evidenceCriterionCount >= 3;
+        hasMinimumReviewVolume &&
+        (
+          reviewEvidenceCount >= 5 ||
+          cachedAnalyzedReviewCount >= 5 ||
+          evidenceCriterionCount >= 3
+        );
 
       if (!hasEvaluationEvidence) {
         const reason =
-          `추천 평가근거 부족: reviews=${reviewEvidenceCount}, ` +
-          `analyzedReviews=${cachedAnalyzedReviewCount}, ` +
-          `evaluationCriteria=${evidenceCriterionCount}`;
+          !hasMinimumReviewVolume
+            ? `추천용 리뷰 총량 부족: availableReviews=${availableReviewCount}, minimum=${MIN_REVIEW_COUNT_FOR_DB}`
+            : (
+                `추천 평가근거 부족: reviews=${reviewEvidenceCount}, ` +
+                `analyzedReviews=${cachedAnalyzedReviewCount}, ` +
+                `evaluationCriteria=${evidenceCriterionCount}`
+              );
 
         console.log(
           `[ENRICH ${position}] 탈락(evidence)`,
@@ -4486,7 +4530,7 @@ export async function GET(
       3개씩 병렬 처리.
 
       한 묶음이 끝날 때마다 결과를 반영하고,
-      최종 5개가 확보되면 다음 묶음은 시작하지 않는다.
+      DB 상품 풀 목표 30개가 확보되면 다음 묶음은 시작하지 않는다.
     */
     for (
       let start = 0;
@@ -4604,7 +4648,7 @@ export async function GET(
           /*
             partial은 예비 후보로만 보관한다.
             뒤쪽 후보에서 full 상세를 확보할 가능성이 있으므로
-            지금 최종 5개 자리를 차지시키지 않는다.
+            지금 full DB 상품 풀 자리를 차지시키지 않는다.
           */
           seenIdentityKeys.add(
             resultIdentityKey,
@@ -4630,7 +4674,7 @@ export async function GET(
           TARGET_COUNT
         ) {
           /*
-            이 배치에서 이미 full 후보 5개가 찼으면
+            이 배치에서 이미 full 상품 풀 목표 30개가 찼으면
             추가 성공 결과는 저장하지 않는다.
             다음 배치는 호출하지 않는다.
           */
@@ -4665,7 +4709,7 @@ export async function GET(
 
       중요:
       - finalCandidates에는 detailStatus === "full"인 후보만 들어간다.
-      - partial 후보로 숫자 5개를 채워 targetReached=true가 되는 일을 막는다.
+      - partial 후보로 DB 상품 풀 목표 수를 채워 targetReached=true가 되는 일을 막는다.
       - resolver / Manufacturer 개선 후 재검증할 수 있도록
         partialCandidates는 응답에 별도로 남긴다.
     */
@@ -4767,11 +4811,3 @@ export async function GET(
     );
   }
 }
-
-
-
-
-
-
-
-

@@ -1,10 +1,10 @@
 (() => {
-  if (window.__PROJECT_D_REVIEW_XHR_INTERCEPTOR__) return;
-  window.__PROJECT_D_REVIEW_XHR_INTERCEPTOR__ = true;
+  if (window.__PROJECT_D_BRANDSTORE_REVIEW_XHR_INTERCEPTOR__) return;
+  window.__PROJECT_D_BRANDSTORE_REVIEW_XHR_INTERCEPTOR__ = true;
 
   const TARGETS = [
-    "/i/v1/contents/reviews/query-pages",
     "/n/v1/contents/reviews/query-pages",
+    "/i/v1/contents/reviews/query-pages",
   ];
 
   const isTargetReviewUrl = (value) =>
@@ -19,13 +19,13 @@
     );
 
   const RESPONSE_TYPE =
-    "PROJECT_D_SMARTSTORE_NATIVE_REVIEW_RESPONSE";
+    "PROJECT_D_BRANDSTORE_NATIVE_REVIEW_RESPONSE";
 
   const FETCH_PAGE_TYPE =
-    "PROJECT_D_SMARTSTORE_NATIVE_REVIEW_FETCH_PAGE";
+    "PROJECT_D_BRANDSTORE_NATIVE_REVIEW_FETCH_PAGE";
 
   const SOURCE =
-    "PROJECT_D_SMARTSTORE_MAIN_WORLD";
+    "PROJECT_D_BRANDSTORE_MAIN_WORLD";
 
   const originalOpen =
     XMLHttpRequest.prototype.open;
@@ -46,19 +46,19 @@
       ...rest
     ) {
       try {
-        this.__projectDUrl =
+        this.__projectDBrandReviewUrl =
           String(
             url ||
             "",
           );
 
-        this.__projectDMethod =
+        this.__projectDBrandReviewMethod =
           String(
             method ||
             "",
           );
 
-        this.__projectDHeaders =
+        this.__projectDBrandReviewHeaders =
           {};
       } catch {
         // ignore
@@ -80,10 +80,10 @@
       try {
         if (
           isTargetReviewUrl(
-            this.__projectDUrl,
+            this.__projectDBrandReviewUrl,
           )
         ) {
-          this.__projectDHeaders[
+          this.__projectDBrandReviewHeaders[
             String(
               name ||
               "",
@@ -112,20 +112,20 @@
 
       if (
         isTargetReviewUrl(
-          xhr.__projectDUrl,
+          xhr.__projectDBrandReviewUrl,
         )
       ) {
         try {
           requestTemplate = {
             url:
               String(
-                xhr.__projectDUrl ||
+                xhr.__projectDBrandReviewUrl ||
                 "",
               ),
 
             method:
               String(
-                xhr.__projectDMethod ||
+                xhr.__projectDBrandReviewMethod ||
                 "POST",
               ),
 
@@ -137,13 +137,13 @@
 
             headers: {
               ...(
-                xhr.__projectDHeaders ||
+                xhr.__projectDBrandReviewHeaders ||
                 {}
               ),
             },
           };
         } catch {
-          // 템플릿 저장 실패는 원래 SmartStore 요청에 영향을 주지 않는다.
+          // 템플릿 저장 실패는 원래 페이지 요청에 영향을 주지 않는다.
         }
 
         xhr.addEventListener(
@@ -170,13 +170,11 @@
               } else {
                 const text =
                   typeof xhr.responseText ===
-                    "string"
+                  "string"
                     ? xhr.responseText
                     : "";
 
-                if (
-                  text
-                ) {
+                if (text) {
                   data =
                     JSON.parse(
                       text,
@@ -184,9 +182,7 @@
                 }
               }
 
-              if (
-                !data
-              ) {
+              if (!data) {
                 return;
               }
 
@@ -200,13 +196,13 @@
 
                   url:
                     String(
-                      xhr.__projectDUrl ||
+                      xhr.__projectDBrandReviewUrl ||
                       "",
                     ),
 
                   method:
                     String(
-                      xhr.__projectDMethod ||
+                      xhr.__projectDBrandReviewMethod ||
                       "",
                     ),
 
@@ -238,7 +234,7 @@
                 "*",
               );
             } catch {
-              // 원래 SmartStore XHR 동작에는 영향을 주지 않는다.
+              // 원래 Brand Store XHR 동작에는 영향을 주지 않는다.
             }
           },
         );
@@ -371,11 +367,15 @@
                 value,
               );
             } catch {
-              // 브라우저가 허용하지 않는 헤더는 건너뛴다.
+              // 브라우저가 금지한 헤더는 건너뛴다.
             }
           },
         );
 
+        /*
+         * 원본 request가 content-type을 명시하지 않은 경우를 대비한다.
+         * 이미 있으면 중복 설정하지 않는다.
+         */
         const hasContentType =
           Object.keys(
             headers,

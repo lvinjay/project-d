@@ -1,4 +1,4 @@
-﻿import OpenAI from "openai";
+import OpenAI from "openai";
 import {
   NextResponse,
 } from "next/server";
@@ -327,6 +327,373 @@ function normalizeAnalysis(
   };
 }
 
+const MAX_REVIEW_COUNT = 1000;
+const REVIEW_BATCH_SIZE = 200;
+const REVIEW_TEXT_LIMIT = 800;
+
+type BatchAnalysisResult = {
+  batchIndex: number;
+  reviewStart: number;
+  reviewEnd: number;
+  reviewCount: number;
+  analysis: Record<
+    string,
+    unknown
+  >;
+};
+
+function cleanReview(
+  review: string,
+) {
+  return review
+    .replace(
+      /\s+/g,
+      " ",
+    )
+    .trim()
+    .slice(
+      0,
+      REVIEW_TEXT_LIMIT,
+    );
+}
+
+function chunkReviews(
+  reviews: string[],
+) {
+  const batches:
+    string[][] = [];
+
+  for (
+    let start = 0;
+    start <
+    reviews.length;
+    start +=
+    REVIEW_BATCH_SIZE
+  ) {
+    batches.push(
+      reviews.slice(
+        start,
+        start +
+          REVIEW_BATCH_SIZE,
+      ),
+    );
+  }
+
+  return batches;
+}
+
+async function requestJsonAnalysis(
+  client: OpenAI,
+  prompt: string,
+  label: string,
+) {
+  const response =
+    await client.responses.create(
+      {
+        model:
+          "gpt-5",
+        input:
+          prompt,
+      },
+    );
+
+  const outputText =
+    response.output_text?.trim();
+
+  if (!outputText) {
+    throw new Error(
+      `${label}: AI가 분석 결과를 반환하지 않았습니다.`,
+    );
+  }
+
+  try {
+    return extractJson(
+      outputText,
+    );
+  } catch {
+    console.error(
+      `${label} JSON parsing failed:`,
+      outputText,
+    );
+
+    throw new Error(
+      `${label}: AI 분석 결과를 JSON으로 해석하지 못했습니다.`,
+    );
+  }
+}
+
+function buildBatchPrompt(
+  category: string,
+  productName: string,
+  dynamicCriteria:
+    DynamicCriterion[],
+  criterionKeys:
+    string[],
+  reviews: string[],
+  batchIndex: number,
+  totalBatches: number,
+  reviewStart: number,
+  reviewEnd: number,
+) {
+  return `
+당신은 Project D의 실제 구매 리뷰 분석 엔진입니다.
+
+이번 작업은 최대 1,000개 리뷰를 한 번에 모델에 넣지 않고
+여러 batch로 나눠 정확하게 읽는 1차 분석입니다.
+
+카테고리:
+${category}
+
+상품명:
+${productName}
+
+전체 batch:
+${totalBatches}
+
+현재 batch:
+${batchIndex + 1}/${totalBatches}
+
+현재 batch 리뷰 범위:
+${reviewStart}~${reviewEnd}
+
+현재 batch 실제 리뷰 수:
+${reviews.length}
+
+현재 이 카테고리의 핵심 구매기준:
+${JSON.stringify(
+  dynamicCriteria,
+  null,
+  2,
+)}
+
+현재 batch 실제 리뷰:
+${reviews
+  .map(
+    (
+      review,
+      index,
+    ) =>
+      `${reviewStart + index}. ${review}`,
+  )
+  .join("\n")}
+
+분석 원칙:
+
+1. 반드시 현재 batch에 제공된 실제 리뷰만 근거로 판단하세요.
+2. 리뷰에 없는 제품 사양이나 성능을 추측하지 마세요.
+3. 배송, 포장, 판매자 응대처럼 제품 성능과 직접 관계없는 내용은 약하게 반영하세요.
+4. "좋아요", "추천합니다", "대만족"처럼 구체성이 부족한 리뷰는 낮은 정보량 리뷰로 취급하세요.
+5. 실제 사용기간, 사용환경, 성능 결과, 오류, 소음, 앱 문제, 관리 불편처럼 구체적인 사용경험을 더 신뢰하세요.
+6. 한두 개 리뷰에서만 나온 문제를 전체 제품의 확정적 결함으로 표현하지 마세요.
+7. 반복되는 장점과 단점을 우선하세요.
+8. 광고성 또는 이벤트성 문체로 보이는 리뷰는 약하게 반영하세요.
+9. evidenceCount는 이 batch 안에서 해당 주제를 실제로 뒷받침한 리뷰 개수입니다.
+10. criterionEvidence의 reviewEvidenceCount도 이 batch 안의 실제 개수만 기록하세요.
+11. 근거가 부족한 criterionScores는 null로 두세요.
+12. 입력된 구매기준 key만 사용하세요.
+13. JSON만 출력하세요. 마크다운은 사용하지 마세요.
+
+반드시 아래 JSON 구조로 반환하세요.
+
+{
+  "batchIndex": ${batchIndex + 1},
+  "reviewCount": ${reviews.length},
+  "summary": "이 batch에서 반복적으로 확인된 핵심 사용경험 요약",
+  "positivePoints": [
+    {
+      "topic": "장점 항목",
+      "summary": "실제 반복 장점",
+      "evidenceCount": 0
+    }
+  ],
+  "negativePoints": [
+    {
+      "topic": "단점 항목",
+      "summary": "실제 반복 단점",
+      "evidenceCount": 0
+    }
+  ],
+  "cautions": [
+    "이 batch에서 확인된 구매 전 주의사항"
+  ],
+  "bestFor": [
+    "이 batch 근거로 잘 맞는 사용자"
+  ],
+  "notFor": [
+    "이 batch 근거로 잘 맞지 않는 사용자"
+  ],
+  "reviewQuality": {
+    "highInformationReviews": 0,
+    "lowInformationReviews": 0,
+    "promotionalStyleReviews": 0
+  },
+  "criterionEvidence": {
+    "${criterionKeys[0]}": {
+      "reviewEvidenceCount": 0,
+      "summary": "이 batch의 해당 구매기준 근거 요약"
+    }
+  },
+  "criterionScores": {
+    "${criterionKeys[0]}": null
+  },
+  "criterionReasons": {
+    "${criterionKeys[0]}": "점수 또는 null의 이유"
+  }
+}
+
+criterionEvidence,
+criterionScores,
+criterionReasons에는 아래 key를 전부 포함하세요.
+
+${criterionKeys.join(
+  ", ",
+)}
+`;
+}
+
+function buildAggregatePrompt(
+  category: string,
+  productName: string,
+  dynamicCriteria:
+    DynamicCriterion[],
+  criterionKeys:
+    string[],
+  totalReviewCount: number,
+  batchResults:
+    BatchAnalysisResult[],
+  collectionStats:
+    ReviewCollectionStats,
+) {
+  const compactBatchResults =
+    batchResults.map(
+      (batch) => ({
+        batchIndex:
+          batch.batchIndex,
+        reviewStart:
+          batch.reviewStart,
+        reviewEnd:
+          batch.reviewEnd,
+        reviewCount:
+          batch.reviewCount,
+        analysis:
+          batch.analysis,
+      }),
+    );
+
+  return `
+당신은 Project D의 리뷰 batch 통합 엔진입니다.
+
+아래 내용은 같은 제품의 실제 리뷰 ${totalReviewCount}개를
+최대 ${REVIEW_BATCH_SIZE}개씩 나눠 각각 읽은 1차 분석 결과입니다.
+
+원문 리뷰를 다시 추측하지 말고,
+오직 제공된 batch 분석 결과를 통합해서
+제품 전체의 재사용 가능한 리뷰 분석을 만드세요.
+
+카테고리:
+${category}
+
+상품명:
+${productName}
+
+총 실제 리뷰 수:
+${totalReviewCount}
+
+수집 통계:
+${JSON.stringify(
+  collectionStats,
+  null,
+  2,
+)}
+
+카테고리 핵심 구매기준:
+${JSON.stringify(
+  dynamicCriteria,
+  null,
+  2,
+)}
+
+batch 분석 결과:
+${JSON.stringify(
+  compactBatchResults,
+  null,
+  2,
+)}
+
+통합 원칙:
+
+1. 서로 다른 batch에서 반복되는 장점과 단점을 가장 강하게 반영하세요.
+2. 한 batch에서만 소수로 나온 문제를 제품 전체의 확정적 결함처럼 표현하지 마세요.
+3. evidenceCount는 batch별 evidenceCount를 근거로 합산하되 총 리뷰 수 ${totalReviewCount}를 넘기지 마세요.
+4. 같은 의미의 주제가 여러 batch에 표현만 다르게 등장하면 하나로 합치세요.
+5. criterionEvidence.reviewEvidenceCount도 batch별 실제 근거 수를 합산해서 판단하세요.
+6. criterionScores는 전체 batch의 긍정/부정 근거와 반복성을 종합한 0~100 점수입니다.
+7. 구매기준에 대한 전체 근거가 부족하면 점수는 null로 두세요.
+8. 배송, 포장, 판매자 응대는 제품 평가에 약하게 반영하세요.
+9. confidenceScore는 총 리뷰 수, 정보량, batch 간 반복성, 긍정/부정 근거 균형을 반영한 0~100 정수입니다.
+10. 제공되지 않은 사실을 추가하거나 추측하지 마세요.
+11. 입력된 구매기준 key만 사용하세요.
+12. JSON만 출력하세요. 마크다운은 사용하지 마세요.
+
+반드시 아래 JSON 구조로 반환하세요.
+
+{
+  "productName": "${productName}",
+  "reviewCount": ${totalReviewCount},
+  "summary": "전체 batch를 종합한 2~3문장 요약",
+  "positivePoints": [
+    {
+      "topic": "장점 항목",
+      "summary": "여러 batch에서 반복 확인된 실제 장점",
+      "evidenceCount": 0
+    }
+  ],
+  "negativePoints": [
+    {
+      "topic": "단점 항목",
+      "summary": "여러 batch에서 반복 확인된 실제 단점",
+      "evidenceCount": 0
+    }
+  ],
+  "cautions": [
+    "구매 전에 확인할 사항"
+  ],
+  "bestFor": [
+    "이 제품이 잘 맞는 사용자"
+  ],
+  "notFor": [
+    "이 제품이 잘 맞지 않는 사용자"
+  ],
+  "confidenceScore": 0,
+  "reviewQuality": {
+    "highInformationReviews": 0,
+    "lowInformationReviews": 0,
+    "promotionalStyleReviews": 0
+  },
+  "criterionEvidence": {
+    "${criterionKeys[0]}": {
+      "reviewEvidenceCount": 0,
+      "summary": "전체 batch의 해당 구매기준 근거 요약"
+    }
+  },
+  "criterionScores": {
+    "${criterionKeys[0]}": null
+  },
+  "criterionReasons": {
+    "${criterionKeys[0]}": "점수 또는 null의 이유"
+  }
+}
+
+criterionEvidence,
+criterionScores,
+criterionReasons에는 아래 key를 전부 포함하세요.
+
+${criterionKeys.join(
+  ", ",
+)}
+`;
+}
+
 export async function POST(
   request: Request,
 ) {
@@ -368,24 +735,29 @@ export async function POST(
       Array.isArray(
         body.reviews,
       )
-        ? body.reviews
-            .filter(
-              (
-                review,
-              ): review is string =>
-                typeof review ===
-                  "string" &&
-                review.trim()
-                  .length > 0,
-            )
-            .map(
-              (review) =>
-                review.trim(),
-            )
-            .slice(
-              0,
-              200,
-            )
+        ? Array.from(
+            new Set(
+              body.reviews
+                .filter(
+                  (
+                    review,
+                  ): review is string =>
+                    typeof review ===
+                      "string" &&
+                    review.trim()
+                      .length > 0,
+                )
+                .map(
+                  cleanReview,
+                )
+                .filter(
+                  Boolean,
+                ),
+            ),
+          ).slice(
+            0,
+            MAX_REVIEW_COUNT,
+          )
         : [];
 
     const collectionStats =
@@ -541,197 +913,141 @@ export async function POST(
         apiKey,
       });
 
-    const prompt = `
-당신은 Project D의 실제 구매 리뷰 분석 엔진입니다.
-
-카테고리:
-${category}
-
-상품명:
-${productName}
-
-분석 대상 리뷰 수:
-${reviews.length}
-
-현재 이 카테고리의 핵심 구매기준:
-${JSON.stringify(
-  dynamicCriteria,
-  null,
-  2,
-)}
-
-분석 대상 실제 리뷰:
-${reviews
-  .map(
-    (
-      review,
-      index,
-    ) =>
-      `${index + 1}. ${review}`,
-  )
-  .join("\n")}
-
-분석 원칙:
-
-1. 반드시 제공된 리뷰 내용만 근거로 판단하세요.
-2. 리뷰에 없는 제품 사양이나 성능을 추측하지 마세요.
-3. 배송, 포장, 단순 구매 만족처럼 제품 성능과 직접 관계없는 내용은 약하게 반영하세요.
-4. "좋아요", "추천합니다", "대만족"처럼 구체성이 부족한 리뷰는 낮은 정보량 리뷰로 취급하세요.
-5. 실제 사용기간, 집 환경, 청소 결과, 오류, 소음, 앱 문제, 관리 불편처럼 구체적인 사용경험이 담긴 리뷰는 더 신뢰하세요.
-6. 한두 개 리뷰에서만 나온 문제를 전체 제품의 확정적 결함으로 표현하지 마세요.
-7. 서로 다른 리뷰에서 반복되는 장점과 단점을 우선하세요.
-8. 광고성 또는 이벤트성 문체로 보이는 리뷰는 약하게 반영하세요.
-9. positivePoints와 negativePoints에는 가능하면 서로 다른 리뷰에서 반복 확인된 주제를 넣으세요.
-10. evidenceCount는 해당 주제를 실제로 직접 언급하거나 뒷받침한 리뷰 개수입니다.
-11. evidenceCount를 임의로 크게 만들지 마세요.
-12. criterionEvidence는 각 구매기준과 직접 관련된 실제 리뷰 개수를 기록하세요.
-13. 해당 구매기준에 대한 리뷰 근거가 부족하면 점수는 null로 두세요.
-14. 점수는 0~100입니다.
-15. 점수가 높을수록 해당 구매기준에서 구매 만족도가 높다는 뜻입니다.
-16. 제품의 판매페이지 주장만으로 점수를 만들지 마세요.
-17. 입력된 구매기준 key만 사용하세요.
-18. JSON만 출력하세요. 마크다운은 사용하지 마세요.
-
-점수 기준:
-- 90~100: 반복적인 강한 긍정 근거가 있고 뚜렷한 단점이 거의 없음
-- 75~89: 전반적으로 강점이 분명하고 일부 단점이 있음
-- 60~74: 장단점이 혼재하거나 평균 이상
-- 40~59: 단점이나 불확실성이 비교적 큼
-- 0~39: 반복적인 심각한 불만 근거가 있음
-- 근거 부족: null
-
-반드시 아래 JSON 구조로 반환하세요.
-
-{
-  "productName": "${productName}",
-  "reviewCount": ${reviews.length},
-  "summary": "전체 리뷰를 종합한 2~3문장 요약",
-  "positivePoints": [
-    {
-      "topic": "장점 항목",
-      "summary": "반복적으로 확인된 실제 장점",
-      "evidenceCount": 2
-    }
-  ],
-  "negativePoints": [
-    {
-      "topic": "단점 항목",
-      "summary": "반복적으로 확인된 실제 단점",
-      "evidenceCount": 2
-    }
-  ],
-  "cautions": [
-    "구매 전에 확인할 사항"
-  ],
-  "bestFor": [
-    "이 제품이 잘 맞는 사용자"
-  ],
-  "notFor": [
-    "이 제품이 잘 맞지 않는 사용자"
-  ],
-  "confidenceScore": 0,
-  "reviewQuality": {
-    "highInformationReviews": 0,
-    "lowInformationReviews": 0,
-    "promotionalStyleReviews": 0
-  },
-  "criterionEvidence": {
-    "${criterionKeys[0]}": {
-      "reviewEvidenceCount": 0,
-      "summary": "해당 구매기준에 대한 리뷰 근거 요약"
-    }
-  },
-  "criterionScores": {
-    "${criterionKeys[0]}": null
-  },
-  "criterionReasons": {
-    "${criterionKeys[0]}": "점수 또는 null의 이유"
-  }
-}
-
-중요:
-criterionEvidence,
-criterionScores,
-criterionReasons에는
-반드시 아래 key를 전부 포함하세요.
-
-${criterionKeys.join(
-  ", ",
-)}
-
-confidenceScore는
-리뷰 수, 리뷰 구체성, 반복성,
-긍정/부정 근거의 균형을 고려한
-0~100 정수입니다.
-`;
-
-    const response =
-      await client.responses.create(
-        {
-          model:
-            "gpt-5",
-          input:
-            prompt,
-        },
+    const batches =
+      chunkReviews(
+        reviews,
       );
 
-    const outputText =
-      response.output_text?.trim();
+    const batchResults:
+      BatchAnalysisResult[] =
+      [];
 
-    if (!outputText) {
-      throw new Error(
-        "AI가 리뷰 분석 결과를 반환하지 않았습니다.",
-      );
-    }
+    /*
+      비용/정확도 균형:
+      - 최대 1,000개를 200개씩 최대 5 batch로 나눈다.
+      - API 폭주를 막기 위해 제품 내부 batch는 순차 실행한다.
+      - 각 리뷰 텍스트는 분석용으로 최대 800자까지만 사용한다.
+      - 원본 최대 1,000개 리뷰는 별도로 DB에 저장된다.
+    */
+    for (
+      let index = 0;
+      index <
+      batches.length;
+      index++
+    ) {
+      const batch =
+        batches[index];
 
-    try {
-      const parsed =
-        extractJson(
-          outputText,
-        );
+      const reviewStart =
+        index *
+          REVIEW_BATCH_SIZE +
+        1;
 
-      const normalized =
-        normalizeAnalysis(
-          parsed,
+      const reviewEnd =
+        reviewStart +
+        batch.length -
+        1;
+
+      const prompt =
+        buildBatchPrompt(
+          category,
+          productName,
+          dynamicCriteria,
           criterionKeys,
+          batch,
+          index,
+          batches.length,
+          reviewStart,
+          reviewEnd,
         );
 
-      const analysis = {
-        ...normalized,
+      const parsed =
+        await requestJsonAnalysis(
+          client,
+          prompt,
+          `${productName} batch ${index + 1}/${batches.length}`,
+        );
 
-        criterionEvidence:
-          normalizeCriterionEvidence(
-            parsed.criterionEvidence,
-            criterionKeys,
-            reviews.length,
-          ),
-
-        collectionStats,
-      };
-
-      return NextResponse.json({
-        success: true,
-        analysis,
+      batchResults.push({
+        batchIndex:
+          index + 1,
+        reviewStart,
+        reviewEnd,
+        reviewCount:
+          batch.length,
+        analysis:
+          parsed,
       });
-    } catch {
-      console.error(
-        "Review analysis JSON parsing failed:",
-        outputText,
+    }
+
+    const aggregatePrompt =
+      buildAggregatePrompt(
+        category,
+        productName,
+        dynamicCriteria,
+        criterionKeys,
+        reviews.length,
+        batchResults,
+        collectionStats,
       );
 
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "AI 리뷰 분석 결과를 JSON으로 해석하지 못했습니다.",
-          rawResult:
-            outputText,
-        },
-        {
-          status: 502,
-        },
+    const aggregateParsed =
+      await requestJsonAnalysis(
+        client,
+        aggregatePrompt,
+        `${productName} 최종 batch 통합`,
       );
-    }
+
+    const normalized =
+      normalizeAnalysis(
+        aggregateParsed,
+        criterionKeys,
+      );
+
+    const analysis = {
+      ...normalized,
+
+      productName,
+
+      reviewCount:
+        reviews.length,
+
+      criterionEvidence:
+        normalizeCriterionEvidence(
+          aggregateParsed
+            .criterionEvidence,
+          criterionKeys,
+          reviews.length,
+        ),
+
+      collectionStats,
+
+      batchAnalysis: {
+        strategy:
+          "sequential-200-review-batches",
+
+        totalReviews:
+          reviews.length,
+
+        batchSize:
+          REVIEW_BATCH_SIZE,
+
+        batchCount:
+          batches.length,
+
+        reviewTextLimit:
+          REVIEW_TEXT_LIMIT,
+      },
+    };
+
+    return NextResponse.json({
+      success: true,
+      analysis,
+      batchCount:
+        batches.length,
+      analyzedReviewCount:
+        reviews.length,
+    });
   } catch (error) {
     console.error(
       "Review analysis API error:",

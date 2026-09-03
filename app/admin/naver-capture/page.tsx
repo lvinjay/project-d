@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import {
   useEffect,
@@ -100,13 +100,13 @@ function getNameTokens(
 ) {
   const ignored =
     new Set([
-      "로봇청소기",
-      "청소기",
-      "로봇",
       "자동",
       "공식",
       "신제품",
+      "신형",
+      "최신",
       "new",
+      "official",
     ]);
 
   return new Set(

@@ -60,12 +60,37 @@ type FinalCandidate = {
     detailStatus?:
       | "full"
       | "partial-market";
+    reviewSourceUrl?: string;
     reviews?: Array<{
       rating?: number;
+      score?: number;
+      reviewScore?: number;
       date?: string;
+      createDate?: string;
+      reviewDate?: string;
       text?: string;
+      reviewContent?: string;
       helpfulCount?: number;
     }>;
+  };
+};
+
+type DeepReviewBridgeResponse = {
+  mode?: string;
+  productName?: string;
+  reviewSourceUrl?: string;
+  requestedMaxReviews?: number;
+  reviewCountReturned?: number;
+  probe?: {
+    success?: boolean;
+    finalUrl?: string;
+    reviewCountReturned?: number;
+    deepReview?: boolean;
+    targetReviewCount?: number;
+    collectionComplete?: boolean;
+    reviews?: BrowserReview[];
+    reviewSample?: BrowserReview[];
+    reason?: string;
   };
 };
 
@@ -85,19 +110,19 @@ type Step = {
 const INITIAL_STEPS: Step[] = [
   {
     key: "market",
-    label: "1. 시장 후보 자동 수집",
+    label: "1. 시장 상품 자동 수집",
     status: "idle",
     message: "",
   },
   {
     key: "enrich",
-    label: "2. 최종 후보 5개 검증",
+    label: "2. 유효 상품 풀 검증",
     status: "idle",
     message: "",
   },
   {
     key: "import",
-    label: "3. 제품 DB 등록",
+    label: "3. 상품 풀 DB 등록",
     status: "idle",
     message: "",
   },
@@ -109,13 +134,13 @@ const INITIAL_STEPS: Step[] = [
   },
   {
     key: "reviews",
-    label: "5. 리뷰 AI 분석",
+    label: "5. 최대 1,000개 리뷰 심층 수집",
     status: "idle",
     message: "",
   },
   {
     key: "save-reviews",
-    label: "6. 리뷰 분석 DB 저장",
+    label: "6. 리뷰 batch AI 분석·DB 저장",
     status: "idle",
     message: "",
   },
@@ -125,40 +150,7 @@ const INITIAL_STEPS: Step[] = [
     status: "idle",
     message: "",
   },
-  {
-    key: "scores",
-    label: "8. 제품별 비교 점수 생성",
-    status: "idle",
-    message: "",
-  },
 ];
-
-function parsePrice(
-  value: string,
-) {
-  const digits =
-    value.replace(
-      /[^\d]/g,
-      "",
-    );
-
-  return digits
-    ? Number(digits)
-    : 0;
-}
-
-function displayPrice(
-  value: string,
-) {
-  const price =
-    parsePrice(value);
-
-  return price
-    ? price.toLocaleString(
-        "ko-KR",
-      )
-    : "";
-}
 
 function cleanText(
   value: unknown,
@@ -198,20 +190,6 @@ export default function ProjectDAutomationPanel() {
   );
 
   const [
-    minBudget,
-    setMinBudget,
-  ] = useState(
-    "500,000",
-  );
-
-  const [
-    maxBudget,
-    setMaxBudget,
-  ] = useState(
-    "1,500,000",
-  );
-
-  const [
     steps,
     setSteps,
   ] = useState<Step[]>(
@@ -248,34 +226,140 @@ export default function ProjectDAutomationPanel() {
     );
   }
 
+  async function collectDeepNaverReviews(
+    productName: string,
+    reviewSourceUrl: string,
+    maxReviews = 1000,
+  ) {
+    const requestId =
+      `project-d-deep-review-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+    return new Promise<DeepReviewBridgeResponse>(
+      (
+        resolve,
+        reject,
+      ) => {
+        let settled =
+          false;
+
+        const cleanup =
+          () => {
+            window.removeEventListener(
+              "message",
+              onMessage,
+            );
+
+            window.clearTimeout(
+              timeoutId,
+            );
+          };
+
+        const onMessage =
+          (
+            event:
+              MessageEvent,
+          ) => {
+            if (
+              event.source !==
+                window ||
+              !event.data ||
+              event.data.type !==
+                "PROJECT_D_NAVER_CAPTURE_RESULT" ||
+              event.data.requestId !==
+                requestId
+            ) {
+              return;
+            }
+
+            settled =
+              true;
+
+            cleanup();
+
+            if (
+              event.data.success !==
+              true
+            ) {
+              reject(
+                new Error(
+                  cleanText(
+                    event.data.message,
+                  ) ||
+                    `${productName}: 네이버 심층 리뷰 수집 실패`,
+                ),
+              );
+
+              return;
+            }
+
+            resolve(
+              (
+                event.data
+                  .result ??
+                {}
+              ) as DeepReviewBridgeResponse,
+            );
+          };
+
+        /*
+          제품 1개에서 최대 1,000개 리뷰를
+          네이버 native infinite-scroll로 수집할 수 있으므로
+          shallow 후보검증보다 넉넉하게 15분을 허용한다.
+        */
+        const timeoutId =
+          window.setTimeout(
+            () => {
+              if (
+                settled
+              ) {
+                return;
+              }
+
+              settled =
+                true;
+
+              cleanup();
+
+              reject(
+                new Error(
+                  `${productName}: 네이버 심층 리뷰 수집 시간이 초과되었습니다.`,
+                ),
+              );
+            },
+            900000,
+          );
+
+        window.addEventListener(
+          "message",
+          onMessage,
+        );
+
+        window.postMessage(
+          {
+            type:
+              "PROJECT_D_NAVER_CAPTURE_REQUEST",
+            requestId,
+            payload: {
+              mode:
+                "deep-reviews",
+              productName,
+              reviewSourceUrl,
+              maxReviews,
+            },
+          },
+          window.location.origin,
+        );
+      },
+    );
+  }
+
   async function run() {
     const normalizedCategory =
       category.trim();
 
-    const min =
-      parsePrice(
-        minBudget,
-      );
-
-    const max =
-      parsePrice(
-        maxBudget,
-      );
-
     if (!normalizedCategory) {
       alert(
         "제품군을 입력하세요.",
-      );
-      return;
-    }
-
-    if (
-      min > 0 &&
-      max > 0 &&
-      min > max
-    ) {
-      alert(
-        "최소 예산은 최대 예산보다 작아야 합니다.",
       );
       return;
     }
@@ -362,8 +446,8 @@ export default function ProjectDAutomationPanel() {
               requestId: bridgeRequestId,
               payload: {
                 category: normalizedCategory,
-                minBudget: min,
-                maxBudget: max,
+                minBudget: 0,
+                maxBudget: 0,
                 targetCount: 100,
               },
             },
@@ -578,10 +662,10 @@ export default function ProjectDAutomationPanel() {
                 normalizedCategory,
 
               minBudget:
-                min,
+                0,
 
               maxBudget:
-                max,
+                0,
 
               products:
                 captureProducts,
@@ -619,14 +703,13 @@ export default function ProjectDAutomationPanel() {
 
       /*
         2단계
-        최대 15개 후보를
-        공식 URL + Bright Data로 상세 검증해
-        최종 5개를 확보한다.
+        시장 후보를 상세 검증해
+        고객 추천에 재사용할 수 있는 유효 상품 풀을 확보한다.
       */
       updateStep(
         "enrich",
         "working",
-        "최대 15개 후보의 실제 판매가·리뷰·중복·공식 상품 URL을 검증하는 중...",
+        "시장 후보의 실제 판매가·리뷰·중복·공식 상품 URL을 검증해 상품 풀을 만드는 중...",
       );
 
       const enrichedResponse =
@@ -679,9 +762,7 @@ export default function ProjectDAutomationPanel() {
         );
 
       if (
-        enriched.targetReached !==
-          true ||
-        finalCandidates.length < 5
+        finalCandidates.length === 0
       ) {
         const partialCount =
           Number(
@@ -690,18 +771,20 @@ export default function ProjectDAutomationPanel() {
           ) || 0;
 
         throw new Error(
-          `full 유효 후보가 5개에 도달하지 못했습니다. 현재 ${finalCandidates.length}개` +
+          "DB에 등록할 full 유효 상품을 확보하지 못했습니다." +
             (partialCount > 0
               ? ` · partial 예비 후보 ${partialCount}개`
-              : "") +
-            "입니다.",
+              : ""),
         );
       }
 
       updateStep(
         "enrich",
         "done",
-        `${finalCandidates.length}개 최종 후보 확보 · Bright Data ${Number(
+        `${finalCandidates.length}개 유효 상품 확보 · 목표 ${Number(
+          enriched.targetCount ??
+            30,
+        )}개 · Bright Data ${Number(
           enriched.brightDataCalls ??
             0,
         )}회`,
@@ -709,12 +792,12 @@ export default function ProjectDAutomationPanel() {
 
       /*
         3단계
-        최종 5개를 products에 등록/갱신.
+        검증된 유효 상품 풀 전체를 products에 등록/갱신.
       */
       updateStep(
         "import",
         "working",
-        "최종 후보를 제품 DB에 등록하는 중...",
+        "검증된 유효 상품 풀을 제품 DB에 등록하는 중...",
       );
 
       const importResponse =
@@ -802,11 +885,12 @@ export default function ProjectDAutomationPanel() {
           .filter(Boolean);
 
       if (
-        currentRunProductNames.length !== 5 ||
-        currentRunProductIds.length !== 5
+        currentRunProductNames.length === 0 ||
+        currentRunProductIds.length !==
+          currentRunProductNames.length
       ) {
         throw new Error(
-          `현재 실행의 최종 제품명/UUID가 정확히 5개여야 합니다. 제품명 ${currentRunProductNames.length}개 · UUID ${currentRunProductIds.length}개입니다.`,
+          `상품 풀 DB 등록 결과가 일치하지 않습니다. 제품명 ${currentRunProductNames.length}개 · UUID ${currentRunProductIds.length}개입니다.`,
         );
       }
 
@@ -877,23 +961,45 @@ export default function ProjectDAutomationPanel() {
 
       /*
         5단계
-        Bright Data에서 확보한 리뷰를
-        제품별로 AI 분석.
+        DB 등록이 끝난 상품만 심층 리뷰를 수집한다.
+
+        중요:
+        - 시장 후보 전체를 1,000개씩 수집하지 않는다.
+        - SmartStore, Naver Catalog, Brand Store reviewSource는 deep mode를 사용한다.
+        - 세 소스 모두 DB 등록이 끝난 상품에 한해서만 deep mode를 사용한다.
       */
       updateStep(
         "reviews",
         "working",
-        "제품 5개의 리뷰를 순서대로 AI 분석 중...",
+        `${finalCandidates.length}개 DB 상품의 리뷰 소스를 확인하는 중...`,
       );
 
-      const analyzedProducts:
+      const reviewCollections:
         Array<{
           productId: string;
           productName: string;
-          analysis: unknown;
+          reviews: string[];
+          reviewObjects: BrowserReview[];
+          collectionStats: {
+            total: number;
+            ranking: number;
+            latest: number;
+            lowScore: number;
+          };
+          sourceMode:
+            | "smartstore-deep"
+            | "catalog-deep"
+            | "brandstore-deep"
+            | "existing-shallow";
         }> = [];
 
-      let skippedReviewProducts =
+      let deepCollectedProducts =
+        0;
+
+      let shallowFallbackProducts =
+        0;
+
+      let insufficientReviewProducts =
         0;
 
       for (
@@ -918,91 +1024,286 @@ export default function ProjectDAutomationPanel() {
             detail.productName,
           );
 
-        const reviewObjects =
+        const reviewSourceUrl =
+          cleanText(
+            detail.reviewSourceUrl,
+          );
+
+        const existingReviewObjects:
+          BrowserReview[] =
           Array.isArray(
             detail.reviews,
           )
             ? detail.reviews
             : [];
 
-        const reviews =
-          reviewObjects
-            .map(
-              (review) =>
-                cleanText(
-                  review.text,
-                ),
+        let selectedReviewObjects:
+          BrowserReview[] =
+          existingReviewObjects;
+
+        let sourceMode:
+          | "smartstore-deep"
+          | "catalog-deep"
+          | "brandstore-deep"
+          | "existing-shallow" =
+          "existing-shallow";
+
+        const isSmartStoreReviewSource =
+          reviewSourceUrl.startsWith(
+            "https://smartstore.naver.com/",
+          ) ||
+          reviewSourceUrl.startsWith(
+            "https://m.smartstore.naver.com/",
+          );
+
+        const isCatalogReviewSource =
+          reviewSourceUrl.startsWith(
+            "https://search.shopping.naver.com/catalog/",
+          );
+
+        const isBrandStoreReviewSource =
+          reviewSourceUrl.startsWith(
+            "https://brand.naver.com/",
+          ) ||
+          reviewSourceUrl.startsWith(
+            "https://m.brand.naver.com/",
+          );
+
+        const supportsDeepReviewSource =
+          isSmartStoreReviewSource ||
+          isCatalogReviewSource ||
+          isBrandStoreReviewSource;
+
+        if (
+          supportsDeepReviewSource
+        ) {
+          const deepSourceLabel =
+            isCatalogReviewSource
+              ? "Catalog"
+              : isBrandStoreReviewSource
+                ? "Brand Store"
+                : "SmartStore";
+
+          updateStep(
+            "reviews",
+            "working",
+            `${index + 1}/${finalCandidates.length} · ${productName} · ${deepSourceLabel} 최대 1,000개 심층 수집 중...`,
+          );
+
+          const deepResult =
+            await collectDeepNaverReviews(
+              productName,
+              reviewSourceUrl,
+              1000,
+            );
+
+          const deepProbe =
+            deepResult.probe ??
+            {};
+
+          const deepReviews =
+            Array.isArray(
+              deepProbe.reviews,
             )
-            .filter(Boolean);
+              ? deepProbe.reviews
+              : [];
+
+          if (
+            deepReviews.length >
+            0
+          ) {
+            selectedReviewObjects =
+              deepReviews;
+
+            sourceMode =
+              isCatalogReviewSource
+                ? "catalog-deep"
+                : isBrandStoreReviewSource
+                  ? "brandstore-deep"
+                  : "smartstore-deep";
+
+            deepCollectedProducts++;
+          } else {
+            shallowFallbackProducts++;
+          }
+        } else {
+          shallowFallbackProducts++;
+        }
+
+        const reviews =
+          Array.from(
+            new Set(
+              selectedReviewObjects
+                .map(
+                  (review) =>
+                    cleanText(
+                      review.text ??
+                      review.reviewContent,
+                    ),
+                )
+                .filter(
+                  Boolean,
+                ),
+            ),
+          ).slice(
+            0,
+            1000,
+          );
 
         const lowScore =
-          reviewObjects.filter(
+          selectedReviewObjects.filter(
             (review) => {
               const rating =
                 Number(
                   review.rating ??
-                    0,
+                  review.score ??
+                  review.reviewScore ??
+                  0,
                 );
 
               return (
-                rating > 0 &&
-                rating <= 3
+                rating >
+                  0 &&
+                rating <=
+                  3
               );
             },
           ).length;
 
         if (
           reviews.length <
-          5
+          30
         ) {
-          skippedReviewProducts++;
+          insufficientReviewProducts++;
 
           updateStep(
             "reviews",
             "working",
-            `${index + 1}/${finalCandidates.length} · ${productName} · 리뷰 본문 ${reviews.length}개 → AI 분석 생략`,
+            `${index + 1}/${finalCandidates.length} · ${productName} · 실제 리뷰 본문 ${reviews.length}개 → 추천 분석 대상 제외`,
           );
 
           continue;
         }
 
+        reviewCollections.push({
+          productId,
+          productName,
+          reviews,
+          reviewObjects:
+            selectedReviewObjects,
+          collectionStats: {
+            total:
+              reviews.length,
+            ranking:
+              sourceMode ===
+                "smartstore-deep" ||
+              sourceMode ===
+                "catalog-deep" ||
+              sourceMode ===
+                "brandstore-deep"
+                ? reviews.length
+                : 0,
+            latest:
+              sourceMode ===
+              "existing-shallow"
+                ? reviews.length
+                : 0,
+            lowScore,
+          },
+          sourceMode,
+        });
+      }
+
+      updateStep(
+        "reviews",
+        "done",
+        `${reviewCollections.length}개 분석용 리뷰 corpus 확보` +
+          ` · SmartStore/Catalog/Brand 심층 ${deepCollectedProducts}개` +
+          (
+            shallowFallbackProducts >
+            0
+              ? ` · 기존 리뷰 사용 ${shallowFallbackProducts}개`
+              : ""
+          ) +
+          (
+            insufficientReviewProducts >
+            0
+              ? ` · 리뷰 본문 30개 미만 ${insufficientReviewProducts}개 제외`
+              : ""
+          ),
+      );
+
+      /*
+        6단계의 AI 분석은 아래에서 reviewCollections를 사용한다.
+
+        현재 /api/analyze-reviews에는 아직 200개 cap이 있으므로
+        실제 Admin 실행 전에 다음 패치에서 100~200개 단위 batch 분석 +
+        최종 aggregation으로 교체한다.
+      */
+      const analyzedProducts:
+        Array<{
+          productId: string;
+          productName: string;
+          analysis: unknown;
+          reviews: string[];
+          collectionStats: {
+            total: number;
+            ranking: number;
+            latest: number;
+            lowScore: number;
+          };
+        }> = [];
+
+      let skippedReviewProducts =
+        insufficientReviewProducts;
+
+      updateStep(
+        "save-reviews",
+        "working",
+        `${reviewCollections.length}개 제품 리뷰를 AI 분석하는 중...`,
+      );
+
+      for (
+        let index = 0;
+        index <
+        reviewCollections.length;
+        index++
+      ) {
+        const collection =
+          reviewCollections[index];
+
         updateStep(
-          "reviews",
+          "save-reviews",
           "working",
-          `${index + 1}/${finalCandidates.length} · ${productName}`,
+          `${index + 1}/${reviewCollections.length} · ${collection.productName} · 리뷰 ${collection.reviews.length}개`,
         );
 
         const analyzeResponse =
           await fetch(
             "/api/analyze-reviews",
             {
-              method: "POST",
+              method:
+                "POST",
 
               headers: {
                 "Content-Type":
                   "application/json",
               },
 
-              body: JSON.stringify({
-                productName,
+              body:
+                JSON.stringify({
+                  productName:
+                    collection.productName,
 
-                category:
-                  normalizedCategory,
+                  category:
+                    normalizedCategory,
 
-                reviews,
+                  reviews:
+                    collection.reviews,
 
-                collectionStats: {
-                  total:
-                    reviews.length,
-
-                  ranking: 0,
-
-                  latest:
-                    reviews.length,
-
-                  lowScore,
-                },
-              }),
+                  collectionStats:
+                    collection.collectionStats,
+                }),
             },
           );
 
@@ -1017,7 +1318,7 @@ export default function ProjectDAutomationPanel() {
             true
         ) {
           throw new Error(
-            `${productName}: ${
+            `${collection.productName}: ${
               cleanText(
                 analyzeResult.message,
               ) ||
@@ -1027,32 +1328,29 @@ export default function ProjectDAutomationPanel() {
         }
 
         analyzedProducts.push({
-          productId,
+          productId:
+            collection.productId,
 
-          productName,
+          productName:
+            collection.productName,
 
           analysis:
             analyzeResult.analysis,
+
+          reviews:
+            collection.reviews,
+
+          collectionStats:
+            collection.collectionStats,
         });
       }
 
-      updateStep(
-        "reviews",
-        "done",
-        `${analyzedProducts.length}개 리뷰 AI 분석 완료` +
-          (
-            skippedReviewProducts > 0
-              ? ` · ${skippedReviewProducts}개 리뷰 본문 부족으로 생략`
-              : ""
-          ),
-      );
-
       /*
         6단계
-        실제 리뷰 본문이 충분해 AI 분석까지 완료된 제품만 저장한다.
+        심층/기존 리뷰 corpus를 batch AI 분석한 결과만 저장한다.
 
-        리뷰 본문 미확보 제품은 review_analysis를 꾸며내지 않고
-        기존 null/미분석 상태로 두며 이후 구매기준/점수 단계는 계속 진행한다.
+        리뷰 본문 30개 미만 제품은 review_analysis를 꾸며내지 않고
+        기존 null/미분석 상태로 둔다.
       */
       if (
         analyzedProducts.length >
@@ -1061,7 +1359,7 @@ export default function ProjectDAutomationPanel() {
         updateStep(
           "save-reviews",
           "working",
-          "리뷰 분석 결과를 DB에 저장하는 중...",
+          "리뷰 batch AI 분석 결과와 실제 리뷰 corpus를 DB에 저장하는 중...",
         );
 
         const saveResponse =
@@ -1120,7 +1418,7 @@ export default function ProjectDAutomationPanel() {
         updateStep(
           "save-reviews",
           "done",
-          "저장할 리뷰 분석 없음 · 리뷰 본문 미확보 제품은 미분석 상태로 계속 진행",
+          "저장할 리뷰 분석 없음 · 리뷰 본문 30개 미만 제품은 미분석 상태로 유지",
         );
       }
 
@@ -1177,65 +1475,8 @@ export default function ProjectDAutomationPanel() {
         "최종 구매기준 보정 완료",
       );
 
-      /*
-        8단계
-        최종 상대평가 점수 생성.
-      */
-      updateStep(
-        "scores",
-        "working",
-        "최종 제품 비교 점수를 계산하는 중...",
-      );
-
-      const scoreResponse =
-        await fetch(
-          "/api/generate-product-scores",
-          {
-            method: "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body: JSON.stringify({
-              category:
-                normalizedCategory,
-              productNames:
-                currentRunProductNames,
-            }),
-          },
-        );
-
-      const scoreResult =
-        await readJson(
-          scoreResponse,
-        );
-
-      if (
-        !scoreResponse.ok ||
-        scoreResult.success !==
-          true
-      ) {
-        throw new Error(
-          cleanText(
-            scoreResult.message,
-          ) ||
-            "제품별 점수 생성에 실패했습니다.",
-        );
-      }
-
-      updateStep(
-        "scores",
-        "done",
-        `${Number(
-          scoreResult.productCount ??
-            5,
-        )}개 제품 비교 점수 생성 완료`,
-      );
-
       setFinalMessage(
-        `완료 · ${normalizedCategory} 최종 후보 5개와 추천 데이터 준비가 모두 끝났습니다.`,
+        `완료 · ${normalizedCategory} 유효 상품 ${finalCandidates.length}개 DB 구축과 공통 분석이 끝났습니다.`,
       );
     } catch (error) {
       const message =
@@ -1308,7 +1549,7 @@ export default function ProjectDAutomationPanel() {
       </div>
 
       <h2 style={{ margin: 0 }}>
-        후보 수집부터 추천 준비까지 자동 실행
+        카테고리 상품 DB 자동 구축
       </h2>
 
       <p
@@ -1319,7 +1560,7 @@ export default function ProjectDAutomationPanel() {
           lineHeight: 1.7,
         }}
       >
-        제품군과 예산만 입력하면 시장 후보 수집부터 최종 5개 선정, 리뷰 분석, 구매기준과 비교점수 생성까지 자동 처리합니다.
+        제품군만 입력하면 가격 제한 없이 시장 상품을 수집하고, 유효 상품 검증·DB 등록·공통 구매기준·리뷰 분석까지 자동 처리합니다. 고객별 비교점수와 최종 추천은 구매 상담 단계에서 별도로 계산합니다.
       </p>
 
       <div
@@ -1344,60 +1585,6 @@ export default function ProjectDAutomationPanel() {
           }
           placeholder="예: 로봇청소기"
         />
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "1fr 1fr",
-          gap: 16,
-          marginTop: 18,
-        }}
-      >
-        <div className="field">
-          <label htmlFor="automationMinBudget">
-            최소 예산
-          </label>
-
-          <input
-            id="automationMinBudget"
-            className="textInput"
-            inputMode="numeric"
-            value={minBudget}
-            disabled={isRunning}
-            onChange={(event) =>
-              setMinBudget(
-                displayPrice(
-                  event.target.value,
-                ),
-              )
-            }
-            placeholder="500,000"
-          />
-        </div>
-
-        <div className="field">
-          <label htmlFor="automationMaxBudget">
-            최대 예산
-          </label>
-
-          <input
-            id="automationMaxBudget"
-            className="textInput"
-            inputMode="numeric"
-            value={maxBudget}
-            disabled={isRunning}
-            onChange={(event) =>
-              setMaxBudget(
-                displayPrice(
-                  event.target.value,
-                ),
-              )
-            }
-            placeholder="1,500,000"
-          />
-        </div>
       </div>
 
       <div
@@ -1496,7 +1683,7 @@ export default function ProjectDAutomationPanel() {
       >
         {isRunning
           ? "Project D 자동 실행 중..."
-          : "후보 수집부터 추천 준비까지 자동 실행"}
+          : "카테고리 상품 DB 자동 구축"}
       </button>
 
       {finalMessage ? (

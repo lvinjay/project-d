@@ -1,86 +1,107 @@
-﻿{
-    "manifest_version":  3,
-    "name":  "Project D One Button Bridge",
-    "version":  "0.5.6",
-    "description":  "Project D hybrid SmartStore and Brand Store review capture.",
-    "permissions":  [
-                        "tabs",
-                        "scripting"
-                    ],
-    "host_permissions":  [
-                             "http://localhost/*",
-                             "http://127.0.0.1/*",
-                             "https://search.shopping.naver.com/*",
-                             "https://smartstore.naver.com/*",
-                             "https://m.smartstore.naver.com/*",
-                             "https://ader.naver.com/*",
-                             "https://cr.shopping.naver.com/*",
-                             "https://cr3.shopping.naver.com/*",
-                             "https://brand.naver.com/*",
-                             "https://m.brand.naver.com/*"
-                         ],
-    "background":  {
-                       "service_worker":  "background.js"
-                   },
-    "content_scripts":  [
-                            {
-                                "matches":  [
-                                                "http://localhost/*",
-                                                "http://127.0.0.1/*"
-                                            ],
-                                "js":  [
-                                           "admin-bridge.js"
-                                       ],
-                                "run_at":  "document_start"
-                            },
-                            {
-                                "matches":  [
-                                                "https://search.shopping.naver.com/*"
-                                            ],
-                                "js":  [
-                                           "naver-collector.js"
-                                       ],
-                                "run_at":  "document_idle"
-                            },
-                            {
-                                "matches":  [
-                                                "https://smartstore.naver.com/*",
-                                                "https://m.smartstore.naver.com/*"
-                                            ],
-                                "js":  [
-                                           "smartstore-review-interceptor.js"
-                                       ],
-                                "run_at":  "document_start",
-                                "world":  "MAIN"
-                            },
-                            {
-                                "matches":  [
-                                                "https://smartstore.naver.com/*",
-                                                "https://m.smartstore.naver.com/*"
-                                            ],
-                                "js":  [
-                                           "smartstore-review-probe.js"
-                                       ],
-                                "run_at":  "document_start"
-                            },
-                            {
-                                "matches":  [
-                                                "https://brand.naver.com/*",
-                                                "https://m.brand.naver.com/*"
-                                            ],
-                                "js":  [
-                                           "brandstore-review-probe.js"
-                                       ],
-                                "run_at":  "document_start"
-                            },
-                            {
-                                "matches":  [
-                                                "https://search.shopping.naver.com/catalog/*"
-                                            ],
-                                "js":  [
-                                           "catalog-review-probe.js"
-                                       ],
-                                "run_at":  "document_start"
-                            }
-                        ]
+{
+  "manifest_version": 3,
+  "name": "Project D One Button Bridge",
+  "version": "0.5.13",
+  "description": "Project D hybrid SmartStore and Brand Store review capture.",
+  "permissions": [
+    "tabs",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://localhost/*",
+    "http://127.0.0.1/*",
+    "https://search.shopping.naver.com/*",
+    "https://smartstore.naver.com/*",
+    "https://m.smartstore.naver.com/*",
+    "https://ader.naver.com/*",
+    "https://cr.shopping.naver.com/*",
+    "https://cr3.shopping.naver.com/*",
+    "https://brand.naver.com/*",
+    "https://m.brand.naver.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost/*",
+        "http://127.0.0.1/*"
+      ],
+      "js": [
+        "admin-bridge.js"
+      ],
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://search.shopping.naver.com/*"
+      ],
+      "js": [
+        "naver-collector.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://smartstore.naver.com/*",
+        "https://m.smartstore.naver.com/*"
+      ],
+      "js": [
+        "smartstore-review-interceptor.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://smartstore.naver.com/*",
+        "https://m.smartstore.naver.com/*"
+      ],
+      "js": [
+        "smartstore-review-probe.js"
+      ],
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://brand.naver.com/*",
+        "https://m.brand.naver.com/*"
+      ],
+      "js": [
+        "brandstore-review-interceptor.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://brand.naver.com/*",
+        "https://m.brand.naver.com/*"
+      ],
+      "js": [
+        "brandstore-review-probe.js"
+      ],
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://search.shopping.naver.com/catalog/*"
+      ],
+      "js": [
+        "catalog-review-interceptor.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://search.shopping.naver.com/catalog/*"
+      ],
+      "js": [
+        "catalog-review-probe.js"
+      ],
+      "run_at": "document_start"
+    }
+  ]
 }
