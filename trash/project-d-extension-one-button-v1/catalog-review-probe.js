@@ -41,6 +41,11 @@
 
   let nativeDuplicateTextCount = 0;
 
+  let nativeUniqueTargetReached = false;
+  let nativeSourceExhausted = false;
+  let nativeCompletionReason = "not-started";
+  let nativeAvailablePageCount = 0;
+
   const sleep = (ms) =>
     new Promise(
       (resolve) =>
@@ -876,6 +881,15 @@
         nativeReviews.size ===
           0
       ) {
+        nativeUniqueTargetReached =
+          false;
+        nativeSourceExhausted =
+          false;
+        nativeCompletionReason =
+          "native-api-not-ready";
+        nativeAvailablePageCount =
+          0;
+
         return [];
       }
 
@@ -922,6 +936,15 @@
               ),
             );
 
+      nativeUniqueTargetReached =
+        false;
+      nativeSourceExhausted =
+        false;
+      nativeCompletionReason =
+        "collecting";
+      nativeAvailablePageCount =
+        availablePages;
+
       if (
         nativeCapturedPages.size ===
           0 &&
@@ -945,6 +968,10 @@
           nativeReviews.size >=
           effectiveTarget
         ) {
+          nativeUniqueTargetReached =
+            true;
+          nativeCompletionReason =
+            "unique-target-reached";
           break;
         }
 
@@ -991,6 +1018,9 @@
             },
           );
 
+          nativeCompletionReason =
+            "page-timeout";
+
           break;
         }
 
@@ -1005,7 +1035,9 @@
 
         if (
           stagnantPages >=
-          10
+            10 &&
+          nativeTotalCount <=
+            0
         ) {
           console.warn(
             "PROJECT_D_CATALOG_NATIVE_UNIQUE_STAGNANT",
@@ -1020,12 +1052,53 @@
             },
           );
 
+          nativeCompletionReason =
+            "unknown-total-stagnation";
+
           break;
         }
 
         await sleep(
           180,
         );
+      }
+
+      nativeUniqueTargetReached =
+        nativeReviews.size >=
+        effectiveTarget;
+
+      const allKnownPagesCaptured =
+        nativeTotalCount >
+          0 &&
+        nativeCapturedPages.size >=
+          availablePages;
+
+      const allKnownRawReviewsSeen =
+        nativeTotalCount >
+          0 &&
+        nativeSeenReviewKeys.size >=
+          nativeTotalCount;
+
+      nativeSourceExhausted =
+        allKnownPagesCaptured ||
+        allKnownRawReviewsSeen;
+
+      if (
+        nativeUniqueTargetReached
+      ) {
+        nativeCompletionReason =
+          "unique-target-reached";
+      } else if (
+        nativeSourceExhausted
+      ) {
+        nativeCompletionReason =
+          "source-exhausted";
+      } else if (
+        nativeCompletionReason ===
+        "collecting"
+      ) {
+        nativeCompletionReason =
+          "incomplete";
       }
 
       return Array.from(
@@ -1335,6 +1408,14 @@
             nativeReviews.size,
           duplicateTextReviewCount:
             nativeDuplicateTextCount,
+          uniqueTargetReached:
+            nativeUniqueTargetReached,
+          sourceExhausted:
+            nativeSourceExhausted,
+          completionReason:
+            nativeCompletionReason,
+          availablePageCount:
+            nativeAvailablePageCount,
           sourceType:
             "catalog-native",
           deepReview:
@@ -1343,15 +1424,8 @@
           totalAvailableReviews:
             nativeTotalCount,
           collectionComplete:
-            nativeTotalCount >
-            0
-              ? reviews.length >=
-                Math.min(
-                  targetReviewCount,
-                  nativeTotalCount,
-                )
-              : reviews.length >=
-                targetReviewCount,
+            nativeUniqueTargetReached ||
+            nativeSourceExhausted,
         });
 
         return;
