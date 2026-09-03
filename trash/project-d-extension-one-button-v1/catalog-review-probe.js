@@ -36,6 +36,11 @@
   const nativeReviews =
     new Map();
 
+  const nativeSeenReviewKeys =
+    new Set();
+
+  let nativeDuplicateTextCount = 0;
+
   const sleep = (ms) =>
     new Promise(
       (resolve) =>
@@ -579,11 +584,12 @@
         )
           .replace(
             /\s+/g,
-            "",
+            " ",
           )
+          .trim()
           .slice(
             0,
-            300,
+            500,
           );
 
       const date =
@@ -596,6 +602,13 @@
           "",
         );
 
+      if (
+        !date &&
+        !text
+      ) {
+        return "";
+      }
+
       return [
         "fallback",
         date,
@@ -603,6 +616,32 @@
         String(index),
       ].join(
         "|",
+      );
+    };
+
+  const nativeEvidenceKey =
+    (review) => {
+      const text =
+        firstText(
+          review,
+        )
+          .replace(
+            /\s+/g,
+            " ",
+          )
+          .trim()
+          .slice(
+            0,
+            2500,
+          );
+
+      if (!text) {
+        return "";
+      }
+
+      return (
+        "text:" +
+        text
       );
     };
 
@@ -683,23 +722,47 @@
           review,
           index,
         ) => {
-          const key =
+          const reviewKey =
             nativeReviewKey(
               review,
               index,
             );
 
           if (
-            !key ||
-            nativeReviews.has(
-              key,
+            !reviewKey ||
+            nativeSeenReviewKeys.has(
+              reviewKey,
             )
           ) {
             return;
           }
 
+          nativeSeenReviewKeys.add(
+            reviewKey,
+          );
+
+          const evidenceKey =
+            nativeEvidenceKey(
+              review,
+            );
+
+          if (!evidenceKey) {
+            return;
+          }
+
+          if (
+            nativeReviews.has(
+              evidenceKey,
+            )
+          ) {
+            nativeDuplicateTextCount +=
+              1;
+
+            return;
+          }
+
           nativeReviews.set(
-            key,
+            evidenceKey,
             normalizeNativeReview(
               review,
               nativeReviews.size,
@@ -736,8 +799,12 @@
             null,
           responseReviews:
             reviews.length,
-          accumulatedReviews:
+          rawUniqueReviewCount:
+            nativeSeenReviewKeys.size,
+          uniqueEvidenceReviews:
             nativeReviews.size,
+          duplicateTextReviews:
+            nativeDuplicateTextCount,
           totalCount:
             nativeTotalCount,
           url:
@@ -837,6 +904,24 @@
           ),
         );
 
+      const availablePages =
+        nativeTotalCount >
+        0
+          ? Math.max(
+              1,
+              Math.ceil(
+                nativeTotalCount /
+                pageSize,
+              ),
+            )
+          : Math.min(
+              200,
+              Math.max(
+                requiredPages * 3,
+                requiredPages + 20,
+              ),
+            );
+
       if (
         nativeCapturedPages.size ===
           0 &&
@@ -848,10 +933,12 @@
         );
       }
 
+      let stagnantPages = 0;
+
       for (
         let page = 1;
         page <=
-          requiredPages;
+          availablePages;
         page += 1
       ) {
         if (
@@ -871,6 +958,9 @@
 
         const beforeSerial =
           nativeResponseSerial;
+
+        const beforeUnique =
+          nativeReviews.size;
 
         window.postMessage(
           {
@@ -898,6 +988,35 @@
               page,
               accumulated:
                 nativeReviews.size,
+            },
+          );
+
+          break;
+        }
+
+        if (
+          nativeReviews.size >
+          beforeUnique
+        ) {
+          stagnantPages = 0;
+        } else {
+          stagnantPages += 1;
+        }
+
+        if (
+          stagnantPages >=
+          10
+        ) {
+          console.warn(
+            "PROJECT_D_CATALOG_NATIVE_UNIQUE_STAGNANT",
+            {
+              page,
+              rawUniqueReviewCount:
+                nativeSeenReviewKeys.size,
+              uniqueEvidenceReviews:
+                nativeReviews.size,
+              duplicateTextReviews:
+                nativeDuplicateTextCount,
             },
           );
 
@@ -1210,6 +1329,12 @@
           nativeResponseCaptured:
             true,
           nativeResponseCount,
+          rawUniqueReviewCount:
+            nativeSeenReviewKeys.size,
+          uniqueEvidenceReviewCount:
+            nativeReviews.size,
+          duplicateTextReviewCount:
+            nativeDuplicateTextCount,
           sourceType:
             "catalog-native",
           deepReview:
