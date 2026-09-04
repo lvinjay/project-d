@@ -44,6 +44,7 @@ type DynamicCriterion = {
 
 type CriterionEvidence = {
   reviewEvidenceCount: number;
+  evidenceReviewNumbers: number[];
   summary: string;
 };
 
@@ -231,10 +232,171 @@ function normalizeCollectionStats(
   };
 }
 
+function normalizeEvidenceReviewNumbers(
+  raw: unknown,
+  minimumReviewNumber: number,
+  maximumReviewNumber: number,
+) {
+  if (
+    !Array.isArray(
+      raw,
+    )
+  ) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      raw
+        .map(
+          (value) =>
+            Number(value),
+        )
+        .filter(
+          (value) =>
+            Number.isSafeInteger(
+              value,
+            ) &&
+            value >=
+              minimumReviewNumber &&
+            value <=
+              maximumReviewNumber,
+        ),
+    ),
+  ).sort(
+    (left, right) =>
+      left - right,
+  );
+}
+
+function minimumCriterionEvidence(
+  reviewCount: number,
+) {
+  return Math.max(
+    3,
+    Math.ceil(
+      reviewCount *
+        0.01,
+    ),
+  );
+}
+
+function collectCriterionEvidenceNumbers(
+  batchResults:
+    BatchAnalysisResult[],
+  criterionKeys:
+    string[],
+) {
+  const result:
+    Record<
+      string,
+      number[]
+    > = {};
+
+  for (
+    const key of
+    criterionKeys
+  ) {
+    const numbers =
+      new Set<number>();
+
+    for (
+      const batch of
+      batchResults
+    ) {
+      const analysisRow =
+        batch.analysis &&
+        typeof batch.analysis ===
+          "object" &&
+        !Array.isArray(
+          batch.analysis,
+        )
+          ? batch.analysis
+          : {};
+
+      const criterionEvidenceRow =
+        analysisRow
+          .criterionEvidence &&
+        typeof analysisRow
+          .criterionEvidence ===
+          "object" &&
+        !Array.isArray(
+          analysisRow
+            .criterionEvidence,
+        )
+          ? (
+              analysisRow
+                .criterionEvidence as
+                Record<
+                  string,
+                  unknown
+                >
+            )
+          : {};
+
+      const item =
+        criterionEvidenceRow[
+          key
+        ] &&
+        typeof criterionEvidenceRow[
+          key
+        ] ===
+          "object" &&
+        !Array.isArray(
+          criterionEvidenceRow[
+            key
+          ],
+        )
+          ? (
+              criterionEvidenceRow[
+                key
+              ] as
+                Record<
+                  string,
+                  unknown
+                >
+            )
+          : {};
+
+      const batchNumbers =
+        normalizeEvidenceReviewNumbers(
+          item
+            .evidenceReviewNumbers,
+          batch.reviewStart,
+          batch.reviewEnd,
+        );
+
+      for (
+        const reviewNumber of
+        batchNumbers
+      ) {
+        numbers.add(
+          reviewNumber,
+        );
+      }
+    }
+
+    result[key] =
+      Array.from(
+        numbers,
+      ).sort(
+        (left, right) =>
+          left - right,
+      );
+  }
+
+  return result;
+}
+
 function normalizeCriterionEvidence(
   raw: unknown,
   criterionKeys: string[],
   reviewCount: number,
+  evidenceNumbersByCriterion?:
+    Record<
+      string,
+      number[]
+    >,
 ) {
   const row =
     raw &&
@@ -274,23 +436,38 @@ function normalizeCriterionEvidence(
           )
         : {};
 
-    const rawCount =
-      Number(
-        item.reviewEvidenceCount,
+    const modelEvidenceNumbers =
+      normalizeEvidenceReviewNumbers(
+        item
+          .evidenceReviewNumbers,
+        1,
+        reviewCount,
       );
 
-    const reviewEvidenceCount =
-      Number.isFinite(
-        rawCount,
-      ) &&
-      rawCount >= 0
-        ? Math.min(
+    const batchEvidenceNumbers =
+      evidenceNumbersByCriterion &&
+      Array.isArray(
+        evidenceNumbersByCriterion[
+          key
+        ],
+      )
+        ? normalizeEvidenceReviewNumbers(
+            evidenceNumbersByCriterion[
+              key
+            ],
+            1,
             reviewCount,
-            Math.round(
-              rawCount,
-            ),
           )
-        : 0;
+        : [];
+
+    const evidenceReviewNumbers =
+      batchEvidenceNumbers.length >
+      0
+        ? batchEvidenceNumbers
+        : modelEvidenceNumbers;
+
+    const reviewEvidenceCount =
+      evidenceReviewNumbers.length;
 
     const summary =
       typeof item.summary ===
@@ -300,6 +477,8 @@ function normalizeCriterionEvidence(
 
     result[key] = {
       reviewEvidenceCount,
+
+      evidenceReviewNumbers,
 
       summary:
         summary ||
@@ -392,6 +571,159 @@ function normalizeAnalysis(
     ...raw,
     criterionScores,
     criterionReasons,
+  };
+}
+
+function normalizePointEvidence(
+  raw: unknown,
+  reviewCount: number,
+) {
+  if (
+    !Array.isArray(
+      raw,
+    )
+  ) {
+    return [];
+  }
+
+  return raw
+    .filter(
+      (item) =>
+        item &&
+        typeof item ===
+          "object" &&
+        !Array.isArray(
+          item,
+        ),
+    )
+    .map(
+      (item) => {
+        const row =
+          item as
+            Record<
+              string,
+              unknown
+            >;
+
+        const evidenceReviewNumbers =
+          normalizeEvidenceReviewNumbers(
+            row
+              .evidenceReviewNumbers,
+            1,
+            reviewCount,
+          );
+
+        return {
+          ...row,
+
+          evidenceReviewNumbers,
+
+          evidenceCount:
+            evidenceReviewNumbers
+              .length,
+        };
+      },
+    );
+}
+
+function applyCriterionEvidenceFloor(
+  analysis:
+    Record<
+      string,
+      unknown
+    >,
+  criterionEvidence:
+    Record<
+      string,
+      CriterionEvidence
+    >,
+  criterionKeys:
+    string[],
+  reviewCount: number,
+) {
+  const minimumEvidence =
+    minimumCriterionEvidence(
+      reviewCount,
+    );
+
+  const scoreRow =
+    analysis.criterionScores &&
+    typeof analysis.criterionScores ===
+      "object" &&
+    !Array.isArray(
+      analysis.criterionScores,
+    )
+      ? (
+          analysis
+            .criterionScores as
+            Record<
+              string,
+              number | null
+            >
+        )
+      : {};
+
+  const reasonRow =
+    analysis.criterionReasons &&
+    typeof analysis.criterionReasons ===
+      "object" &&
+    !Array.isArray(
+      analysis.criterionReasons,
+    )
+      ? (
+          analysis
+            .criterionReasons as
+            Record<
+              string,
+              string
+            >
+        )
+      : {};
+
+  const criterionScores = {
+    ...scoreRow,
+  };
+
+  const criterionReasons = {
+    ...reasonRow,
+  };
+
+  for (
+    const key of
+    criterionKeys
+  ) {
+    const evidenceCount =
+      criterionEvidence[
+        key
+      ]?.reviewEvidenceCount ??
+      0;
+
+    if (
+      evidenceCount <
+      minimumEvidence
+    ) {
+      criterionScores[key] =
+        null;
+
+      criterionReasons[key] =
+        `직접 근거 ${evidenceCount}건으로 최소 기준 ${minimumEvidence}건에 미달하여 점수를 산정하지 않습니다.`;
+    }
+  }
+
+  return {
+    ...analysis,
+
+    criterionScores,
+
+    criterionReasons,
+
+    criterionScoring: {
+      minimumEvidenceForScore:
+        minimumEvidence,
+
+      minimumEvidenceRule:
+        "max(3, ceil(reviewCount * 0.01))",
+    },
   };
 }
 
@@ -587,11 +919,15 @@ ${reviews
 6. 한두 개 리뷰에서만 나온 문제를 전체 제품의 확정적 결함으로 표현하지 마세요.
 7. 반복되는 장점과 단점을 우선하세요.
 8. 광고성 또는 이벤트성 문체로 보이는 리뷰는 약하게 반영하세요.
-9. evidenceCount는 이 batch 안에서 해당 주제를 실제로 뒷받침한 리뷰 개수입니다.
-10. criterionEvidence의 reviewEvidenceCount도 이 batch 안의 실제 개수만 기록하세요.
-11. 근거가 부족한 criterionScores는 null로 두세요.
-12. 입력된 구매기준 key만 사용하세요.
-13. JSON만 출력하세요. 마크다운은 사용하지 마세요.
+9. positivePoints와 negativePoints의 evidenceReviewNumbers에는 해당 항목을 직접 뒷받침한 현재 batch 리뷰 번호만 넣으세요.
+10. evidenceCount는 evidenceReviewNumbers의 중복 제거 후 개수와 정확히 같아야 합니다.
+11. criterionEvidence의 evidenceReviewNumbers에도 해당 구매기준을 직접 뒷받침한 현재 batch 리뷰 번호만 넣으세요.
+12. criterionEvidence.reviewEvidenceCount는 evidenceReviewNumbers의 중복 제거 후 개수와 정확히 같아야 합니다.
+13. cautions, bestFor, notFor도 실제 리뷰에 직접 근거가 있는 범위만 표현하고 일반적인 제품 상식이나 사양을 추가로 추론하지 마세요.
+14. 한 리뷰의 좁은 불만을 더 넓은 기능 문제로 확장하지 마세요. 예: 자동 맵 확장 불만을 근거 없이 세밀한 맵 편집 문제까지 확대하지 마세요.
+15. 근거가 부족한 criterionScores는 null로 두세요.
+16. 입력된 구매기준 key만 사용하세요.
+17. JSON만 출력하세요. 마크다운은 사용하지 마세요.
 
 반드시 아래 JSON 구조로 반환하세요.
 
@@ -603,6 +939,7 @@ ${reviews
     {
       "topic": "장점 항목",
       "summary": "실제 반복 장점",
+      "evidenceReviewNumbers": [${reviewStart}],
       "evidenceCount": 0
     }
   ],
@@ -610,6 +947,7 @@ ${reviews
     {
       "topic": "단점 항목",
       "summary": "실제 반복 단점",
+      "evidenceReviewNumbers": [${reviewStart}],
       "evidenceCount": 0
     }
   ],
@@ -629,6 +967,7 @@ ${reviews
   },
   "criterionEvidence": {
     "${criterionKeys[0]}": {
+      "evidenceReviewNumbers": [${reviewStart}],
       "reviewEvidenceCount": 0,
       "summary": "이 batch의 해당 구매기준 근거 요약"
     }
@@ -699,6 +1038,11 @@ ${productName}
 총 실제 리뷰 수:
 ${totalReviewCount}
 
+최종 구매기준 점수의 최소 직접 근거 수:
+${minimumCriterionEvidence(
+  totalReviewCount,
+)}
+
 수집 통계:
 ${JSON.stringify(
   collectionStats,
@@ -724,16 +1068,22 @@ ${JSON.stringify(
 
 1. 서로 다른 batch에서 반복되는 장점과 단점을 가장 강하게 반영하세요.
 2. 한 batch에서만 소수로 나온 문제를 제품 전체의 확정적 결함처럼 표현하지 마세요.
-3. evidenceCount는 batch별 evidenceCount를 근거로 합산하되 총 리뷰 수 ${totalReviewCount}를 넘기지 마세요.
-4. 같은 의미의 주제가 여러 batch에 표현만 다르게 등장하면 하나로 합치세요.
-5. criterionEvidence.reviewEvidenceCount도 batch별 실제 근거 수를 합산해서 판단하세요.
-6. criterionScores는 전체 batch의 긍정/부정 근거와 반복성을 종합한 0~100 점수입니다.
-7. 구매기준에 대한 전체 근거가 부족하면 점수는 null로 두세요.
-8. 배송, 포장, 판매자 응대는 제품 평가에 약하게 반영하세요.
-9. confidenceScore는 총 리뷰 수, 정보량, batch 간 반복성, 긍정/부정 근거 균형을 반영한 0~100 정수입니다.
-10. 제공되지 않은 사실을 추가하거나 추측하지 마세요.
-11. 입력된 구매기준 key만 사용하세요.
-12. JSON만 출력하세요. 마크다운은 사용하지 마세요.
+3. positivePoints와 negativePoints의 evidenceReviewNumbers는 batch 결과에 실제로 존재하는 리뷰 번호만 합치고 중복을 제거하세요.
+4. evidenceCount는 evidenceReviewNumbers의 중복 제거 후 개수와 정확히 같아야 합니다.
+5. 같은 의미의 주제가 여러 batch에 표현만 다르게 등장하면 하나로 합치세요.
+6. criterionEvidence.evidenceReviewNumbers도 batch별 해당 구매기준의 실제 리뷰 번호만 합치고 중복을 제거하세요.
+7. criterionEvidence.reviewEvidenceCount는 evidenceReviewNumbers의 중복 제거 후 개수와 정확히 같아야 합니다.
+8. criterionScores는 전체 batch의 긍정/부정 근거와 반복성을 종합한 0~100 점수입니다.
+9. 해당 구매기준의 직접 근거가 ${minimumCriterionEvidence(
+  totalReviewCount,
+)}건보다 적으면 criterionScores는 반드시 null로 두세요.
+10. 배송, 포장, 판매자 응대는 제품 평가에 약하게 반영하세요.
+11. cautions, bestFor, notFor도 batch 근거에 직접 연결되는 범위만 표현하세요. 일반적인 제품 상식이나 사양을 새로 추론하지 마세요.
+12. 한 리뷰의 좁은 불만을 더 넓은 기능 문제로 확장하지 마세요.
+13. confidenceScore는 총 리뷰 수, 정보량, batch 간 반복성, 긍정/부정 근거 균형을 반영한 0~100 정수입니다.
+14. 제공되지 않은 사실을 추가하거나 추측하지 마세요.
+15. 입력된 구매기준 key만 사용하세요.
+16. JSON만 출력하세요. 마크다운은 사용하지 마세요.
 
 반드시 아래 JSON 구조로 반환하세요.
 
@@ -745,6 +1095,7 @@ ${JSON.stringify(
     {
       "topic": "장점 항목",
       "summary": "여러 batch에서 반복 확인된 실제 장점",
+      "evidenceReviewNumbers": [1],
       "evidenceCount": 0
     }
   ],
@@ -752,6 +1103,7 @@ ${JSON.stringify(
     {
       "topic": "단점 항목",
       "summary": "여러 batch에서 반복 확인된 실제 단점",
+      "evidenceReviewNumbers": [1],
       "evidenceCount": 0
     }
   ],
@@ -772,6 +1124,7 @@ ${JSON.stringify(
   },
   "criterionEvidence": {
     "${criterionKeys[0]}": {
+      "evidenceReviewNumbers": [1],
       "reviewEvidenceCount": 0,
       "summary": "전체 batch의 해당 구매기준 근거 요약"
     }
@@ -1211,6 +1564,11 @@ export async function POST(
         estimatedOpenAiCalls:
           batches.length +
           1,
+
+        minimumCriterionEvidence:
+          minimumCriterionEvidence(
+            reviews.length,
+          ),
       });
     }
 
@@ -1321,21 +1679,52 @@ export async function POST(
         criterionKeys,
       );
 
+    const evidenceNumbersByCriterion =
+      collectCriterionEvidenceNumbers(
+        batchResults,
+        criterionKeys,
+      );
+
+    const criterionEvidence =
+      normalizeCriterionEvidence(
+        aggregateParsed
+          .criterionEvidence,
+        criterionKeys,
+        reviews.length,
+        evidenceNumbersByCriterion,
+      );
+
+    const evidenceFlooredAnalysis =
+      applyCriterionEvidenceFloor(
+        normalized,
+        criterionEvidence,
+        criterionKeys,
+        reviews.length,
+      );
+
     const analysis = {
-      ...normalized,
+      ...evidenceFlooredAnalysis,
 
       productName,
 
       reviewCount:
         reviews.length,
 
-      criterionEvidence:
-        normalizeCriterionEvidence(
+      positivePoints:
+        normalizePointEvidence(
           aggregateParsed
-            .criterionEvidence,
-          criterionKeys,
+            .positivePoints,
           reviews.length,
         ),
+
+      negativePoints:
+        normalizePointEvidence(
+          aggregateParsed
+            .negativePoints,
+          reviews.length,
+        ),
+
+      criterionEvidence,
 
       collectionStats,
 
