@@ -4,6 +4,10 @@ import {
 } from "next/server";
 
 import {
+  createClient,
+} from "@supabase/supabase-js";
+
+import {
   supabase,
 } from "../../../lib/supabase";
 
@@ -25,6 +29,9 @@ type ReviewAnalysisRequest = {
   category?: string;
   reviews?: string[];
   collectionStats?: unknown;
+  originProductNo?: string | number;
+  useStoredReviews?: boolean;
+  dryRun?: boolean;
 };
 
 type DynamicCriterion = {
@@ -39,6 +46,67 @@ type CriterionEvidence = {
   reviewEvidenceCount: number;
   summary: string;
 };
+
+function cleanText(
+  value: unknown,
+) {
+  return typeof value ===
+    "string"
+    ? value.trim()
+    : "";
+}
+
+function asRecord(
+  value: unknown,
+) {
+  return (
+    value &&
+    typeof value ===
+      "object" &&
+    !Array.isArray(
+      value,
+    )
+  )
+    ? value as
+        Record<
+          string,
+          unknown
+        >
+    : null;
+}
+
+function getServiceSupabase() {
+  const url =
+    process.env
+      .NEXT_PUBLIC_SUPABASE_URL;
+
+  const serviceRoleKey =
+    process.env
+      .SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url) {
+    throw new Error(
+      "NEXT_PUBLIC_SUPABASE_URL이 설정되지 않았습니다.",
+    );
+  }
+
+  if (!serviceRoleKey) {
+    throw new Error(
+      "SUPABASE_SERVICE_ROLE_KEY가 설정되지 않았습니다.",
+    );
+  }
+
+  return createClient(
+    url,
+    serviceRoleKey,
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    },
+  );
+}
 
 function extractJson(
   text: string,
@@ -355,6 +423,38 @@ function cleanReview(
       0,
       REVIEW_TEXT_LIMIT,
     );
+}
+
+function normalizeReviewCorpus(
+  value: unknown,
+) {
+  return Array.isArray(
+    value,
+  )
+    ? Array.from(
+        new Set(
+          value
+            .filter(
+              (
+                review,
+              ): review is string =>
+                typeof review ===
+                  "string" &&
+                review.trim()
+                  .length > 0,
+            )
+            .map(
+              cleanReview,
+            )
+            .filter(
+              Boolean,
+            ),
+        ),
+      ).slice(
+        0,
+        MAX_REVIEW_COUNT,
+      )
+    : [];
 }
 
 function chunkReviews(
@@ -698,28 +798,12 @@ export async function POST(
   request: Request,
 ) {
   try {
-    const apiKey =
-      process.env.OPENAI_API_KEY;
-
-    if (!apiKey) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "OPENAI_API_KEY가 설정되지 않았습니다.",
-        },
-        {
-          status: 500,
-        },
-      );
-    }
-
     const body =
       (
         await request.json()
       ) as ReviewAnalysisRequest;
 
-    const productName =
+    const requestedProductName =
       typeof body.productName ===
         "string"
         ? body.productName.trim()
@@ -731,38 +815,212 @@ export async function POST(
         ? body.category.trim()
         : "";
 
-    const reviews =
-      Array.isArray(
-        body.reviews,
-      )
-        ? Array.from(
-            new Set(
-              body.reviews
-                .filter(
-                  (
-                    review,
-                  ): review is string =>
-                    typeof review ===
-                      "string" &&
-                    review.trim()
-                      .length > 0,
-                )
-                .map(
-                  cleanReview,
-                )
-                .filter(
-                  Boolean,
-                ),
-            ),
-          ).slice(
-            0,
-            MAX_REVIEW_COUNT,
+    const useStoredReviews =
+      body.useStoredReviews ===
+      true;
+
+    const dryRun =
+      body.dryRun ===
+      true;
+
+    const originProductNo =
+      Number(
+        body.originProductNo,
+      );
+
+    const hasOriginProductNo =
+      Number.isSafeInteger(
+        originProductNo,
+      ) &&
+      originProductNo >
+        0;
+
+    if (!category) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "카테고리가 필요합니다.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    let productName =
+      requestedProductName;
+
+    let reviewInput:
+      unknown =
+      body.reviews;
+
+    let collectionStatsInput:
+      unknown =
+      body.collectionStats;
+
+    let storedDbProductId:
+      string | null =
+      null;
+
+    let storedOriginProductNo:
+      number | null =
+      null;
+
+    let storedReviewRawDataPresent =
+      false;
+
+    let storedReviewCount =
+      0;
+
+    if (useStoredReviews) {
+      if (
+        !hasOriginProductNo &&
+        !productName
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "저장 리뷰를 사용할 때는 originProductNo 또는 상품명이 필요합니다.",
+          },
+          {
+            status: 400,
+          },
+        );
+      }
+
+      const serviceSupabase =
+        getServiceSupabase();
+
+      let productQuery =
+        serviceSupabase
+          .from(
+            "products",
           )
-        : [];
+          .select(
+            "id, product_name, origin_product_no, review_raw_data",
+          )
+          .eq(
+            "category",
+            category,
+          );
+
+      if (hasOriginProductNo) {
+        productQuery =
+          productQuery.eq(
+            "origin_product_no",
+            originProductNo,
+          );
+      } else {
+        productQuery =
+          productQuery.eq(
+            "product_name",
+            productName,
+          );
+      }
+
+      const {
+        data: matchedProduct,
+        error:
+          matchedProductError,
+      } =
+        await productQuery
+          .limit(
+            1,
+          )
+          .maybeSingle();
+
+      if (matchedProductError) {
+        throw matchedProductError;
+      }
+
+      if (!matchedProduct) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "DB에서 저장 리뷰 대상 제품을 찾지 못했습니다.",
+          },
+          {
+            status: 404,
+          },
+        );
+      }
+
+      const reviewRawData =
+        asRecord(
+          matchedProduct
+            .review_raw_data,
+        );
+
+      const storedReviews =
+        reviewRawData &&
+        Array.isArray(
+          reviewRawData.reviews,
+        )
+          ? reviewRawData.reviews
+          : [];
+
+      productName =
+        cleanText(
+          matchedProduct
+            .product_name,
+        ) ||
+        productName;
+
+      reviewInput =
+        storedReviews;
+
+      if (
+        body.collectionStats ===
+          undefined ||
+        body.collectionStats ===
+          null
+      ) {
+        collectionStatsInput =
+          reviewRawData
+            ?.collectionStats ??
+          null;
+      }
+
+      storedDbProductId =
+        cleanText(
+          matchedProduct.id,
+        ) ||
+        null;
+
+      const matchedOriginProductNo =
+        Number(
+          matchedProduct
+            .origin_product_no,
+        );
+
+      storedOriginProductNo =
+        Number.isSafeInteger(
+          matchedOriginProductNo,
+        ) &&
+        matchedOriginProductNo >
+          0
+          ? matchedOriginProductNo
+          : null;
+
+      storedReviewRawDataPresent =
+        reviewRawData !==
+        null;
+
+      storedReviewCount =
+        storedReviews.length;
+    }
+
+    const reviews =
+      normalizeReviewCorpus(
+        reviewInput,
+      );
 
     const collectionStats =
       normalizeCollectionStats(
-        body.collectionStats,
+        collectionStatsInput,
         reviews.length,
       );
 
@@ -779,19 +1037,6 @@ export async function POST(
       );
     }
 
-    if (!category) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "카테고리가 필요합니다.",
-        },
-        {
-          status: 400,
-        },
-      );
-    }
-
     if (
       reviews.length === 0
     ) {
@@ -799,7 +1044,9 @@ export async function POST(
         {
           success: false,
           message:
-            "분석할 리뷰가 없습니다.",
+            useStoredReviews
+              ? "DB에 분석할 저장 리뷰가 없습니다."
+              : "분석할 리뷰가 없습니다.",
         },
         {
           status: 400,
@@ -908,15 +1155,85 @@ export async function POST(
           criterion.key,
       );
 
-    const client =
-      new OpenAI({
-        apiKey,
-      });
-
     const batches =
       chunkReviews(
         reviews,
       );
+
+    if (dryRun) {
+      return NextResponse.json({
+        success: true,
+
+        dryRun:
+          true,
+
+        paidApiCalls:
+          0,
+
+        inputSource:
+          useStoredReviews
+            ? "stored-db"
+            : "request-body",
+
+        category,
+
+        productName,
+
+        dbProductId:
+          storedDbProductId,
+
+        originProductNo:
+          storedOriginProductNo,
+
+        storedReviewRawDataPresent,
+
+        storedReviewCount,
+
+        analyzedReviewCount:
+          reviews.length,
+
+        collectionStats,
+
+        criterionCount:
+          dynamicCriteria.length,
+
+        criterionKeys,
+
+        batchSize:
+          REVIEW_BATCH_SIZE,
+
+        batchCount:
+          batches.length,
+
+        reviewTextLimit:
+          REVIEW_TEXT_LIMIT,
+
+        estimatedOpenAiCalls:
+          batches.length +
+          1,
+      });
+    }
+
+    const apiKey =
+      process.env.OPENAI_API_KEY;
+
+    if (!apiKey) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "OPENAI_API_KEY가 설정되지 않았습니다.",
+        },
+        {
+          status: 500,
+        },
+      );
+    }
+
+    const client =
+      new OpenAI({
+        apiKey,
+      });
 
     const batchResults:
       BatchAnalysisResult[] =
@@ -1042,9 +1359,23 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
+
+      inputSource:
+        useStoredReviews
+          ? "stored-db"
+          : "request-body",
+
+      dbProductId:
+        storedDbProductId,
+
+      originProductNo:
+        storedOriginProductNo,
+
       analysis,
+
       batchCount:
         batches.length,
+
       analyzedReviewCount:
         reviews.length,
     });
