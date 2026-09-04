@@ -835,6 +835,121 @@ type ReviewAnalysisExecutionMode =
   | "batch"
   | "aggregate";
 
+type AnalysisUsage = {
+  model: string;
+  inputTokens: number;
+  cachedInputTokens: number;
+  outputTokens: number;
+  reasoningTokens: number;
+  totalTokens: number;
+};
+
+type AnalysisCallResult = {
+  analysis: Record<
+    string,
+    unknown
+  >;
+  usage: AnalysisUsage;
+};
+
+const REVIEW_BATCH_MODEL =
+  process.env
+    .REVIEW_ANALYSIS_BATCH_MODEL
+    ?.trim() ||
+  "gpt-5-mini";
+
+const REVIEW_AGGREGATE_MODEL =
+  process.env
+    .REVIEW_ANALYSIS_AGGREGATE_MODEL
+    ?.trim() ||
+  "gpt-5";
+
+function safeUsageCount(
+  value: unknown,
+) {
+  const parsed =
+    Number(value);
+
+  return (
+    Number.isFinite(
+      parsed,
+    ) &&
+    parsed >=
+      0
+  )
+    ? Math.floor(
+        parsed,
+      )
+    : 0;
+}
+
+function summarizeUsage(
+  calls:
+    AnalysisUsage[],
+) {
+  return {
+    callCount:
+      calls.length,
+
+    inputTokens:
+      calls.reduce(
+        (
+          total,
+          call,
+        ) =>
+          total +
+          call.inputTokens,
+        0,
+      ),
+
+    cachedInputTokens:
+      calls.reduce(
+        (
+          total,
+          call,
+        ) =>
+          total +
+          call.cachedInputTokens,
+        0,
+      ),
+
+    outputTokens:
+      calls.reduce(
+        (
+          total,
+          call,
+        ) =>
+          total +
+          call.outputTokens,
+        0,
+      ),
+
+    reasoningTokens:
+      calls.reduce(
+        (
+          total,
+          call,
+        ) =>
+          total +
+          call.reasoningTokens,
+        0,
+      ),
+
+    totalTokens:
+      calls.reduce(
+        (
+          total,
+          call,
+        ) =>
+          total +
+          call.totalTokens,
+        0,
+      ),
+
+    calls,
+  };
+}
+
 function normalizeExecutionMode(
   value: unknown,
 ):
@@ -872,7 +987,11 @@ function createAnalysisInputFingerprint(
 ) {
   const payload = {
     version:
-      "strict-direct-evidence-resumable-v1",
+      "strict-direct-evidence-cost-v2",
+    batchModel:
+      REVIEW_BATCH_MODEL,
+    aggregateModel:
+      REVIEW_AGGREGATE_MODEL,
     category,
     productName,
     dbProductId,
@@ -1106,12 +1225,14 @@ async function requestJsonAnalysis(
   client: OpenAI,
   prompt: string,
   label: string,
-) {
+  model: string,
+): Promise<
+  AnalysisCallResult
+> {
   const response =
     await client.responses.create(
       {
-        model:
-          "gpt-5",
+        model,
         input:
           prompt,
       },
@@ -1126,10 +1247,17 @@ async function requestJsonAnalysis(
     );
   }
 
+  let analysis:
+    Record<
+      string,
+      unknown
+    >;
+
   try {
-    return extractJson(
-      outputText,
-    );
+    analysis =
+      extractJson(
+        outputText,
+      );
   } catch {
     console.error(
       `${label} JSON parsing failed:`,
@@ -1140,6 +1268,61 @@ async function requestJsonAnalysis(
       `${label}: AI 분석 결과를 JSON으로 해석하지 못했습니다.`,
     );
   }
+
+  const usageRow =
+    asRecord(
+      response.usage,
+    );
+
+  const inputDetails =
+    asRecord(
+      usageRow
+        ?.input_tokens_details,
+    );
+
+  const outputDetails =
+    asRecord(
+      usageRow
+        ?.output_tokens_details,
+    );
+
+  return {
+    analysis,
+
+    usage: {
+      model,
+
+      inputTokens:
+        safeUsageCount(
+          usageRow
+            ?.input_tokens,
+        ),
+
+      cachedInputTokens:
+        safeUsageCount(
+          inputDetails
+            ?.cached_tokens,
+        ),
+
+      outputTokens:
+        safeUsageCount(
+          usageRow
+            ?.output_tokens,
+        ),
+
+      reasoningTokens:
+        safeUsageCount(
+          outputDetails
+            ?.reasoning_tokens,
+        ),
+
+      totalTokens:
+        safeUsageCount(
+          usageRow
+            ?.total_tokens,
+        ),
+    },
+  };
 }
 
 function buildBatchPrompt(
@@ -1155,11 +1338,29 @@ function buildBatchPrompt(
   reviewStart: number,
   reviewEnd: number,
 ) {
-  return `
-당신은 Project D의 실제 구매 리뷰 분석 엔진입니다.
+  const compactCriteria =
+    dynamicCriteria.map(
+      (
+        criterion,
+      ) => ({
+        key:
+          criterion.key,
+        label:
+          criterion.label,
+        shortDescription:
+          criterion.shortDescription,
+        helpText:
+          criterion.helpText,
+      }),
+    );
 
-이번 작업은 최대 1,000개 리뷰를 한 번에 모델에 넣지 않고
-여러 batch로 나눠 정확하게 읽는 1차 분석입니다.
+  return `
+당신은 Project D의 리뷰 근거 추출 엔진입니다.
+
+목표:
+최종 구매평 문장을 작성하는 단계가 아닙니다.
+현재 batch의 실제 리뷰에서 "직접 근거"만 짧고 정확하게 추출하세요.
+출력을 작게 유지하세요.
 
 카테고리:
 ${category}
@@ -1167,26 +1368,21 @@ ${category}
 상품명:
 ${productName}
 
-전체 batch:
-${totalBatches}
-
 현재 batch:
 ${batchIndex + 1}/${totalBatches}
 
-현재 batch 리뷰 범위:
+리뷰 번호 범위:
 ${reviewStart}~${reviewEnd}
 
-현재 batch 실제 리뷰 수:
+실제 리뷰 수:
 ${reviews.length}
 
-현재 이 카테고리의 핵심 구매기준:
+구매기준:
 ${JSON.stringify(
-  dynamicCriteria,
-  null,
-  2,
+  compactCriteria,
 )}
 
-현재 batch 실제 리뷰:
+실제 리뷰:
 ${reviews
   .map(
     (
@@ -1197,61 +1393,46 @@ ${reviews
   )
   .join("\n")}
 
-분석 원칙:
+근거 추출 규칙:
 
-1. 반드시 현재 batch에 제공된 실제 리뷰만 근거로 판단하세요.
-2. 리뷰에 없는 제품 사양이나 성능을 추측하지 마세요.
-3. 배송, 포장, 판매자 응대처럼 제품 성능과 직접 관계없는 내용은 약하게 반영하세요.
-4. "좋아요", "추천합니다", "대만족"처럼 구체성이 부족한 리뷰는 낮은 정보량 리뷰로 취급하세요.
-5. 실제 사용기간, 사용환경, 성능 결과, 오류, 소음, 앱 문제, 관리 불편처럼 구체적인 사용경험을 더 신뢰하세요.
-6. 한두 개 리뷰에서만 나온 문제를 전체 제품의 확정적 결함으로 표현하지 마세요.
-7. 반복되는 장점과 단점을 우선하세요.
-8. 광고성 또는 이벤트성 문체로 보이는 리뷰는 약하게 반영하세요.
-9. positivePoints와 negativePoints의 evidenceReviewNumbers에는 해당 항목을 직접 뒷받침한 현재 batch 리뷰 번호만 넣으세요.
-10. evidenceCount는 evidenceReviewNumbers의 중복 제거 후 개수와 정확히 같아야 합니다.
-11. criterionEvidence의 evidenceReviewNumbers에도 해당 구매기준을 직접 뒷받침한 현재 batch 리뷰 번호만 넣으세요.
-12. criterionEvidence.reviewEvidenceCount는 evidenceReviewNumbers의 중복 제거 후 개수와 정확히 같아야 합니다.
-13. criterionEvidence에는 해당 구매기준을 직접 설명하는 리뷰만 넣으세요. "청소를 잘한다", "꼼꼼하다", "성능이 좋다", "만족한다"처럼 범용적인 칭찬은 특정 세부 구매기준의 직접 근거로 세지 마세요.
-14. 복합 구매기준은 리뷰가 실제로 언급한 하위 항목만 근거로 인정하세요. 예를 들어 흡입력·머리카락 처리 기준에서 단순한 전체 청소 만족이나 구석 청소 평가는 흡입력/머리카락 처리의 직접 근거가 아닙니다.
-15. 앱, 장애물 회피, 머리카락 처리, 카펫 흡입, 스테이션 기능처럼 구체적인 항목은 리뷰에 그 기능 또는 결과가 명시되어 있을 때만 evidenceReviewNumbers에 포함하세요.
-16. criterionScores는 직접 근거의 범위만 평가하세요. 구매기준의 중요한 하위 항목에 직접 근거가 없으면 그 한계를 이유에 명시하고, 근거가 지나치게 부분적이면 null을 사용하세요.
-17. cautions, bestFor, notFor도 실제 리뷰에 직접 근거가 있는 범위만 표현하고 일반적인 제품 상식이나 사양을 추가로 추론하지 마세요.
-18. 한 리뷰의 좁은 불만을 더 넓은 기능 문제로 확장하지 마세요. 예: 자동 맵 확장 불만을 근거 없이 세밀한 맵 편집 문제까지 확대하지 마세요.
-19. reviewQuality의 highInformationReviews, lowInformationReviews, promotionalStyleReviews는 서로 겹치지 않는 분류입니다. 현재 batch의 모든 리뷰를 정확히 한 분류에만 넣고 세 값의 합이 현재 batch 리뷰 수와 정확히 같아야 합니다.
-20. 근거가 부족한 criterionScores는 null로 두세요.
-21. 입력된 구매기준 key만 사용하세요.
-22. JSON만 출력하세요. 마크다운은 사용하지 마세요.
+1. 반드시 제공된 실제 리뷰만 근거로 사용하세요.
+2. 제품 사양이나 일반 상식을 추가로 추론하지 마세요.
+3. "좋아요", "만족", "청소 잘함", "성능 좋음", "꼼꼼함" 같은 범용 칭찬은 특정 세부 구매기준의 직접 근거로 세지 마세요.
+4. 복합 구매기준은 리뷰가 실제로 언급한 하위 항목만 인정하세요.
+5. 흡입력·머리카락 처리 기준은 먼지/이물질 흡입 결과, 머리카락·반려털 처리, 카펫 흡입처럼 직접 언급된 경우만 인정하세요.
+6. 앱, 장애물 회피, 맵핑, 스테이션, 물걸레 등 구체 기능도 해당 기능 또는 결과가 명시된 리뷰만 인정하세요.
+7. 배송·포장·판매자 응대는 제품 성능 근거로 승격하지 마세요.
+8. positivePoints/negativePoints는 반복되거나 구매 판단에 의미 있는 항목만 최대 5개씩 반환하세요.
+9. 각 point의 topic은 짧게, summary는 한 문장 이내로 작성하세요.
+10. evidenceReviewNumbers에는 해당 항목을 직접 뒷받침하는 현재 batch 리뷰 번호만 넣으세요.
+11. evidenceCount는 evidenceReviewNumbers의 중복 제거 개수와 같아야 합니다.
+12. criterionEvidence도 직접 근거 리뷰 번호만 넣으세요.
+13. criterionEvidence.summary는 한 문장 이내로 작성하세요.
+14. reviewQuality 세 분류는 서로 겹치지 않으며 합이 ${reviews.length}가 되어야 합니다.
+15. 이 1차 단계에서는 criterionScores, criterionReasons, cautions, bestFor, notFor를 만들지 마세요.
+16. 입력된 구매기준 key만 사용하세요.
+17. JSON만 출력하고 마크다운은 사용하지 마세요.
 
-반드시 아래 JSON 구조로 반환하세요.
+반드시 아래의 간결한 JSON 구조만 반환하세요.
 
 {
   "batchIndex": ${batchIndex + 1},
   "reviewCount": ${reviews.length},
-  "summary": "이 batch에서 반복적으로 확인된 핵심 사용경험 요약",
   "positivePoints": [
     {
-      "topic": "장점 항목",
-      "summary": "실제 반복 장점",
+      "topic": "짧은 장점명",
+      "summary": "한 문장 근거 요약",
       "evidenceReviewNumbers": [${reviewStart}],
-      "evidenceCount": 0
+      "evidenceCount": 1
     }
   ],
   "negativePoints": [
     {
-      "topic": "단점 항목",
-      "summary": "실제 반복 단점",
+      "topic": "짧은 단점명",
+      "summary": "한 문장 근거 요약",
       "evidenceReviewNumbers": [${reviewStart}],
-      "evidenceCount": 0
+      "evidenceCount": 1
     }
-  ],
-  "cautions": [
-    "이 batch에서 확인된 구매 전 주의사항"
-  ],
-  "bestFor": [
-    "이 batch 근거로 잘 맞는 사용자"
-  ],
-  "notFor": [
-    "이 batch 근거로 잘 맞지 않는 사용자"
   ],
   "reviewQuality": {
     "highInformationReviews": 0,
@@ -1261,21 +1442,13 @@ ${reviews
   "criterionEvidence": {
     "${criterionKeys[0]}": {
       "evidenceReviewNumbers": [${reviewStart}],
-      "reviewEvidenceCount": 0,
-      "summary": "이 batch의 해당 구매기준 근거 요약"
+      "reviewEvidenceCount": 1,
+      "summary": "직접 근거를 한 문장으로 요약"
     }
-  },
-  "criterionScores": {
-    "${criterionKeys[0]}": null
-  },
-  "criterionReasons": {
-    "${criterionKeys[0]}": "점수 또는 null의 이유"
   }
 }
 
-criterionEvidence,
-criterionScores,
-criterionReasons에는 아래 key를 전부 포함하세요.
+criterionEvidence에는 아래 key를 전부 포함하세요.
 
 ${criterionKeys.join(
   ", ",
@@ -1316,7 +1489,12 @@ function buildAggregatePrompt(
 당신은 Project D의 리뷰 batch 통합 엔진입니다.
 
 아래 내용은 같은 제품의 실제 리뷰 ${totalReviewCount}개를
-최대 ${REVIEW_BATCH_SIZE}개씩 나눠 각각 읽은 1차 분석 결과입니다.
+최대 ${REVIEW_BATCH_SIZE}개씩 나눠 각각 읽은
+"간결한 직접근거 추출 결과"입니다.
+
+1차 batch는 비용 절감을 위해 점수·추천문장·주의사항을 만들지 않았습니다.
+이 최종 통합 단계에서만 전체 summary, 점수, 이유,
+cautions, bestFor, notFor를 생성하세요.
 
 원문 리뷰를 다시 추측하지 말고,
 오직 제공된 batch 분석 결과를 통합해서
@@ -1875,6 +2053,13 @@ export async function POST(
 
         executionMode,
 
+        analysisModels: {
+          batch:
+            REVIEW_BATCH_MODEL,
+          aggregate:
+            REVIEW_AGGREGATE_MODEL,
+        },
+
         inputFingerprint,
 
         requestedBatchIndex:
@@ -2036,12 +2221,16 @@ export async function POST(
           reviewEnd,
         );
 
-      const parsed =
+      const batchCall =
         await requestJsonAnalysis(
           client,
           prompt,
           `${productName} batch ${requestedBatchIndex}/${batches.length}`,
+          REVIEW_BATCH_MODEL,
         );
+
+      const parsed =
+        batchCall.analysis;
 
       const batchResult:
         BatchAnalysisResult = {
@@ -2076,11 +2265,22 @@ export async function POST(
         batchCount:
           batches.length,
         batchResult,
+
+        apiUsage:
+          summarizeUsage(
+            [
+              batchCall.usage,
+            ],
+          ),
       });
     }
 
     let batchResults:
       BatchAnalysisResult[];
+
+    const apiUsageCalls:
+      AnalysisUsage[] =
+      [];
 
     if (
       executionMode ===
@@ -2148,12 +2348,20 @@ export async function POST(
             reviewEnd,
           );
 
-        const parsed =
+        const batchCall =
           await requestJsonAnalysis(
             client,
             prompt,
             `${productName} batch ${index + 1}/${batches.length}`,
+            REVIEW_BATCH_MODEL,
           );
+
+        apiUsageCalls.push(
+          batchCall.usage,
+        );
+
+        const parsed =
+          batchCall.analysis;
 
         batchResults.push({
           batchIndex:
@@ -2179,12 +2387,20 @@ export async function POST(
         collectionStats,
       );
 
-    const aggregateParsed =
+    const aggregateCall =
       await requestJsonAnalysis(
         client,
         aggregatePrompt,
         `${productName} 최종 batch 통합`,
+        REVIEW_AGGREGATE_MODEL,
       );
+
+    apiUsageCalls.push(
+      aggregateCall.usage,
+    );
+
+    const aggregateParsed =
+      aggregateCall.analysis;
 
     const normalized =
       normalizeAnalysis(
@@ -2257,7 +2473,13 @@ export async function POST(
 
       batchAnalysis: {
         strategy:
-          "sequential-200-review-batches",
+          "cost-optimized-resumable-evidence-batches",
+
+        batchModel:
+          REVIEW_BATCH_MODEL,
+
+        aggregateModel:
+          REVIEW_AGGREGATE_MODEL,
 
         totalReviews:
           reviews.length,
@@ -2305,6 +2527,18 @@ export async function POST(
 
       analyzedReviewCount:
         reviews.length,
+
+      analysisModels: {
+        batch:
+          REVIEW_BATCH_MODEL,
+        aggregate:
+          REVIEW_AGGREGATE_MODEL,
+      },
+
+      apiUsage:
+        summarizeUsage(
+          apiUsageCalls,
+        ),
     });
   } catch (error) {
     console.error(
