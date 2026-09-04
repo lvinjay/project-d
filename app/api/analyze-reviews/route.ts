@@ -626,6 +626,86 @@ function normalizePointEvidence(
     );
 }
 
+function auditReviewQuality(
+  raw: unknown,
+  reviewCount: number,
+) {
+  const row =
+    raw &&
+    typeof raw ===
+      "object" &&
+    !Array.isArray(
+      raw,
+    )
+      ? (
+          raw as
+            Record<
+              string,
+              unknown
+            >
+        )
+      : {};
+
+  const safeCount = (
+    value: unknown,
+  ) => {
+    const parsed =
+      Number(value);
+
+    return (
+      Number.isSafeInteger(
+        parsed,
+      ) &&
+      parsed >=
+        0
+    )
+      ? parsed
+      : 0;
+  };
+
+  const highInformationReviews =
+    safeCount(
+      row.highInformationReviews,
+    );
+
+  const lowInformationReviews =
+    safeCount(
+      row.lowInformationReviews,
+    );
+
+  const promotionalStyleReviews =
+    safeCount(
+      row.promotionalStyleReviews,
+    );
+
+  const classifiedReviewCount =
+    highInformationReviews +
+    lowInformationReviews +
+    promotionalStyleReviews;
+
+  return {
+    reviewQuality: {
+      highInformationReviews,
+      lowInformationReviews,
+      promotionalStyleReviews,
+    },
+
+    reviewQualityAudit: {
+      expectedReviewCount:
+        reviewCount,
+
+      classifiedReviewCount,
+
+      mutuallyExclusive:
+        true,
+
+      countValid:
+        classifiedReviewCount ===
+        reviewCount,
+    },
+  };
+}
+
 function applyCriterionEvidenceFloor(
   analysis:
     Record<
@@ -923,11 +1003,16 @@ ${reviews
 10. evidenceCount는 evidenceReviewNumbers의 중복 제거 후 개수와 정확히 같아야 합니다.
 11. criterionEvidence의 evidenceReviewNumbers에도 해당 구매기준을 직접 뒷받침한 현재 batch 리뷰 번호만 넣으세요.
 12. criterionEvidence.reviewEvidenceCount는 evidenceReviewNumbers의 중복 제거 후 개수와 정확히 같아야 합니다.
-13. cautions, bestFor, notFor도 실제 리뷰에 직접 근거가 있는 범위만 표현하고 일반적인 제품 상식이나 사양을 추가로 추론하지 마세요.
-14. 한 리뷰의 좁은 불만을 더 넓은 기능 문제로 확장하지 마세요. 예: 자동 맵 확장 불만을 근거 없이 세밀한 맵 편집 문제까지 확대하지 마세요.
-15. 근거가 부족한 criterionScores는 null로 두세요.
-16. 입력된 구매기준 key만 사용하세요.
-17. JSON만 출력하세요. 마크다운은 사용하지 마세요.
+13. criterionEvidence에는 해당 구매기준을 직접 설명하는 리뷰만 넣으세요. "청소를 잘한다", "꼼꼼하다", "성능이 좋다", "만족한다"처럼 범용적인 칭찬은 특정 세부 구매기준의 직접 근거로 세지 마세요.
+14. 복합 구매기준은 리뷰가 실제로 언급한 하위 항목만 근거로 인정하세요. 예를 들어 흡입력·머리카락 처리 기준에서 단순한 전체 청소 만족이나 구석 청소 평가는 흡입력/머리카락 처리의 직접 근거가 아닙니다.
+15. 앱, 장애물 회피, 머리카락 처리, 카펫 흡입, 스테이션 기능처럼 구체적인 항목은 리뷰에 그 기능 또는 결과가 명시되어 있을 때만 evidenceReviewNumbers에 포함하세요.
+16. criterionScores는 직접 근거의 범위만 평가하세요. 구매기준의 중요한 하위 항목에 직접 근거가 없으면 그 한계를 이유에 명시하고, 근거가 지나치게 부분적이면 null을 사용하세요.
+17. cautions, bestFor, notFor도 실제 리뷰에 직접 근거가 있는 범위만 표현하고 일반적인 제품 상식이나 사양을 추가로 추론하지 마세요.
+18. 한 리뷰의 좁은 불만을 더 넓은 기능 문제로 확장하지 마세요. 예: 자동 맵 확장 불만을 근거 없이 세밀한 맵 편집 문제까지 확대하지 마세요.
+19. reviewQuality의 highInformationReviews, lowInformationReviews, promotionalStyleReviews는 서로 겹치지 않는 분류입니다. 현재 batch의 모든 리뷰를 정확히 한 분류에만 넣고 세 값의 합이 현재 batch 리뷰 수와 정확히 같아야 합니다.
+20. 근거가 부족한 criterionScores는 null로 두세요.
+21. 입력된 구매기준 key만 사용하세요.
+22. JSON만 출력하세요. 마크다운은 사용하지 마세요.
 
 반드시 아래 JSON 구조로 반환하세요.
 
@@ -1078,12 +1163,17 @@ ${JSON.stringify(
   totalReviewCount,
 )}건보다 적으면 criterionScores는 반드시 null로 두세요.
 10. 배송, 포장, 판매자 응대는 제품 평가에 약하게 반영하세요.
-11. cautions, bestFor, notFor도 batch 근거에 직접 연결되는 범위만 표현하세요. 일반적인 제품 상식이나 사양을 새로 추론하지 마세요.
-12. 한 리뷰의 좁은 불만을 더 넓은 기능 문제로 확장하지 마세요.
-13. confidenceScore는 총 리뷰 수, 정보량, batch 간 반복성, 긍정/부정 근거 균형을 반영한 0~100 정수입니다.
-14. 제공되지 않은 사실을 추가하거나 추측하지 마세요.
-15. 입력된 구매기준 key만 사용하세요.
-16. JSON만 출력하세요. 마크다운은 사용하지 마세요.
+11. criterionEvidence에는 해당 구매기준을 직접 설명하는 리뷰 번호만 유지하세요. "청소를 잘한다", "꼼꼼하다", "성능이 좋다", "만족한다" 같은 범용 평가는 특정 세부 구매기준의 직접 근거로 승격하지 마세요.
+12. 복합 구매기준은 리뷰가 실제로 언급한 하위 항목만 근거로 인정하세요. 중요한 하위 항목에 직접 근거가 없으면 criterionReasons에 그 공백을 명확히 적고 점수를 과대평가하지 마세요.
+13. 특히 흡입력·머리카락 처리 같은 구체 기준은 먼지 흡입 결과, 머리카락/반려털 처리, 카펫 흡입 등 직접 언급이 없으면 일반적인 "청소가 잘 된다" 리뷰만으로 점수를 만들지 마세요.
+14. 앱, 장애물 회피, 스테이션, 맵핑 등도 해당 기능의 직접 사용경험이 있는 리뷰만 근거로 세세요.
+15. cautions, bestFor, notFor도 batch 근거에 직접 연결되는 범위만 표현하세요. 일반적인 제품 상식이나 사양을 새로 추론하지 마세요.
+16. 한 리뷰의 좁은 불만을 더 넓은 기능 문제로 확장하지 마세요.
+17. reviewQuality의 highInformationReviews, lowInformationReviews, promotionalStyleReviews는 서로 겹치지 않는 분류입니다. 전체 리뷰를 정확히 한 분류에만 포함하고 세 값의 합이 ${totalReviewCount}와 정확히 같아야 합니다.
+18. confidenceScore는 총 리뷰 수, 정보량, batch 간 반복성, 긍정/부정 근거 균형을 반영한 0~100 정수입니다.
+19. 제공되지 않은 사실을 추가하거나 추측하지 마세요.
+20. 입력된 구매기준 key만 사용하세요.
+21. JSON만 출력하세요. 마크다운은 사용하지 마세요.
 
 반드시 아래 JSON 구조로 반환하세요.
 
@@ -1702,6 +1792,16 @@ export async function POST(
         reviews.length,
       );
 
+    const {
+      reviewQuality,
+      reviewQualityAudit,
+    } =
+      auditReviewQuality(
+        aggregateParsed
+          .reviewQuality,
+        reviews.length,
+      );
+
     const analysis = {
       ...evidenceFlooredAnalysis,
 
@@ -1723,6 +1823,10 @@ export async function POST(
             .negativePoints,
           reviews.length,
         ),
+
+      reviewQuality,
+
+      reviewQualityAudit,
 
       criterionEvidence,
 
