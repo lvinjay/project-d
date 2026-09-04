@@ -1,3 +1,7 @@
+import {
+  createHash,
+} from "node:crypto";
+
 import OpenAI from "openai";
 import {
   NextResponse,
@@ -32,6 +36,10 @@ type ReviewAnalysisRequest = {
   originProductNo?: string | number;
   useStoredReviews?: boolean;
   dryRun?: boolean;
+  executionMode?: string;
+  batchIndex?: number;
+  batchResults?: unknown;
+  inputFingerprint?: string;
 };
 
 type DynamicCriterion = {
@@ -822,6 +830,206 @@ type BatchAnalysisResult = {
   >;
 };
 
+type ReviewAnalysisExecutionMode =
+  | "full"
+  | "batch"
+  | "aggregate";
+
+function normalizeExecutionMode(
+  value: unknown,
+):
+  | ReviewAnalysisExecutionMode
+  | null {
+  if (
+    value === undefined ||
+    value === null ||
+    value === ""
+  ) {
+    return "full";
+  }
+
+  if (
+    value === "full" ||
+    value === "batch" ||
+    value === "aggregate"
+  ) {
+    return value;
+  }
+
+  return null;
+}
+
+function createAnalysisInputFingerprint(
+  category: string,
+  productName: string,
+  dbProductId: string | null,
+  originProductNo: number | null,
+  reviews: string[],
+  collectionStats:
+    ReviewCollectionStats,
+  dynamicCriteria:
+    DynamicCriterion[],
+) {
+  const payload = {
+    version:
+      "strict-direct-evidence-resumable-v1",
+    category,
+    productName,
+    dbProductId,
+    originProductNo,
+    reviews,
+    collectionStats,
+    dynamicCriteria,
+    reviewBatchSize:
+      REVIEW_BATCH_SIZE,
+    reviewTextLimit:
+      REVIEW_TEXT_LIMIT,
+  };
+
+  return createHash(
+    "sha256",
+  )
+    .update(
+      JSON.stringify(
+        payload,
+      ),
+      "utf8",
+    )
+    .digest(
+      "hex",
+    );
+}
+
+function normalizeResumeBatchResults(
+  raw: unknown,
+  batches: string[][],
+) {
+  if (
+    !Array.isArray(
+      raw,
+    )
+  ) {
+    throw new Error(
+      "aggregate 모드에는 batchResults 배열이 필요합니다.",
+    );
+  }
+
+  if (
+    raw.length !==
+    batches.length
+  ) {
+    throw new Error(
+      `batchResults 개수 ${raw.length}건이 현재 batch 수 ${batches.length}건과 다릅니다.`,
+    );
+  }
+
+  const rows =
+    raw.map(
+      (value) =>
+        asRecord(
+          value,
+        ),
+    );
+
+  if (
+    rows.some(
+      (row) =>
+        !row,
+    )
+  ) {
+    throw new Error(
+      "batchResults에 올바르지 않은 항목이 있습니다.",
+    );
+  }
+
+  const result:
+    BatchAnalysisResult[] =
+    [];
+
+  for (
+    let index = 0;
+    index <
+    batches.length;
+    index++
+  ) {
+    const expectedBatchIndex =
+      index + 1;
+
+    const expectedReviewStart =
+      index *
+        REVIEW_BATCH_SIZE +
+      1;
+
+    const expectedReviewCount =
+      batches[index].length;
+
+    const expectedReviewEnd =
+      expectedReviewStart +
+      expectedReviewCount -
+      1;
+
+    const row =
+      rows.find(
+        (candidate) =>
+          Number(
+            candidate
+              ?.batchIndex,
+          ) ===
+          expectedBatchIndex,
+      );
+
+    if (!row) {
+      throw new Error(
+        `batchResults에서 batch ${expectedBatchIndex}를 찾지 못했습니다.`,
+      );
+    }
+
+    const analysis =
+      asRecord(
+        row.analysis,
+      );
+
+    if (!analysis) {
+      throw new Error(
+        `batch ${expectedBatchIndex}의 analysis가 올바르지 않습니다.`,
+      );
+    }
+
+    if (
+      Number(
+        row.reviewStart,
+      ) !==
+        expectedReviewStart ||
+      Number(
+        row.reviewEnd,
+      ) !==
+        expectedReviewEnd ||
+      Number(
+        row.reviewCount,
+      ) !==
+        expectedReviewCount
+    ) {
+      throw new Error(
+        `batch ${expectedBatchIndex}의 리뷰 범위 또는 개수가 현재 저장 리뷰와 일치하지 않습니다.`,
+      );
+    }
+
+    result.push({
+      batchIndex:
+        expectedBatchIndex,
+      reviewStart:
+        expectedReviewStart,
+      reviewEnd:
+        expectedReviewEnd,
+      reviewCount:
+        expectedReviewCount,
+      analysis,
+    });
+  }
+
+  return result;
+}
+
 function cleanReview(
   review: string,
 ) {
@@ -1603,6 +1811,58 @@ export async function POST(
         reviews,
       );
 
+    const executionMode =
+      normalizeExecutionMode(
+        body.executionMode,
+      );
+
+    if (!executionMode) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "executionMode은 full, batch, aggregate 중 하나여야 합니다.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    const inputFingerprint =
+      createAnalysisInputFingerprint(
+        category,
+        productName,
+        storedDbProductId,
+        storedOriginProductNo,
+        reviews,
+        collectionStats,
+        dynamicCriteria,
+      );
+
+    const requestedInputFingerprint =
+      cleanText(
+        body.inputFingerprint,
+      );
+
+    if (
+      requestedInputFingerprint &&
+      requestedInputFingerprint !==
+        inputFingerprint
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "분석 입력 fingerprint가 현재 저장 리뷰/구매기준과 일치하지 않습니다. 새 dryRun으로 체크포인트를 다시 시작하세요.",
+          inputFingerprint,
+        },
+        {
+          status: 409,
+        },
+      );
+    }
+
     if (dryRun) {
       return NextResponse.json({
         success: true,
@@ -1612,6 +1872,18 @@ export async function POST(
 
         paidApiCalls:
           0,
+
+        executionMode,
+
+        inputFingerprint,
+
+        requestedBatchIndex:
+          executionMode ===
+            "batch"
+            ? Number(
+                body.batchIndex,
+              )
+            : null,
 
         inputSource:
           useStoredReviews
@@ -1652,8 +1924,11 @@ export async function POST(
           REVIEW_TEXT_LIMIT,
 
         estimatedOpenAiCalls:
-          batches.length +
-          1,
+          executionMode ===
+            "full"
+            ? batches.length +
+              1
+            : 1,
 
         minimumCriterionEvidence:
           minimumCriterionEvidence(
@@ -1683,23 +1958,58 @@ export async function POST(
         apiKey,
       });
 
-    const batchResults:
-      BatchAnalysisResult[] =
-      [];
-
-    /*
-      비용/정확도 균형:
-      - 최대 1,000개를 200개씩 최대 5 batch로 나눈다.
-      - API 폭주를 막기 위해 제품 내부 batch는 순차 실행한다.
-      - 각 리뷰 텍스트는 분석용으로 최대 800자까지만 사용한다.
-      - 원본 최대 1,000개 리뷰는 별도로 DB에 저장된다.
-    */
-    for (
-      let index = 0;
-      index <
-      batches.length;
-      index++
+    if (
+      executionMode !==
+        "full" &&
+      !requestedInputFingerprint
     ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "batch/aggregate 모드의 유료 실행에는 dryRun에서 받은 inputFingerprint가 필요합니다.",
+          inputFingerprint,
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    if (
+      executionMode ===
+      "batch"
+    ) {
+      const requestedBatchIndex =
+        Number(
+          body.batchIndex,
+        );
+
+      if (
+        !Number.isSafeInteger(
+          requestedBatchIndex,
+        ) ||
+        requestedBatchIndex <
+          1 ||
+        requestedBatchIndex >
+          batches.length
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              `batchIndex는 1~${batches.length} 사이 정수여야 합니다.`,
+          },
+          {
+            status: 400,
+          },
+        );
+      }
+
+      const index =
+        requestedBatchIndex -
+        1;
+
       const batch =
         batches[index];
 
@@ -1730,19 +2040,132 @@ export async function POST(
         await requestJsonAnalysis(
           client,
           prompt,
-          `${productName} batch ${index + 1}/${batches.length}`,
+          `${productName} batch ${requestedBatchIndex}/${batches.length}`,
         );
 
-      batchResults.push({
-        batchIndex:
-          index + 1,
-        reviewStart,
-        reviewEnd,
-        reviewCount:
-          batch.length,
-        analysis:
-          parsed,
+      const batchResult:
+        BatchAnalysisResult = {
+          batchIndex:
+            requestedBatchIndex,
+          reviewStart,
+          reviewEnd,
+          reviewCount:
+            batch.length,
+          analysis:
+            parsed,
+        };
+
+      return NextResponse.json({
+        success: true,
+        executionMode:
+          "batch",
+        paidApiCalls:
+          1,
+        inputSource:
+          useStoredReviews
+            ? "stored-db"
+            : "request-body",
+        inputFingerprint,
+        dbProductId:
+          storedDbProductId,
+        originProductNo:
+          storedOriginProductNo,
+        productName,
+        analyzedReviewCount:
+          reviews.length,
+        batchCount:
+          batches.length,
+        batchResult,
       });
+    }
+
+    let batchResults:
+      BatchAnalysisResult[];
+
+    if (
+      executionMode ===
+      "aggregate"
+    ) {
+      try {
+        batchResults =
+          normalizeResumeBatchResults(
+            body.batchResults,
+            batches,
+          );
+      } catch (error) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              error instanceof Error
+                ? error.message
+                : "batchResults 검증에 실패했습니다.",
+          },
+          {
+            status: 400,
+          },
+        );
+      }
+    } else {
+      batchResults =
+        [];
+
+      /*
+        기존 full 모드는 호환성을 위해 유지한다.
+        resumable 실행은 batch 모드로 한 batch씩 호출하고,
+        각 응답을 외부 체크포인트에 즉시 보존한 뒤
+        aggregate 모드로 마지막 1회 통합한다.
+      */
+      for (
+        let index = 0;
+        index <
+        batches.length;
+        index++
+      ) {
+        const batch =
+          batches[index];
+
+        const reviewStart =
+          index *
+            REVIEW_BATCH_SIZE +
+          1;
+
+        const reviewEnd =
+          reviewStart +
+          batch.length -
+          1;
+
+        const prompt =
+          buildBatchPrompt(
+            category,
+            productName,
+            dynamicCriteria,
+            criterionKeys,
+            batch,
+            index,
+            batches.length,
+            reviewStart,
+            reviewEnd,
+          );
+
+        const parsed =
+          await requestJsonAnalysis(
+            client,
+            prompt,
+            `${productName} batch ${index + 1}/${batches.length}`,
+          );
+
+        batchResults.push({
+          batchIndex:
+            index + 1,
+          reviewStart,
+          reviewEnd,
+          reviewCount:
+            batch.length,
+          analysis:
+            parsed,
+        });
+      }
     }
 
     const aggregatePrompt =
@@ -1852,6 +2275,17 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
+
+      executionMode,
+
+      paidApiCalls:
+        executionMode ===
+          "aggregate"
+          ? 1
+          : batches.length +
+            1,
+
+      inputFingerprint,
 
       inputSource:
         useStoredReviews
