@@ -54,6 +54,10 @@ type CriterionEvidence = {
   reviewEvidenceCount: number;
   evidenceReviewNumbers: number[];
   summary: string;
+  positiveReviewNumbers?: number[];
+  negativeReviewNumbers?: number[];
+  mixedReviewNumbers?: number[];
+  neutralReviewNumbers?: number[];
 };
 
 function cleanText(
@@ -582,6 +586,701 @@ function normalizeAnalysis(
   };
 }
 
+function normalizeBatchPointEvidence(
+  raw: unknown,
+  minimumReviewNumber: number,
+  maximumReviewNumber: number,
+) {
+  if (
+    !Array.isArray(
+      raw,
+    )
+  ) {
+    return [];
+  }
+
+  return raw
+    .filter(
+      (item) =>
+        item &&
+        typeof item ===
+          "object" &&
+        !Array.isArray(
+          item,
+        ),
+    )
+    .map(
+      (item) => {
+        const row =
+          item as
+            Record<
+              string,
+              unknown
+            >;
+
+        const evidenceReviewNumbers =
+          normalizeEvidenceReviewNumbers(
+            row
+              .evidenceReviewNumbers,
+            minimumReviewNumber,
+            maximumReviewNumber,
+          );
+
+        return {
+          ...row,
+
+          evidenceReviewNumbers,
+
+          evidenceCount:
+            evidenceReviewNumbers
+              .length,
+        };
+      },
+    );
+}
+
+type BatchReviewClassification = {
+  n: number;
+  q: "h" | "l" | "p";
+  tags: string[];
+};
+
+function criterionAlias(
+  index: number,
+) {
+  return `c${index + 1}`;
+}
+
+function normalizeBatchReviewClassifications(
+  raw: unknown,
+  criterionKeys:
+    string[],
+  reviewStart: number,
+  reviewEnd: number,
+) {
+  const rawRows =
+    Array.isArray(
+      raw,
+    )
+      ? raw
+      : [];
+
+  const seenReviewNumbers =
+    new Set<number>();
+
+  const duplicateReviewNumbers =
+    new Set<number>();
+
+  const invalidReviewNumbers:
+    number[] =
+    [];
+
+  const invalidQualityReviewNumbers:
+    number[] =
+    [];
+
+  let unknownTagCount =
+    0;
+
+  const rows:
+    BatchReviewClassification[] =
+    [];
+
+  for (
+    const value of
+    rawRows
+  ) {
+    const row =
+      asRecord(
+        value,
+      );
+
+    if (!row) {
+      continue;
+    }
+
+    const reviewNumber =
+      Number(
+        row.n ??
+        row.reviewNumber,
+      );
+
+    if (
+      !Number.isSafeInteger(
+        reviewNumber,
+      ) ||
+      reviewNumber <
+        reviewStart ||
+      reviewNumber >
+        reviewEnd
+    ) {
+      if (
+        Number.isFinite(
+          reviewNumber,
+        )
+      ) {
+        invalidReviewNumbers.push(
+          reviewNumber,
+        );
+      }
+
+      continue;
+    }
+
+    if (
+      seenReviewNumbers.has(
+        reviewNumber,
+      )
+    ) {
+      duplicateReviewNumbers.add(
+        reviewNumber,
+      );
+
+      continue;
+    }
+
+    seenReviewNumbers.add(
+      reviewNumber,
+    );
+
+    const qualityRaw =
+      typeof row.q ===
+        "string"
+        ? row.q.trim()
+            .toLowerCase()
+        : "";
+
+    const quality =
+      qualityRaw ===
+        "h" ||
+      qualityRaw ===
+        "l" ||
+      qualityRaw ===
+        "p"
+        ? qualityRaw
+        : "l";
+
+    if (
+      qualityRaw !==
+        "h" &&
+      qualityRaw !==
+        "l" &&
+      qualityRaw !==
+        "p"
+    ) {
+      invalidQualityReviewNumbers.push(
+        reviewNumber,
+      );
+    }
+
+    const rawTags =
+      Array.isArray(
+        row.tags,
+      )
+        ? row.tags
+        : [];
+
+    const normalizedTags =
+      Array.from(
+        new Set(
+          rawTags
+            .filter(
+              (
+                tag,
+              ): tag is string =>
+                typeof tag ===
+                  "string",
+            )
+            .map(
+              (tag) =>
+                tag.trim()
+                  .toLowerCase(),
+            )
+            .filter(
+              Boolean,
+            )
+            .filter(
+              (tag) => {
+                const match =
+                  /^c(\d+)([+\-m0])$/.exec(
+                    tag,
+                  );
+
+                if (!match) {
+                  unknownTagCount +=
+                    1;
+
+                  return false;
+                }
+
+                const criterionIndex =
+                  Number(
+                    match[1],
+                  ) -
+                  1;
+
+                const valid =
+                  Number.isSafeInteger(
+                    criterionIndex,
+                  ) &&
+                  criterionIndex >=
+                    0 &&
+                  criterionIndex <
+                    criterionKeys.length;
+
+                if (!valid) {
+                  unknownTagCount +=
+                    1;
+                }
+
+                return valid;
+              },
+            ),
+        ),
+      );
+
+    rows.push({
+      n:
+        reviewNumber,
+      q:
+        quality,
+      tags:
+        normalizedTags,
+    });
+  }
+
+  rows.sort(
+    (
+      left,
+      right,
+    ) =>
+      left.n -
+      right.n,
+  );
+
+  const missingReviewNumbers:
+    number[] =
+    [];
+
+  for (
+    let reviewNumber =
+      reviewStart;
+    reviewNumber <=
+      reviewEnd;
+    reviewNumber++
+  ) {
+    if (
+      !seenReviewNumbers.has(
+        reviewNumber,
+      )
+    ) {
+      missingReviewNumbers.push(
+        reviewNumber,
+      );
+    }
+  }
+
+  const expectedReviewCount =
+    reviewEnd -
+    reviewStart +
+    1;
+
+  const complete =
+    rows.length ===
+      expectedReviewCount &&
+    missingReviewNumbers
+      .length ===
+      0 &&
+    duplicateReviewNumbers
+      .size ===
+      0 &&
+    invalidReviewNumbers
+      .length ===
+      0 &&
+    invalidQualityReviewNumbers
+      .length ===
+      0 &&
+    unknownTagCount ===
+      0;
+
+  return {
+    rows,
+
+    audit: {
+      expectedReviewCount,
+
+      rawRowCount:
+        rawRows.length,
+
+      normalizedRowCount:
+        rows.length,
+
+      missingReviewNumbers,
+
+      duplicateReviewNumbers:
+        Array.from(
+          duplicateReviewNumbers,
+        ).sort(
+          (
+            left,
+            right,
+          ) =>
+            left -
+            right,
+        ),
+
+      invalidReviewNumbers,
+
+      invalidQualityReviewNumbers,
+
+      unknownTagCount,
+
+      complete,
+    },
+  };
+}
+
+function buildCriterionEvidenceFromClassifications(
+  classifications:
+    BatchReviewClassification[],
+  criterionKeys:
+    string[],
+  rawSummaries: unknown,
+) {
+  const summaryRow =
+    asRecord(
+      rawSummaries,
+    ) ??
+    {};
+
+  const result:
+    Record<
+      string,
+      CriterionEvidence
+    > = {};
+
+  for (
+    let criterionIndex =
+      0;
+    criterionIndex <
+      criterionKeys.length;
+    criterionIndex++
+  ) {
+    const key =
+      criterionKeys[
+        criterionIndex
+      ];
+
+    const alias =
+      criterionAlias(
+        criterionIndex,
+      );
+
+    const positive:
+      number[] =
+      [];
+
+    const negative:
+      number[] =
+      [];
+
+    const mixed:
+      number[] =
+      [];
+
+    const neutral:
+      number[] =
+      [];
+
+    for (
+      const classification of
+      classifications
+    ) {
+      for (
+        const tag of
+        classification.tags
+      ) {
+        const match =
+          /^c(\d+)([+\-m0])$/.exec(
+            tag,
+          );
+
+        if (!match) {
+          continue;
+        }
+
+        if (
+          Number(
+            match[1],
+          ) -
+            1 !==
+          criterionIndex
+        ) {
+          continue;
+        }
+
+        if (
+          match[2] ===
+          "+"
+        ) {
+          positive.push(
+            classification.n,
+          );
+        } else if (
+          match[2] ===
+          "-"
+        ) {
+          negative.push(
+            classification.n,
+          );
+        } else if (
+          match[2] ===
+          "m"
+        ) {
+          mixed.push(
+            classification.n,
+          );
+        } else {
+          neutral.push(
+            classification.n,
+          );
+        }
+      }
+    }
+
+    const evidenceReviewNumbers =
+      Array.from(
+        new Set(
+          [
+            ...positive,
+            ...negative,
+            ...mixed,
+            ...neutral,
+          ],
+        ),
+      ).sort(
+        (
+          left,
+          right,
+        ) =>
+          left -
+          right,
+      );
+
+    const summaryValue =
+      summaryRow[
+        alias
+      ] ??
+      summaryRow[
+        key
+      ];
+
+    const summary =
+      typeof summaryValue ===
+        "string"
+        ? summaryValue.trim()
+        : "";
+
+    result[key] = {
+      evidenceReviewNumbers,
+
+      reviewEvidenceCount:
+        evidenceReviewNumbers
+          .length,
+
+      positiveReviewNumbers:
+        Array.from(
+          new Set(
+            positive,
+          ),
+        ).sort(
+          (
+            left,
+            right,
+          ) =>
+            left -
+            right,
+        ),
+
+      negativeReviewNumbers:
+        Array.from(
+          new Set(
+            negative,
+          ),
+        ).sort(
+          (
+            left,
+            right,
+          ) =>
+            left -
+            right,
+        ),
+
+      mixedReviewNumbers:
+        Array.from(
+          new Set(
+            mixed,
+          ),
+        ).sort(
+          (
+            left,
+            right,
+          ) =>
+            left -
+            right,
+        ),
+
+      neutralReviewNumbers:
+        Array.from(
+          new Set(
+            neutral,
+          ),
+        ).sort(
+          (
+            left,
+            right,
+          ) =>
+            left -
+            right,
+        ),
+
+      summary:
+        summary ||
+        (
+          evidenceReviewNumbers.length >
+          0
+            ? "현재 batch에서 해당 구매기준의 직접 리뷰 근거가 확인되었습니다."
+            : "현재 batch에서는 해당 구매기준의 직접 리뷰 근거가 확인되지 않았습니다."
+        ),
+    };
+  }
+
+  return result;
+}
+
+function buildReviewQualityFromClassifications(
+  classifications:
+    BatchReviewClassification[],
+) {
+  let highInformationReviews =
+    0;
+
+  let lowInformationReviews =
+    0;
+
+  let promotionalStyleReviews =
+    0;
+
+  for (
+    const classification of
+    classifications
+  ) {
+    if (
+      classification.q ===
+      "h"
+    ) {
+      highInformationReviews +=
+        1;
+    } else if (
+      classification.q ===
+      "p"
+    ) {
+      promotionalStyleReviews +=
+        1;
+    } else {
+      lowInformationReviews +=
+        1;
+    }
+  }
+
+  return {
+    highInformationReviews,
+    lowInformationReviews,
+    promotionalStyleReviews,
+  };
+}
+
+function normalizeBatchEvidenceAnalysis(
+  raw:
+    Record<
+      string,
+      unknown
+    >,
+  criterionKeys:
+    string[],
+  reviewStart: number,
+  reviewEnd: number,
+) {
+  const {
+    rows:
+      reviewClassifications,
+    audit:
+      classificationAudit,
+  } =
+    normalizeBatchReviewClassifications(
+      raw.reviewClassifications,
+      criterionKeys,
+      reviewStart,
+      reviewEnd,
+    );
+
+  const criterionEvidence =
+    buildCriterionEvidenceFromClassifications(
+      reviewClassifications,
+      criterionKeys,
+      raw.criterionSummaries,
+    );
+
+  const reviewQuality =
+    buildReviewQualityFromClassifications(
+      reviewClassifications,
+    );
+
+  return {
+    ...raw,
+
+    positivePoints:
+      normalizeBatchPointEvidence(
+        raw.positivePoints,
+        reviewStart,
+        reviewEnd,
+      ),
+
+    negativePoints:
+      normalizeBatchPointEvidence(
+        raw.negativePoints,
+        reviewStart,
+        reviewEnd,
+      ),
+
+    reviewClassifications,
+
+    classificationAudit,
+
+    reviewQuality,
+
+    reviewQualityAudit: {
+      expectedReviewCount:
+        reviewEnd -
+        reviewStart +
+        1,
+
+      classifiedReviewCount:
+        reviewClassifications
+          .length,
+
+      mutuallyExclusive:
+        true,
+
+      countValid:
+        classificationAudit
+          .complete,
+    },
+
+    criterionEvidence,
+  };
+}
+
 function normalizePointEvidence(
   raw: unknown,
   reviewCount: number,
@@ -710,6 +1409,109 @@ function auditReviewQuality(
       countValid:
         classifiedReviewCount ===
         reviewCount,
+    },
+  };
+}
+
+function collectReviewQualityFromBatches(
+  batchResults:
+    BatchAnalysisResult[],
+  reviewCount: number,
+) {
+  let highInformationReviews =
+    0;
+
+  let lowInformationReviews =
+    0;
+
+  let promotionalStyleReviews =
+    0;
+
+  let classificationAuditPass =
+    true;
+
+  for (
+    const batch of
+    batchResults
+  ) {
+    const analysisRow =
+      asRecord(
+        batch.analysis,
+      ) ??
+      {};
+
+    const qualityRow =
+      asRecord(
+        analysisRow
+          .reviewQuality,
+      ) ??
+      {};
+
+    highInformationReviews +=
+      Number(
+        qualityRow
+          .highInformationReviews,
+      ) ||
+      0;
+
+    lowInformationReviews +=
+      Number(
+        qualityRow
+          .lowInformationReviews,
+      ) ||
+      0;
+
+    promotionalStyleReviews +=
+      Number(
+        qualityRow
+          .promotionalStyleReviews,
+      ) ||
+      0;
+
+    const classificationAudit =
+      asRecord(
+        analysisRow
+          .classificationAudit,
+      );
+
+    if (
+      classificationAudit
+        ?.complete !==
+      true
+    ) {
+      classificationAuditPass =
+        false;
+    }
+  }
+
+  const classifiedReviewCount =
+    highInformationReviews +
+    lowInformationReviews +
+    promotionalStyleReviews;
+
+  return {
+    reviewQuality: {
+      highInformationReviews,
+      lowInformationReviews,
+      promotionalStyleReviews,
+    },
+
+    reviewQualityAudit: {
+      expectedReviewCount:
+        reviewCount,
+
+      classifiedReviewCount,
+
+      mutuallyExclusive:
+        true,
+
+      countValid:
+        classifiedReviewCount ===
+          reviewCount &&
+        classificationAuditPass,
+
+      source:
+        "server-derived-from-per-review-classification",
     },
   };
 }
@@ -987,7 +1789,7 @@ function createAnalysisInputFingerprint(
 ) {
   const payload = {
     version:
-      "strict-direct-evidence-cost-v2",
+      "strict-direct-evidence-cost-v2-3",
     batchModel:
       REVIEW_BATCH_MODEL,
     aggregateModel:
@@ -1111,6 +1913,22 @@ function normalizeResumeBatchResults(
     if (!analysis) {
       throw new Error(
         `batch ${expectedBatchIndex}의 analysis가 올바르지 않습니다.`,
+      );
+    }
+
+    const classificationAudit =
+      asRecord(
+        analysis
+          .classificationAudit,
+      );
+
+    if (
+      classificationAudit
+        ?.complete !==
+      true
+    ) {
+      throw new Error(
+        `batch ${expectedBatchIndex}의 per-review classification audit가 PASS가 아닙니다.`,
       );
     }
 
@@ -1338,11 +2156,16 @@ function buildBatchPrompt(
   reviewStart: number,
   reviewEnd: number,
 ) {
-  const compactCriteria =
+  const aliasCriteria =
     dynamicCriteria.map(
       (
         criterion,
+        index,
       ) => ({
+        alias:
+          criterionAlias(
+            index,
+          ),
         key:
           criterion.key,
         label:
@@ -1354,13 +2177,77 @@ function buildBatchPrompt(
       }),
     );
 
-  return `
-당신은 Project D의 리뷰 근거 추출 엔진입니다.
+  const aliasByKey =
+    new Map(
+      aliasCriteria.map(
+        (
+          criterion,
+        ) => [
+          criterion.key,
+          criterion.alias,
+        ],
+      ),
+    );
 
-목표:
-최종 구매평 문장을 작성하는 단계가 아닙니다.
-현재 batch의 실제 리뷰에서 "직접 근거"만 짧고 정확하게 추출하세요.
-출력을 작게 유지하세요.
+  const boundaryRules:
+    string[] =
+    [];
+
+  const addBoundaryRule = (
+    key: string,
+    rule: string,
+  ) => {
+    const alias =
+      aliasByKey.get(
+        key,
+      );
+
+    if (alias) {
+      boundaryRules.push(
+        `${alias}: ${rule}`,
+      );
+    }
+  };
+
+  addBoundaryRule(
+    "mopping_quality_and_coverage",
+    "실제 바닥 물걸레 닦임 결과, 얼룩/자국 제거, 물자국, 가장자리·모서리 커버리지처럼 '바닥을 어떻게 닦았는지'가 직접 언급된 경우만 태그하세요. 스테이션의 걸레 자동세척·건조만 언급된 리뷰는 이 기준으로 태그하지 마세요.",
+  );
+
+  addBoundaryRule(
+    "vacuum_pickup_and_hair_handling",
+    "실제 먼지·이물질 흡입 결과, 머리카락·반려동물 털 처리, 카펫/러그 흡입, 브러시 엉킴 경험이 직접 언급된 경우만 태그하세요. 단순히 Pa 수치만 나열한 경우는 실제 사용 결과가 함께 없으면 태그하지 마세요.",
+  );
+
+  addBoundaryRule(
+    "obstacle_avoidance_and_navigation_reliability",
+    "맵핑 정확도/속도, 경로, 장애물 회피, 문턱·매트 통과, 걸림·정지·위치인식 실패처럼 주행 신뢰성이 직접 언급된 경우만 태그하세요. 단순히 '똑똑하다', '청소가 꼼꼼하다'만으로는 태그하지 마세요.",
+  );
+
+  addBoundaryRule(
+    "maintenance_automation_and_station_quality",
+    "도크/스테이션의 먼지비움, 걸레 세척·건조, 물 보충·오수 관리, 직배수, 소모품·관리 부담, 스테이션 소음·설치 경험이 직접 언급된 경우만 태그하세요.",
+  );
+
+  addBoundaryRule(
+    "app_experience_and_reliability",
+    "앱 연결, UI, 맵/구역/금지구역 설정, 예약·원격제어, 앱 오류·안정성처럼 앱 사용 경험이 직접 언급된 경우만 태그하세요. 맵핑이 좋다는 말만 있고 앱 사용 언급이 없으면 태그하지 마세요.",
+  );
+
+  const boundaryText =
+    boundaryRules.length >
+    0
+      ? boundaryRules.join(
+          "\n",
+        )
+      : "각 구매기준의 label, shortDescription, helpText 범위를 서로 섞지 말고 직접 언급된 기준만 태그하세요.";
+
+  return `
+당신은 Project D의 리뷰별 직접근거 분류 엔진입니다.
+
+이번 단계의 핵심은 "대표 리뷰 몇 개를 고르는 것"이 아닙니다.
+현재 batch의 리뷰를 1개씩 모두 판정하여
+각 리뷰 번호마다 정확히 한 줄의 classification을 반환해야 합니다.
 
 카테고리:
 ${category}
@@ -1377,10 +2264,13 @@ ${reviewStart}~${reviewEnd}
 실제 리뷰 수:
 ${reviews.length}
 
-구매기준:
+구매기준 alias:
 ${JSON.stringify(
-  compactCriteria,
+  aliasCriteria,
 )}
+
+구매기준 경계 규칙:
+${boundaryText}
 
 실제 리뷰:
 ${reviews
@@ -1393,31 +2283,55 @@ ${reviews
   )
   .join("\n")}
 
-근거 추출 규칙:
+분류 규칙:
 
-1. 반드시 제공된 실제 리뷰만 근거로 사용하세요.
-2. 제품 사양이나 일반 상식을 추가로 추론하지 마세요.
-3. "좋아요", "만족", "청소 잘함", "성능 좋음", "꼼꼼함" 같은 범용 칭찬은 특정 세부 구매기준의 직접 근거로 세지 마세요.
-4. 복합 구매기준은 리뷰가 실제로 언급한 하위 항목만 인정하세요.
-5. 흡입력·머리카락 처리 기준은 먼지/이물질 흡입 결과, 머리카락·반려털 처리, 카펫 흡입처럼 직접 언급된 경우만 인정하세요.
-6. 앱, 장애물 회피, 맵핑, 스테이션, 물걸레 등 구체 기능도 해당 기능 또는 결과가 명시된 리뷰만 인정하세요.
-7. 배송·포장·판매자 응대는 제품 성능 근거로 승격하지 마세요.
-8. positivePoints/negativePoints는 반복되거나 구매 판단에 의미 있는 항목만 최대 5개씩 반환하세요.
-9. 각 point의 topic은 짧게, summary는 한 문장 이내로 작성하세요.
-10. evidenceReviewNumbers에는 해당 항목을 직접 뒷받침하는 현재 batch 리뷰 번호만 넣으세요.
-11. evidenceCount는 evidenceReviewNumbers의 중복 제거 개수와 같아야 합니다.
-12. criterionEvidence도 직접 근거 리뷰 번호만 넣으세요.
-13. criterionEvidence.summary는 한 문장 이내로 작성하세요.
-14. reviewQuality 세 분류는 서로 겹치지 않으며 합이 ${reviews.length}가 되어야 합니다.
-15. 이 1차 단계에서는 criterionScores, criterionReasons, cautions, bestFor, notFor를 만들지 마세요.
-16. 입력된 구매기준 key만 사용하세요.
-17. JSON만 출력하고 마크다운은 사용하지 마세요.
+1. reviewClassifications에는 ${reviewStart}번부터 ${reviewEnd}번까지 모든 리뷰를 번호 순서대로 정확히 ${reviews.length}행 반환하세요. 한 리뷰도 생략하거나 중복하지 마세요.
+2. 각 행은 {"n":리뷰번호,"q":"h|l|p","tags":[...]} 형식입니다.
+3. q는 반드시 하나만 선택합니다.
+   - h: 구체적인 실제 사용 경험/장단점이 충분한 리뷰
+   - l: 정보가 적거나 일반적인 만족/구매 이야기 위주인 리뷰
+   - p: 사양·광고 문구·추천 문구 반복이 강한 프로모션성 리뷰
+4. tags는 해당 리뷰가 구매기준을 "직접" 뒷받침하는 경우에만 넣습니다. 아무 기준의 직접 근거도 없으면 []로 둡니다.
+5. tag 형식:
+   - c1+ : c1에 대한 긍정 직접 경험
+   - c1- : c1에 대한 부정 직접 경험
+   - c1m : 같은 리뷰 안에 c1의 긍정과 부정 경험이 모두 있음
+   - c10 : 긍정/부정으로 보기 어려운 중립적 직접 경험
+   alias는 실제 구매기준 alias에 맞게 사용하세요.
+6. 한 리뷰가 여러 구매기준을 실제로 다루면 tags에 여러 기준을 넣어도 됩니다.
+7. 단순한 "좋아요", "만족", "청소 잘함", "성능 좋음", "똑똑함", "꼼꼼함"은 특정 세부 구매기준 tag가 아닙니다.
+8. 제품 사양을 단순 복사한 문장만으로는 실제 사용 직접근거로 태그하지 마세요. 사양과 함께 실제 결과가 명확히 적혀 있을 때만 해당 결과를 태그하세요.
+9. 서로 다른 구매기준을 섞지 마세요. 특히 물걸레 바닥 성능과 스테이션 걸레 세척/건조는 서로 다른 기준입니다.
+10. criterionSummaries는 alias별로 classification에서 실제 태그한 내용만 한 문장으로 요약하세요. 긍정과 부정이 둘 다 있으면 둘 다 반영하세요.
+11. positivePoints/negativePoints는 구매 판단에 의미 있는 반복 항목만 최대 5개씩 반환하세요.
+12. point의 evidenceReviewNumbers는 해당 point를 직접 뒷받침하는 현재 batch 번호만 넣으세요.
+13. 이 단계에서는 criterionEvidence, criterionScores, criterionReasons, cautions, bestFor, notFor를 만들지 마세요. criterionEvidence는 서버가 reviewClassifications에서 계산합니다.
+14. JSON만 출력하고 마크다운은 사용하지 마세요.
 
 반드시 아래의 간결한 JSON 구조만 반환하세요.
 
 {
   "batchIndex": ${batchIndex + 1},
   "reviewCount": ${reviews.length},
+  "reviewClassifications": [
+    {
+      "n": ${reviewStart},
+      "q": "h",
+      "tags": ["c1+", "c2-"]
+    },
+    {
+      "n": ${Math.min(
+        reviewStart + 1,
+        reviewEnd,
+      )},
+      "q": "l",
+      "tags": []
+    }
+  ],
+  "criterionSummaries": {
+    "c1": "c1에 실제로 태그된 리뷰만 요약",
+    "c2": "c2에 실제로 태그된 리뷰만 요약"
+  },
   "positivePoints": [
     {
       "topic": "짧은 장점명",
@@ -1433,26 +2347,22 @@ ${reviews
       "evidenceReviewNumbers": [${reviewStart}],
       "evidenceCount": 1
     }
-  ],
-  "reviewQuality": {
-    "highInformationReviews": 0,
-    "lowInformationReviews": 0,
-    "promotionalStyleReviews": 0
-  },
-  "criterionEvidence": {
-    "${criterionKeys[0]}": {
-      "evidenceReviewNumbers": [${reviewStart}],
-      "reviewEvidenceCount": 1,
-      "summary": "직접 근거를 한 문장으로 요약"
-    }
-  }
+  ]
 }
 
-criterionEvidence에는 아래 key를 전부 포함하세요.
+중요:
+위 reviewClassifications 2행은 형식 예시일 뿐입니다.
+실제 응답에는 반드시 ${reviewStart}~${reviewEnd}의 ${reviews.length}개 리뷰를 전부 1행씩 반환하세요.
 
-${criterionKeys.join(
-  ", ",
-)}
+사용 가능한 alias:
+${aliasCriteria
+  .map(
+    (
+      criterion,
+    ) =>
+      `${criterion.alias}=${criterion.key}`,
+  )
+  .join(", ")}
 `;
 }
 
@@ -1471,26 +2381,46 @@ function buildAggregatePrompt(
 ) {
   const compactBatchResults =
     batchResults.map(
-      (batch) => ({
-        batchIndex:
-          batch.batchIndex,
-        reviewStart:
-          batch.reviewStart,
-        reviewEnd:
-          batch.reviewEnd,
-        reviewCount:
-          batch.reviewCount,
-        analysis:
-          batch.analysis,
-      }),
+      (batch) => {
+        const analysisRow =
+          asRecord(
+            batch.analysis,
+          ) ??
+          {};
+
+        const {
+          reviewClassifications:
+            _reviewClassifications,
+          ...compactAnalysis
+        } =
+          analysisRow;
+
+        return {
+          batchIndex:
+            batch.batchIndex,
+          reviewStart:
+            batch.reviewStart,
+          reviewEnd:
+            batch.reviewEnd,
+          reviewCount:
+            batch.reviewCount,
+          analysis:
+            compactAnalysis,
+        };
+      },
     );
 
   return `
 당신은 Project D의 리뷰 batch 통합 엔진입니다.
 
 아래 내용은 같은 제품의 실제 리뷰 ${totalReviewCount}개를
-최대 ${REVIEW_BATCH_SIZE}개씩 나눠 각각 읽은
-"간결한 직접근거 추출 결과"입니다.
+최대 ${REVIEW_BATCH_SIZE}개씩 나눠 각각 읽고,
+각 리뷰를 한 행씩 분류한 뒤 서버가 계산한
+"리뷰별 직접근거 집계 결과"입니다.
+
+각 batch의 criterionEvidence 번호/개수와 reviewQuality는
+서버가 reviewClassifications에서 계산한 값입니다.
+임의로 번호를 추가하거나 삭제하지 마세요.
 
 1차 batch는 비용 절감을 위해 점수·추천문장·주의사항을 만들지 않았습니다.
 이 최종 통합 단계에서만 전체 summary, 점수, 이유,
@@ -1542,24 +2472,25 @@ ${JSON.stringify(
 3. positivePoints와 negativePoints의 evidenceReviewNumbers는 batch 결과에 실제로 존재하는 리뷰 번호만 합치고 중복을 제거하세요.
 4. evidenceCount는 evidenceReviewNumbers의 중복 제거 후 개수와 정확히 같아야 합니다.
 5. 같은 의미의 주제가 여러 batch에 표현만 다르게 등장하면 하나로 합치세요.
-6. criterionEvidence.evidenceReviewNumbers도 batch별 해당 구매기준의 실제 리뷰 번호만 합치고 중복을 제거하세요.
+6. criterionEvidence.evidenceReviewNumbers는 각 batch가 반환한 "전체 직접근거 번호"를 모두 합치고 중복을 제거하세요. 일부 대표 번호만 다시 추려내지 마세요.
 7. criterionEvidence.reviewEvidenceCount는 evidenceReviewNumbers의 중복 제거 후 개수와 정확히 같아야 합니다.
-8. criterionScores는 전체 batch의 긍정/부정 근거와 반복성을 종합한 0~100 점수입니다.
-9. 해당 구매기준의 직접 근거가 ${minimumCriterionEvidence(
+8. criterionEvidence.summary와 criterionReasons에는 batch 근거에 없는 기능명, 사양, 원인, 음성명령, 센서/카메라 종류 같은 세부사항을 새로 추가하지 마세요. 긍정과 부정 근거가 함께 있으면 양쪽을 반영하세요.
+10. criterionScores는 전체 batch의 긍정/부정 근거와 반복성을 종합한 0~100 점수입니다.
+10. 해당 구매기준의 직접 근거가 ${minimumCriterionEvidence(
   totalReviewCount,
 )}건보다 적으면 criterionScores는 반드시 null로 두세요.
-10. 배송, 포장, 판매자 응대는 제품 평가에 약하게 반영하세요.
-11. criterionEvidence에는 해당 구매기준을 직접 설명하는 리뷰 번호만 유지하세요. "청소를 잘한다", "꼼꼼하다", "성능이 좋다", "만족한다" 같은 범용 평가는 특정 세부 구매기준의 직접 근거로 승격하지 마세요.
-12. 복합 구매기준은 리뷰가 실제로 언급한 하위 항목만 근거로 인정하세요. 중요한 하위 항목에 직접 근거가 없으면 criterionReasons에 그 공백을 명확히 적고 점수를 과대평가하지 마세요.
-13. 특히 흡입력·머리카락 처리 같은 구체 기준은 먼지 흡입 결과, 머리카락/반려털 처리, 카펫 흡입 등 직접 언급이 없으면 일반적인 "청소가 잘 된다" 리뷰만으로 점수를 만들지 마세요.
-14. 앱, 장애물 회피, 스테이션, 맵핑 등도 해당 기능의 직접 사용경험이 있는 리뷰만 근거로 세세요.
-15. cautions, bestFor, notFor도 batch 근거에 직접 연결되는 범위만 표현하세요. 일반적인 제품 상식이나 사양을 새로 추론하지 마세요.
-16. 한 리뷰의 좁은 불만을 더 넓은 기능 문제로 확장하지 마세요.
-17. reviewQuality의 highInformationReviews, lowInformationReviews, promotionalStyleReviews는 서로 겹치지 않는 분류입니다. 전체 리뷰를 정확히 한 분류에만 포함하고 세 값의 합이 ${totalReviewCount}와 정확히 같아야 합니다.
-18. confidenceScore는 총 리뷰 수, 정보량, batch 간 반복성, 긍정/부정 근거 균형을 반영한 0~100 정수입니다.
-19. 제공되지 않은 사실을 추가하거나 추측하지 마세요.
-20. 입력된 구매기준 key만 사용하세요.
-21. JSON만 출력하세요. 마크다운은 사용하지 마세요.
+11. 배송, 포장, 판매자 응대는 제품 평가에 약하게 반영하세요.
+12. criterionEvidence에는 해당 구매기준을 직접 설명하는 리뷰 번호만 유지하세요. "청소를 잘한다", "꼼꼼하다", "성능이 좋다", "만족한다" 같은 범용 평가는 특정 세부 구매기준의 직접 근거로 승격하지 마세요.
+13. 복합 구매기준은 리뷰가 실제로 언급한 하위 항목만 근거로 인정하세요. 중요한 하위 항목에 직접 근거가 없으면 criterionReasons에 그 공백을 명확히 적고 점수를 과대평가하지 마세요.
+14. 특히 흡입력·머리카락 처리 같은 구체 기준은 먼지 흡입 결과, 머리카락/반려털 처리, 카펫 흡입 등 직접 언급이 없으면 일반적인 "청소가 잘 된다" 리뷰만으로 점수를 만들지 마세요.
+15. 앱, 장애물 회피, 스테이션, 맵핑 등도 해당 기능의 직접 사용경험이 있는 리뷰만 근거로 세세요.
+16. cautions, bestFor, notFor도 batch 근거에 직접 연결되는 범위만 표현하세요. 일반적인 제품 상식이나 사양을 새로 추론하지 마세요.
+17. 한 리뷰의 좁은 불만을 더 넓은 기능 문제로 확장하지 마세요.
+18. reviewQuality의 highInformationReviews, lowInformationReviews, promotionalStyleReviews는 서로 겹치지 않는 분류입니다. 전체 리뷰를 정확히 한 분류에만 포함하고 세 값의 합이 ${totalReviewCount}와 정확히 같아야 합니다.
+19. confidenceScore는 총 리뷰 수, 정보량, batch 간 반복성, 긍정/부정 근거 균형을 반영한 0~100 정수입니다.
+20. 제공되지 않은 사실을 추가하거나 추측하지 마세요.
+21. 입력된 구매기준 key만 사용하세요.
+22. JSON만 출력하세요. 마크다운은 사용하지 마세요.
 
 반드시 아래 JSON 구조로 반환하세요.
 
@@ -2230,7 +3161,12 @@ export async function POST(
         );
 
       const parsed =
-        batchCall.analysis;
+        normalizeBatchEvidenceAnalysis(
+          batchCall.analysis,
+          criterionKeys,
+          reviewStart,
+          reviewEnd,
+        );
 
       const batchResult:
         BatchAnalysisResult = {
@@ -2265,6 +3201,13 @@ export async function POST(
         batchCount:
           batches.length,
         batchResult,
+
+        classificationAudit:
+          asRecord(
+            batchResult
+              .analysis
+              .classificationAudit,
+          ),
 
         apiUsage:
           summarizeUsage(
@@ -2361,7 +3304,12 @@ export async function POST(
         );
 
         const parsed =
-          batchCall.analysis;
+          normalizeBatchEvidenceAnalysis(
+            batchCall.analysis,
+            criterionKeys,
+            reviewStart,
+            reviewEnd,
+          );
 
         batchResults.push({
           batchIndex:
@@ -2435,9 +3383,8 @@ export async function POST(
       reviewQuality,
       reviewQualityAudit,
     } =
-      auditReviewQuality(
-        aggregateParsed
-          .reviewQuality,
+      collectReviewQualityFromBatches(
+        batchResults,
         reviews.length,
       );
 
@@ -2473,7 +3420,7 @@ export async function POST(
 
       batchAnalysis: {
         strategy:
-          "cost-optimized-resumable-evidence-batches",
+          "cost-optimized-resumable-per-review-classification-v2-3",
 
         batchModel:
           REVIEW_BATCH_MODEL,
