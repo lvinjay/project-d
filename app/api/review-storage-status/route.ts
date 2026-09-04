@@ -241,16 +241,7 @@ export async function GET(
           "products",
         )
         .select(
-          [
-            "id",
-            "product_name",
-            "origin_product_no",
-            "review_analysis",
-            "review_raw_data",
-            "updated_at",
-          ].join(
-            ",",
-          ),
+          "id, product_name, origin_product_no, review_analysis, review_raw_data, updated_at",
         )
         .eq(
           "category",
