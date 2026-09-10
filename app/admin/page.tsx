@@ -64,8 +64,121 @@ type FetchReviewsResponse = {
 type AnalyzeReviewsResponse = {
   success?: boolean;
   message?: string;
+  dryRun?: boolean;
+  inputFingerprint?: string;
+  estimatedOpenAiCalls?: number;
+  paidApiCalls?: number;
   analysis?: Record<string, unknown>;
 };
+
+type ProductionReviewAnalysisInput = {
+  productName: string;
+  category: string;
+  reviews: string[];
+  collectionStats?: {
+    total: number;
+    ranking: number;
+    latest: number;
+    lowScore: number;
+  } | null;
+  originProductNo: number;
+};
+
+type ProductionReviewAnalysisPlan = {
+  input: ProductionReviewAnalysisInput;
+  inputFingerprint: string;
+  estimatedOpenAiCalls: number;
+};
+
+async function prepareProductionReviewAnalysis(
+  input: ProductionReviewAnalysisInput,
+): Promise<ProductionReviewAnalysisPlan> {
+  const dryRunResponse = await fetch(
+    "/api/analyze-reviews",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...input,
+        executionMode: "full",
+        dryRun: true,
+      }),
+    },
+  );
+
+  const dryRunResult =
+    (await dryRunResponse.json()) as AnalyzeReviewsResponse;
+
+  if (
+    !dryRunResponse.ok ||
+    !dryRunResult.success ||
+    dryRunResult.dryRun !== true ||
+    dryRunResult.paidApiCalls !== 0 ||
+    !dryRunResult.inputFingerprint
+  ) {
+    throw new Error(
+      dryRunResult.message ??
+        "리뷰 분석 무료 사전검증에 실패했습니다.",
+    );
+  }
+
+  const estimatedOpenAiCalls =
+    Number(dryRunResult.estimatedOpenAiCalls);
+
+  if (
+    !Number.isSafeInteger(estimatedOpenAiCalls) ||
+    estimatedOpenAiCalls <= 0
+  ) {
+    throw new Error(
+      "리뷰 분석 예상 OpenAI 호출 수를 확인하지 못했습니다. 실제 유료 분석은 시작하지 않습니다.",
+    );
+  }
+
+  return {
+    input,
+    inputFingerprint:
+      dryRunResult.inputFingerprint,
+    estimatedOpenAiCalls,
+  };
+}
+
+async function executeProductionReviewAnalysis(
+  plan: ProductionReviewAnalysisPlan,
+) {
+  const analysisResponse = await fetch(
+    "/api/analyze-reviews",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...plan.input,
+        executionMode: "full",
+        inputFingerprint:
+          plan.inputFingerprint,
+      }),
+    },
+  );
+
+  const analysisResult =
+    (await analysisResponse.json()) as AnalyzeReviewsResponse;
+
+  if (
+    !analysisResponse.ok ||
+    !analysisResult.success ||
+    !analysisResult.analysis
+  ) {
+    throw new Error(
+      analysisResult.message ??
+        "리뷰 분석에 실패했습니다.",
+    );
+  }
+
+  return analysisResult.analysis;
+}
 
 type ProductDetailAnalysisResponse = {
   success: boolean;
@@ -598,6 +711,26 @@ export default function AdminPage() {
       return;
     }
 
+    const missingOriginProductNames = targets
+      .filter((product) => {
+        const originProductNo = Number(
+          product.origin_product_no,
+        );
+
+        return (
+          !Number.isSafeInteger(originProductNo) ||
+          originProductNo <= 0
+        );
+      })
+      .map((product) => product.product_name);
+
+    if (missingOriginProductNames.length > 0) {
+      alert(
+        `원상품 번호가 없는 제품이 있어 production 리뷰 재분석을 시작하지 않습니다.\n\n${missingOriginProductNames.join(", ")}\n\n리뷰 수집 식별자를 먼저 저장해 주세요.`,
+      );
+      return;
+    }
+
     setIsBulkReanalyzingReviews(true);
     setBulkReviewMessage("");
     setErrorMessage("");
@@ -605,54 +738,97 @@ export default function AdminPage() {
     let completed = 0;
 
     try {
-      for (const product of targets) {
+      const prepared =
+        new Array<{
+          product: RegisteredProduct;
+          plan: ProductionReviewAnalysisPlan;
+        }>();
+
+      let estimatedOpenAiCalls = 0;
+
+      for (
+        let index = 0;
+        index < targets.length;
+        index += 1
+      ) {
+        const product = targets[index];
         const reviews =
           product.review_raw_data?.reviews ?? [];
         const savedCollectionStats =
           product.review_raw_data?.collectionStats ?? null;
 
         setBulkReviewMessage(
-          `${targets.length}개 중 ${completed + 1}번째: ${product.product_name} · DB 저장 리뷰 ${reviews.length}개 AI 재분석 중...`,
+          `${targets.length}개 중 ${index + 1}번째: ${product.product_name} · 무료 사전검증 중...`,
         );
 
-        const analyzeResponse = await fetch(
-          "/api/analyze-reviews",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              productName: product.product_name,
-              category: product.category,
-              reviews,
-              collectionStats: savedCollectionStats,
-            }),
-          },
+        const originProductNo = Number(
+          product.origin_product_no,
         );
-
-        const analyzeResult =
-          (await analyzeResponse.json()) as AnalyzeReviewsResponse;
 
         if (
-          !analyzeResponse.ok ||
-          !analyzeResult.success ||
-          !analyzeResult.analysis
+          !Number.isSafeInteger(originProductNo) ||
+          originProductNo <= 0
         ) {
           throw new Error(
-            `${product.product_name}: ${
-              analyzeResult.message ??
-              "저장된 리뷰 원문의 AI 재분석에 실패했습니다."
-            }`,
+            `${product.product_name}: 원상품 번호(origin_product_no)가 없어 production 리뷰 분석을 시작할 수 없습니다.`,
           );
         }
+
+        const plan =
+          await prepareProductionReviewAnalysis({
+            productName: product.product_name,
+            category: product.category,
+            reviews,
+            collectionStats: savedCollectionStats,
+            originProductNo,
+          });
+
+        prepared.push({
+          product,
+          plan,
+        });
+
+        estimatedOpenAiCalls +=
+          plan.estimatedOpenAiCalls;
+      }
+
+      const confirmed =
+        window.confirm(
+          `무료 사전검증이 완료되었습니다.\n\n제품 ${prepared.length}개\n예상 OpenAI 호출 최대 ${estimatedOpenAiCalls}회\n\n확인을 누르기 전까지 유료 리뷰 분석은 실행되지 않았습니다.\n실제 유료 리뷰 분석을 시작할까요?`,
+        );
+
+      if (!confirmed) {
+        setBulkReviewMessage(
+          `무료 사전검증만 완료했습니다. 실제 유료 리뷰 분석은 취소했습니다. 예상 OpenAI 호출 최대 ${estimatedOpenAiCalls}회 · 실제 유료 호출 시작 안 함.`,
+        );
+        return;
+      }
+
+      for (
+        let index = 0;
+        index < prepared.length;
+        index += 1
+      ) {
+        const {
+          product,
+          plan,
+        } = prepared[index];
+
+        setBulkReviewMessage(
+          `${prepared.length}개 중 ${index + 1}번째: ${product.product_name} · production 리뷰 분석 중...`,
+        );
+
+        const analysis =
+          await executeProductionReviewAnalysis(
+            plan,
+          );
 
         const { error: updateError } =
           await supabase
             .from("products")
             .update({
               review_analysis:
-                analyzeResult.analysis,
+                analysis,
               updated_at:
                 new Date().toISOString(),
             })

@@ -20,6 +20,7 @@ import {
   ProductionPipelineError, auditProductionReviewNumbering,
   createProductionBatchDryRun, runProductionReviewBatch,
   createProductionPipelineFingerprint, replayProductionReviewBatch,
+  productionReviewPipelineVersionForCriteria,
   type SavedProductionStageArtifact,
 } from "../../../lib/project-d-review-production-pipeline";
 
@@ -6092,6 +6093,7 @@ function buildAggregatePrompt(
     BatchAnalysisResult[],
   collectionStats:
     ReviewCollectionStats,
+  frozenCriteriaPipeline: boolean,
 ) {
   const compactBatchResults =
     batchResults.map(
@@ -6124,6 +6126,19 @@ function buildAggregatePrompt(
       },
     );
 
+  const criteriaPipelineDescription =
+    frozenCriteriaPipeline
+      ? [
+          'Stage0 결과가 e === "direct"인 리뷰만 frozen V1.4 c1-c5 분석으로 진행합니다. 제외된 non-direct 리뷰는 V1.4 c1-c5 분류를 받지 않습니다.',
+          "frozen V1.4는 서버 소유 sentence/segment ID와 semantic evidence event를 사용하며, 서버가 선택된 근거를 검증하고 해당 ID를 원문 근거로 복원합니다.",
+          "aggregate에 전달된 criterionEvidence 번호/개수, polarity, evidenceExcerpts는 검증된 V1.4 출력으로부터 deterministic production adapter가 구성한 값입니다.",
+        ].join("\n")
+      : [
+          'Stage0 결과가 e === "direct"인 리뷰만 dynamic c1-c5 분석으로 진행합니다. 제외된 non-direct 리뷰는 dynamic criterion 분류를 받지 않습니다.',
+          "dynamic c1-c5 엔진은 현재 카테고리 profile의 key, label, shortDescription, helpText를 의미 경계로 사용하고 서버 소유 sentence/segment ID와 semantic evidence event를 사용합니다.",
+          "aggregate에 전달된 criterionEvidence 번호/개수, polarity, evidenceExcerpts는 검증된 dynamic criterion 출력으로부터 deterministic production adapter가 구성한 값입니다.",
+        ].join("\n");
+
   return `
 당신은 Project D의 리뷰 batch 통합 엔진입니다.
 
@@ -6131,9 +6146,7 @@ function buildAggregatePrompt(
 최대 ${REVIEW_BATCH_SIZE}개씩 나누어 처리한 production pipeline의 집계 결과입니다.
 
 Stage0 v5는 모든 리뷰에 대해 서버 소유 evidence span을 바탕으로 사실을 추출하고, 서버가 eligibility를 결정합니다.
-Stage0 결과가 e === "direct"인 리뷰만 frozen V1.4 c1-c5 분석으로 진행합니다. 제외된 non-direct 리뷰는 V1.4 c1-c5 분류를 받지 않습니다.
-frozen V1.4는 서버 소유 sentence/segment ID와 semantic evidence event를 사용하며, 서버가 선택된 근거를 검증하고 해당 ID를 원문 근거로 복원합니다.
-aggregate에 전달된 criterionEvidence 번호/개수, polarity, evidenceExcerpts는 검증된 V1.4 출력으로부터 deterministic production adapter가 구성한 값입니다.
+${criteriaPipelineDescription}
 evidenceExcerpts는 서버가 검증된 원문 segment에서 복원한 직접근거입니다.
 
 reviewQuality는 Stage0-derived reviewQuality compatibility mapping에 따른 호환성 메타데이터이며, 서버가 Stage0 eligibility에서 결정적으로 계산합니다.
@@ -6276,14 +6289,19 @@ ${criterionKeys.join(
 }
 
 // Deterministic checkpoint contract gate, not a semantic reclassification pass.
-function validateProductionCheckpoint(value: unknown, fingerprint: string, keys: string[]) {
+function validateProductionCheckpoint(
+  value: unknown,
+  fingerprint: string,
+  keys: string[],
+  pipelineVersion: string,
+) {
   const row = asRecord(value), analysis = asRecord(row?.analysis);
   const audit = asRecord(analysis?.classificationAudit), qualityAudit = asRecord(analysis?.reviewQualityAudit);
   const quality = asRecord(analysis?.reviewQuality), evidence = asRecord(analysis?.criterionEvidence);
-  if (!row || row.inputFingerprint !== fingerprint || row.pipelineVersion !== PRODUCTION_REVIEW_PIPELINE_VERSION ||
-      !analysis || analysis.pipelineVersion !== PRODUCTION_REVIEW_PIPELINE_VERSION ||
+  if (!row || row.inputFingerprint !== fingerprint || row.pipelineVersion !== pipelineVersion ||
+      !analysis || analysis.pipelineVersion !== pipelineVersion ||
       analysis.reviewQualitySource !== PRODUCTION_REVIEW_QUALITY_SOURCE ||
-      audit?.complete !== true || audit.source !== PRODUCTION_REVIEW_PIPELINE_VERSION ||
+      audit?.complete !== true || audit.source !== pipelineVersion ||
       audit.invalidSegmentReferenceCount !== 0 || qualityAudit?.countValid !== true ||
       qualityAudit.mutuallyExclusive !== true || qualityAudit.source !== PRODUCTION_REVIEW_QUALITY_SOURCE || !quality || !evidence) {
     throw new Error("Invalid/legacy production checkpoint; semantic fallback is forbidden.");
@@ -6306,10 +6324,15 @@ function validateProductionCheckpoint(value: unknown, fingerprint: string, keys:
 }
 
 type ProductionCheckpointSource = Awaited<ReturnType<typeof runProductionReviewBatch>>;
-function createProductionCheckpoint(production: ProductionCheckpointSource, index: number, inputFingerprint: string) {
+function createProductionCheckpoint(
+  production: ProductionCheckpointSource,
+  index: number,
+  inputFingerprint: string,
+  pipelineVersion: string,
+) {
   return { batchIndex: index + 1, reviewStart: production.reviewStart,
         reviewEnd: production.reviewEnd, reviewCount: production.reviewCount,
-        inputFingerprint, pipelineVersion: PRODUCTION_REVIEW_PIPELINE_VERSION,
+        inputFingerprint, pipelineVersion,
         analysis: { criterionEvidence: production.criterionEvidence, reviewQuality: production.reviewQuality,
           reviewQualityAudit: production.reviewQualityAudit, classificationAudit: production.classificationAudit,
           eligibilityCounts: production.eligibilityCounts, semanticVersions: production.semanticVersions,
@@ -6685,6 +6708,50 @@ export async function POST(
       );
     }
 
+    const uniqueCriterionKeys =
+      new Set(
+        dynamicCriteria.map(
+          criterion =>
+            criterion.key,
+        ),
+      );
+
+    if (
+      dynamicCriteria.length !==
+        5 ||
+      uniqueCriterionKeys.size !==
+        5
+    ) {
+      return NextResponse.json(
+        {
+          success:
+            false,
+
+          stage:
+            "precheck",
+
+          paidApiCalls:
+            0,
+
+          message:
+            "Production review analysis requires exactly five unique category criteria.",
+        },
+        {
+          status:
+            400,
+        },
+      );
+    }
+
+    const pipelineVersion =
+      productionReviewPipelineVersionForCriteria(
+        dynamicCriteria,
+      );
+
+    const frozenCriteriaPipeline =
+      pipelineVersion ===
+        PRODUCTION_REVIEW_PIPELINE_VERSION;
+
     const criterionKeys =
       dynamicCriteria.map(
         (
@@ -6740,7 +6807,7 @@ export async function POST(
     }
     if (dryRun) {
       return NextResponse.json({ success: true, dryRun: true, paidApiCalls: 0, executionMode,
-        pipelineVersion: PRODUCTION_REVIEW_PIPELINE_VERSION, reviewQualitySource: PRODUCTION_REVIEW_QUALITY_SOURCE,
+        pipelineVersion, reviewQualitySource: PRODUCTION_REVIEW_QUALITY_SOURCE,
         analysisModels: { stage0: productionDryRuns[0].stage0.model, batch: productionDryRuns[0].criteria.model, aggregate: REVIEW_AGGREGATE_MODEL },
         inputFingerprint, requestedBatchIndex: executionMode === "batch" || executionMode === "replay" ? requestedBatchIndex : null,
         inputSource: useStoredReviews ? "stored-db" : "request-body", category, productName,
@@ -6762,10 +6829,10 @@ export async function POST(
       }
       const production = await replayProductionReviewBatch({ ...batchInput(requestedBatchIndex - 1),
         stage0: body.replayArtifacts.stage0, criteriaArtifact: body.replayArtifacts.criteria });
-      const checkpoint = createProductionCheckpoint(production, requestedBatchIndex - 1, inputFingerprint);
-      validateProductionCheckpoint(checkpoint, inputFingerprint, criterionKeys);
+      const checkpoint = createProductionCheckpoint(production, requestedBatchIndex - 1, inputFingerprint, pipelineVersion);
+      validateProductionCheckpoint(checkpoint, inputFingerprint, criterionKeys, pipelineVersion);
       return NextResponse.json({ success: true, executionMode: "replay", replay: true, paidApiCalls: 0,
-        inputFingerprint, pipelineVersion: PRODUCTION_REVIEW_PIPELINE_VERSION,
+        inputFingerprint, pipelineVersion,
         reviewQualitySource: PRODUCTION_REVIEW_QUALITY_SOURCE,
         historicalPaidApiCalls: production.historicalPaidApiCalls, apiUsage: production.apiUsage,
         historicalApiUsage: production.historicalApiUsage,
@@ -6803,15 +6870,15 @@ export async function POST(
       paidApiCalls = priorCalls + production.paidApiCalls;
       paidUsages.push(production.stage0.apiUsage);
       if (production.criteria) paidUsages.push(production.criteria.apiUsage);
-      const checkpoint = createProductionCheckpoint(production, index, inputFingerprint);
-      validateProductionCheckpoint(checkpoint, inputFingerprint, criterionKeys);
+      const checkpoint = createProductionCheckpoint(production, index, inputFingerprint, pipelineVersion);
+      validateProductionCheckpoint(checkpoint, inputFingerprint, criterionKeys, pipelineVersion);
       completedProductionBatches.push(checkpoint);
       return { production, checkpoint };
     };
     if (executionMode === "batch") {
       const { production, checkpoint } = await runBatch(requestedBatchIndex - 1);
       return NextResponse.json({ success: true, executionMode, paidApiCalls, inputFingerprint,
-        pipelineVersion: PRODUCTION_REVIEW_PIPELINE_VERSION, reviewQualitySource: PRODUCTION_REVIEW_QUALITY_SOURCE,
+        pipelineVersion, reviewQualitySource: PRODUCTION_REVIEW_QUALITY_SOURCE,
         inputSource: useStoredReviews ? "stored-db" : "request-body", dbProductId: storedDbProductId,
         originProductNo: storedOriginProductNo, productName, analyzedReviewCount: reviews.length,
         batchCount: batches.length, batchResult: checkpoint, stage0: production.stage0, criteria: production.criteria,
@@ -6819,14 +6886,14 @@ export async function POST(
         rawModelAnalysis: { stage0: production.stage0.rawModelAnalysis, criteria: production.criteria?.rawModelAnalysis ?? null },
         rawModelOutputText: { stage0: production.stage0.rawModelOutputText, criteria: production.criteria?.rawModelOutputText ?? null },
         openAiResponse: { stage0: production.stage0.openAiResponse, criteria: production.criteria?.openAiResponse ?? null },
-        classificationAudit: production.classificationAudit, normalizationVersion: PRODUCTION_REVIEW_PIPELINE_VERSION,
+        classificationAudit: production.classificationAudit, normalizationVersion: pipelineVersion,
         apiUsage: summarizeUsage(paidUsages) });
     }
     let batchResults: BatchAnalysisResult[];
     const apiUsageCalls = paidUsages;
     if (executionMode === "aggregate") {
       if (!Array.isArray(body.batchResults)) throw new Error("Production checkpoints required.");
-      for (const row of body.batchResults) validateProductionCheckpoint(row, inputFingerprint, criterionKeys);
+      for (const row of body.batchResults) validateProductionCheckpoint(row, inputFingerprint, criterionKeys, pipelineVersion);
       // Existing structural range/completeness checks only; never old semantic normalization.
       batchResults = normalizeResumeBatchResults(body.batchResults, batches);
     } else {
@@ -6846,6 +6913,7 @@ export async function POST(
         reviews.length,
         batchResults,
         collectionStats,
+        frozenCriteriaPipeline,
       );
 
     paidApiCalls += 1; // Count attempted aggregate request even if transport/parsing fails.
@@ -6934,7 +7002,7 @@ export async function POST(
 
       batchAnalysis: {
         strategy:
-          PRODUCTION_REVIEW_PIPELINE_VERSION,
+          pipelineVersion,
 
         batchModel:
           REVIEW_BATCH_MODEL,
@@ -6961,7 +7029,7 @@ export async function POST(
       executionMode,
 
       paidApiCalls,
-      pipelineVersion: PRODUCTION_REVIEW_PIPELINE_VERSION,
+      pipelineVersion,
       reviewQualitySource: PRODUCTION_REVIEW_QUALITY_SOURCE,
 
       inputFingerprint,

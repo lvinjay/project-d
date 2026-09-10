@@ -43,6 +43,7 @@ type RegisteredProduct = {
   category: string;
   product_name: string;
   source_url: string;
+  origin_product_no: string | number | null;
   review_analysis: ReviewAnalysis | null;
   criterion_scores: CriterionScoreMap;
   review_raw_data?: {
@@ -56,9 +57,117 @@ type RegisteredProduct = {
 
 type AnalyzeResponse = {
   success: boolean;
+  dryRun?: boolean;
+  inputFingerprint?: string;
+  estimatedOpenAiCalls?: number;
+  paidApiCalls?: number;
   analysis?: ReviewAnalysis;
   message?: string;
 };
+
+type ProductionReviewAnalysisInput = {
+  productName: string;
+  category: string;
+  reviews: string[];
+  collectionStats: ReviewCollectionStats | null;
+  originProductNo: number;
+};
+
+type ProductionReviewAnalysisPlan = {
+  input: ProductionReviewAnalysisInput;
+  inputFingerprint: string;
+  estimatedOpenAiCalls: number;
+};
+
+async function prepareProductionReviewAnalysis(
+  input: ProductionReviewAnalysisInput,
+): Promise<ProductionReviewAnalysisPlan> {
+  const dryRunResponse = await fetch(
+    "/api/analyze-reviews",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...input,
+        executionMode: "full",
+        dryRun: true,
+      }),
+    },
+  );
+
+  const dryRunResult =
+    (await dryRunResponse.json()) as AnalyzeResponse;
+
+  if (
+    !dryRunResponse.ok ||
+    !dryRunResult.success ||
+    dryRunResult.dryRun !== true ||
+    dryRunResult.paidApiCalls !== 0 ||
+    !dryRunResult.inputFingerprint
+  ) {
+    throw new Error(
+      dryRunResult.message ??
+        "리뷰 분석 무료 사전검증에 실패했습니다.",
+    );
+  }
+
+  const estimatedOpenAiCalls =
+    Number(dryRunResult.estimatedOpenAiCalls);
+
+  if (
+    !Number.isSafeInteger(estimatedOpenAiCalls) ||
+    estimatedOpenAiCalls <= 0
+  ) {
+    throw new Error(
+      "리뷰 분석 예상 OpenAI 호출 수를 확인하지 못했습니다. 실제 유료 분석은 시작하지 않습니다.",
+    );
+  }
+
+  return {
+    input,
+    inputFingerprint:
+      dryRunResult.inputFingerprint,
+    estimatedOpenAiCalls,
+  };
+}
+
+async function executeProductionReviewAnalysis(
+  plan: ProductionReviewAnalysisPlan,
+) {
+  const analysisResponse = await fetch(
+    "/api/analyze-reviews",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...plan.input,
+        executionMode: "full",
+        inputFingerprint:
+          plan.inputFingerprint,
+      }),
+    },
+  );
+
+  const analysisResult =
+    (await analysisResponse.json()) as AnalyzeResponse;
+
+  if (
+    !analysisResponse.ok ||
+    !analysisResult.success ||
+    !analysisResult.analysis
+  ) {
+    throw new Error(
+      analysisResult.message ??
+        "리뷰 분석에 실패했습니다.",
+    );
+  }
+
+  return analysisResult.analysis;
+}
 
 function AdminReviewContent() {
   const router = useRouter();
@@ -112,7 +221,7 @@ function AdminReviewContent() {
       const { data, error } = await supabase
         .from("products")
         .select(
-          "id, category, product_name, source_url, review_analysis, criterion_scores, review_raw_data, created_at, updated_at",
+          "id, category, product_name, source_url, origin_product_no, review_analysis, criterion_scores, review_raw_data, created_at, updated_at",
         )
         .eq("id", productId)
         .single();
@@ -273,44 +382,48 @@ function AdminReviewContent() {
     setErrorMessage("");
 
     try {
-      const response = await fetch(
-        "/api/analyze-reviews",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify({
-            productName:
-              normalizedProductName,
-            category:
-              product?.category ?? "",
-            reviews,
-            collectionStats,
-          }),
-        },
+      const originProductNo = Number(
+        product?.origin_product_no,
       );
 
-      const result =
-        (await response.json()) as AnalyzeResponse;
-
-      if (!response.ok || !result.success) {
+      if (
+        !Number.isSafeInteger(originProductNo) ||
+        originProductNo <= 0
+      ) {
         throw new Error(
-          result.message ??
-            "리뷰 분석에 실패했습니다.",
+          "원상품 번호(origin_product_no)가 없어 production 리뷰 분석을 시작할 수 없습니다. 리뷰 수집 식별자를 먼저 저장해 주세요.",
         );
       }
 
-      if (!result.analysis) {
-        throw new Error(
-          "AI 분석 결과가 없습니다.",
+      const plan =
+        await prepareProductionReviewAnalysis({
+          productName: normalizedProductName,
+          category: product?.category ?? "",
+          reviews,
+          collectionStats,
+          originProductNo,
+        });
+
+      const confirmed =
+        window.confirm(
+          `무료 사전검증이 완료되었습니다.\n\n제품: ${normalizedProductName}\n리뷰: ${reviews.length}개\n예상 OpenAI 호출 최대 ${plan.estimatedOpenAiCalls}회\n\n확인을 누르기 전까지 유료 리뷰 분석은 실행되지 않았습니다.\n실제 유료 리뷰 분석을 시작할까요?`,
         );
+
+      if (!confirmed) {
+        alert(
+          "실제 유료 리뷰 분석을 취소했습니다. 무료 사전검증만 완료했으며 유료 분석은 시작하지 않았습니다.",
+        );
+        return;
       }
 
-      setAnalysis(result.analysis);
+      const nextAnalysis =
+        await executeProductionReviewAnalysis(
+          plan,
+        );
 
-      await saveAnalysis(result.analysis);
+      setAnalysis(nextAnalysis);
+
+      await saveAnalysis(nextAnalysis);
     } catch (error) {
       console.error(
         "리뷰 분석 또는 저장 실패:",

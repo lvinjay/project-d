@@ -10,6 +10,9 @@ import {
 export const PRODUCTION_REVIEW_PIPELINE_VERSION =
   "stage0-v5-plus-c1c5-v1-4-production-v1";
 
+export const PRODUCTION_DYNAMIC_REVIEW_PIPELINE_VERSION =
+  "stage0-v5-plus-dynamic-c1c5-v1-production-v1";
+
 export const PRODUCTION_REVIEW_QUALITY_SOURCE =
   "stage0-v5-compatibility-mapping-v1";
 
@@ -2162,6 +2165,116 @@ namespace CriteriaV14Core {
       "app_experience_and_reliability",
     ] as const;
 
+  const DYNAMIC_ENGINE_VERSION =
+    "project-d-review-criteria-dynamic-v1-semantic-evidence-events";
+
+  const DYNAMIC_DECISION_POLICY_VERSION =
+    "ai-semantic-dynamic-criterion-evidence-event-polarity-server-validated-v1";
+
+  function hasFrozenCriterionKeys(
+    criteria:
+      ProductionDynamicCriterion[],
+  ) {
+    return (
+      criteria.length ===
+        REQUIRED_CRITERION_KEYS.length &&
+      criteria.every(
+        (
+          criterion,
+          index,
+        ) =>
+          criterion.key ===
+            REQUIRED_CRITERION_KEYS[
+              index
+            ],
+      )
+    );
+  }
+
+  function validateFiveCriteria(
+    criteria:
+      ProductionDynamicCriterion[],
+  ) {
+    if (
+      criteria.length !==
+        REQUIRED_CRITERION_KEYS.length
+    ) {
+      throw new Error(
+        "Exactly five production criteria are required.",
+      );
+    }
+
+    const keys =
+      criteria.map(
+        criterion =>
+          criterion.key.trim(),
+      );
+
+    if (
+      keys.some(
+        key =>
+          !key,
+      ) ||
+      new Set(
+        keys,
+      ).size !==
+        keys.length ||
+      criteria.some(
+        criterion =>
+          !criterion.label.trim(),
+      )
+    ) {
+      throw new Error(
+        "Production criteria require five unique non-empty keys and labels.",
+      );
+    }
+  }
+
+  export function isFrozenCriterionSet(
+    criteria:
+      ProductionDynamicCriterion[],
+  ) {
+    return hasFrozenCriterionKeys(
+      criteria,
+    );
+  }
+
+  export function semanticMetadataForCriteria(
+    criteria:
+      ProductionDynamicCriterion[],
+  ) {
+    const frozen =
+      hasFrozenCriterionKeys(
+        criteria,
+      );
+
+    return {
+      mode:
+        frozen
+          ? "frozen-v1-4"
+          : "dynamic-v1",
+
+      engineVersion:
+        frozen
+          ? ENGINE_VERSION
+          : DYNAMIC_ENGINE_VERSION,
+
+      decisionPolicyVersion:
+        frozen
+          ? DECISION_POLICY_VERSION
+          : DYNAMIC_DECISION_POLICY_VERSION,
+
+      evidenceEventVersion:
+        EVIDENCE_EVENT_VERSION,
+
+      segmentVersion:
+        SEGMENT_VERSION,
+
+      model:
+        REVIEW_ANALYSIS_MODEL,
+    } as const;
+  }
+
   type CriteriaDiagnosticRequest = {
     category?: string;
     originProductNo?: string | number;
@@ -2721,6 +2834,73 @@ namespace CriteriaV14Core {
       );
   }
 
+  function createDynamicFingerprint(
+    category: string,
+    productName: string,
+    dbProductId: string,
+    originProductNo: number,
+    reviewStart: number,
+    reviewEnd: number,
+    eligibleReviewNumbers: number[],
+    criteria: DynamicCriterion[],
+    evidenceReviews: ReviewEvidence[],
+  ) {
+    return createHash(
+      "sha256",
+    )
+      .update(
+        JSON.stringify(
+          {
+            engineVersion:
+              DYNAMIC_ENGINE_VERSION,
+
+            decisionPolicyVersion:
+              DYNAMIC_DECISION_POLICY_VERSION,
+
+            evidenceEventVersion:
+              EVIDENCE_EVENT_VERSION,
+
+            segmentVersion:
+              SEGMENT_VERSION,
+
+            model:
+              REVIEW_ANALYSIS_MODEL,
+
+            category,
+
+            productName,
+
+            dbProductId,
+
+            originProductNo,
+
+            reviewStart,
+
+            reviewEnd,
+
+            eligibleReviewNumbers,
+
+            criteria,
+
+            evidenceReviews,
+
+            reviewTextLimit:
+              REVIEW_TEXT_LIMIT,
+
+            maxSegmentLength:
+              MAX_SEGMENT_LENGTH,
+
+            maxSelectedSegmentsPerPolarity:
+              MAX_SELECTED_SEGMENTS_PER_POLARITY,
+          },
+        ),
+        "utf8",
+      )
+      .digest(
+        "hex",
+      );
+  }
+
   function buildPrompt(
     category: string,
     productName: string,
@@ -2810,6 +2990,92 @@ namespace CriteriaV14Core {
       "일반 만족, 추천, 삶의 질, 구매동기, 배송, 포장, 가격, 디자인, AS 기간, 사양/광고 문구, 미래 기대만으로 세부 criterion 근거를 만들지 마세요.",
       "과거 제품의 성능은 현재 대상제품의 근거가 아닙니다. 다만 과거 제품과 현재 제품을 실제로 비교하면서 현재 제품의 개선/악화를 명확히 체감한 경우 현재 제품 쪽 결과만 사용할 수 있습니다.",
       "한 segment가 서로 다른 criterion을 실제로 각각 뒷받침한다면 여러 criterion에서 같은 segment ID를 선택할 수 있습니다.",
+      "모든 REVIEW마다 c1,c2,c3,c4,c5를 정확히 한 번씩, 순서대로 반환하세요.",
+      "입력 리뷰:",
+      reviewText,
+      "JSON schema에 맞는 JSON만 반환하세요.",
+    ].join(
+      "\n\n",
+    );
+  }
+
+  function buildDynamicPrompt(
+    category: string,
+    productName: string,
+    criteria: DynamicCriterion[],
+    evidenceReviews: ReviewEvidence[],
+    reviewStart: number,
+    reviewEnd: number,
+  ) {
+    const criterionText =
+      criteria
+        .map(
+          (
+            criterion,
+            index,
+          ) => [
+            `${criterionAlias(index)} = ${criterion.key}`,
+            `label: ${criterion.label}`,
+            `shortDescription: ${criterion.shortDescription || "(없음)"}`,
+            `helpText: ${criterion.helpText || "(없음)"}`,
+          ].join(
+            "\n",
+          ),
+        )
+        .join(
+          "\n\n",
+        );
+
+    const reviewText =
+      evidenceReviews
+        .map(
+          review => [
+            `REVIEW ${review.n}`,
+            ...review.segments.map(
+              segment =>
+                `${segment.id}: ${segment.text}`,
+            ),
+          ].join(
+            "\n",
+          ),
+        )
+        .join(
+          "\n\n",
+        );
+
+    return [
+      "당신은 Project D의 범용 dynamic c1-c5 리뷰 의미 판정 엔진입니다.",
+      "중요: 아래 리뷰는 Stage 0에서 이미 direct로 통과된 리뷰만 전달됩니다. eligibility/direct/indirect/spec_only/product_mismatch를 다시 판단하지 마세요. 오직 제공된 5개 구매기준의 직접근거와 polarity만 판정하세요.",
+      "각 구매기준의 의미 경계는 서버가 제공한 key, label, shortDescription, helpText입니다. 특정 제품군이나 로봇청소기용 규칙을 임의로 가져오지 마세요.",
+      "리뷰 원문은 서버가 sentence/segment ID로 분리했습니다. 문장을 다시 쓰거나 quote를 생성하지 말고, 실제로 근거가 되는 segment ID만 선택하세요.",
+      "서버는 의미를 추측하거나 regex로 polarity를 고치지 않습니다. 당신이 의미를 읽고 criterion과 polarity를 결정하고, 서버는 ID 유효성/중복/집계를 검증합니다.",
+      `카테고리: ${category}`,
+      `대상 상품: ${productName}`,
+      `리뷰 범위: R${reviewStart}-R${reviewEnd}`,
+      "구매기준:",
+      criterionText,
+      "EVENT GATES:",
+      "각 REVIEW의 모든 segment를 처음부터 끝까지 읽고, 각 criterion마다 실제 사건/결과 후보를 찾으세요.",
+      "각 후보는 순서대로 3개 gate를 모두 통과해야 합니다: (1) current-target actual-use gate: 현재 대상제품의 first-hand 실제 사용/관찰 결과인가, (2) criterion-fit gate: 그 결과가 해당 criterion의 label/description/helpText 의미에 직접 속하는가, (3) result gate: 단순 기능 존재·실행·사양·일반 만족이 아니라 성능·편의·신뢰성·제약의 실제 결과인가.",
+      "세 gate 중 하나라도 통과하지 못하면 해당 criterion 근거로 선택하지 마세요. 애매하면 none을 우선하세요.",
+      "POLARITY POLICY:",
+      "+ = 세 gate를 통과한 현재 대상제품의 실제 결과가 해당 criterion을 긍정적으로 확인함.",
+      "- = 세 gate를 통과한 현재 대상제품의 실제 결과가 해당 criterion의 실패·오류·제약·불편·부담을 부정적으로 확인함.",
+      "neutral = criterion과 직접 관련된 실제 관찰이지만 제품 자체의 성공/실패로 귀속하면 안 되는 외부 조건 또는 비방향성 맥락.",
+      "각 criterion은 {c,e}로 반환하고 e에는 {s: 실제 segment ID, v: + 또는 - 또는 neutral} event를 넣으세요. 직접근거가 없으면 e를 빈 배열로 두세요.",
+      "MIXED / TEMPORAL POLICY:",
+      "한 criterion에 실제 긍정 사건과 실제 부정 사건이 모두 있으면 각각 \"+\"와 \"-\" event로 유지하세요. 서버가 mixed를 계산합니다.",
+      "초기 실패 뒤 정상작동, 정상작동 뒤 나중 오류처럼 시간/phase가 달라도 실제 사건이면 모두 유지하세요. 나중 사건이 앞선 실제 사건을 삭제하지 않습니다.",
+      "같은 segment가 같은 criterion의 실제 긍정과 부정을 동시에 담는다면 같은 ID를 양쪽 event에 넣을 수 있습니다. neutral과 directional(+/-) event를 같은 segment에 동시에 넣지는 마세요.",
+      "CROSS-CRITERION BOUNDARY CHECK:",
+      "비슷한 구매기준끼리 의미를 섞지 마세요. 하나의 사건은 각 criterion 설명에 실제로 직접 해당할 때만 그 criterion에 넣으세요.",
+      "한 segment가 서로 다른 criterion의 서로 다른 실제 결과를 명확히 동시에 담는 경우에만 여러 criterion에서 같은 segment ID를 사용할 수 있습니다.",
+      "기능 이름, 스펙 수치, 구성품, 광고문구, 구매동기, 배송/포장, 가격, 디자인, 추천, 일반 만족만으로 criterion evidence를 만들지 마세요.",
+      "과거 제품의 성능은 현재 대상제품의 근거가 아닙니다. 다만 과거 제품과 현재 제품을 실제로 비교하면서 현재 제품의 개선/악화를 명확히 체감한 경우 현재 제품 쪽 결과만 사용할 수 있습니다.",
+      "FINAL RECALL SWEEP:",
+      "각 criterion 후보를 정한 뒤 리뷰를 다시 확인해 반대 polarity 사건이나 놓친 실제 결과가 없는지 검토하세요. 이미 근거가 있다는 이유로 다른 실제 실패/성공을 지우지 마세요.",
+      "각 polarity에는 가장 직접적인 근거 1개를 우선 선택하고, 서로 다른 핵심근거가 꼭 필요할 때만 최대 2개까지 선택하세요.",
+      "segment ID는 반드시 해당 REVIEW 아래 실제로 제공된 ID만 사용하세요. 존재하지 않는 ID를 생성하지 마세요.",
       "모든 REVIEW마다 c1,c2,c3,c4,c5를 정확히 한 번씩, 순서대로 반환하세요.",
       "입력 리뷰:",
       reviewText,
@@ -3602,24 +3868,14 @@ namespace CriteriaV14Core {
         criteria,
       } = input;
 
-      if (
-        criteria.length !==
-          REQUIRED_CRITERION_KEYS.length ||
-        criteria.some(
-          (
-            criterion,
-            index,
-          ) =>
-            criterion.key !==
-              REQUIRED_CRITERION_KEYS[
-                index
-              ],
-        )
-      ) {
-        throw new Error(
-          "Production c1-c5 criteria must match frozen V1.4 key order.",
+      validateFiveCriteria(
+        criteria,
+      );
+
+      const frozenCriteria =
+        hasFrozenCriterionKeys(
+          criteria,
         );
-      }
 
       const eligibleSet =
         new Set(
@@ -3741,17 +3997,29 @@ namespace CriteriaV14Core {
       };
 
       const inputFingerprint =
-        createFingerprint(
-          category,
-          productName,
-          dbProductId,
-          originProductNo,
-          reviewStart,
-          reviewEnd,
-          normalizedEligible,
-          criteria,
-          evidenceReviews,
-        );
+        frozenCriteria
+          ? createFingerprint(
+              category,
+              productName,
+              dbProductId,
+              originProductNo,
+              reviewStart,
+              reviewEnd,
+              normalizedEligible,
+              criteria,
+              evidenceReviews,
+            )
+          : createDynamicFingerprint(
+              category,
+              productName,
+              dbProductId,
+              originProductNo,
+              reviewStart,
+              reviewEnd,
+              normalizedEligible,
+              criteria,
+              evidenceReviews,
+            );
 
       const client =
         new OpenAI({
@@ -3761,14 +4029,23 @@ namespace CriteriaV14Core {
         });
 
       const prompt =
-        buildPrompt(
-          category,
-          productName,
-          criteria,
-          evidenceReviews,
-          reviewStart,
-          reviewEnd,
-        );
+        frozenCriteria
+          ? buildPrompt(
+              category,
+              productName,
+              criteria,
+              evidenceReviews,
+              reviewStart,
+              reviewEnd,
+            )
+          : buildDynamicPrompt(
+              category,
+              productName,
+              criteria,
+              evidenceReviews,
+              reviewStart,
+              reviewEnd,
+            );
 
       const schema =
         buildSchema(
@@ -3800,7 +4077,9 @@ namespace CriteriaV14Core {
                     "json_schema",
 
                   name:
-                    "project_d_review_criteria_isolated_v1_4",
+                    frozenCriteria
+                      ? "project_d_review_criteria_isolated_v1_4"
+                      : "project_d_review_criteria_dynamic_v1",
 
                   strict:
                     true,
@@ -3814,7 +4093,9 @@ namespace CriteriaV14Core {
         error
       ) {
         throw new ProductionPipelineError(
-          "Frozen V1.4 c1-c5 OpenAI request failed.",
+          frozenCriteria
+            ? "Frozen V1.4 c1-c5 OpenAI request failed."
+            : "Dynamic c1-c5 OpenAI request failed.",
           {
             stage:
               "criteria_openai",
@@ -3872,7 +4153,9 @@ namespace CriteriaV14Core {
 
       if (!outputText) {
         throw new ProductionPipelineError(
-          "Frozen V1.4 c1-c5 AI response body is empty.",
+          frozenCriteria
+            ? "Frozen V1.4 c1-c5 AI response body is empty."
+            : "Dynamic c1-c5 AI response body is empty.",
           {
             stage:
               "criteria_output",
@@ -3910,7 +4193,9 @@ namespace CriteriaV14Core {
         error
       ) {
         throw new ProductionPipelineError(
-          "Frozen V1.4 c1-c5 Structured Output JSON parse failed.",
+          frozenCriteria
+            ? "Frozen V1.4 c1-c5 Structured Output JSON parse failed."
+            : "Dynamic c1-c5 Structured Output JSON parse failed.",
           {
             stage:
               "criteria_parse",
@@ -3957,7 +4242,9 @@ namespace CriteriaV14Core {
         error
       ) {
         throw new ProductionPipelineError(
-          "Frozen V1.4 c1-c5 server validation failed.",
+          frozenCriteria
+            ? "Frozen V1.4 c1-c5 server validation failed."
+            : "Dynamic c1-c5 server validation failed.",
           {
             stage:
               "criteria_validation",
@@ -3990,10 +4277,14 @@ namespace CriteriaV14Core {
 
       return {
         engineVersion:
-          ENGINE_VERSION,
+          frozenCriteria
+            ? ENGINE_VERSION
+            : DYNAMIC_ENGINE_VERSION,
 
         decisionPolicyVersion:
-          DECISION_POLICY_VERSION,
+          frozenCriteria
+            ? DECISION_POLICY_VERSION
+            : DYNAMIC_DECISION_POLICY_VERSION,
 
         evidenceEventVersion:
           EVIDENCE_EVENT_VERSION,
@@ -4065,24 +4356,14 @@ namespace CriteriaV14Core {
         criteria,
       } = input;
 
-      if (
-        criteria.length !==
-          REQUIRED_CRITERION_KEYS.length ||
-        criteria.some(
-          (
-            criterion,
-            index,
-          ) =>
-            criterion.key !==
-              REQUIRED_CRITERION_KEYS[
-                index
-              ],
-        )
-      ) {
-        throw new Error(
-          "Production c1-c5 criteria must match frozen V1.4 key order.",
+      validateFiveCriteria(
+        criteria,
+      );
+
+      const frozenCriteria =
+        hasFrozenCriterionKeys(
+          criteria,
         );
-      }
 
       const eligibleSet =
         new Set(
@@ -4204,17 +4485,29 @@ namespace CriteriaV14Core {
       };
 
       const inputFingerprint =
-        createFingerprint(
-          category,
-          productName,
-          dbProductId,
-          originProductNo,
-          reviewStart,
-          reviewEnd,
-          normalizedEligible,
-          criteria,
-          evidenceReviews,
-        );
+        frozenCriteria
+          ? createFingerprint(
+              category,
+              productName,
+              dbProductId,
+              originProductNo,
+              reviewStart,
+              reviewEnd,
+              normalizedEligible,
+              criteria,
+              evidenceReviews,
+            )
+          : createDynamicFingerprint(
+              category,
+              productName,
+              dbProductId,
+              originProductNo,
+              reviewStart,
+              reviewEnd,
+              normalizedEligible,
+              criteria,
+              evidenceReviews,
+            );
 
       // No client, prompt construction or network invocation on this pure replay path.
       if (saved.inputFingerprint !== inputFingerprint) throw new Error("Saved stage fingerprint mismatch.");
@@ -4225,7 +4518,9 @@ namespace CriteriaV14Core {
 
       if (!outputText) {
         throw new ProductionPipelineError(
-          "Frozen V1.4 c1-c5 AI response body is empty.",
+          frozenCriteria
+            ? "Frozen V1.4 c1-c5 AI response body is empty."
+            : "Dynamic c1-c5 AI response body is empty.",
           {
             stage:
               "criteria_output",
@@ -4263,7 +4558,9 @@ namespace CriteriaV14Core {
         error
       ) {
         throw new ProductionPipelineError(
-          "Frozen V1.4 c1-c5 Structured Output JSON parse failed.",
+          frozenCriteria
+            ? "Frozen V1.4 c1-c5 Structured Output JSON parse failed."
+            : "Dynamic c1-c5 Structured Output JSON parse failed.",
           {
             stage:
               "criteria_parse",
@@ -4310,7 +4607,9 @@ namespace CriteriaV14Core {
         error
       ) {
         throw new ProductionPipelineError(
-          "Frozen V1.4 c1-c5 server validation failed.",
+          frozenCriteria
+            ? "Frozen V1.4 c1-c5 server validation failed."
+            : "Dynamic c1-c5 server validation failed.",
           {
             stage:
               "criteria_validation",
@@ -4343,10 +4642,14 @@ namespace CriteriaV14Core {
 
       return {
         engineVersion:
-          ENGINE_VERSION,
+          frozenCriteria
+            ? ENGINE_VERSION
+            : DYNAMIC_ENGINE_VERSION,
 
         decisionPolicyVersion:
-          DECISION_POLICY_VERSION,
+          frozenCriteria
+            ? DECISION_POLICY_VERSION
+            : DYNAMIC_DECISION_POLICY_VERSION,
 
         evidenceEventVersion:
           EVIDENCE_EVENT_VERSION,
@@ -4756,27 +5059,37 @@ function buildCriterionEvidenceAdapter(
 function validateProductionCriteria(
   criteria:
     ProductionDynamicCriterion[],
+  category?: string,
 ) {
-  const required =
+  const requiredCount =
     CriteriaV14Core
-      .requiredCriterionKeys();
+      .requiredCriterionKeys()
+      .length;
 
-  if (
-    criteria.length !==
-      required.length ||
-    criteria.some(
-      (
-        criterion,
-        index,
-      ) =>
-        criterion.key !==
-          required[
-            index
-          ],
-    )
-  ) {
+  const keys =
+    criteria.map(
+      criterion =>
+        criterion.key.trim(),
+    );
+
+  const validShape =
+    criteria.length ===
+      requiredCount &&
+    keys.every(
+      Boolean,
+    ) &&
+    new Set(
+      keys,
+    ).size ===
+      requiredCount &&
+    criteria.every(
+      criterion =>
+        criterion.label.trim(),
+    );
+
+  if (!validShape) {
     throw new ProductionPipelineError(
-      "Production category profile does not contain frozen c1-c5 in the required order.",
+      "Production category profile must contain exactly five unique valid criteria.",
       {
         stage:
           "precheck",
@@ -4785,10 +5098,45 @@ function validateProductionCriteria(
           0,
 
         message:
-          "Required c1-c5 criterion keys/order mismatch.",
+          "Exactly five unique non-empty criterion keys and labels are required.",
       },
     );
   }
+
+  if (
+    category?.trim() ===
+      "로봇청소기" &&
+    !CriteriaV14Core
+      .isFrozenCriterionSet(
+        criteria,
+      )
+  ) {
+    throw new ProductionPipelineError(
+      "Robot-vacuum production analysis requires the frozen V1.4 c1-c5 criterion set.",
+      {
+        stage:
+          "precheck",
+
+        paidApiCalls:
+          0,
+
+        message:
+          "The 로봇청소기 category profile must preserve the frozen V1.4 criterion keys and order.",
+      },
+    );
+  }
+}
+
+export function productionReviewPipelineVersionForCriteria(
+  criteria:
+    ProductionDynamicCriterion[],
+) {
+  return CriteriaV14Core
+    .isFrozenCriterionSet(
+      criteria,
+    )
+    ? PRODUCTION_REVIEW_PIPELINE_VERSION
+    : PRODUCTION_DYNAMIC_REVIEW_PIPELINE_VERSION;
 }
 
 export function auditProductionReviewNumbering(
@@ -4810,7 +5158,20 @@ export function createProductionBatchDryRun(
 ) {
   validateProductionCriteria(
     input.criteria,
+    input.category,
   );
+
+
+  const pipelineVersion =
+    productionReviewPipelineVersionForCriteria(
+      input.criteria,
+    );
+
+  const criteriaSemanticMetadata =
+    CriteriaV14Core
+      .semanticMetadataForCriteria(
+        input.criteria,
+      );
 
   const numberingAudit =
     auditProductionReviewNumbering(
@@ -4880,8 +5241,7 @@ export function createProductionBatchDryRun(
     dryRun:
       true,
 
-    pipelineVersion:
-      PRODUCTION_REVIEW_PIPELINE_VERSION,
+    pipelineVersion,
 
     reviewQualitySource:
       PRODUCTION_REVIEW_QUALITY_SOURCE,
@@ -4905,22 +5265,24 @@ export function createProductionBatchDryRun(
 
     criteria: {
       engineVersion:
-        "project-d-review-criteria-isolated-v1-4-semantic-evidence-events",
+        criteriaSemanticMetadata
+          .engineVersion,
 
       decisionPolicyVersion:
-        "ai-semantic-evidence-event-polarity-server-validated-v1-4",
+        criteriaSemanticMetadata
+          .decisionPolicyVersion,
 
       evidenceEventVersion:
-        "ai-segment-evidence-event-v1",
+        criteriaSemanticMetadata
+          .evidenceEventVersion,
 
       segmentVersion:
-        "server-sentence-segment-anchor-v1",
+        criteriaSemanticMetadata
+          .segmentVersion,
 
       model:
-        process.env
-          .REVIEW_ANALYSIS_BATCH_MODEL
-          ?.trim() ||
-        "gpt-5-mini",
+        criteriaSemanticMetadata
+          .model,
     },
 
     numberingAudit,
@@ -4956,7 +5318,20 @@ export async function runProductionReviewBatch(
 ) {
   validateProductionCriteria(
     input.criteria,
+    input.category,
   );
+
+
+  const pipelineVersion =
+    productionReviewPipelineVersionForCriteria(
+      input.criteria,
+    );
+
+  const criteriaSemanticMetadata =
+    CriteriaV14Core
+      .semanticMetadataForCriteria(
+        input.criteria,
+      );
 
   if (
     !input.apiKey
@@ -5179,7 +5554,10 @@ export async function runProductionReviewBatch(
       }
 
       throw new ProductionPipelineError(
-        "Frozen V1.4 production pass failed.",
+        criteriaSemanticMetadata.mode ===
+          "frozen-v1-4"
+          ? "Frozen V1.4 production pass failed."
+          : "Dynamic criteria production pass failed.",
         {
           stage:
             "criteria_validation",
@@ -5326,8 +5704,7 @@ export async function runProductionReviewBatch(
     success:
       true,
 
-    pipelineVersion:
-      PRODUCTION_REVIEW_PIPELINE_VERSION,
+    pipelineVersion,
 
     reviewQualitySource:
       PRODUCTION_REVIEW_QUALITY_SOURCE,
@@ -5396,7 +5773,7 @@ export async function runProductionReviewBatch(
         0,
 
       source:
-        PRODUCTION_REVIEW_PIPELINE_VERSION,
+        pipelineVersion,
     },
 
     semanticVersions: {
@@ -5440,22 +5817,24 @@ export async function runProductionReviewBatch(
             }
           : {
               engineVersion:
-                "project-d-review-criteria-isolated-v1-4-semantic-evidence-events",
+                criteriaSemanticMetadata
+                  .engineVersion,
 
               decisionPolicyVersion:
-                "ai-semantic-evidence-event-polarity-server-validated-v1-4",
+                criteriaSemanticMetadata
+                  .decisionPolicyVersion,
 
               evidenceEventVersion:
-                "ai-segment-evidence-event-v1",
+                criteriaSemanticMetadata
+                  .evidenceEventVersion,
 
               segmentVersion:
-                "server-sentence-segment-anchor-v1",
+                criteriaSemanticMetadata
+                  .segmentVersion,
 
               model:
-                process.env
-                  .REVIEW_ANALYSIS_BATCH_MODEL
-                  ?.trim() ||
-                "gpt-5-mini",
+                criteriaSemanticMetadata
+                  .model,
             },
     },
 
@@ -5490,6 +5869,17 @@ export function createProductionPipelineFingerprint(
     reviewBatchSize: number;
   },
 ) {
+  const pipelineVersion =
+    productionReviewPipelineVersionForCriteria(
+      input.criteria,
+    );
+
+  const criteriaSemanticMetadata =
+    CriteriaV14Core
+      .semanticMetadataForCriteria(
+        input.criteria,
+      );
+
   return createHash(
     "sha256",
   )
@@ -5497,7 +5887,7 @@ export function createProductionPipelineFingerprint(
       JSON.stringify(
         {
           version:
-            PRODUCTION_REVIEW_PIPELINE_VERSION,
+            pipelineVersion,
 
           category:
             input.category,
@@ -5533,16 +5923,20 @@ export function createProductionPipelineFingerprint(
             "server-normalized-nonoverlap-span-v1",
 
           criteriaEngineVersion:
-            "project-d-review-criteria-isolated-v1-4-semantic-evidence-events",
+            criteriaSemanticMetadata
+              .engineVersion,
 
           criteriaDecisionPolicyVersion:
-            "ai-semantic-evidence-event-polarity-server-validated-v1-4",
+            criteriaSemanticMetadata
+              .decisionPolicyVersion,
 
           criteriaEvidenceEventVersion:
-            "ai-segment-evidence-event-v1",
+            criteriaSemanticMetadata
+              .evidenceEventVersion,
 
           criteriaSegmentVersion:
-            "server-sentence-segment-anchor-v1",
+            criteriaSemanticMetadata
+              .segmentVersion,
         },
       ),
       "utf8",
@@ -5584,7 +5978,20 @@ async function reconstructProductionReviewBatch(
 ) {
   validateProductionCriteria(
     input.criteria,
+    input.category,
   );
+
+
+  const pipelineVersion =
+    productionReviewPipelineVersionForCriteria(
+      input.criteria,
+    );
+
+  const criteriaSemanticMetadata =
+    CriteriaV14Core
+      .semanticMetadataForCriteria(
+        input.criteria,
+      );
 
   const numberingAudit =
     auditProductionReviewNumbering(
@@ -5787,7 +6194,10 @@ async function reconstructProductionReviewBatch(
       }
 
       throw new ProductionPipelineError(
-        "Frozen V1.4 production pass failed.",
+        criteriaSemanticMetadata.mode ===
+          "frozen-v1-4"
+          ? "Frozen V1.4 production pass failed."
+          : "Dynamic criteria production replay failed.",
         {
           stage:
             "criteria_validation",
@@ -5934,8 +6344,7 @@ async function reconstructProductionReviewBatch(
     success:
       true,
 
-    pipelineVersion:
-      PRODUCTION_REVIEW_PIPELINE_VERSION,
+    pipelineVersion,
 
     reviewQualitySource:
       PRODUCTION_REVIEW_QUALITY_SOURCE,
@@ -6004,7 +6413,7 @@ async function reconstructProductionReviewBatch(
         0,
 
       source:
-        PRODUCTION_REVIEW_PIPELINE_VERSION,
+        pipelineVersion,
     },
 
     semanticVersions: {
@@ -6048,22 +6457,24 @@ async function reconstructProductionReviewBatch(
             }
           : {
               engineVersion:
-                "project-d-review-criteria-isolated-v1-4-semantic-evidence-events",
+                criteriaSemanticMetadata
+                  .engineVersion,
 
               decisionPolicyVersion:
-                "ai-semantic-evidence-event-polarity-server-validated-v1-4",
+                criteriaSemanticMetadata
+                  .decisionPolicyVersion,
 
               evidenceEventVersion:
-                "ai-segment-evidence-event-v1",
+                criteriaSemanticMetadata
+                  .evidenceEventVersion,
 
               segmentVersion:
-                "server-sentence-segment-anchor-v1",
+                criteriaSemanticMetadata
+                  .segmentVersion,
 
               model:
-                process.env
-                  .REVIEW_ANALYSIS_BATCH_MODEL
-                  ?.trim() ||
-                "gpt-5-mini",
+                criteriaSemanticMetadata
+                  .model,
             },
     },
 
