@@ -1,4 +1,5 @@
-﻿import OpenAI from "openai";
+import OpenAI from "openai";
+import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
@@ -8,7 +9,14 @@ export const dynamic = "force-dynamic";
 type RequestBody = {
   productId?: string;
   browserSnapshot?: unknown;
+  dryRun?: unknown;
+  inputFingerprint?: unknown;
 };
+
+const PRODUCT_DETAIL_PIPELINE_VERSION =
+  "project-d-product-detail-v2-cost-guard";
+
+const PRODUCT_DETAIL_MAX_OPENAI_CALLS = 3;
 
 type ImageCandidate = {
   index: number;
@@ -637,6 +645,16 @@ function normalizeAnalysis(
 export async function POST(
   request: Request,
 ) {
+  let paidApiCalls = 0;
+
+  const paidResponseAudit:
+    Array<{
+      stage: string;
+      responseId: string;
+      responseStatus: string;
+      rawModelOutputText: string;
+    }> = [];
+
   try {
     const body =
       (await request.json()) as RequestBody;
@@ -682,16 +700,12 @@ export async function POST(
       process.env
         .NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-    const apiKey =
-      process.env.OPENAI_API_KEY;
-
     if (
       !supabaseUrl ||
-      !supabaseKey ||
-      !apiKey
+      !supabaseKey
     ) {
       throw new Error(
-        "필수 환경변수가 설정되지 않았습니다.",
+        "Supabase 환경변수가 설정되지 않았습니다.",
       );
     }
 
@@ -722,9 +736,136 @@ export async function POST(
       );
     }
 
+    const inputFingerprint =
+      createHash("sha256")
+        .update(
+          JSON.stringify({
+            pipelineVersion:
+              PRODUCT_DETAIL_PIPELINE_VERSION,
+            product: {
+              id:
+                String(product.id),
+              category:
+                safeString(
+                  product.category,
+                  300,
+                ),
+              productName:
+                safeString(
+                  product.product_name,
+                  500,
+                ),
+              sourceUrl:
+                safeString(
+                  product.source_url,
+                  3000,
+                ),
+              reviewAnalysis:
+                product.review_analysis ??
+                null,
+            },
+            snapshot,
+          }),
+          "utf8",
+        )
+        .digest("hex");
+
+    if (body.dryRun === true) {
+      return NextResponse.json({
+        success: true,
+        dryRun: true,
+        pipelineVersion:
+          PRODUCT_DETAIL_PIPELINE_VERSION,
+        inputFingerprint,
+        estimatedOpenAiCalls:
+          PRODUCT_DETAIL_MAX_OPENAI_CALLS,
+        paidApiCalls: 0,
+        dbWrites: 0,
+        productId:
+          String(product.id),
+        category:
+          safeString(
+            product.category,
+            300,
+          ),
+        productName:
+          safeString(
+            product.product_name,
+            500,
+          ),
+      });
+    }
+
+    const requestedFingerprint =
+      safeString(
+        body.inputFingerprint,
+        200,
+      );
+
+    if (!requestedFingerprint) {
+      return NextResponse.json(
+        {
+          success: false,
+          stage: "precheck",
+          pipelineVersion:
+            PRODUCT_DETAIL_PIPELINE_VERSION,
+          inputFingerprint,
+          estimatedOpenAiCalls:
+            PRODUCT_DETAIL_MAX_OPENAI_CALLS,
+          paidApiCalls: 0,
+          dbWrites: 0,
+          message:
+            "유료 상세정보 AI 분석에는 dryRun에서 받은 inputFingerprint가 필요합니다.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (
+      requestedFingerprint !==
+      inputFingerprint
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          stage: "precheck",
+          pipelineVersion:
+            PRODUCT_DETAIL_PIPELINE_VERSION,
+          inputFingerprint,
+          estimatedOpenAiCalls:
+            PRODUCT_DETAIL_MAX_OPENAI_CALLS,
+          paidApiCalls: 0,
+          dbWrites: 0,
+          message:
+            "상세정보 분석 입력이 무료 사전검증 이후 변경되었습니다. 다시 사전검증해 주세요.",
+        },
+        { status: 409 },
+      );
+    }
+
+    const apiKey =
+      process.env.OPENAI_API_KEY;
+
+    if (!apiKey) {
+      return NextResponse.json(
+        {
+          success: false,
+          pipelineVersion:
+            PRODUCT_DETAIL_PIPELINE_VERSION,
+          inputFingerprint,
+          paidApiCalls: 0,
+          dbWrites: 0,
+          message:
+            "OPENAI_API_KEY가 설정되지 않았습니다.",
+        },
+        { status: 500 },
+      );
+    }
+
     const openai =
       new OpenAI({
         apiKey,
+        maxRetries: 0,
       });
 
     /*
@@ -802,6 +943,8 @@ JSON만 출력:
         });
       }
 
+      paidApiCalls += 1;
+
       const scoutResponse =
         await openai.responses.create({
           model:
@@ -824,6 +967,28 @@ JSON만 출력:
       const scoutOutput =
         scoutResponse.output_text?.trim();
 
+      paidResponseAudit.push({
+        stage: "image_scout",
+        responseId:
+          safeString(
+            (scoutResponse as unknown as Record<string, unknown>).id,
+            300,
+          ),
+        responseStatus:
+          safeString(
+            (scoutResponse as unknown as Record<string, unknown>).status,
+            100,
+          ),
+        rawModelOutputText:
+          scoutResponse.output_text ?? "",
+      });
+
+      if (!scoutOutput) {
+        throw new Error(
+          "AI 사양 이미지 후보 탐색 결과가 없습니다. 유료 응답을 확인한 뒤 다시 판단해야 합니다.",
+        );
+      }
+
       if (scoutOutput) {
         try {
           const parsed =
@@ -843,6 +1008,10 @@ JSON만 출력:
             "사양 이미지 후보 JSON 파싱 실패:",
             parseError,
             scoutOutput,
+          );
+
+          throw new Error(
+            "AI 사양 이미지 후보 응답 형식이 올바르지 않습니다. 유료 응답을 확인한 뒤 다시 판단해야 합니다.",
           );
         }
       }
@@ -1016,6 +1185,8 @@ ${JSON.stringify(
         detail: "high",
       });
     }
+
+    paidApiCalls += 1;
 
     const detailResponse =
       await openai.responses.create({
@@ -1290,6 +1461,22 @@ ${JSON.stringify(
     const output =
       detailResponse.output_text?.trim();
 
+    paidResponseAudit.push({
+      stage: "detail_analysis",
+      responseId:
+        safeString(
+          (detailResponse as unknown as Record<string, unknown>).id,
+          300,
+        ),
+      responseStatus:
+        safeString(
+          (detailResponse as unknown as Record<string, unknown>).status,
+          100,
+        ),
+      rawModelOutputText:
+        detailResponse.output_text ?? "",
+    });
+
     if (!output) {
       throw new Error(
         "AI 상세정보 분석 결과가 없습니다.",
@@ -1410,6 +1597,8 @@ JSON 스키마에 맞춰 결과만 반환하세요.
         });
       }
 
+      paidApiCalls += 1;
+
       const recoveryResponse =
         await openai.responses.create({
           model: "gpt-5-mini",
@@ -1488,6 +1677,28 @@ JSON 스키마에 맞춰 결과만 반환하세요.
 
       const recoveryOutput =
         recoveryResponse.output_text?.trim();
+
+      paidResponseAudit.push({
+        stage: "core_spec_recovery",
+        responseId:
+          safeString(
+            (recoveryResponse as unknown as Record<string, unknown>).id,
+            300,
+          ),
+        responseStatus:
+          safeString(
+            (recoveryResponse as unknown as Record<string, unknown>).status,
+            100,
+          ),
+        rawModelOutputText:
+          recoveryResponse.output_text ?? "",
+      });
+
+      if (!recoveryOutput) {
+        throw new Error(
+          "AI 핵심 스펙 보충 결과가 없습니다. 유료 응답을 확인한 뒤 다시 판단해야 합니다.",
+        );
+      }
 
       if (recoveryOutput) {
         try {
@@ -1598,6 +1809,10 @@ JSON 스키마에 맞춰 결과만 반환하세요.
             recoveryError,
             recoveryOutput,
           );
+
+          throw new Error(
+            "AI 핵심 스펙 보충 응답 형식이 올바르지 않습니다. 유료 응답을 확인한 뒤 다시 판단해야 합니다.",
+          );
         }
       }
     }
@@ -1640,6 +1855,13 @@ JSON 스키마에 맞춰 결과만 반환하세요.
 
     return NextResponse.json({
       success: true,
+      pipelineVersion:
+        PRODUCT_DETAIL_PIPELINE_VERSION,
+      inputFingerprint,
+      estimatedOpenAiCalls:
+        PRODUCT_DETAIL_MAX_OPENAI_CALLS,
+      paidApiCalls,
+      dbWrites: 1,
       analysis:
         storedAnalysis,
       scoutImageCount:
@@ -1658,6 +1880,12 @@ JSON 스키마에 맞춰 결과만 반환하세요.
     return NextResponse.json(
       {
         success: false,
+        paidApiCalls,
+        dbWrites: 0,
+        paidResponseAudit:
+          paidApiCalls > 0
+            ? paidResponseAudit
+            : undefined,
         message:
           error instanceof Error
             ? error.message

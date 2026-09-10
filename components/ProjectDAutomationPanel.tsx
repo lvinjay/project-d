@@ -183,6 +183,119 @@ async function readJson(
   }
 }
 
+type CategoryCriteriaPlan = {
+  category: string;
+  inputFingerprint: string;
+  estimatedOpenAiCalls: number;
+};
+
+async function prepareCategoryCriteria(
+  category: string,
+): Promise<CategoryCriteriaPlan> {
+  const response =
+    await fetch(
+      "/api/generate-category-criteria",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+        body:
+          JSON.stringify({
+            category,
+            dryRun: true,
+          }),
+      },
+    );
+
+  const result =
+    await readJson(
+      response,
+    );
+
+  const estimatedOpenAiCalls =
+    Number(
+      result.estimatedOpenAiCalls,
+    );
+
+  if (
+    !response.ok ||
+    result.success !== true ||
+    result.dryRun !== true ||
+    Number(
+      result.paidApiCalls ??
+      0,
+    ) !== 0 ||
+    !cleanText(
+      result.inputFingerprint,
+    ) ||
+    !Number.isSafeInteger(
+      estimatedOpenAiCalls,
+    ) ||
+    estimatedOpenAiCalls < 1 ||
+    estimatedOpenAiCalls > 1
+  ) {
+    throw new Error(
+      cleanText(
+        result.message,
+      ) ||
+        "구매기준 AI 생성 무료 사전검증에 실패했습니다.",
+    );
+  }
+
+  return {
+    category,
+    inputFingerprint:
+      cleanText(
+        result.inputFingerprint,
+      ),
+    estimatedOpenAiCalls,
+  };
+}
+
+async function executeCategoryCriteria(
+  plan: CategoryCriteriaPlan,
+) {
+  const response =
+    await fetch(
+      "/api/generate-category-criteria",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+        body:
+          JSON.stringify({
+            category:
+              plan.category,
+            inputFingerprint:
+              plan.inputFingerprint,
+          }),
+      },
+    );
+
+  const result =
+    await readJson(
+      response,
+    );
+
+  if (
+    !response.ok ||
+    result.success !== true
+  ) {
+    throw new Error(
+      cleanText(
+        result.message,
+      ) ||
+        "구매기준 AI 생성에 실패했습니다. 자동 재시도하지 않습니다.",
+    );
+  }
+
+  return result;
+}
+
 export default function ProjectDAutomationPanel() {
   const [
     category,
@@ -1009,41 +1122,33 @@ export default function ProjectDAutomationPanel() {
         "리뷰 분석용 1차 구매기준을 생성하는 중...",
       );
 
-      const firstCriteriaResponse =
-        await fetch(
-          "/api/generate-category-criteria",
-          {
-            method: "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body: JSON.stringify({
-              category:
-                normalizedCategory,
-            }),
-          },
+      const firstCriteriaPlan =
+        await prepareCategoryCriteria(
+          normalizedCategory,
         );
 
-      const firstCriteriaResult =
-        await readJson(
-          firstCriteriaResponse,
+      const firstCriteriaApproved =
+        window.confirm(
+          `${normalizedCategory} 1차 구매기준 AI 생성을 시작할까요?\n\n무료 사전검증 완료 · 예상 OpenAI 호출 최대 ${firstCriteriaPlan.estimatedOpenAiCalls}회\n\n취소하면 유료 호출은 시작되지 않습니다.`,
         );
 
-      if (
-        !firstCriteriaResponse.ok ||
-        firstCriteriaResult.success !==
-          true
-      ) {
-        throw new Error(
-          cleanText(
-            firstCriteriaResult.message,
-          ) ||
-            "1차 구매기준 생성에 실패했습니다.",
+      if (!firstCriteriaApproved) {
+        updateStep(
+          "criteria-first",
+          "error",
+          "무료 사전검증 후 사용자가 유료 구매기준 생성을 취소했습니다.",
         );
+
+        setFinalMessage(
+          "중단됨 · 1차 구매기준 유료 AI 생성을 승인하지 않았습니다.",
+        );
+
+        return;
       }
+
+      await executeCategoryCriteria(
+        firstCriteriaPlan,
+      );
 
       updateStep(
         "criteria-first",
@@ -1525,41 +1630,33 @@ export default function ProjectDAutomationPanel() {
         "상세정보와 리뷰 근거를 함께 사용해 구매기준을 최종 보정하는 중...",
       );
 
-      const finalCriteriaResponse =
-        await fetch(
-          "/api/generate-category-criteria",
-          {
-            method: "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body: JSON.stringify({
-              category:
-                normalizedCategory,
-            }),
-          },
+      const finalCriteriaPlan =
+        await prepareCategoryCriteria(
+          normalizedCategory,
         );
 
-      const finalCriteriaResult =
-        await readJson(
-          finalCriteriaResponse,
+      const finalCriteriaApproved =
+        window.confirm(
+          `${normalizedCategory} 최종 구매기준 AI 보정을 시작할까요?\n\n무료 사전검증 완료 · 예상 OpenAI 호출 최대 ${finalCriteriaPlan.estimatedOpenAiCalls}회\n\n취소하면 유료 호출은 시작되지 않습니다.`,
         );
 
-      if (
-        !finalCriteriaResponse.ok ||
-        finalCriteriaResult.success !==
-          true
-      ) {
-        throw new Error(
-          cleanText(
-            finalCriteriaResult.message,
-          ) ||
-            "최종 구매기준 생성에 실패했습니다.",
+      if (!finalCriteriaApproved) {
+        updateStep(
+          "criteria-final",
+          "error",
+          "무료 사전검증 후 사용자가 유료 최종 구매기준 보정을 취소했습니다.",
         );
+
+        setFinalMessage(
+          "중단됨 · 최종 구매기준 유료 AI 보정을 승인하지 않았습니다.",
+        );
+
+        return;
       }
+
+      await executeCategoryCriteria(
+        finalCriteriaPlan,
+      );
 
       updateStep(
         "criteria-final",

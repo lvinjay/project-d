@@ -36,7 +36,7 @@ export default function Home() {
     const normalized = query.trim();
 
     router.push(
-      `/search${normalized ? `?q=${encodeURIComponent(normalized)}` : ""}`,
+      `/advisor${normalized ? `?category=${encodeURIComponent(normalized)}` : ""}`,
     );
   }
 
@@ -192,7 +192,7 @@ export default function Home() {
               }`}
               onClick={() =>
                 active &&
-                router.push(`/search?q=${encodeURIComponent(name)}`)
+                router.push(`/advisor?category=${encodeURIComponent(name)}`)
               }
               disabled={!active}
             >
@@ -216,7 +216,7 @@ export default function Home() {
         <button
           type="button"
           onClick={() =>
-            router.push("/search?q=캠핑용%20에어컨")
+            router.push("/advisor?category=캠핑용%20에어컨")
           }
         >
           무료로 체험하기

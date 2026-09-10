@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { createHash } from "node:crypto";
 import {
   NextResponse,
 } from "next/server";
@@ -15,7 +16,14 @@ export const dynamic =
 
 type GenerateCriteriaRequest = {
   category?: string;
+  dryRun?: unknown;
+  inputFingerprint?: unknown;
 };
+
+const CATEGORY_CRITERIA_PIPELINE_VERSION =
+  "project-d-category-criteria-v2-cost-guard";
+
+const CATEGORY_CRITERIA_MAX_OPENAI_CALLS = 1;
 
 type ProductRow = {
   id: string;
@@ -582,24 +590,17 @@ function normalizeCommonCautions(
 export async function POST(
   request: Request,
 ) {
+  let paidApiCalls = 0;
+
+  let paidResponseAudit:
+    | {
+        responseId: string;
+        responseStatus: string;
+        rawModelOutputText: string;
+      }
+    | null = null;
+
   try {
-    const apiKey =
-      process.env
-        .OPENAI_API_KEY;
-
-    if (!apiKey) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "OPENAI_API_KEY가 설정되지 않았습니다.",
-        },
-        {
-          status: 500,
-        },
-      );
-    }
-
     const body =
       (
         await request.json()
@@ -614,11 +615,38 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+          paidApiCalls: 0,
+          dbWrites: 0,
           message:
             "카테고리가 필요합니다.",
         },
         {
           status: 400,
+        },
+      );
+    }
+
+    /*
+      frozen robot criteria revision은 H08에서 별도로 정리한다.
+      그 전에는 generic criteria generator가 frozen key/order를
+      덮어쓰지 못하도록 안전하게 중단한다.
+    */
+    if (
+      category ===
+      "로봇청소기"
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          paidApiCalls: 0,
+          dbWrites: 0,
+          frozenCriteriaProtected:
+            true,
+          message:
+            "로봇청소기 구매기준은 frozen production 기준을 사용합니다. 일반 구매기준 재생성은 H08 정리 전까지 차단됩니다.",
+        },
+        {
+          status: 409,
         },
       );
     }
@@ -721,9 +749,108 @@ export async function POST(
       );
     }
 
+    const inputFingerprint =
+      createHash("sha256")
+        .update(
+          JSON.stringify({
+            pipelineVersion:
+              CATEGORY_CRITERIA_PIPELINE_VERSION,
+            category,
+            sourceProducts:
+              productEvidence,
+          }),
+          "utf8",
+        )
+        .digest("hex");
+
+    if (body.dryRun === true) {
+      return NextResponse.json({
+        success: true,
+        dryRun: true,
+        pipelineVersion:
+          CATEGORY_CRITERIA_PIPELINE_VERSION,
+        inputFingerprint,
+        estimatedOpenAiCalls:
+          CATEGORY_CRITERIA_MAX_OPENAI_CALLS,
+        paidApiCalls: 0,
+        dbWrites: 0,
+        category,
+        analyzedProductCount:
+          sourceProducts.length,
+        detailReadyCount,
+      });
+    }
+
+    const requestedFingerprint =
+      normalizeText(
+        body.inputFingerprint,
+      );
+
+    if (!requestedFingerprint) {
+      return NextResponse.json(
+        {
+          success: false,
+          stage: "precheck",
+          pipelineVersion:
+            CATEGORY_CRITERIA_PIPELINE_VERSION,
+          inputFingerprint,
+          estimatedOpenAiCalls:
+            CATEGORY_CRITERIA_MAX_OPENAI_CALLS,
+          paidApiCalls: 0,
+          dbWrites: 0,
+          message:
+            "유료 구매기준 AI 생성에는 dryRun에서 받은 inputFingerprint가 필요합니다.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (
+      requestedFingerprint !==
+      inputFingerprint
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          stage: "precheck",
+          pipelineVersion:
+            CATEGORY_CRITERIA_PIPELINE_VERSION,
+          inputFingerprint,
+          estimatedOpenAiCalls:
+            CATEGORY_CRITERIA_MAX_OPENAI_CALLS,
+          paidApiCalls: 0,
+          dbWrites: 0,
+          message:
+            "구매기준 생성 입력이 무료 사전검증 이후 변경되었습니다. 다시 사전검증해 주세요.",
+        },
+        { status: 409 },
+      );
+    }
+
+    const apiKey =
+      process.env
+        .OPENAI_API_KEY;
+
+    if (!apiKey) {
+      return NextResponse.json(
+        {
+          success: false,
+          pipelineVersion:
+            CATEGORY_CRITERIA_PIPELINE_VERSION,
+          inputFingerprint,
+          paidApiCalls: 0,
+          dbWrites: 0,
+          message:
+            "OPENAI_API_KEY가 설정되지 않았습니다.",
+        },
+        { status: 500 },
+      );
+    }
+
     const client =
       new OpenAI({
         apiKey,
+        maxRetries: 0,
       });
 
     const prompt = `
@@ -847,6 +974,8 @@ ${JSON.stringify(
 personalizationQuestions는 2개 또는 3개를 반환하세요.
 `;
 
+    paidApiCalls += 1;
+
     const response =
       await client.responses.create(
         {
@@ -861,6 +990,19 @@ personalizationQuestions는 2개 또는 3개를 반환하세요.
       response
         .output_text
         ?.trim();
+
+    paidResponseAudit = {
+      responseId:
+        normalizeText(
+          (response as unknown as Record<string, unknown>).id,
+        ),
+      responseStatus:
+        normalizeText(
+          (response as unknown as Record<string, unknown>).status,
+        ),
+      rawModelOutputText:
+        response.output_text ?? "",
+    };
 
     if (!outputText) {
       throw new Error(
@@ -1013,6 +1155,13 @@ personalizationQuestions는 2개 또는 3개를 반환하세요.
 
     return NextResponse.json({
       success: true,
+      pipelineVersion:
+        CATEGORY_CRITERIA_PIPELINE_VERSION,
+      inputFingerprint,
+      estimatedOpenAiCalls:
+        CATEGORY_CRITERIA_MAX_OPENAI_CALLS,
+      paidApiCalls,
+      dbWrites: 1,
 
       category,
 
@@ -1043,6 +1192,12 @@ personalizationQuestions는 2개 또는 3개를 반환하세요.
     return NextResponse.json(
       {
         success: false,
+        paidApiCalls,
+        dbWrites: 0,
+        paidResponseAudit:
+          paidApiCalls > 0
+            ? paidResponseAudit
+            : undefined,
 
         message:
           error instanceof Error

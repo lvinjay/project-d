@@ -206,6 +206,110 @@ type ProductScoreGenerationPlan = {
   cacheHit: boolean;
 };
 
+type CategoryCriteriaGenerationResponse = {
+  success?: boolean;
+  message?: string;
+  dryRun?: boolean;
+  inputFingerprint?: string;
+  estimatedOpenAiCalls?: number;
+  paidApiCalls?: number;
+  criteria?: Array<{
+    label?: string;
+  }>;
+};
+
+type CategoryCriteriaGenerationPlan = {
+  category: string;
+  inputFingerprint: string;
+  estimatedOpenAiCalls: number;
+};
+
+async function prepareCategoryCriteriaGeneration(
+  category: string,
+): Promise<CategoryCriteriaGenerationPlan> {
+  const response = await fetch(
+    "/api/generate-category-criteria",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        category,
+        dryRun: true,
+      }),
+    },
+  );
+
+  const result =
+    (await response.json()) as CategoryCriteriaGenerationResponse;
+
+  const estimatedOpenAiCalls =
+    Number(
+      result.estimatedOpenAiCalls,
+    );
+
+  if (
+    !response.ok ||
+    !result.success ||
+    result.dryRun !== true ||
+    result.paidApiCalls !== 0 ||
+    !result.inputFingerprint ||
+    !Number.isSafeInteger(
+      estimatedOpenAiCalls,
+    ) ||
+    estimatedOpenAiCalls < 1 ||
+    estimatedOpenAiCalls > 1
+  ) {
+    throw new Error(
+      result.message ??
+        "구매기준 AI 생성 무료 사전검증에 실패했습니다.",
+    );
+  }
+
+  return {
+    category,
+    inputFingerprint:
+      result.inputFingerprint,
+    estimatedOpenAiCalls,
+  };
+}
+
+async function executeCategoryCriteriaGeneration(
+  plan: CategoryCriteriaGenerationPlan,
+) {
+  const response = await fetch(
+    "/api/generate-category-criteria",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        category:
+          plan.category,
+        inputFingerprint:
+          plan.inputFingerprint,
+      }),
+    },
+  );
+
+  const result =
+    (await response.json()) as CategoryCriteriaGenerationResponse;
+
+  if (
+    !response.ok ||
+    !result.success
+  ) {
+    throw new Error(
+      result.message ??
+        "구매기준 AI 생성에 실패했습니다. 자동 재시도하지 않습니다.",
+    );
+  }
+
+  return result;
+}
+
 async function prepareProductScoreGeneration(
   input: ProductScoreGenerationRequest,
 ): Promise<ProductScoreGenerationPlan> {
@@ -1049,44 +1153,52 @@ export default function AdminPage() {
     setErrorMessage("");
 
     try {
-      const response = await fetch(
-        "/api/generate-category-criteria",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ category }),
-        },
-      );
-
-      const result = (await response.json()) as {
-        success?: boolean;
-        message?: string;
-        criteria?: Array<{ label?: string }>;
-      };
-
-      if (!response.ok || !result.success) {
-        throw new Error(
-          result.message ??
-            "구매기준 자동 생성에 실패했습니다.",
+      const plan =
+        await prepareCategoryCriteriaGeneration(
+          category,
         );
+
+      const confirmed =
+        window.confirm(
+          `구매기준 AI 생성 무료 사전검증이 완료되었습니다.\n\n카테고리: ${category}\n예상 OpenAI 호출 최대 ${plan.estimatedOpenAiCalls}회\n\n확인을 누르기 전까지 유료 AI 생성은 실행되지 않았습니다.\n실제 유료 구매기준 생성을 시작할까요?`,
+        );
+
+      if (!confirmed) {
+        setCriteriaMessage(
+          `무료 사전검증만 완료했습니다. 실제 유료 구매기준 생성은 취소했습니다. 예상 OpenAI 호출 최대 ${plan.estimatedOpenAiCalls}회 · 실제 유료 호출 시작 안 함.`,
+        );
+        return;
       }
 
-      const labels = Array.isArray(result.criteria)
-        ? result.criteria
-            .map((criterion) => criterion.label?.trim())
-            .filter(Boolean)
-            .join(" · ")
-        : "";
+      const result =
+        await executeCategoryCriteriaGeneration(
+          plan,
+        );
+
+      const labels =
+        Array.isArray(
+          result.criteria,
+        )
+          ? result.criteria
+              .map(
+                (criterion) =>
+                  criterion.label?.trim(),
+              )
+              .filter(Boolean)
+              .join(" · ")
+          : "";
 
       setCriteriaMessage(
         labels
           ? `자동 생성 완료: ${labels}`
-          : result.message ?? "구매기준 자동 생성이 완료되었습니다.",
+          : result.message ??
+              "구매기준 자동 생성이 완료되었습니다.",
       );
     } catch (error) {
-      console.error("구매기준 자동 생성 실패:", error);
+      console.error(
+        "구매기준 자동 생성 실패:",
+        error,
+      );
 
       const message =
         error instanceof Error
@@ -1522,7 +1634,7 @@ export default function AdminPage() {
                 lineHeight: 1.7,
               }}
             >
-              <strong>AI 구매기준 생성 완료</strong>
+              <strong>AI 구매기준 생성 상태</strong>
               <p style={{ margin: "6px 0 0" }}>
                 {criteriaMessage}
               </p>
