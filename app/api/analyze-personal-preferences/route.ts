@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { supabase } from "../../../lib/supabase";
 
@@ -10,7 +11,31 @@ type Body = {
   mode?: unknown;
   budgetChoice?: unknown;
   customPreference?: unknown;
+  productIds?: unknown;
+  productNames?: unknown;
+  dryRun?: unknown;
+  inputFingerprint?: unknown;
 };
+
+const PERSONAL_PREFERENCE_PIPELINE_VERSION =
+  "project-d-personal-preference-v2-cost-guard-final-candidates";
+
+const PERSONAL_PREFERENCE_MODEL =
+  "gpt-5-mini";
+
+function stringList(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return [
+    ...new Set(
+      value
+        .map((item) => text(item))
+        .filter(Boolean),
+    ),
+  ];
+}
 
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -348,28 +373,80 @@ function createPersonalPreferenceEvidence(
 }
 
 export async function POST(request: Request) {
+  let paidApiCalls = 0;
+  let paidResponseAudit:
+    | {
+        responseId: string;
+        responseStatus: string;
+        rawModelOutputText: string;
+      }
+    | null = null;
+
   try {
     const body = (await request.json()) as Body;
     const category = text(body.category);
     const mode = text(body.mode);
     const budgetChoice = text(body.budgetChoice) || "no_limit";
     const customPreference = text(body.customPreference).slice(0, 500);
+    const requestedProductIds = stringList(body.productIds);
+    const requestedProductNames = stringList(body.productNames);
+    const dryRun = body.dryRun === true;
+    const requestedFingerprint = text(body.inputFingerprint);
 
     if (!category) {
-      return NextResponse.json({ success: false, message: "카테고리가 필요합니다." }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          paidApiCalls: 0,
+          message: "카테고리가 필요합니다.",
+        },
+        { status: 400 },
+      );
     }
 
-    const { data, error } = await supabase
-      .from("products")
-      .select("id, product_name, source_url, product_detail_analysis, review_analysis, market_metrics")
-      .eq("category", category)
-      .order("created_at", { ascending: true });
+    let productsQuery =
+      supabase
+        .from("products")
+        .select(
+          "id, product_name, source_url, product_detail_analysis, review_analysis, market_metrics",
+        )
+        .eq("category", category);
+
+    if (mode !== "budget_options") {
+      if (requestedProductIds.length > 0) {
+        productsQuery =
+          productsQuery.in(
+            "id",
+            requestedProductIds,
+          );
+      } else if (requestedProductNames.length > 0) {
+        productsQuery =
+          productsQuery.in(
+            "product_name",
+            requestedProductNames,
+          );
+      }
+    }
+
+    const { data, error } =
+      await productsQuery.order(
+        "created_at",
+        { ascending: true },
+      );
 
     if (error) throw error;
+
     const products = data ?? [];
 
     if (products.length < 2) {
-      return NextResponse.json({ success: false, message: "비교할 제품이 부족합니다." }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          paidApiCalls: 0,
+          message: "비교할 제품이 부족합니다.",
+        },
+        { status: 400 },
+      );
     }
 
     if (mode === "budget_options") {
@@ -380,6 +457,87 @@ export async function POST(request: Request) {
           products as Array<Record<string, unknown>>,
         ),
         analysisMode: "budget_options_server",
+        paidApiCalls: 0,
+      });
+    }
+
+    const requestedProductCount =
+      requestedProductIds.length > 0
+        ? requestedProductIds.length
+        : requestedProductNames.length;
+
+    if (
+      requestedProductCount > 0 &&
+      products.length !== requestedProductCount
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          paidApiCalls: 0,
+          productCount: products.length,
+          requestedProductCount,
+          message:
+            `현재 실행 제품 ${requestedProductCount}개 중 ${products.length}개만 개인조건 평가 대상으로 확인됐습니다.`,
+        },
+        { status: 400 },
+      );
+    }
+
+    const personalPreferenceEvidence =
+      createPersonalPreferenceEvidence(
+        products as Array<Record<string, unknown>>,
+      );
+
+    const inputFingerprint =
+      createHash("sha256")
+        .update(
+          JSON.stringify({
+            pipelineVersion:
+              PERSONAL_PREFERENCE_PIPELINE_VERSION,
+            model:
+              PERSONAL_PREFERENCE_MODEL,
+            category,
+            customPreference,
+            products:
+              personalPreferenceEvidence,
+          }),
+          "utf8",
+        )
+        .digest("hex");
+
+    const estimatedOpenAiCalls =
+      customPreference
+        ? 1
+        : 0;
+
+    if (dryRun) {
+      return NextResponse.json({
+        success: true,
+        dryRun: true,
+        category,
+        budgetChoice,
+        customPreference,
+        pipelineVersion:
+          PERSONAL_PREFERENCE_PIPELINE_VERSION,
+        inputFingerprint,
+        productCount: products.length,
+        requestedProductCount:
+          requestedProductCount || null,
+        estimatedOpenAiCalls,
+        paidApiCalls: 0,
+        dbWrites: 0,
+        interpretedPreferences:
+          customPreference
+            ? undefined
+            : [],
+        productScores:
+          customPreference
+            ? undefined
+            : [],
+        analysisMode:
+          customPreference
+            ? "custom_preference_paid_precheck"
+            : "no_custom_preference_precheck",
       });
     }
 
@@ -394,23 +552,81 @@ export async function POST(request: Request) {
         interpretedPreferences: [],
         productScores: [],
         analysisMode: "no_custom_preference",
+        pipelineVersion:
+          PERSONAL_PREFERENCE_PIPELINE_VERSION,
+        inputFingerprint,
+        paidApiCalls: 0,
+        dbWrites: 0,
       });
     }
 
-    const personalPreferenceEvidence =
-      createPersonalPreferenceEvidence(
-        products as Array<Record<string, unknown>>,
+    if (!requestedFingerprint) {
+      return NextResponse.json(
+        {
+          success: false,
+          stage: "precheck",
+          pipelineVersion:
+            PERSONAL_PREFERENCE_PIPELINE_VERSION,
+          inputFingerprint,
+          estimatedOpenAiCalls: 1,
+          paidApiCalls: 0,
+          dbWrites: 0,
+          message:
+            "유료 개인조건 AI 분석에는 dryRun에서 받은 inputFingerprint가 필요합니다.",
+        },
+        { status: 400 },
       );
-
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error("OPENAI_API_KEY가 설정되지 않았습니다.");
     }
 
-    const client = new OpenAI({ apiKey });
+    if (
+      requestedFingerprint !==
+      inputFingerprint
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          stage: "precheck",
+          pipelineVersion:
+            PERSONAL_PREFERENCE_PIPELINE_VERSION,
+          inputFingerprint,
+          estimatedOpenAiCalls: 1,
+          paidApiCalls: 0,
+          dbWrites: 0,
+          message:
+            "개인조건 분석 입력이 무료 사전검증 이후 변경되었습니다. 다시 사전검증해 주세요.",
+        },
+        { status: 409 },
+      );
+    }
+
+    const apiKey = process.env.OPENAI_API_KEY;
+
+    if (!apiKey) {
+      return NextResponse.json(
+        {
+          success: false,
+          pipelineVersion:
+            PERSONAL_PREFERENCE_PIPELINE_VERSION,
+          inputFingerprint,
+          paidApiCalls: 0,
+          dbWrites: 0,
+          message:
+            "OPENAI_API_KEY가 설정되지 않았습니다.",
+        },
+        { status: 500 },
+      );
+    }
+
+    const client = new OpenAI({
+      apiKey,
+      maxRetries: 0,
+    });
+
+    paidApiCalls += 1;
 
     const response = await client.responses.create({
-      model: "gpt-5-mini",
+      model:
+        PERSONAL_PREFERENCE_MODEL,
       reasoning: { effort: "minimal" },
       max_output_tokens: 1200,
       text: {
@@ -455,7 +671,7 @@ export async function POST(request: Request) {
 카테고리: ${category}
 
 사용자가 직접 적은 추가 조건:
-${customPreference || "(추가 조건 없음)"}
+${customPreference}
 
 비교 제품 핵심 데이터:
 ${JSON.stringify(personalPreferenceEvidence)}
@@ -481,10 +697,30 @@ ${JSON.stringify(personalPreferenceEvidence)}
 `,
     });
 
-    const output = response.output_text?.trim();
-    if (!output) throw new Error("AI가 개인조건 평가를 반환하지 않았습니다.");
+    const responseRecord =
+      response as unknown as
+        Record<string, unknown>;
 
-    let parsed: Record<string, unknown>;
+    paidResponseAudit = {
+      responseId:
+        text(responseRecord.id),
+      responseStatus:
+        text(responseRecord.status),
+      rawModelOutputText:
+        response.output_text ?? "",
+    };
+
+    const output =
+      response.output_text?.trim();
+
+    if (!output) {
+      throw new Error(
+        "AI가 개인조건 평가를 반환하지 않았습니다.",
+      );
+    }
+
+    let parsed:
+      Record<string, unknown>;
 
     try {
       parsed = parseJson(output);
@@ -494,51 +730,106 @@ ${JSON.stringify(personalPreferenceEvidence)}
         parseError,
         output,
       );
+
       throw new Error(
-        "AI 개인조건 응답 형식이 올바르지 않습니다. 잠시 후 다시 시도해주세요.",
+        "AI 개인조건 응답 형식이 올바르지 않습니다. 저장된 응답을 확인한 뒤 다시 판단해야 합니다.",
       );
     }
 
-    const rawProducts = Array.isArray(parsed.products) ? parsed.products : [];
-    const validIds = new Set(products.map((product) => String(product.id)));
+    const rawProducts =
+      Array.isArray(parsed.products)
+        ? parsed.products
+        : [];
 
-    const productScores = rawProducts
-      .map((item) => {
-        if (!item || typeof item !== "object" || Array.isArray(item)) return null;
-        const row = item as Record<string, unknown>;
-        const productId = text(row.productId);
-        const rawScore = Number(row.score);
-        if (!validIds.has(productId) || !Number.isFinite(rawScore)) return null;
-        return {
-          productId,
-          score: Math.max(0, Math.min(100, Math.round(rawScore))),
-          reason: text(row.reason) || "개인조건 평가 근거가 없습니다.",
-        };
-      })
-      .filter(
-        (
-          item,
-        ): item is {
-          productId: string;
-          score: number;
-          reason: string;
-        } => item !== null,
+    const validIds =
+      new Set(
+        products.map(
+          (product) =>
+            String(product.id),
+        ),
       );
 
-    if (productScores.length !== products.length) {
-      console.error("Incomplete personal preference scores:", {
-        expected: products.length,
-        received: productScores.length,
-        productScores,
-      });
+    const productScores =
+      rawProducts
+        .map((item) => {
+          if (
+            !item ||
+            typeof item !== "object" ||
+            Array.isArray(item)
+          ) {
+            return null;
+          }
+
+          const row =
+            item as Record<string, unknown>;
+
+          const productId =
+            text(row.productId);
+
+          const rawScore =
+            Number(row.score);
+
+          if (
+            !validIds.has(productId) ||
+            !Number.isFinite(rawScore)
+          ) {
+            return null;
+          }
+
+          return {
+            productId,
+            score:
+              Math.max(
+                0,
+                Math.min(
+                  100,
+                  Math.round(rawScore),
+                ),
+              ),
+            reason:
+              text(row.reason) ||
+              "개인조건 평가 근거가 없습니다.",
+          };
+        })
+        .filter(
+          (
+            item,
+          ): item is {
+            productId: string;
+            score: number;
+            reason: string;
+          } => item !== null,
+        );
+
+    if (
+      productScores.length !==
+      products.length
+    ) {
+      console.error(
+        "Incomplete personal preference scores:",
+        {
+          expected:
+            products.length,
+          received:
+            productScores.length,
+          productScores,
+        },
+      );
+
       throw new Error(
-        "일부 제품의 개인조건 평가가 누락되었습니다. 잠시 후 다시 시도해주세요.",
+        "일부 제품의 개인조건 평가가 누락되었습니다. 유료 호출 결과를 확인한 뒤 다시 판단해야 합니다.",
       );
     }
 
-    const interpretedPreferences = Array.isArray(parsed.interpretedPreferences)
-      ? parsed.interpretedPreferences.map(text).filter(Boolean).slice(0, 8)
-      : [];
+    const interpretedPreferences =
+      Array.isArray(
+        parsed.interpretedPreferences,
+      )
+        ? parsed.interpretedPreferences
+            .map(text)
+            .filter(Boolean)
+            .slice(0, 8)
+        : [];
 
     return NextResponse.json({
       success: true,
@@ -547,14 +838,30 @@ ${JSON.stringify(personalPreferenceEvidence)}
       customPreference,
       interpretedPreferences,
       productScores,
-      analysisMode: "custom_preference_only_structured_ai",
+      analysisMode:
+        "custom_preference_only_structured_ai",
+      pipelineVersion:
+        PERSONAL_PREFERENCE_PIPELINE_VERSION,
+      inputFingerprint,
+      paidApiCalls,
+      dbWrites: 0,
     });
   } catch (error) {
-    console.error("Personal preference analysis error:", error);
+    console.error(
+      "Personal preference analysis error:",
+      error,
+    );
+
     return NextResponse.json(
       {
         success: false,
-        message: error instanceof Error ? error.message : "개인 구매조건을 분석하지 못했습니다.",
+        paidApiCalls,
+        dbWrites: 0,
+        paidResponseAudit,
+        message:
+          error instanceof Error
+            ? error.message
+            : "개인 구매조건을 분석하지 못했습니다.",
       },
       { status: 500 },
     );

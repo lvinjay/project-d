@@ -166,9 +166,28 @@ type StoredAnswers = {
   customPreference?: string;
 };
 
+type PersonalPreferenceRequest = {
+  category: string;
+  budgetChoice: string;
+  customPreference: string;
+  productIds: string[];
+};
+
 type PersonalPreferenceResponse = {
   success: boolean;
   message?: string;
+  dryRun?: boolean;
+  pipelineVersion?: string;
+  inputFingerprint?: string;
+  estimatedOpenAiCalls?: number;
+  paidApiCalls?: number;
+  productCount?: number;
+  analysisMode?: string;
+  paidResponseAudit?: {
+    responseId?: string;
+    responseStatus?: string;
+    rawModelOutputText?: string;
+  } | null;
   interpretedPreferences?: string[];
   productScores?: Array<{
     productId: string;
@@ -176,6 +195,141 @@ type PersonalPreferenceResponse = {
     reason: string;
   }>;
 };
+
+type PersonalPreferencePlan = {
+  input: PersonalPreferenceRequest;
+  inputFingerprint: string;
+  estimatedOpenAiCalls: number;
+  precheckResult: PersonalPreferenceResponse;
+};
+
+async function preparePersonalPreferenceAnalysis(
+  input: PersonalPreferenceRequest,
+): Promise<PersonalPreferencePlan> {
+  const response = await fetch(
+    "/api/analyze-personal-preferences",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...input,
+        dryRun: true,
+      }),
+    },
+  );
+
+  const result =
+    (await response.json()) as PersonalPreferenceResponse;
+
+  if (
+    !response.ok ||
+    !result.success ||
+    result.dryRun !== true ||
+    result.paidApiCalls !== 0 ||
+    !result.inputFingerprint
+  ) {
+    throw new Error(
+      result.message ??
+        "개인 추가조건 AI 분석 무료 사전검증에 실패했습니다.",
+    );
+  }
+
+  const estimatedOpenAiCalls =
+    Number(
+      result.estimatedOpenAiCalls,
+    );
+
+  if (
+    !Number.isSafeInteger(
+      estimatedOpenAiCalls,
+    ) ||
+    estimatedOpenAiCalls < 0 ||
+    estimatedOpenAiCalls > 1
+  ) {
+    throw new Error(
+      "개인 추가조건 AI 분석 예상 OpenAI 호출 수가 안전 범위를 벗어났습니다. 유료 분석은 시작하지 않습니다.",
+    );
+  }
+
+  return {
+    input,
+    inputFingerprint:
+      result.inputFingerprint,
+    estimatedOpenAiCalls,
+    precheckResult:
+      result,
+  };
+}
+
+async function executePersonalPreferenceAnalysis(
+  plan: PersonalPreferencePlan,
+) {
+  const response = await fetch(
+    "/api/analyze-personal-preferences",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...plan.input,
+        inputFingerprint:
+          plan.inputFingerprint,
+      }),
+    },
+  );
+
+  const result =
+    (await response.json()) as PersonalPreferenceResponse;
+
+  if (
+    !response.ok ||
+    !result.success
+  ) {
+    if (
+      Number(
+        result.paidApiCalls ?? 0,
+      ) > 0
+    ) {
+      window.sessionStorage.setItem(
+        "projectDPersonalPreferenceLastFailedPaidResponse",
+        JSON.stringify({
+          savedAt:
+            new Date().toISOString(),
+          inputFingerprint:
+            plan.inputFingerprint,
+          result,
+        }),
+      );
+    }
+
+    throw new Error(
+      result.message ??
+        "개인 추가조건 AI 분석에 실패했습니다. 자동 재시도하지 않습니다.",
+    );
+  }
+
+  const paidApiCalls =
+    Number(
+      result.paidApiCalls ?? 0,
+    );
+
+  if (
+    !Number.isSafeInteger(
+      paidApiCalls,
+    ) ||
+    paidApiCalls < 0 ||
+    paidApiCalls > 1
+  ) {
+    throw new Error(
+      "개인 추가조건 AI 분석의 실제 OpenAI 호출 수가 안전 범위를 벗어났습니다. 자동 재시도하지 않습니다.",
+    );
+  }
+
+  return result;
+}
 
 type PersonalPreferenceCache = {
   key: string;
@@ -703,6 +857,18 @@ export default function ResultsClient() {
     [],
   );
 
+  const [
+    pendingPersonalPlan,
+    setPendingPersonalPlan,
+  ] = useState<
+    PersonalPreferencePlan | null
+  >(null);
+
+  const [
+    isRunningPersonalPreference,
+    setIsRunningPersonalPreference,
+  ] = useState(false);
+
   useEffect(() => {
     async function loadRecommendations() {
       try {
@@ -839,21 +1005,27 @@ export default function ResultsClient() {
           );
         }
 
-        const personalRequest = {
-          category:
-            nextCategory,
-          budgetChoice:
-            stored.budgetChoice ??
-            "no_limit",
-          customPreference:
-            stored.customPreference ??
-            "",
-        };
+        const personalRequest:
+          PersonalPreferenceRequest = {
+            category:
+              nextCategory,
+            budgetChoice:
+              stored.budgetChoice ??
+              "no_limit",
+            customPreference:
+              stored.customPreference ??
+              "",
+            productIds:
+              currentRunProductIds,
+          };
 
-        const personalCacheKey =
-          JSON.stringify(
+        const personalPlan =
+          await preparePersonalPreferenceAnalysis(
             personalRequest,
           );
+
+        const personalCacheKey =
+          personalPlan.inputFingerprint;
 
         const cachedRaw =
           window.sessionStorage.getItem(
@@ -887,47 +1059,23 @@ export default function ResultsClient() {
         }
 
         if (!personalResult) {
-          const personalResponse =
-            await fetch(
-              "/api/analyze-personal-preferences",
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type":
-                    "application/json",
-                },
-                body:
-                  JSON.stringify(
-                    personalRequest,
-                  ),
-              },
-            );
-
-          const fetchedPersonalResult =
-            (await personalResponse.json()) as PersonalPreferenceResponse;
-
           if (
-            !personalResponse.ok ||
-            !fetchedPersonalResult.success
+            personalPlan.estimatedOpenAiCalls ===
+            0
           ) {
-            throw new Error(
-              fetchedPersonalResult.message ??
-                "가격·추가 조건을 분석하지 못했습니다.",
+            personalResult =
+              personalPlan.precheckResult;
+          } else {
+            setCategory(
+              nextCategory,
             );
+
+            setPendingPersonalPlan(
+              personalPlan,
+            );
+
+            return;
           }
-
-          personalResult =
-            fetchedPersonalResult;
-
-          window.sessionStorage.setItem(
-            "projectDPersonalPreferenceCache",
-            JSON.stringify({
-              key:
-                personalCacheKey,
-              result:
-                fetchedPersonalResult,
-            } satisfies PersonalPreferenceCache),
-          );
         }
 
         if (!personalResult) {
@@ -1037,6 +1185,63 @@ export default function ResultsClient() {
 
     void loadRecommendations();
   }, []);
+
+  async function runPendingPersonalPreference() {
+    if (
+      !pendingPersonalPlan ||
+      isRunningPersonalPreference
+    ) {
+      return;
+    }
+
+    const plan =
+      pendingPersonalPlan;
+
+    /*
+      유료 요청을 누른 뒤 실패하면 자동 재시도 버튼을 남기지 않는다.
+      요청이 서버에 도달했을 가능성이 있으므로 결과 확인 후 새로 판단한다.
+    */
+    setPendingPersonalPlan(
+      null,
+    );
+    setIsRunningPersonalPreference(
+      true,
+    );
+    setErrorMessage("");
+
+    try {
+      const result =
+        await executePersonalPreferenceAnalysis(
+          plan,
+        );
+
+      window.sessionStorage.setItem(
+        "projectDPersonalPreferenceCache",
+        JSON.stringify({
+          key:
+            plan.inputFingerprint,
+          result,
+        } satisfies PersonalPreferenceCache),
+      );
+
+      window.location.reload();
+    } catch (error) {
+      console.error(
+        "개인 추가조건 AI 분석 실패:",
+        error,
+      );
+
+      setErrorMessage(
+        error instanceof Error
+          ? `${error.message} 유료 요청이 시작됐을 수 있으므로 자동 재시도하지 않습니다.`
+          : "개인 추가조건 AI 분석에 실패했습니다. 유료 요청이 시작됐을 수 있으므로 자동 재시도하지 않습니다.",
+      );
+    } finally {
+      setIsRunningPersonalPreference(
+        false,
+      );
+    }
+  }
 
   const winner =
     recommendations[0] ??
@@ -1236,10 +1441,69 @@ export default function ResultsClient() {
       </section>
 
       <section className="container advisorResultContainer">
-        {isLoading ? (
+        {isLoading ||
+        isRunningPersonalPreference ? (
           <div className="card advisorResultState">
-            추천 순위를 계산하는
-            중입니다.
+            {isRunningPersonalPreference
+              ? "승인한 개인 추가조건 AI 분석을 실행하는 중입니다. 자동 재시도는 하지 않습니다."
+              : "추천 순위를 계산하는 중입니다."}
+          </div>
+        ) : pendingPersonalPlan ? (
+          <div className="card advisorResultState">
+            <h2>
+              개인 추가조건 AI 분석이
+              필요합니다.
+            </h2>
+
+            <p>
+              무료 사전검증이
+              완료되었습니다. 결과 화면은
+              유료 OpenAI 호출을 자동으로
+              시작하지 않습니다.
+            </p>
+
+            <p>
+              예상 OpenAI 호출 최대{" "}
+              <strong>
+                {
+                  pendingPersonalPlan
+                    .estimatedOpenAiCalls
+                }
+                회
+              </strong>
+            </p>
+
+            <p>
+              추가 조건:{" "}
+              <strong>
+                {
+                  pendingPersonalPlan
+                    .input
+                    .customPreference
+                }
+              </strong>
+            </p>
+
+            <button
+              type="button"
+              className="primaryButton"
+              onClick={
+                runPendingPersonalPreference
+              }
+            >
+              개인조건 AI 분석 시작
+            </button>
+
+            <p
+              style={{
+                marginTop: 14,
+                color: "#667085",
+              }}
+            >
+              버튼을 누른 경우에만 최대
+              1회의 유료 AI 분석을
+              시작합니다.
+            </p>
           </div>
         ) : errorMessage ? (
           <div className="card advisorResultState advisorResultError">
