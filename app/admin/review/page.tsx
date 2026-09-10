@@ -33,9 +33,12 @@ type ReviewAnalysis = {
   bestFor: string[];
   notFor: string[];
   confidenceScore: number;
-  criterionScores: CriterionScoreMap;
-  criterionReasons: CriterionReasonMap;
+  criterionScores?: CriterionScoreMap;
+  criterionReasons?: CriterionReasonMap;
+  criterionEvidence?: Record<string, unknown>;
+  pipelineVersion?: string;
   collectionStats?: ReviewCollectionStats;
+  [key: string]: unknown;
 };
 
 type RegisteredProduct = {
@@ -309,8 +312,6 @@ function AdminReviewContent() {
         .from("products")
         .update({
           review_analysis: nextAnalysis,
-          criterion_scores:
-            nextAnalysis.criterionScores,
           review_raw_data: {
             reviews,
             collectionStats,
@@ -329,8 +330,6 @@ function AdminReviewContent() {
           ? {
               ...current,
               review_analysis: nextAnalysis,
-              criterion_scores:
-                nextAnalysis.criterionScores,
               review_raw_data: {
                 reviews: getReviews(),
                 collectionStats,
@@ -344,7 +343,7 @@ function AdminReviewContent() {
       );
 
       setSaveMessage(
-        "AI 분석 결과와 리뷰 원문을 Supabase에 저장했습니다.",
+        "AI 분석 결과와 리뷰 원문을 Supabase에 저장했습니다. 제품 상대평가 점수는 별도 점수 생성 단계에서 갱신됩니다.",
       );
     } finally {
       setIsSaving(false);

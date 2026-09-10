@@ -180,6 +180,126 @@ async function executeProductionReviewAnalysis(
   return analysisResult.analysis;
 }
 
+type ProductScoreGenerationRequest = {
+  category: string;
+  productIds?: string[];
+  productNames?: string[];
+};
+
+type ProductScoreGenerationResponse = {
+  success?: boolean;
+  message?: string;
+  dryRun?: boolean;
+  cacheHit?: boolean;
+  pipelineVersion?: string;
+  inputFingerprint?: string;
+  estimatedOpenAiCalls?: number;
+  paidApiCalls?: number;
+  updatedCount?: number;
+  productCount?: number;
+};
+
+type ProductScoreGenerationPlan = {
+  input: ProductScoreGenerationRequest;
+  inputFingerprint: string;
+  estimatedOpenAiCalls: number;
+  cacheHit: boolean;
+};
+
+async function prepareProductScoreGeneration(
+  input: ProductScoreGenerationRequest,
+): Promise<ProductScoreGenerationPlan> {
+  const response = await fetch(
+    "/api/generate-product-scores",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...input,
+        dryRun: true,
+      }),
+    },
+  );
+
+  const result =
+    (await response.json()) as ProductScoreGenerationResponse;
+
+  if (
+    !response.ok ||
+    !result.success ||
+    result.dryRun !== true ||
+    result.paidApiCalls !== 0 ||
+    !result.inputFingerprint
+  ) {
+    throw new Error(
+      result.message ??
+        "제품별 점수 생성 무료 사전검증에 실패했습니다.",
+    );
+  }
+
+  const estimatedOpenAiCalls =
+    Number(
+      result.estimatedOpenAiCalls,
+    );
+
+  if (
+    !Number.isSafeInteger(
+      estimatedOpenAiCalls,
+    ) ||
+    estimatedOpenAiCalls < 0 ||
+    estimatedOpenAiCalls > 1
+  ) {
+    throw new Error(
+      "제품별 점수 생성 예상 OpenAI 호출 수가 안전 범위를 벗어났습니다. 실제 유료 평가는 시작하지 않습니다.",
+    );
+  }
+
+  return {
+    input,
+    inputFingerprint:
+      result.inputFingerprint,
+    estimatedOpenAiCalls,
+    cacheHit:
+      result.cacheHit === true,
+  };
+}
+
+async function executeProductScoreGeneration(
+  plan: ProductScoreGenerationPlan,
+) {
+  const response = await fetch(
+    "/api/generate-product-scores",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...plan.input,
+        inputFingerprint:
+          plan.inputFingerprint,
+      }),
+    },
+  );
+
+  const result =
+    (await response.json()) as ProductScoreGenerationResponse;
+
+  if (
+    !response.ok ||
+    !result.success
+  ) {
+    throw new Error(
+      result.message ??
+        "제품별 점수 생성에 실패했습니다.",
+    );
+  }
+
+  return result;
+}
+
 type ProductDetailAnalysisResponse = {
   success: boolean;
   message?: string;
@@ -792,14 +912,21 @@ export default function AdminPage() {
           plan.estimatedOpenAiCalls;
       }
 
+      const estimatedScoreOpenAiCalls =
+        1;
+
+      const approvedMaxOpenAiCalls =
+        estimatedOpenAiCalls +
+        estimatedScoreOpenAiCalls;
+
       const confirmed =
         window.confirm(
-          `무료 사전검증이 완료되었습니다.\n\n제품 ${prepared.length}개\n예상 OpenAI 호출 최대 ${estimatedOpenAiCalls}회\n\n확인을 누르기 전까지 유료 리뷰 분석은 실행되지 않았습니다.\n실제 유료 리뷰 분석을 시작할까요?`,
+          `무료 사전검증이 완료되었습니다.\n\n제품 ${prepared.length}개\n리뷰 분석 예상 최대 ${estimatedOpenAiCalls}회\n제품 점수 재생성 예상 최대 ${estimatedScoreOpenAiCalls}회\n총 예상 OpenAI 호출 최대 ${approvedMaxOpenAiCalls}회\n\n확인을 누르기 전까지 유료 리뷰 분석이나 제품 점수 생성은 실행되지 않았습니다.\n실제 유료 분석을 시작할까요?`,
         );
 
       if (!confirmed) {
         setBulkReviewMessage(
-          `무료 사전검증만 완료했습니다. 실제 유료 리뷰 분석은 취소했습니다. 예상 OpenAI 호출 최대 ${estimatedOpenAiCalls}회 · 실제 유료 호출 시작 안 함.`,
+          `무료 사전검증만 완료했습니다. 실제 유료 분석은 취소했습니다. 총 예상 OpenAI 호출 최대 ${approvedMaxOpenAiCalls}회 · 실제 유료 호출 시작 안 함.`,
         );
         return;
       }
@@ -845,32 +972,27 @@ export default function AdminPage() {
         `${completed}개 제품의 저장 리뷰 재분석 완료. 제품별 점수를 새 근거로 다시 계산하는 중...`,
       );
 
-      const scoreResponse = await fetch(
-        "/api/generate-product-scores",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ category }),
-        },
-      );
+      const scorePlan =
+        await prepareProductScoreGeneration({
+          category,
+        });
 
-      const scoreResult =
-        (await scoreResponse.json()) as {
-          success?: boolean;
-          message?: string;
-        };
-
-      if (!scoreResponse.ok || !scoreResult.success) {
+      if (
+        scorePlan.estimatedOpenAiCalls >
+        estimatedScoreOpenAiCalls
+      ) {
         throw new Error(
-          scoreResult.message ??
-            "리뷰 재분석은 완료됐지만 제품별 점수 재생성에 실패했습니다.",
+          "제품 점수 생성의 실제 사전검증 예상 호출 수가 승인한 최대치를 초과했습니다. 점수 생성은 시작하지 않습니다.",
         );
       }
 
+      const scoreResult =
+        await executeProductScoreGeneration(
+          scorePlan,
+        );
+
       setBulkReviewMessage(
-        `${completed}개 제품 완료 · DB에 저장된 리뷰 원문으로 재분석 · 제품별 점수까지 갱신했습니다. 네이버 리뷰 재수집은 하지 않았습니다.`,
+        `${completed}개 제품 완료 · DB에 저장된 리뷰 원문으로 재분석 · 제품별 점수까지 갱신했습니다. 네이버 리뷰 재수집은 하지 않았습니다. 제품 점수 유료 호출 ${scoreResult.paidApiCalls ?? 0}회.`,
       );
 
       await loadProducts();
@@ -1000,33 +1122,35 @@ export default function AdminPage() {
     setErrorMessage("");
 
     try {
-      const response = await fetch("/api/generate-product-scores", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category }),
-      });
+      const plan =
+        await prepareProductScoreGeneration({
+          category,
+        });
 
-      const contentType = response.headers.get("content-type") ?? "";
-      if (!contentType.includes("application/json")) {
-        const text = await response.text();
-        throw new Error(
-          `제품별 점수 생성 API가 JSON이 아닌 응답을 반환했습니다. (${response.status}) ${text.slice(0, 120)}`,
+      if (
+        plan.estimatedOpenAiCalls > 0
+      ) {
+        const confirmed =
+          window.confirm(
+            `제품별 점수 생성 무료 사전검증이 완료되었습니다.\n\n카테고리: ${category}\n예상 OpenAI 호출 최대 ${plan.estimatedOpenAiCalls}회\n\n확인을 누르기 전까지 유료 제품 평가는 실행되지 않았습니다.\n실제 유료 제품 점수 생성을 시작할까요?`,
+          );
+
+        if (!confirmed) {
+          setProductScoresMessage(
+            `무료 사전검증만 완료했습니다. 실제 유료 제품 점수 생성은 취소했습니다. 예상 OpenAI 호출 최대 ${plan.estimatedOpenAiCalls}회 · 실제 유료 호출 시작 안 함.`,
+          );
+          return;
+        }
+      }
+
+      const result =
+        await executeProductScoreGeneration(
+          plan,
         );
-      }
 
-      const result = (await response.json()) as {
-        success?: boolean;
-        message?: string;
-        updatedCount?: number;
-        productCount?: number;
-        cacheHit?: boolean;
-      };
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message ?? "제품별 점수 자동 생성에 실패했습니다.");
-      }
-
-      const count = result.updatedCount ?? result.productCount;
+      const count =
+        result.updatedCount ??
+        result.productCount;
 
       setProductScoresMessage(
         result.cacheHit
@@ -1420,10 +1544,10 @@ export default function AdminPage() {
                 lineHeight: 1.7,
               }}
             >
-              <strong>AI 제품별 점수 생성 완료</strong>
+              <strong>AI 제품별 점수 생성 상태</strong>
               <p style={{ margin: "6px 0 0" }}>{productScoresMessage}</p>
               <p style={{ margin: "6px 0 0", color: "#475467" }}>
-                데이터가 변경된 경우에만 AI가 전체 제품을 다시 평가합니다.
+                점수 생성 전 무료 사전검증을 수행하고, 유료 실행은 확인 후에만 시작합니다.
               </p>
             </div>
           ) : null}

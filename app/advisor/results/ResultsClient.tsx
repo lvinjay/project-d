@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import {
   useEffect,
@@ -70,10 +70,90 @@ type RecommendationResponse = {
   needsScoreGeneration?: boolean;
 };
 
+type ProductScoreGenerationRequest = {
+  category: string;
+  productIds?: string[];
+  productNames?: string[];
+};
+
 type ProductScoreGenerationResponse = {
   success: boolean;
   message?: string;
+  dryRun?: boolean;
+  cacheHit?: boolean;
+  pipelineVersion?: string;
+  inputFingerprint?: string;
+  estimatedOpenAiCalls?: number;
+  paidApiCalls?: number;
+  productCount?: number;
 };
+
+type ProductScoreGenerationPlan = {
+  input: ProductScoreGenerationRequest;
+  inputFingerprint: string;
+  estimatedOpenAiCalls: number;
+  cacheHit: boolean;
+};
+
+async function prepareProductScoreGeneration(
+  input: ProductScoreGenerationRequest,
+): Promise<ProductScoreGenerationPlan> {
+  const response = await fetch(
+    "/api/generate-product-scores",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...input,
+        dryRun: true,
+      }),
+    },
+  );
+
+  const result =
+    (await response.json()) as ProductScoreGenerationResponse;
+
+  if (
+    !response.ok ||
+    !result.success ||
+    result.dryRun !== true ||
+    result.paidApiCalls !== 0 ||
+    !result.inputFingerprint
+  ) {
+    throw new Error(
+      result.message ??
+        "제품 점수 최신성 무료 사전검증에 실패했습니다.",
+    );
+  }
+
+  const estimatedOpenAiCalls =
+    Number(
+      result.estimatedOpenAiCalls,
+    );
+
+  if (
+    !Number.isSafeInteger(
+      estimatedOpenAiCalls,
+    ) ||
+    estimatedOpenAiCalls < 0 ||
+    estimatedOpenAiCalls > 1
+  ) {
+    throw new Error(
+      "제품 점수 생성 예상 OpenAI 호출 수가 안전 범위를 벗어났습니다. 자동 유료 평가는 시작하지 않습니다.",
+    );
+  }
+
+  return {
+    input,
+    inputFingerprint:
+      result.inputFingerprint,
+    estimatedOpenAiCalls,
+    cacheHit:
+      result.cacheHit === true,
+  };
+}
 
 type StoredAnswers = {
   category?: string;
@@ -741,6 +821,24 @@ export default function ResultsClient() {
           );
         }
 
+        const scorePlan =
+          await prepareProductScoreGeneration({
+            category:
+              nextCategory,
+            productIds:
+              currentRunProductIds,
+          });
+
+        if (
+          scorePlan.estimatedOpenAiCalls >
+            0 ||
+          !scorePlan.cacheHit
+        ) {
+          throw new Error(
+            `최종 추천용 제품 점수가 최신이 아닙니다. 무료 사전검증 결과 OpenAI 호출 최대 ${scorePlan.estimatedOpenAiCalls}회가 필요하지만 결과 화면에서는 유료 호출을 자동 실행하지 않습니다. 관리자에서 제품별 점수 생성을 승인한 뒤 다시 추천을 실행해 주세요.`,
+          );
+        }
+
         const personalRequest = {
           category:
             nextCategory,
@@ -893,44 +991,9 @@ export default function ResultsClient() {
             !result.success) &&
           result.needsScoreGeneration
         ) {
-          const scoreResponse =
-            await fetch(
-              "/api/generate-product-scores",
-              {
-                method:
-                  "POST",
-                headers: {
-                  "Content-Type":
-                    "application/json",
-                },
-                body:
-                  JSON.stringify({
-                    category:
-                      nextCategory,
-                    productNames:
-                      currentRunProductNames,
-                  }),
-              },
-            );
-
-          const scoreResult =
-            (await scoreResponse.json()) as ProductScoreGenerationResponse;
-
-          if (
-            !scoreResponse.ok ||
-            !scoreResult.success
-          ) {
-            throw new Error(
-              scoreResult.message ??
-                "제품별 AI 평가 점수를 만들지 못했습니다.",
-            );
-          }
-
-          ({
-            response,
-            result,
-          } =
-            await requestRecommendations());
+          throw new Error(
+            "제품 점수 최신성 검증과 생성 이후에도 추천용 점수가 완전하지 않습니다. 자동으로 유료 호출을 반복하지 않고 중단했습니다.",
+          );
         }
 
         if (

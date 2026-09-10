@@ -1,4 +1,4 @@
-﻿import OpenAI from "openai";
+import OpenAI from "openai";
 import {
   createHash,
 } from "node:crypto";
@@ -17,10 +17,15 @@ export const runtime =
 export const dynamic =
   "force-dynamic";
 
+const PRODUCT_SCORE_PIPELINE_VERSION =
+  "project-d-product-score-v2-cost-guard-no-derived-feedback";
+
 type RequestBody = {
   category?: unknown;
   productIds?: unknown;
   productNames?: unknown;
+  dryRun?: unknown;
+  inputFingerprint?: unknown;
 };
 
 type Criterion = {
@@ -314,6 +319,34 @@ function createFingerprint(
     );
 }
 
+function reviewAnalysisEvidenceOnly(
+  value:
+    | Record<string, unknown>
+    | null,
+) {
+  if (!value) {
+    return null;
+  }
+
+  const evidenceOnly = {
+    ...value,
+  };
+
+  delete evidenceOnly
+    .criterionReasons;
+
+  delete evidenceOnly
+    .criterion_reasons;
+
+  delete evidenceOnly
+    .criterionScores;
+
+  delete evidenceOnly
+    .criterion_scores;
+
+  return evidenceOnly;
+}
+
 function hasCompleteScores(
   scores:
     | Record<
@@ -369,6 +402,8 @@ function hasCompleteScores(
 export async function POST(
   request: Request,
 ) {
+  let paidApiCalls = 0;
+
   try {
     const body =
       (
@@ -378,6 +413,14 @@ export async function POST(
     const category =
       normalizeText(
         body.category,
+      );
+
+    const dryRun =
+      body.dryRun === true;
+
+    const requestedInputFingerprint =
+      normalizeText(
+        body.inputFingerprint,
       );
 
     const requestedProductIds =
@@ -425,23 +468,6 @@ export async function POST(
         },
         {
           status: 400,
-        },
-      );
-    }
-
-    const apiKey =
-      process.env
-        .OPENAI_API_KEY;
-
-    if (!apiKey) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "OPENAI_API_KEY가 설정되지 않았습니다.",
-        },
-        {
-          status: 500,
         },
       );
     }
@@ -667,6 +693,8 @@ export async function POST(
 
     const fingerprint =
       createFingerprint({
+        version:
+          PRODUCT_SCORE_PIPELINE_VERSION,
         category,
         criteria,
 
@@ -692,7 +720,9 @@ export async function POST(
                 product.source_url,
 
               reviewAnalysis:
-                product.review_analysis,
+                reviewAnalysisEvidenceOnly(
+                  product.review_analysis,
+                ),
 
               productDetailAnalysis:
                 product.product_detail_analysis,
@@ -718,19 +748,31 @@ export async function POST(
           ),
       );
 
-    if (
+    const cacheHit =
       cachedFingerprint ===
         fingerprint &&
-      allHaveScores
-    ) {
+      allHaveScores;
+
+    if (cacheHit) {
       return NextResponse.json({
         success: true,
+        dryRun,
         cacheHit: true,
         category,
+        pipelineVersion:
+          PRODUCT_SCORE_PIPELINE_VERSION,
         productCount:
           products.length,
         criterionCount:
           criteria.length,
+        inputFingerprint:
+          fingerprint,
+        estimatedOpenAiCalls:
+          0,
+        paidApiCalls:
+          0,
+        dbWrites:
+          0,
         scoreGeneratedAt:
           profile
             .score_generated_at ??
@@ -738,6 +780,95 @@ export async function POST(
         message:
           "제품 근거가 변경되지 않아 기존 AI 점수를 그대로 사용합니다.",
       });
+    }
+
+    if (dryRun) {
+      return NextResponse.json({
+        success: true,
+        dryRun: true,
+        cacheHit: false,
+        category,
+        pipelineVersion:
+          PRODUCT_SCORE_PIPELINE_VERSION,
+        productCount:
+          products.length,
+        criterionCount:
+          criteria.length,
+        inputFingerprint:
+          fingerprint,
+        estimatedOpenAiCalls:
+          1,
+        paidApiCalls:
+          0,
+        dbWrites:
+          0,
+        message:
+          "제품별 점수 생성 무료 사전검증이 완료되었습니다. 실제 AI 평가는 아직 실행되지 않았습니다.",
+      });
+    }
+
+    if (!requestedInputFingerprint) {
+      return NextResponse.json(
+        {
+          success: false,
+          cacheHit: false,
+          category,
+          pipelineVersion:
+            PRODUCT_SCORE_PIPELINE_VERSION,
+          inputFingerprint:
+            fingerprint,
+          paidApiCalls:
+            0,
+          message:
+            "유료 제품 점수 생성에는 dryRun에서 받은 inputFingerprint가 필요합니다.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    if (
+      requestedInputFingerprint !==
+      fingerprint
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          cacheHit: false,
+          category,
+          pipelineVersion:
+            PRODUCT_SCORE_PIPELINE_VERSION,
+          inputFingerprint:
+            fingerprint,
+          paidApiCalls:
+            0,
+          message:
+            "제품 근거가 사전검증 이후 변경되었습니다. 새 dryRun으로 다시 확인해 주세요.",
+        },
+        {
+          status: 409,
+        },
+      );
+    }
+
+    const apiKey =
+      process.env
+        .OPENAI_API_KEY;
+
+    if (!apiKey) {
+      return NextResponse.json(
+        {
+          success: false,
+          paidApiCalls:
+            0,
+          message:
+            "OPENAI_API_KEY가 설정되지 않았습니다.",
+        },
+        {
+          status: 500,
+        },
+      );
     }
 
     const evidenceProducts =
@@ -774,13 +905,16 @@ export async function POST(
               : {},
 
           reviewAnalysis:
-            product.review_analysis,
+            reviewAnalysisEvidenceOnly(
+              product.review_analysis,
+            ),
         }),
       );
 
     const client =
       new OpenAI({
         apiKey,
+        maxRetries: 0,
       });
 
     const prompt = `
@@ -883,6 +1017,8 @@ ${criterionKeys.join(
 
 반드시 비교 대상 모든 제품을 반환하세요.
 `;
+
+    paidApiCalls += 1;
 
     const response =
       await client.responses.create(
@@ -1038,8 +1174,16 @@ ${criterionKeys.join(
 
     return NextResponse.json({
       success: true,
+      dryRun: false,
       cacheHit: false,
       category,
+      pipelineVersion:
+        PRODUCT_SCORE_PIPELINE_VERSION,
+      inputFingerprint:
+        fingerprint,
+      estimatedOpenAiCalls:
+        1,
+      paidApiCalls,
 
       productCount:
         products.length,
@@ -1064,6 +1208,7 @@ ${criterionKeys.join(
     return NextResponse.json(
       {
         success: false,
+        paidApiCalls,
 
         message:
           error instanceof Error
