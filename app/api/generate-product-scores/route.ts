@@ -255,6 +255,54 @@ function normalizeResults(
     );
 }
 
+function assertExactUniqueProductMembership(
+  results: Array<{
+    productId: string;
+  }>,
+  expectedProductIds: string[],
+) {
+  const expected =
+    new Set(
+      expectedProductIds,
+    );
+
+  const actualIds =
+    results.map(
+      (item) =>
+        item.productId,
+    );
+
+  const actual =
+    new Set(
+      actualIds,
+    );
+
+  if (
+    expected.size !==
+      expectedProductIds.length ||
+    actual.size !==
+      actualIds.length ||
+    actualIds.length !==
+      expectedProductIds.length ||
+    actualIds.some(
+      (productId) =>
+        !expected.has(
+          productId,
+        ),
+    ) ||
+    expectedProductIds.some(
+      (productId) =>
+        !actual.has(
+          productId,
+        ),
+    )
+  ) {
+    throw new Error(
+      "AI 제품 평가 결과의 productId 집합이 요청한 제품 UUID 집합과 정확히 일치하지 않습니다. 유료 응답을 확인한 뒤 다시 판단해야 합니다.",
+    );
+  }
+}
+
 function stableStringify(
   value: unknown,
 ): string {
@@ -403,6 +451,14 @@ export async function POST(
   request: Request,
 ) {
   let paidApiCalls = 0;
+  let paidResponseAudit:
+    | {
+        responseId: string;
+        responseStatus: string;
+        rawModelOutputText: string;
+      }
+    | null =
+      null;
 
   try {
     const body =
@@ -1030,6 +1086,27 @@ ${criterionKeys.join(
         },
       );
 
+    const responseRecord =
+      response as unknown as
+        Record<
+          string,
+          unknown
+        >;
+
+    paidResponseAudit = {
+      responseId:
+        normalizeText(
+          responseRecord.id,
+        ),
+      responseStatus:
+        normalizeText(
+          responseRecord.status,
+        ),
+      rawModelOutputText:
+        response.output_text ??
+        "",
+    };
+
     const outputText =
       response
         .output_text
@@ -1063,30 +1140,36 @@ ${criterionKeys.join(
         criterionKeys,
       );
 
-    if (
-      scoreResults.length !==
-      products.length
-    ) {
-      throw new Error(
-        `AI 제품 평가 결과가 완전하지 않습니다. ${products.length}개 중 ${scoreResults.length}개만 반환되었습니다.`,
+    assertExactUniqueProductMembership(
+      scoreResults,
+      products.map(
+        (product) =>
+          product.id,
+      ),
+    );
+
+    const scoreResultByProductId =
+      new Map(
+        scoreResults.map(
+          (item) => [
+            item.productId,
+            item,
+          ] as const),
       );
-    }
 
     for (
       const product of
       products
     ) {
       const scoreResult =
-        scoreResults.find(
-          (
-            item,
-          ) =>
-            item.productId ===
-            product.id,
+        scoreResultByProductId.get(
+          product.id,
         );
 
       if (!scoreResult) {
-        continue;
+        throw new Error(
+          "검증된 제품 점수 집합에서 현재 제품 UUID를 찾지 못했습니다.",
+        );
       }
 
       const existingReview =
@@ -1209,6 +1292,7 @@ ${criterionKeys.join(
       {
         success: false,
         paidApiCalls,
+        paidResponseAudit,
 
         message:
           error instanceof Error

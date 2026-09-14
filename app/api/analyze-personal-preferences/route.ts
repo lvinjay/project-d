@@ -41,6 +41,54 @@ function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function assertExactUniqueProductMembership(
+  results: Array<{
+    productId: string;
+  }>,
+  expectedProductIds: string[],
+) {
+  const expected =
+    new Set(
+      expectedProductIds,
+    );
+
+  const actualIds =
+    results.map(
+      (item) =>
+        item.productId,
+    );
+
+  const actual =
+    new Set(
+      actualIds,
+    );
+
+  if (
+    expected.size !==
+      expectedProductIds.length ||
+    actual.size !==
+      actualIds.length ||
+    actualIds.length !==
+      expectedProductIds.length ||
+    actualIds.some(
+      (productId) =>
+        !expected.has(
+          productId,
+        ),
+    ) ||
+    expectedProductIds.some(
+      (productId) =>
+        !actual.has(
+          productId,
+        ),
+    )
+  ) {
+    throw new Error(
+      "AI 개인조건 평가 결과의 productId 집합이 요청한 제품 UUID 집합과 정확히 일치하지 않습니다. 유료 응답을 확인한 뒤 다시 판단해야 합니다.",
+    );
+  }
+}
+
 function parseJson(value: string) {
   return JSON.parse(
     value.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/\s*```$/i, "").trim(),
@@ -801,25 +849,15 @@ ${JSON.stringify(personalPreferenceEvidence)}
           } => item !== null,
         );
 
-    if (
-      productScores.length !==
-      products.length
-    ) {
-      console.error(
-        "Incomplete personal preference scores:",
-        {
-          expected:
-            products.length,
-          received:
-            productScores.length,
-          productScores,
-        },
-      );
-
-      throw new Error(
-        "일부 제품의 개인조건 평가가 누락되었습니다. 유료 호출 결과를 확인한 뒤 다시 판단해야 합니다.",
-      );
-    }
+    assertExactUniqueProductMembership(
+      productScores,
+      products.map(
+        (product) =>
+          String(
+            product.id,
+          ),
+      ),
+    );
 
     const interpretedPreferences =
       Array.isArray(
