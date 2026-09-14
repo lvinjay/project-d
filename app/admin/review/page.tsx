@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchCurrentReviewAnalysisSnapshot, storeAndSaveReviewAnalysis, retryStoredReviewAnalysisPersistence } from "../../../lib/project-d-review-cas-client";
+
 import {
   Suspense,
   useCallback,
@@ -295,7 +297,7 @@ function AdminReviewContent() {
   async function saveAnalysis(
     nextAnalysis: ReviewAnalysis,
   ) {
-    if (!productId) {
+    if (!product || !productId || product.id !== productId) {
       throw new Error(
         "저장할 제품 ID가 없습니다.",
       );
@@ -308,10 +310,11 @@ function AdminReviewContent() {
       const reviews = getReviews();
       const savedAt = new Date().toISOString();
 
-      const { error } = await supabase
+      const originProductNo = Number(product.origin_product_no);
+      if (!Number.isSafeInteger(originProductNo) || originProductNo <= 0) throw new Error("원상품 번호가 유효하지 않습니다.");
+      const { data: rawSaved, error } = await supabase
         .from("products")
         .update({
-          review_analysis: nextAnalysis,
           review_raw_data: {
             reviews,
             collectionStats,
@@ -319,10 +322,12 @@ function AdminReviewContent() {
           },
           updated_at: savedAt,
         })
-        .eq("id", productId);
+        .eq("category", product.category).eq("id", product.id)
+        .eq("origin_product_no", originProductNo).eq("product_name", product.product_name)
+        .select("id").limit(1).maybeSingle();
 
-      if (error) {
-        throw error;
+      if (error || !rawSaved || rawSaved.id !== product.id) {
+        throw new Error("리뷰 분석 CAS 저장은 완료됐지만 원문 저장에 실패했습니다. 분석은 이미 DB에 저장됐으며 되돌리지 않습니다. AI를 다시 실행할 필요가 없습니다.");
       }
 
       setProduct((current) =>
@@ -415,14 +420,27 @@ function AdminReviewContent() {
         return;
       }
 
-      const nextAnalysis =
+      if (!product || product.id !== productId) throw new Error("분석할 현재 제품이 없습니다.");
+      if (!Number.isSafeInteger(originProductNo) || originProductNo <= 0) throw new Error("원상품 번호가 유효하지 않습니다.");
+      const identity = { category: product.category, dbProductId: product.id, originProductNo, productName: product.product_name };
+      const retried = await retryStoredReviewAnalysisPersistence(identity, plan.inputFingerprint);
+      let nextAnalysis: ReviewAnalysis;
+      if (retried) {
+        nextAnalysis = retried.analysis as ReviewAnalysis;
+      } else {
+      const expectedReviewAnalysis = await fetchCurrentReviewAnalysisSnapshot({
+        category: product.category, dbProductId: product.id, originProductNo, productName: product.product_name,
+      });
+      nextAnalysis =
         await executeProductionReviewAnalysis(
           plan,
         );
 
-      setAnalysis(nextAnalysis);
-
+      await storeAndSaveReviewAnalysis({ ...identity, expectedReviewAnalysis, analysis: nextAnalysis,
+        inputFingerprint: plan.inputFingerprint });
+      }
       await saveAnalysis(nextAnalysis);
+      setAnalysis(nextAnalysis);
     } catch (error) {
       console.error(
         "리뷰 분석 또는 저장 실패:",

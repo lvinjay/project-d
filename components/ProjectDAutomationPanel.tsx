@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchCurrentReviewAnalysisSnapshot, storeAndSaveReviewAnalysis, retryStoredReviewAnalysisPersistence } from "../lib/project-d-review-cas-client";
+
 import { beginSelectionRun, assertSelectionRun, selectEligibleFive, fetchCategoryProfile, categoryProfileRevision, publishSelectedFive, type SelectedProduct } from "../lib/project-d-selected-five-manifest";
 
 import {
@@ -1407,6 +1409,15 @@ export default function ProjectDAutomationPanel() {
           throw new Error("프로필이 변경되어 승인된 리뷰 분석을 중단합니다.");
         }
         assertSelectionRun(window.sessionStorage, selectionRun);
+        const identity = { category: normalizedCategory, dbProductId: plan.product.dbProductId,
+          originProductNo: plan.product.originProductNo, productName: plan.product.productName };
+        const retried = await retryStoredReviewAnalysisPersistence(identity, plan.fingerprint);
+        if (!retried) {
+        const expectedReviewAnalysis = await fetchCurrentReviewAnalysisSnapshot({
+          category: normalizedCategory, dbProductId: plan.product.dbProductId,
+          originProductNo: plan.product.originProductNo, productName: plan.product.productName,
+        });
+        assertSelectionRun(window.sessionStorage, selectionRun);
         // Persist attempt state before sending; no transport/parse/model retry.
         window.sessionStorage.setItem("projectDReviewLastAttempt", JSON.stringify({
           ...selectionRun, dbProductId: plan.product.dbProductId, inputFingerprint: plan.fingerprint, status: "attempted",
@@ -1422,17 +1433,13 @@ export default function ProjectDAutomationPanel() {
           throw new Error(cleanText(result.message) || "유료 리뷰 분석 실패. 자동 재시도하지 않습니다.");
         }
         assertSelectionRun(window.sessionStorage, selectionRun);
-        const saveResponse = await fetch("/api/save-review-analysis-only", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ category: normalizedCategory, products: [{
-            dbProductId: plan.product.dbProductId, originProductNo: plan.product.originProductNo,
-            productName: plan.product.productName, analysis,
-          }] }),
+        await storeAndSaveReviewAnalysis({
+          category: normalizedCategory, dbProductId: plan.product.dbProductId,
+          originProductNo: plan.product.originProductNo, productName: plan.product.productName,
+          expectedReviewAnalysis, analysis, inputFingerprint: plan.fingerprint,
         });
-        const saved = await readJson(saveResponse);
-        if (!saveResponse.ok || saved.success !== true || saved.successCount !== 1 ||
-            saved.reviewRawDataTouched !== false) throw new Error(cleanText(saved.message) || "정확한 제품 identity로 분석을 저장하지 못했습니다.");
 
+        }
         assertSelectionRun(window.sessionStorage, selectionRun);
         const rawSaveResponse = await fetch("/api/save-review-raw-batch", {
           method: "POST", headers: { "Content-Type": "application/json" },

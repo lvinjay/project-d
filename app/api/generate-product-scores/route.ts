@@ -1,6 +1,8 @@
 import OpenAI from "openai";
 import {
   createHash,
+  createHmac,
+  timingSafeEqual,
 } from "node:crypto";
 
 import {
@@ -26,6 +28,8 @@ type RequestBody = {
   productNames?: unknown;
   dryRun?: unknown;
   inputFingerprint?: unknown;
+  persistenceOnly?: unknown;
+  persistenceRetry?: unknown;
 };
 
 type Criterion = {
@@ -367,6 +371,111 @@ function createFingerprint(
     );
 }
 
+type PersistenceRetryPayload = {
+  schemaVersion: 1;
+  pipelineVersion: string;
+  category: string;
+  productIds: string[];
+  inputFingerprint: string;
+  scores: ScoreResult[];
+};
+
+type PersistenceRetryEnvelope = {
+  payload: PersistenceRetryPayload;
+  signature: string;
+};
+
+function asRecord(
+  value: unknown,
+) {
+  return (
+    value &&
+    typeof value === "object" &&
+    !Array.isArray(value)
+  )
+    ? value as Record<
+        string,
+        unknown
+      >
+    : null;
+}
+
+function persistenceRetrySigningKey() {
+  const key =
+    process.env
+      .SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!key) {
+    throw new Error(
+      "SUPABASE_SERVICE_ROLE_KEY가 없어 유료 점수 결과의 안전한 저장 재시도 토큰을 만들 수 없습니다.",
+    );
+  }
+
+  return key;
+}
+
+function signPersistenceRetryPayload(
+  payload: PersistenceRetryPayload,
+) {
+  return createHmac(
+    "sha256",
+    persistenceRetrySigningKey(),
+  )
+    .update(
+      stableStringify(
+        payload,
+      ),
+      "utf8",
+    )
+    .digest(
+      "hex",
+    );
+}
+
+function verifyPersistenceRetryPayload(
+  payload: Record<
+    string,
+    unknown
+  >,
+  signature: string,
+) {
+  if (
+    !/^[a-f0-9]{64}$/i.test(
+      signature,
+    )
+  ) {
+    return false;
+  }
+
+  const expected =
+    createHmac(
+      "sha256",
+      persistenceRetrySigningKey(),
+    )
+      .update(
+        stableStringify(
+          payload,
+        ),
+        "utf8",
+      )
+      .digest();
+
+  const actual =
+    Buffer.from(
+      signature,
+      "hex",
+    );
+
+  return (
+    actual.length ===
+      expected.length &&
+    timingSafeEqual(
+      actual,
+      expected,
+    )
+  );
+}
+
 function reviewAnalysisEvidenceOnly(
   value:
     | Record<string, unknown>
@@ -460,6 +569,11 @@ export async function POST(
     | null =
       null;
 
+  let persistenceRetry:
+    PersistenceRetryEnvelope |
+    null =
+      null;
+
   try {
     const body =
       (
@@ -473,6 +587,10 @@ export async function POST(
 
     const dryRun =
       body.dryRun === true;
+
+    const persistenceOnly =
+      body.persistenceOnly ===
+      true;
 
     const requestedInputFingerprint =
       normalizeText(
@@ -908,6 +1026,310 @@ export async function POST(
       );
     }
 
+    if (persistenceOnly) {
+      const retryEnvelope =
+        asRecord(
+          body.persistenceRetry,
+        );
+
+      const retryPayload =
+        asRecord(
+          retryEnvelope
+            ?.payload,
+        );
+
+      const retrySignature =
+        normalizeText(
+          retryEnvelope
+            ?.signature,
+        );
+
+      if (
+        !retryPayload ||
+        !retrySignature ||
+        !verifyPersistenceRetryPayload(
+          retryPayload,
+          retrySignature,
+        )
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            persistenceOnly: true,
+            paidApiCalls: 0,
+            message:
+              "저장 재시도 payload의 서버 서명을 검증하지 못했습니다. OpenAI는 호출하지 않았습니다.",
+          },
+          {
+            status: 400,
+          },
+        );
+      }
+
+      const retryCategory =
+        normalizeText(
+          retryPayload.category,
+        );
+
+      const retryPipelineVersion =
+        normalizeText(
+          retryPayload.pipelineVersion,
+        );
+
+      const retryFingerprint =
+        normalizeText(
+          retryPayload.inputFingerprint,
+        );
+
+      const rawRetryProductIds =
+        Array.isArray(
+          retryPayload.productIds,
+        )
+          ? retryPayload
+              .productIds
+              .map(
+                (value) =>
+                  normalizeText(
+                    value,
+                  ),
+              )
+          : [];
+
+      const retryProductIds =
+        [
+          ...new Set(
+            rawRetryProductIds.filter(
+              Boolean,
+            ),
+          ),
+        ];
+
+      const currentProductIds =
+        products.map(
+          (product) =>
+            product.id,
+        );
+
+      const currentProductIdSet =
+        new Set(
+          currentProductIds,
+        );
+
+      if (
+        Number(
+          retryPayload.schemaVersion,
+        ) !== 1 ||
+        retryPipelineVersion !==
+          PRODUCT_SCORE_PIPELINE_VERSION ||
+        retryCategory !==
+          category ||
+        retryFingerprint !==
+          fingerprint ||
+        rawRetryProductIds.length !==
+          retryProductIds.length ||
+        retryProductIds.length !==
+          currentProductIds.length ||
+        retryProductIds.some(
+          (productId) =>
+            !currentProductIdSet.has(
+              productId,
+            ),
+        ) ||
+        currentProductIds.some(
+          (productId) =>
+            !retryProductIds.includes(
+              productId,
+            ),
+        )
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            persistenceOnly: true,
+            paidApiCalls: 0,
+            inputFingerprint:
+              fingerprint,
+            message:
+              "저장 재시도의 제품 집합 또는 근거 fingerprint가 현재 상태와 일치하지 않습니다. OpenAI는 호출하지 않았습니다.",
+          },
+          {
+            status: 409,
+          },
+        );
+      }
+
+      let retryScoreResults:
+        ScoreResult[];
+
+      try {
+        retryScoreResults =
+          normalizeResults(
+            retryPayload.scores,
+            currentProductIdSet,
+            criterionKeys,
+          );
+
+        assertExactUniqueProductMembership(
+          retryScoreResults,
+          currentProductIds,
+        );
+      } catch {
+        return NextResponse.json(
+          {
+            success: false,
+            persistenceOnly: true,
+            paidApiCalls: 0,
+            message:
+              "저장 재시도의 검증된 점수 집합이 현재 5개 제품과 정확히 일치하지 않습니다. OpenAI는 호출하지 않았습니다.",
+          },
+          {
+            status: 400,
+          },
+        );
+      }
+
+      const retryScoreResultByProductId =
+        new Map(
+          retryScoreResults.map(
+            (item) => [
+              item.productId,
+              item,
+            ] as const),
+        );
+
+      const retryAtomicProducts =
+        products.map(
+          (product) => {
+            const scoreResult =
+              retryScoreResultByProductId.get(
+                product.id,
+              );
+
+            if (!scoreResult) {
+              throw new Error(
+                "검증된 저장 재시도 점수에서 현재 제품 UUID를 찾지 못했습니다.",
+              );
+            }
+
+            return {
+              productId:
+                product.id,
+
+              productName:
+                product.product_name,
+
+              sourceUrl:
+                product.source_url,
+
+              expectedReviewEvidence:
+                reviewAnalysisEvidenceOnly(
+                  product.review_analysis,
+                ),
+
+              expectedProductDetailAnalysis:
+                product.product_detail_analysis,
+
+              criterionScores:
+                scoreResult
+                  .criterionScores,
+
+              criterionReasons:
+                scoreResult
+                  .criterionReasons,
+            };
+          },
+        );
+
+      const retryScoreGeneratedAt =
+        new Date()
+          .toISOString();
+
+      const {
+        data:
+          retryPersistenceResult,
+        error:
+          retryPersistenceError,
+      } =
+        await supabaseAdmin.rpc(
+          "project_d_commit_product_scores_v1",
+          {
+            p_category:
+              category,
+
+            p_expected_criteria:
+              profile.criteria ??
+              null,
+
+            p_expected_common_cautions:
+              profile.common_cautions ??
+              null,
+
+            p_products:
+              retryAtomicProducts,
+
+            p_score_generation_fingerprint:
+              fingerprint,
+
+            p_score_generated_at:
+              retryScoreGeneratedAt,
+          },
+        );
+
+      if (retryPersistenceError) {
+        throw retryPersistenceError;
+      }
+
+      const retryPersistenceRecord =
+        asRecord(
+          retryPersistenceResult,
+        );
+
+      if (
+        !retryPersistenceRecord ||
+        retryPersistenceRecord.success !==
+          true ||
+        Number(
+          retryPersistenceRecord
+            .updatedCount,
+        ) !== products.length ||
+        normalizeText(
+          retryPersistenceRecord
+            .scoreGenerationFingerprint,
+        ) !== fingerprint
+      ) {
+        throw new Error(
+          "저장 재시도 atomic persistence 결과를 검증하지 못했습니다. OpenAI는 호출하지 않았습니다.",
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        persistenceOnly: true,
+        cacheHit: false,
+        category,
+        pipelineVersion:
+          PRODUCT_SCORE_PIPELINE_VERSION,
+        inputFingerprint:
+          fingerprint,
+        estimatedOpenAiCalls:
+          0,
+        paidApiCalls:
+          0,
+        productCount:
+          products.length,
+        updatedCount:
+          products.length,
+        criterionCount:
+          criteria.length,
+        scoreGeneratedAt:
+          retryScoreGeneratedAt,
+        scores:
+          retryScoreResults,
+        message:
+          `${products.length}개 제품의 기존 검증 완료 AI 점수를 OpenAI 재호출 없이 atomic 저장했습니다.`,
+      });
+    }
+
     const apiKey =
       process.env
         .OPENAI_API_KEY;
@@ -1148,6 +1570,38 @@ ${criterionKeys.join(
       ),
     );
 
+    const persistenceRetryPayload:
+      PersistenceRetryPayload = {
+        schemaVersion: 1,
+
+        pipelineVersion:
+          PRODUCT_SCORE_PIPELINE_VERSION,
+
+        category,
+
+        productIds:
+          products.map(
+            (product) =>
+              product.id,
+          ),
+
+        inputFingerprint:
+          fingerprint,
+
+        scores:
+          scoreResults,
+      };
+
+    persistenceRetry = {
+      payload:
+        persistenceRetryPayload,
+
+      signature:
+        signPersistenceRetryPayload(
+          persistenceRetryPayload,
+        ),
+    };
+
     const scoreResultByProductId =
       new Map(
         scoreResults.map(
@@ -1157,103 +1611,122 @@ ${criterionKeys.join(
           ] as const),
       );
 
-    for (
-      const product of
-      products
-    ) {
-      const scoreResult =
-        scoreResultByProductId.get(
-          product.id,
-        );
+    const atomicProducts =
+      products.map(
+        (product) => {
+          const scoreResult =
+            scoreResultByProductId.get(
+              product.id,
+            );
 
-      if (!scoreResult) {
-        throw new Error(
-          "검증된 제품 점수 집합에서 현재 제품 UUID를 찾지 못했습니다.",
-        );
-      }
+          if (!scoreResult) {
+            throw new Error(
+              "검증된 제품 점수 집합에서 현재 제품 UUID를 찾지 못했습니다.",
+            );
+          }
 
-      const existingReview =
-        product.review_analysis &&
-        typeof product
-          .review_analysis ===
-          "object" &&
-        !Array.isArray(
-          product.review_analysis,
-        )
-          ? product.review_analysis
-          : {};
+          return {
+            productId:
+              product.id,
 
-      const mergedReviewAnalysis = {
-        ...existingReview,
+            productName:
+              product.product_name,
 
-        criterionReasons:
-          scoreResult
-            .criterionReasons,
+            sourceUrl:
+              product.source_url,
 
-        criterion_reasons:
-          scoreResult
-            .criterionReasons,
-      };
+            expectedReviewEvidence:
+              reviewAnalysisEvidenceOnly(
+                product.review_analysis,
+              ),
 
-      const {
-        error:
-          updateError,
-      } =
-        await supabaseAdmin
-          .from(
-            "products",
-          )
-          .update({
-            criterion_scores:
+            expectedProductDetailAnalysis:
+              product.product_detail_analysis,
+
+            criterionScores:
               scoreResult
                 .criterionScores,
 
-            review_analysis:
-              mergedReviewAnalysis,
-
-            updated_at:
-              new Date()
-                .toISOString(),
-          })
-          .eq(
-            "id",
-            product.id,
-          );
-
-      if (updateError) {
-        throw updateError;
-      }
-    }
+            criterionReasons:
+              scoreResult
+                .criterionReasons,
+          };
+        },
+      );
 
     const scoreGeneratedAt =
       new Date()
         .toISOString();
 
     const {
+      data:
+        persistenceResult,
       error:
-        profileUpdateError,
+        persistenceError,
     } =
-      await supabaseAdmin
-        .from(
-          "category_profiles",
-        )
-        .update({
-          score_generation_fingerprint:
+      await supabaseAdmin.rpc(
+        "project_d_commit_product_scores_v1",
+        {
+          p_category:
+            category,
+
+          p_expected_criteria:
+            profile.criteria ??
+            null,
+
+          p_expected_common_cautions:
+            profile.common_cautions ??
+            null,
+
+          p_products:
+            atomicProducts,
+
+          p_score_generation_fingerprint:
             fingerprint,
 
-          score_generated_at:
+          p_score_generated_at:
             scoreGeneratedAt,
-        })
-        .eq(
-          "category",
-          category,
-        );
+        },
+      );
+
+    if (persistenceError) {
+      throw persistenceError;
+    }
+
+    const persistenceRecord =
+      persistenceResult &&
+      typeof persistenceResult ===
+        "object" &&
+      !Array.isArray(
+        persistenceResult,
+      )
+        ? (
+            persistenceResult as Record<
+              string,
+              unknown
+            >
+          )
+        : null;
 
     if (
-      profileUpdateError
+      !persistenceRecord ||
+      persistenceRecord.success !==
+        true ||
+      Number(
+        persistenceRecord.updatedCount,
+      ) !== products.length ||
+      normalizeText(
+        persistenceRecord
+          .scoreGenerationFingerprint,
+      ) !== fingerprint
     ) {
-      throw profileUpdateError;
+      throw new Error(
+        "제품 점수 atomic persistence 결과를 검증하지 못했습니다. AI 응답은 재호출하지 말고 저장 결과를 확인해야 합니다.",
+      );
     }
+
+    persistenceRetry =
+      null;
 
     return NextResponse.json({
       success: true,
@@ -1293,6 +1766,12 @@ ${criterionKeys.join(
         success: false,
         paidApiCalls,
         paidResponseAudit,
+
+        persistenceRetryAvailable:
+          persistenceRetry !==
+          null,
+
+        persistenceRetry,
 
         message:
           error instanceof Error

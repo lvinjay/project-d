@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchCurrentReviewAnalysisSnapshot, storeAndSaveReviewAnalysis, retryStoredReviewAnalysisPersistence } from "../../lib/project-d-review-cas-client";
+
 import { loadSelectedFiveContext, selectedFiveIds, assertSameSelectedIds } from "../../lib/project-d-selected-five-manifest";
 
 import {
@@ -193,6 +195,9 @@ type ProductScoreGenerationResponse = {
   message?: string;
   dryRun?: boolean;
   cacheHit?: boolean;
+  persistenceOnly?: boolean;
+  persistenceRetryAvailable?: boolean;
+  persistenceRetry?: unknown;
   pipelineVersion?: string;
   inputFingerprint?: string;
   estimatedOpenAiCalls?: number;
@@ -200,6 +205,20 @@ type ProductScoreGenerationResponse = {
   updatedCount?: number;
   productCount?: number;
 };
+
+type StoredProductScorePersistenceRetry = {
+  schemaVersion: 1;
+  category: string;
+  productIds: string[];
+  selectionIdentity: string;
+  inputFingerprint: string;
+  persistenceRetry:
+    Record<string, unknown>;
+  savedAt: string;
+};
+
+const PRODUCT_SCORE_PERSISTENCE_RETRY_KEY =
+  "projectDProductScorePersistenceRetryV1";
 
 type ProductScoreGenerationPlan = {
   selectionIdentity: string;
@@ -390,6 +409,239 @@ async function prepareProductScoreGeneration(
   };
 }
 
+function readStoredProductScorePersistenceRetry(
+  category: string,
+): StoredProductScorePersistenceRetry | null {
+  const raw =
+    window.sessionStorage.getItem(
+      PRODUCT_SCORE_PERSISTENCE_RETRY_KEY,
+    );
+
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed =
+      JSON.parse(
+        raw,
+      ) as Record<
+        string,
+        unknown
+      >;
+
+    const storedCategory =
+      typeof parsed.category ===
+        "string"
+        ? parsed.category.trim()
+        : "";
+
+    if (
+      storedCategory !==
+      category
+    ) {
+      return null;
+    }
+
+    const productIds =
+      Array.isArray(
+        parsed.productIds,
+      )
+        ? parsed.productIds
+            .map(
+              (value) =>
+                typeof value ===
+                  "string"
+                  ? value.trim()
+                  : "",
+            )
+            .filter(Boolean)
+        : [];
+
+    const selectionIdentity =
+      typeof parsed.selectionIdentity ===
+        "string"
+        ? parsed.selectionIdentity.trim()
+        : "";
+
+    const inputFingerprint =
+      typeof parsed.inputFingerprint ===
+        "string"
+        ? parsed.inputFingerprint.trim()
+        : "";
+
+    const persistenceRetry =
+      parsed.persistenceRetry &&
+      typeof parsed.persistenceRetry ===
+        "object" &&
+      !Array.isArray(
+        parsed.persistenceRetry,
+      )
+        ? (
+            parsed.persistenceRetry as
+              Record<
+                string,
+                unknown
+              >
+          )
+        : null;
+
+    if (
+      Number(
+        parsed.schemaVersion,
+      ) !== 1 ||
+      productIds.length !== 5 ||
+      new Set(
+        productIds,
+      ).size !== 5 ||
+      !selectionIdentity ||
+      !/^[a-f0-9]{64}$/.test(
+        inputFingerprint,
+      ) ||
+      !persistenceRetry
+    ) {
+      window.sessionStorage.removeItem(
+        PRODUCT_SCORE_PERSISTENCE_RETRY_KEY,
+      );
+
+      return null;
+    }
+
+    return {
+      schemaVersion: 1,
+      category:
+        storedCategory,
+      productIds,
+      selectionIdentity,
+      inputFingerprint,
+      persistenceRetry,
+      savedAt:
+        typeof parsed.savedAt ===
+          "string"
+          ? parsed.savedAt
+          : "",
+    };
+  } catch {
+    window.sessionStorage.removeItem(
+      PRODUCT_SCORE_PERSISTENCE_RETRY_KEY,
+    );
+
+    return null;
+  }
+}
+
+async function retryStoredProductScorePersistence(
+  category: string,
+) {
+  const stored =
+    readStoredProductScorePersistenceRetry(
+      category,
+    );
+
+  if (!stored) {
+    return null;
+  }
+
+  try {
+    const selected =
+      await loadSelectedFiveContext(
+        window.sessionStorage,
+        category,
+        stored.selectionIdentity,
+      );
+
+    assertSameSelectedIds(
+      stored.productIds,
+      selected.manifest,
+    );
+  } catch {
+    window.sessionStorage.removeItem(
+      PRODUCT_SCORE_PERSISTENCE_RETRY_KEY,
+    );
+
+    throw new Error(
+      "보관된 제품 점수 저장 재시도는 현재 최종 5개 실행과 더 이상 일치하지 않아 폐기했습니다. OpenAI는 호출하지 않았습니다. 새 평가가 필요하면 버튼을 다시 눌러 주세요.",
+    );
+  }
+
+  const response =
+    await fetch(
+      "/api/generate-product-scores",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+        body: JSON.stringify({
+          category:
+            stored.category,
+
+          productIds:
+            stored.productIds,
+
+          inputFingerprint:
+            stored.inputFingerprint,
+
+          persistenceOnly:
+            true,
+
+          persistenceRetry:
+            stored.persistenceRetry,
+        }),
+      },
+    );
+
+  const result =
+    (await response.json()) as
+      ProductScoreGenerationResponse;
+
+  if (
+    !response.ok ||
+    result.success !== true
+  ) {
+    /*
+     * 400/409 means the signed token or its bound
+     * evidence is no longer usable.
+     *
+     * 5xx/network-style persistence failures keep
+     * the token so another zero-paid retry is possible.
+     */
+    if (
+      response.status === 400 ||
+      response.status === 409
+    ) {
+      window.sessionStorage.removeItem(
+        PRODUCT_SCORE_PERSISTENCE_RETRY_KEY,
+      );
+    }
+
+    throw new Error(
+      result.message ??
+        "기존 AI 점수의 저장 재시도에 실패했습니다. OpenAI는 호출하지 않았습니다.",
+    );
+  }
+
+  if (
+    result.persistenceOnly !== true ||
+    result.paidApiCalls !== 0 ||
+    result.productCount !== 5 ||
+    result.updatedCount !== 5 ||
+    result.inputFingerprint !==
+      stored.inputFingerprint
+  ) {
+    throw new Error(
+      "저장 재시도 응답 계약을 검증하지 못했습니다. OpenAI는 호출하지 않았습니다.",
+    );
+  }
+
+  window.sessionStorage.removeItem(
+    PRODUCT_SCORE_PERSISTENCE_RETRY_KEY,
+  );
+
+  return result;
+}
+
 async function executeProductScoreGeneration(
   plan: ProductScoreGenerationPlan,
 ) {
@@ -417,9 +669,90 @@ async function executeProductScoreGeneration(
     !response.ok ||
     !result.success
   ) {
+    const retryEnvelope =
+      result.persistenceRetry &&
+      typeof result.persistenceRetry ===
+        "object" &&
+      !Array.isArray(
+        result.persistenceRetry,
+      )
+        ? (
+            result.persistenceRetry as
+              Record<
+                string,
+                unknown
+              >
+          )
+        : null;
+
+    if (
+      result.persistenceRetryAvailable ===
+        true &&
+      retryEnvelope &&
+      Number(
+        result.paidApiCalls,
+      ) > 0 &&
+      Array.isArray(
+        plan.input.productIds,
+      ) &&
+      plan.input.productIds.length ===
+        5
+    ) {
+      const stored:
+        StoredProductScorePersistenceRetry = {
+          schemaVersion: 1,
+
+          category:
+            plan.input.category,
+
+          productIds:
+            [
+              ...plan.input.productIds,
+            ],
+
+          selectionIdentity:
+            plan.selectionIdentity,
+
+          inputFingerprint:
+            plan.inputFingerprint,
+
+          persistenceRetry:
+            retryEnvelope,
+
+          savedAt:
+            new Date()
+              .toISOString(),
+        };
+
+      window.sessionStorage.setItem(
+        PRODUCT_SCORE_PERSISTENCE_RETRY_KEY,
+        JSON.stringify(
+          stored,
+        ),
+      );
+
+      throw new Error(
+        `${
+          result.message ??
+          "제품별 AI 점수 생성 후 DB 저장에 실패했습니다."
+        } 검증 완료된 AI 결과는 보관했습니다. 같은 제품 점수 버튼을 다시 누르면 OpenAI 재호출 없이 저장만 재시도합니다.`,
+      );
+    }
+
     throw new Error(
       result.message ??
         "제품별 점수 생성에 실패했습니다.",
+    );
+  }
+
+  const storedRetry =
+    readStoredProductScorePersistenceRetry(
+      plan.input.category,
+    );
+
+  if (storedRetry) {
+    window.sessionStorage.removeItem(
+      PRODUCT_SCORE_PERSISTENCE_RETRY_KEY,
     );
   }
 
@@ -1077,26 +1410,26 @@ export default function AdminPage() {
         );
 
         await loadSelectedFiveContext(window.sessionStorage, category, selectedContext.identity);
+        const originProductNo = Number(product.origin_product_no);
+        if (!Number.isSafeInteger(originProductNo) || originProductNo <= 0) throw new Error("원상품 번호가 유효하지 않습니다.");
+        const identity = { category: product.category, dbProductId: product.id, originProductNo, productName: product.product_name };
+        const retried = await retryStoredReviewAnalysisPersistence(identity, plan.inputFingerprint);
+        if (!retried) {
+        const expectedReviewAnalysis = await fetchCurrentReviewAnalysisSnapshot({
+          category: product.category, dbProductId: product.id, originProductNo, productName: product.product_name,
+        });
+        await loadSelectedFiveContext(window.sessionStorage, category, selectedContext.identity);
         const analysis =
           await executeProductionReviewAnalysis(
             plan,
           );
 
-        const { error: updateError } =
-          await supabase
-            .from("products")
-            .update({
-              review_analysis:
-                analysis,
-              updated_at:
-                new Date().toISOString(),
-            })
-            .eq("id", product.id);
+        await storeAndSaveReviewAnalysis({
+          category: product.category, dbProductId: product.id, originProductNo,
+          productName: product.product_name, expectedReviewAnalysis, analysis, inputFingerprint: plan.inputFingerprint,
+        });
 
-        if (updateError) {
-          throw updateError;
         }
-
         completed += 1;
       }
 
@@ -1240,6 +1573,22 @@ export default function AdminPage() {
     setErrorMessage("");
 
     try {
+      const retryResult =
+        await retryStoredProductScorePersistence(
+          category,
+        );
+
+      if (retryResult) {
+        setProductScoresMessage(
+          retryResult.message ??
+            "이전에 검증 완료된 AI 제품 점수를 OpenAI 재호출 없이 저장했습니다.",
+        );
+
+        await loadProducts();
+
+        return;
+      }
+
       const plan =
         await prepareProductScoreGeneration({
           category,

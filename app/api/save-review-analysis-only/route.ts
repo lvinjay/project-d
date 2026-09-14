@@ -18,6 +18,7 @@ type SaveItem = {
     | string
     | number;
   productName?: string;
+  expectedReviewAnalysis?: unknown;
   analysis?: unknown;
 };
 
@@ -53,6 +54,51 @@ function asRecord(
           unknown
         >
     : null;
+}
+
+function stableStringify(
+  value: unknown,
+): string {
+  if (
+    value === null ||
+    typeof value !== "object"
+  ) {
+    return (
+      JSON.stringify(
+        value,
+      ) ?? "null"
+    );
+  }
+
+  if (Array.isArray(value)) {
+    return `[${value
+      .map(
+        (item) =>
+          stableStringify(
+            item,
+          ),
+      )
+      .join(",")}]`;
+  }
+
+  const row =
+    value as Record<
+      string,
+      unknown
+    >;
+
+  return `{${Object
+    .keys(row)
+    .sort()
+    .map(
+      (key) =>
+        `${JSON.stringify(
+          key,
+        )}:${stableStringify(
+          row[key],
+        )}`,
+    )
+    .join(",")}}`;
 }
 
 function getSupabase() {
@@ -176,6 +222,21 @@ export async function POST(
           item.analysis,
         );
 
+      const hasExpectedReviewAnalysis =
+        Object.prototype
+          .hasOwnProperty.call(
+            item,
+            "expectedReviewAnalysis",
+          );
+
+      const expectedReviewAnalysis =
+        item.expectedReviewAnalysis ===
+          null
+          ? null
+          : asRecord(
+              item.expectedReviewAnalysis,
+            );
+
       if (!dbProductId) {
         results.push({
           success: false,
@@ -227,6 +288,27 @@ export async function POST(
         continue;
       }
 
+      if (
+        !hasExpectedReviewAnalysis ||
+        (
+          item.expectedReviewAnalysis !==
+            null &&
+          !expectedReviewAnalysis
+        )
+      ) {
+        results.push({
+          success: false,
+          dbProductId,
+          originProductNo,
+          productName,
+          casConflict: true,
+          reason:
+            "분석 시작 시점의 expectedReviewAnalysis가 없어 안전한 CAS 저장을 수행할 수 없습니다.",
+        });
+
+        continue;
+      }
+
       const {
         data: matched,
         error: matchError,
@@ -236,7 +318,7 @@ export async function POST(
             "products",
           )
           .select(
-            "id, product_name, origin_product_no",
+            "id, product_name, origin_product_no, review_analysis",
           )
           .eq(
             "category",
@@ -296,6 +378,39 @@ export async function POST(
         continue;
       }
 
+      const currentReviewAnalysis =
+        matched.review_analysis ??
+        null;
+
+      const casMatches =
+        stableStringify(
+          currentReviewAnalysis,
+        ) ===
+        stableStringify(
+          expectedReviewAnalysis,
+        );
+
+      if (!casMatches) {
+        results.push({
+          success: false,
+          dryRun,
+          dbWrite: false,
+          dbProductId:
+            matched.id,
+          originProductNo:
+            Number(
+              matched.origin_product_no,
+            ),
+          productName:
+            matchedProductName,
+          casConflict: true,
+          reason:
+            "리뷰 분석 시작 이후 DB review_analysis가 변경되어 stale 결과 저장을 거부했습니다.",
+        });
+
+        continue;
+      }
+
       if (dryRun) {
         results.push({
           success: true,
@@ -313,6 +428,8 @@ export async function POST(
             true,
           reviewRawDataTouched:
             false,
+          casVerified:
+            true,
         });
 
         continue;
@@ -323,56 +440,85 @@ export async function POST(
           .toISOString();
 
       const {
-        data: updated,
-        error: updateError,
+        data: rpcData,
+        error: rpcError,
       } =
-        await supabase
-          .from(
-            "products",
-          )
-          .update({
-            review_analysis:
+        await supabase.rpc(
+          "project_d_save_review_analysis_cas_v1",
+          {
+            p_category:
+              category,
+
+            p_product_id:
+              matched.id,
+
+            p_origin_product_no:
+              originProductNo,
+
+            p_product_name:
+              matchedProductName,
+
+            p_expected_review_analysis:
+              expectedReviewAnalysis,
+
+            p_next_review_analysis:
               analysis,
 
-            updated_at:
+            p_updated_at:
               updatedAt,
-          })
-          .eq(
-            "category",
-            category,
-          )
-          .eq(
-            "id",
-            matched.id,
-          )
-          .eq(
-            "origin_product_no",
-            originProductNo,
-          )
-          .select(
-            "id, product_name, origin_product_no",
-          )
-          .limit(
-            1,
-          )
-          .maybeSingle();
+          },
+        );
 
-      if (updateError) {
-        throw updateError;
+      if (rpcError) {
+        const rpcMessage =
+          cleanText(
+            rpcError.message,
+          );
+
+        if (
+          rpcMessage.includes(
+            "PROJECT_D_REVIEW_CAS_CONFLICT",
+          ) ||
+          rpcMessage.includes(
+            "PROJECT_D_REVIEW_IDENTITY_CONFLICT",
+          )
+        ) {
+          results.push({
+            success: false,
+            dryRun: false,
+            dbWrite: false,
+            dbProductId:
+              matched.id,
+            originProductNo,
+            productName:
+              matchedProductName,
+            casConflict: true,
+            reason:
+              "리뷰 분석 저장 직전에 DB 상태가 변경되어 stale 결과 저장을 거부했습니다.",
+          });
+
+          continue;
+        }
+
+        throw rpcError;
       }
 
-      if (!updated) {
-        results.push({
-          success: false,
-          dbProductId,
-          originProductNo,
-          productName:
-            matchedProductName,
-          reason:
-            "분석 결과 업데이트 대상 행을 확인하지 못했습니다.",
-        });
+      const rpcResult =
+        asRecord(
+          rpcData,
+        );
 
-        continue;
+      if (
+        !rpcResult ||
+        rpcResult.success !==
+          true ||
+        cleanText(
+          rpcResult.dbProductId,
+        ) !== matched.id
+      ) {
+        throw new Error(
+          "리뷰 분석 CAS RPC 저장 결과를 검증하지 못했습니다.",
+        );
       }
 
       results.push({
@@ -380,19 +526,18 @@ export async function POST(
         dryRun: false,
         dbWrite: true,
         dbProductId:
-          updated.id,
-        originProductNo:
-          Number(
-            updated.origin_product_no,
-          ),
+          matched.id,
+        originProductNo,
         productName:
-          cleanText(
-            updated.product_name,
-          ),
+          matchedProductName,
         reviewAnalysisUpdated:
           true,
         reviewRawDataTouched:
           false,
+        casVerified:
+          true,
+        scoreCacheInvalidated:
+          true,
         updatedAt,
       });
     }
