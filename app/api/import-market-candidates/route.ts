@@ -1,4 +1,4 @@
-﻿import {
+import {
   NextResponse,
 } from "next/server";
 
@@ -69,6 +69,166 @@ function normalizeText(
         .replace(/\s+/g, " ")
         .trim()
     : "";
+}
+
+type ExistingProductRow = {
+  id: string;
+  category: string;
+  source_url: string;
+  origin_product_no: number | null;
+  product_detail_analysis:
+    | Record<string, unknown>
+    | null;
+};
+
+function asRecord(
+  value: unknown,
+) {
+  return (
+    value &&
+    typeof value === "object" &&
+    !Array.isArray(value)
+  )
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function mergeMeaningfulValue(
+  existing: unknown,
+  incoming: unknown,
+): unknown {
+  if (typeof incoming === "string") {
+    return incoming.trim()
+      ? incoming
+      : existing ?? incoming;
+  }
+
+  if (typeof incoming === "number") {
+    return Number.isFinite(incoming) &&
+      incoming !== 0
+      ? incoming
+      : existing ?? incoming;
+  }
+
+  if (incoming === null) {
+    return existing ?? null;
+  }
+
+  if (Array.isArray(incoming)) {
+    return incoming.length > 0
+      ? incoming
+      : Array.isArray(existing)
+        ? existing
+        : incoming;
+  }
+
+  const incomingRecord =
+    asRecord(incoming);
+
+  if (incomingRecord) {
+    const existingRecord =
+      asRecord(existing) ?? {};
+
+    const merged:
+      Record<string, unknown> = {
+        ...existingRecord,
+      };
+
+    for (
+      const [
+        key,
+        value,
+      ] of Object.entries(
+        incomingRecord,
+      )
+    ) {
+      merged[key] =
+        mergeMeaningfulValue(
+          existingRecord[key],
+          value,
+        );
+    }
+
+    return merged;
+  }
+
+  return incoming === undefined
+    ? existing
+    : incoming;
+}
+
+function mergeProductDetailAnalysis(
+  existing: unknown,
+  incoming: Record<string, unknown>,
+) {
+  const merged =
+    (
+      asRecord(
+        mergeMeaningfulValue(
+          existing,
+          incoming,
+        ),
+      ) ?? {}
+    );
+
+  for (
+    const key of [
+      "source",
+      "sourceType",
+      "identityKey",
+      "productId",
+      "productName",
+      "sourceUrl",
+      "collectedAt",
+    ]
+  ) {
+    if (
+      Object.prototype.hasOwnProperty.call(
+        incoming,
+        key,
+      )
+    ) {
+      merged[key] =
+        incoming[key];
+    }
+  }
+
+  return merged;
+}
+
+function mergeIdentityRows(
+  ...groups: Array<
+    ExistingProductRow[] | null
+  >
+) {
+  const byId =
+    new Map<
+      string,
+      ExistingProductRow
+    >();
+
+  for (
+    const group of groups
+  ) {
+    for (
+      const row of group ?? []
+    ) {
+      if (
+        row &&
+        typeof row.id === "string" &&
+        row.id
+      ) {
+        byId.set(
+          row.id,
+          row,
+        );
+      }
+    }
+  }
+
+  return [
+    ...byId.values(),
+  ];
 }
 
 export async function POST(
@@ -346,48 +506,163 @@ export async function POST(
             .toISOString(),
       };
 
-      let existingQuery =
-        supabase
+      const identitySelect =
+        "id, category, source_url, origin_product_no, product_detail_analysis";
+
+      const {
+        data: sourceMatches,
+        error: sourceMatchError,
+      } =
+        await supabase
           .from("products")
-          .select("id");
+          .select(
+            identitySelect,
+          )
+          .eq(
+            "source_url",
+            sourceUrl,
+          )
+          .limit(
+            3,
+          );
+
+      if (sourceMatchError) {
+        throw sourceMatchError;
+      }
+
+      let originMatches:
+        ExistingProductRow[] | null =
+        null;
 
       if (
         originProductNo !==
         null
       ) {
-        existingQuery =
-          existingQuery.or(
-            `origin_product_no.eq.${originProductNo},source_url.eq.${sourceUrl}`,
-          );
-      } else {
-        existingQuery =
-          existingQuery.eq(
-            "source_url",
-            sourceUrl,
-          );
+        const {
+          data,
+          error:
+            originMatchError,
+        } =
+          await supabase
+            .from("products")
+            .select(
+              identitySelect,
+            )
+            .eq(
+              "origin_product_no",
+              originProductNo,
+            )
+            .limit(
+              3,
+            );
+
+        if (originMatchError) {
+          throw originMatchError;
+        }
+
+        originMatches =
+          (
+            data ?? []
+          ) as ExistingProductRow[];
       }
 
-      const {
-        data: existing,
-        error:
-          existingError,
-      } =
-        await existingQuery
-          .limit(1);
+      const identityMatches =
+        mergeIdentityRows(
+          (
+            sourceMatches ?? []
+          ) as ExistingProductRow[],
+          originMatches,
+        );
 
-      if (existingError) {
-        throw existingError;
+      const crossCategory =
+        identityMatches.find(
+          (
+            row,
+          ) =>
+            normalizeText(
+              row.category,
+            ) !== category,
+        );
+
+      if (crossCategory) {
+        results.push({
+          success: false,
+          productId,
+          productName,
+          reason:
+            "동일 source/origin identity가 다른 카테고리에 이미 존재해 기존 분석·점수를 보존하기 위해 재등록을 거부했습니다.",
+          matchedProductId:
+            crossCategory.id,
+          matchedCategory:
+            crossCategory.category,
+        });
+
+        continue;
       }
 
-      const existingId =
-        Array.isArray(
-          existing,
-        ) &&
-        existing.length > 0
-          ? existing[0].id
-          : null;
+      if (
+        identityMatches.length >
+        1
+      ) {
+        results.push({
+          success: false,
+          productId,
+          productName,
+          reason:
+            "source/origin identity가 둘 이상의 제품 행에 연결되어 모호한 업데이트를 거부했습니다.",
+          matchedCount:
+            identityMatches.length,
+        });
 
-      if (existingId) {
+        continue;
+      }
+
+      const existing =
+        identityMatches[0] ??
+        null;
+
+      if (
+        existing &&
+        originProductNo !==
+          null
+      ) {
+        const existingOrigin =
+          Number(
+            existing.origin_product_no,
+          );
+
+        if (
+          Number.isSafeInteger(
+            existingOrigin,
+          ) &&
+          existingOrigin > 0 &&
+          existingOrigin !==
+            originProductNo
+        ) {
+          results.push({
+            success: false,
+            productId,
+            productName,
+            reason:
+              "source URL이 기존 제품과 일치하지만 origin_product_no가 달라 identity 변경을 거부했습니다.",
+            matchedProductId:
+              existing.id,
+            matchedOriginProductNo:
+              existingOrigin,
+          });
+
+          continue;
+        }
+      }
+
+      if (existing) {
+        const mergedProductDetailAnalysis =
+          mergeProductDetailAnalysis(
+            existing
+              .product_detail_analysis,
+            productDetailAnalysis,
+          );
+
         const {
           data,
           error,
@@ -395,22 +670,17 @@ export async function POST(
           await supabase
             .from("products")
             .update({
-              category,
-
               product_name:
                 productName,
 
               source_url:
                 sourceUrl,
 
-              checkout_merchant_no:
-                null,
-
               origin_product_no:
                 originProductNo,
 
               product_detail_analysis:
-                productDetailAnalysis,
+                mergedProductDetailAnalysis,
 
               updated_at:
                 new Date()
@@ -418,7 +688,11 @@ export async function POST(
             })
             .eq(
               "id",
-              existingId,
+              existing.id,
+            )
+            .eq(
+              "category",
+              category,
             )
             .select(
               "id, product_name, origin_product_no",
