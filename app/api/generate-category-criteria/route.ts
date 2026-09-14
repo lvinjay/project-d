@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { UUID_PATTERN } from "../../../lib/project-d-selected-five-manifest";
 import { createHash } from "node:crypto";
 import {
   NextResponse,
@@ -16,6 +17,7 @@ export const dynamic =
 
 type GenerateCriteriaRequest = {
   category?: string;
+  productIds?: unknown;
   dryRun?: unknown;
   inputFingerprint?: unknown;
 };
@@ -627,9 +629,9 @@ export async function POST(
     }
 
     /*
-      frozen robot criteria revision은 H08에서 별도로 정리한다.
-      그 전에는 generic criteria generator가 frozen key/order를
-      덮어쓰지 못하도록 안전하게 중단한다.
+      로봇청소기는 frozen production 기준을 사용한다.
+      frozen key/order 보호를 위해 generic criteria generator의
+      재생성을 차단한다.
     */
     if (
       category ===
@@ -643,7 +645,7 @@ export async function POST(
           frozenCriteriaProtected:
             true,
           message:
-            "로봇청소기 구매기준은 frozen production 기준을 사용합니다. 일반 구매기준 재생성은 H08 정리 전까지 차단됩니다.",
+            "로봇청소기 구매기준은 frozen production 기준을 사용합니다. frozen 기준 보호를 위해 일반 구매기준 재생성은 차단됩니다.",
         },
         {
           status: 409,
@@ -651,55 +653,25 @@ export async function POST(
       );
     }
 
-    const {
-      data,
-      error,
-    } =
-      await supabaseAdmin
-        .from("products")
-        .select(
-          "id, category, product_name, source_url, review_analysis, product_detail_analysis",
-        )
-        .eq(
-          "category",
-          category,
-        )
-        .order(
-          "created_at",
-          {
-            ascending: true,
-          },
-        );
-
-    if (error) {
-      throw error;
+    if (!Array.isArray(body.productIds) || body.productIds.length !== 5 ||
+        body.productIds.some(id => typeof id !== "string" || !UUID_PATTERN.test(id)) ||
+        new Set(body.productIds.map(id => String(id).toLowerCase())).size !== 5) {
+      return NextResponse.json({ success: false, paidApiCalls: 0, dbWrites: 0,
+        message: "정확히 5개의 고유 제품 UUID가 필요합니다." }, { status: 400 });
     }
-
-    const products =
-      (
-        data ?? []
-      ) as ProductRow[];
-
-    if (
-      products.length < 3
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            `구매기준 생성을 위해 최소 3개 제품이 필요합니다. 현재 ${products.length}개입니다.`,
-        },
-        {
-          status: 400,
-        },
-      );
+    const productIds = body.productIds as string[];
+    const { data, error } = await supabaseAdmin.from("products")
+      .select("id, category, product_name, source_url, review_analysis, product_detail_analysis")
+      .eq("category", category).in("id", productIds);
+    if (error) throw error;
+    const rows = (data ?? []) as ProductRow[];
+    if (rows.length !== 5 || productIds.some(id => rows.filter(row =>
+        row.id.toLowerCase() === id.toLowerCase() && row.category === category).length !== 1)) {
+      return NextResponse.json({ success: false, paidApiCalls: 0, dbWrites: 0,
+        message: "요청한 카테고리의 5개 제품이 모두 정확히 일치해야 합니다." }, { status: 409 });
     }
-
-    const sourceProducts =
-      products.slice(
-        0,
-        5,
-      );
+    // Database IN order is not authoritative; retain the approved request order.
+    const sourceProducts = productIds.map(id => rows.find(row => row.id.toLowerCase() === id.toLowerCase())!);
 
     const productEvidence =
       sourceProducts.map(
@@ -741,7 +713,9 @@ export async function POST(
         {
           success: false,
           message:
-            `구매기준 생성을 위해 상세정보가 있는 제품이 최소 3개 필요합니다. 현재 ${detailReadyCount}개입니다.`,
+            `선택한 5개 중 상세정보가 최소 3개 필요합니다. 현재 ${detailReadyCount}개입니다.`,
+          paidApiCalls: 0, dbWrites: 0,
+          notReadyProducts: sourceProducts.filter(p => !p.product_detail_analysis).map(p => ({ productId: p.id, productName: p.product_name })),
         },
         {
           status: 400,
@@ -756,6 +730,7 @@ export async function POST(
             pipelineVersion:
               CATEGORY_CRITERIA_PIPELINE_VERSION,
             category,
+            productIds,
             sourceProducts:
               productEvidence,
           }),
@@ -1103,7 +1078,7 @@ personalizationQuestions는 2개 또는 3개를 반환하세요.
       candidate_limit:
         Math.min(
           5,
-          products.length,
+          sourceProducts.length,
         ),
 
       updated_at:

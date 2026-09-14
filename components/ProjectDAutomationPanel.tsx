@@ -131,14 +131,14 @@ const INITIAL_STEPS: Step[] = [
     message: "",
   },
   {
-    key: "criteria-first",
-    label: "4. 1차 구매기준 생성",
+    key: "reviews",
+    label: "4. 최대 1,000개 리뷰 심층 수집",
     status: "idle",
     message: "",
   },
   {
-    key: "reviews",
-    label: "5. 최대 1,000개 리뷰 심층 수집",
+    key: "criteria-first",
+    label: "5. 선택한 5개 구매기준·프로필 연결",
     status: "idle",
     message: "",
   },
@@ -150,7 +150,7 @@ const INITIAL_STEPS: Step[] = [
   },
   {
     key: "criteria-final",
-    label: "7. 구매기준 최종 보정",
+    label: "7. 최종 5개 프로필 연결 확인",
     status: "idle",
     message: "",
   },
@@ -187,12 +187,14 @@ async function readJson(
 
 type CategoryCriteriaPlan = {
   category: string;
+  productIds: string[];
   inputFingerprint: string;
   estimatedOpenAiCalls: number;
 };
 
 async function prepareCategoryCriteria(
   category: string,
+  productIds: string[],
 ): Promise<CategoryCriteriaPlan> {
   const response =
     await fetch(
@@ -206,6 +208,7 @@ async function prepareCategoryCriteria(
         body:
           JSON.stringify({
             category,
+            productIds,
             dryRun: true,
           }),
       },
@@ -248,6 +251,7 @@ async function prepareCategoryCriteria(
 
   return {
     category,
+    productIds: [...productIds],
     inputFingerprint:
       cleanText(
         result.inputFingerprint,
@@ -272,6 +276,7 @@ async function executeCategoryCriteria(
           JSON.stringify({
             category:
               plan.category,
+            productIds: plan.productIds,
             inputFingerprint:
               plan.inputFingerprint,
           }),
@@ -1068,51 +1073,6 @@ export default function ProjectDAutomationPanel() {
 
       /*
         4단계
-        리뷰분석 API가 구매기준을 사용하므로
-        상세정보 기반 1차 구매기준 생성.
-      */
-      updateStep(
-        "criteria-first",
-        "working",
-        "리뷰 분석용 1차 구매기준을 생성하는 중...",
-      );
-
-      const firstCriteriaPlan =
-        await prepareCategoryCriteria(
-          normalizedCategory,
-        );
-
-      const firstCriteriaApproved =
-        window.confirm(
-          `${normalizedCategory} 1차 구매기준 AI 생성을 시작할까요?\n\n무료 사전검증 완료 · 예상 OpenAI 호출 최대 ${firstCriteriaPlan.estimatedOpenAiCalls}회\n\n취소하면 유료 호출은 시작되지 않습니다.`,
-        );
-
-      if (!firstCriteriaApproved) {
-        updateStep(
-          "criteria-first",
-          "error",
-          "무료 사전검증 후 사용자가 유료 구매기준 생성을 취소했습니다.",
-        );
-
-        setFinalMessage(
-          "중단됨 · 1차 구매기준 유료 AI 생성을 승인하지 않았습니다.",
-        );
-
-        return;
-      }
-
-      await executeCategoryCriteria(
-        firstCriteriaPlan,
-      );
-
-      updateStep(
-        "criteria-first",
-        "done",
-        "1차 구매기준 생성 완료",
-      );
-
-      /*
-        5단계
         DB 등록이 끝난 상품만 심층 리뷰를 수집한다.
 
         중요:
@@ -1392,6 +1352,25 @@ export default function ProjectDAutomationPanel() {
         return [{ ...collection, ...mapping, ...selectionRun }];
       });
       const selected = selectEligibleFive(eligible, selectionRun);
+      assertSelectionRun(window.sessionStorage, selectionRun);
+      if (normalizedCategory !== "로봇청소기") {
+        const productIds = selected.map(product => product.dbProductId);
+        if (productIds.length !== 5) throw new Error("기준 생성에는 현재 실행의 정확한 5개가 필요합니다.");
+        updateStep("criteria-first", "working", "선택한 5개 제품의 구매기준 사전검증 중...");
+        const criteriaPlan = await prepareCategoryCriteria(normalizedCategory, productIds);
+        assertSelectionRun(window.sessionStorage, selectionRun);
+        if (!window.confirm("선택한 5개 제품으로 구매기준을 생성할까요?\n" +
+            selected.map(p => p.productName + " (" + p.dbProductId + ")").join("\n") +
+            "\n예상 OpenAI 최대 " + criteriaPlan.estimatedOpenAiCalls + "회")) {
+          throw new Error("구매기준 유료 생성을 취소했습니다.");
+        }
+        assertSelectionRun(window.sessionStorage, selectionRun);
+        await executeCategoryCriteria(criteriaPlan);
+        assertSelectionRun(window.sessionStorage, selectionRun);
+        updateStep("criteria-first", "done", "선택한 5개 구매기준 생성 완료");
+      } else {
+        updateStep("criteria-first", "done", "기존 frozen 로봇청소기 구매기준 사용");
+      }
       const profile = await fetchCategoryProfile(normalizedCategory);
       const profileRevision = categoryProfileRevision(profile);
       const plans = [];

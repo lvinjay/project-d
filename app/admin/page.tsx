@@ -223,6 +223,8 @@ type CategoryCriteriaGenerationResponse = {
 
 type CategoryCriteriaGenerationPlan = {
   category: string;
+  productIds: string[];
+  selectionIdentity: string;
   inputFingerprint: string;
   estimatedOpenAiCalls: number;
 };
@@ -230,6 +232,10 @@ type CategoryCriteriaGenerationPlan = {
 async function prepareCategoryCriteriaGeneration(
   category: string,
 ): Promise<CategoryCriteriaGenerationPlan> {
+  const selected = await loadSelectedFiveContext(window.sessionStorage, category).catch(() => {
+    throw new Error("현재 최종 5개가 유효하지 않습니다. 자동화/최종 5개 준비를 먼저 완료하세요.");
+  });
+  const productIds = selectedFiveIds(selected.manifest);
   const response = await fetch(
     "/api/generate-category-criteria",
     {
@@ -239,6 +245,7 @@ async function prepareCategoryCriteriaGeneration(
       },
       body: JSON.stringify({
         category,
+        productIds,
         dryRun: true,
       }),
     },
@@ -272,6 +279,8 @@ async function prepareCategoryCriteriaGeneration(
 
   return {
     category,
+    productIds,
+    selectionIdentity: selected.identity,
     inputFingerprint:
       result.inputFingerprint,
     estimatedOpenAiCalls,
@@ -281,6 +290,8 @@ async function prepareCategoryCriteriaGeneration(
 async function executeCategoryCriteriaGeneration(
   plan: CategoryCriteriaGenerationPlan,
 ) {
+  const selected = await loadSelectedFiveContext(window.sessionStorage, plan.category, plan.selectionIdentity);
+  assertSameSelectedIds(plan.productIds, selected.manifest);
   const response = await fetch(
     "/api/generate-category-criteria",
     {
@@ -291,6 +302,7 @@ async function executeCategoryCriteriaGeneration(
       body: JSON.stringify({
         category:
           plan.category,
+        productIds: plan.productIds,
         inputFingerprint:
           plan.inputFingerprint,
       }),
@@ -1143,28 +1155,6 @@ export default function AdminPage() {
       return;
     }
 
-    const categoryProducts = registeredProducts.filter(
-      (product) => product.category === category,
-    );
-
-    if (categoryProducts.length < 3) {
-      alert(
-        `"${category}" 카테고리 제품을 최소 3개 등록한 뒤 실행하세요.`,
-      );
-      return;
-    }
-
-    const analyzedCount = categoryProducts.filter(
-      (product) => product.review_analysis,
-    ).length;
-
-    if (analyzedCount < 3) {
-      alert(
-        `"${category}" 카테고리에서 리뷰 분석 완료 제품이 최소 3개 필요합니다.`,
-      );
-      return;
-    }
-
     setIsGeneratingCriteria(true);
     setCriteriaMessage("");
     setErrorMessage("");
@@ -1207,9 +1197,8 @@ export default function AdminPage() {
 
       setCriteriaMessage(
         labels
-          ? `자동 생성 완료: ${labels}`
-          : result.message ??
-              "구매기준 자동 생성이 완료되었습니다.",
+          ? `자동 생성 완료: ${labels}. 프로필 revision이 변경되어 이전 최종 5개 실행은 만료되었습니다. 점수 생성/추천 전에 자동화·최종 5개 준비를 다시 실행하세요.`
+          : "프로필 revision이 변경되어 이전 최종 5개 실행은 만료되었습니다. 점수 생성/추천 전에 자동화·최종 5개 준비를 다시 실행하세요.",
       );
     } catch (error) {
       console.error(
