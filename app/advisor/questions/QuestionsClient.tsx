@@ -1,6 +1,6 @@
 "use client";
 
-import { loadSelectedFiveContext } from "../../../lib/project-d-selected-five-manifest";
+import { loadSelectedFiveContext, selectedFiveIds } from "../../../lib/project-d-selected-five-manifest";
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -314,12 +314,17 @@ export default function QuestionsClient() {
 
         setEditableWeights(initialEditableWeights);
 
+        const budgetContext = await loadSelectedFiveContext(window.sessionStorage, category, selected.identity);
+        if (cancelled) return;
+        const productIds = selectedFiveIds(budgetContext.manifest);
+        if (productIds.length !== 5 || new Set(productIds).size !== 5) throw new Error("현재 선택한 5개 제품을 확인해 주세요.");
         const budgetResponse = await fetch("/api/analyze-personal-preferences", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             category,
             mode: "budget_options",
+            productIds,
           }),
         });
 

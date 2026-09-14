@@ -1,3 +1,4 @@
+import { UUID_PATTERN } from "../../../lib/project-d-selected-five-manifest";
 import OpenAI from "openai";
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
@@ -452,6 +453,17 @@ export async function POST(request: Request) {
       );
     }
 
+    let budgetProductIds: string[] = [];
+    if (mode === "budget_options") {
+      if (!Array.isArray(body.productIds) || body.productIds.length !== 5 ||
+          body.productIds.some(id => typeof id !== "string" || !UUID_PATTERN.test(id.trim()))) {
+        return NextResponse.json({ success: false, paidApiCalls: 0, message: "예산 선택지는 정확히 5개의 제품 UUID가 필요합니다." }, { status: 400 });
+      }
+      budgetProductIds = body.productIds.map(id => String(id).trim().toLowerCase());
+      if (new Set(budgetProductIds).size !== 5) {
+        return NextResponse.json({ success: false, paidApiCalls: 0, message: "중복 제품 UUID는 허용되지 않습니다." }, { status: 400 });
+      }
+    }
     let productsQuery =
       supabase
         .from("products")
@@ -460,7 +472,9 @@ export async function POST(request: Request) {
         )
         .eq("category", category);
 
-    if (mode !== "budget_options") {
+    if (mode === "budget_options") {
+      productsQuery = productsQuery.in("id", budgetProductIds);
+    } else {
       if (requestedProductIds.length > 0) {
         productsQuery =
           productsQuery.in(
@@ -485,6 +499,12 @@ export async function POST(request: Request) {
     if (error) throw error;
 
     const products = data ?? [];
+    if (mode === "budget_options" && (products.length !== 5 ||
+        new Set(products.map(p => p.id)).size !== 5 ||
+        budgetProductIds.some(id => !products.some(p => p.id === id)) ||
+        products.some(p => !budgetProductIds.includes(p.id)))) {
+      return NextResponse.json({ success: false, paidApiCalls: 0, message: "선택한 5개 제품의 카테고리와 UUID가 모두 일치해야 합니다." }, { status: 409 });
+    }
 
     if (products.length < 2) {
       return NextResponse.json(

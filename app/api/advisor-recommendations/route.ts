@@ -1260,7 +1260,7 @@ export async function POST(
 
           /*
             성능/개인화 점수와 가격은 분리한다.
-            budgetPenalty은 표시용으로 유지하지만
+            예산은 rankingScore에만 반영하며
             matchScore에서는 차감하지 않는다.
           */
           const matchScore =
@@ -1271,6 +1271,8 @@ export async function POST(
                 blendedMatchScore,
               ),
             );
+
+          const rankingScore = Math.max(0, Math.min(100, matchScore - budget.penalty));
 
           const dataCoverage =
             Math.round(
@@ -1458,6 +1460,7 @@ export async function POST(
               product.source_url,
 
             matchScore,
+            rankingScore,
             baseMatchScore,
             blendedMatchScore,
 
@@ -1761,6 +1764,7 @@ export async function POST(
       withValueScores
         .sort(
           (a, b) =>
+            b.rankingScore - a.rankingScore ||
             b.matchScore -
               a.matchScore ||
             b.confidence -
@@ -1802,7 +1806,7 @@ export async function POST(
         recommendations.length,
       recommendations,
       note:
-        "점수가 없는 기준은 후보군의 해당 기준 평균점으로 중립 대체하고 dataCoverage로 실제 근거 비율을 별도 표시합니다. matchScore는 성능·개인화 점수이며 가격은 감점하지 않고 valueScore/valueRank로 별도 평가합니다.",
+        "점수가 없는 기준은 후보군의 해당 기준 평균점으로 중립 대체하고 dataCoverage로 실제 근거 비율을 별도 표시합니다. matchScore는 순수 성능·개인화 적합도입니다. valueScore/valueRank는 상대가격 가치 지표이며, 선택 예산은 rankingScore에서 한 번만 반영합니다.",
     });
   } catch (error) {
     console.error(
