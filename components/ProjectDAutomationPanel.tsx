@@ -1,5 +1,7 @@
 "use client";
 
+import { beginSelectionRun, assertSelectionRun, selectEligibleFive, fetchCategoryProfile, categoryProfileRevision, publishSelectedFive, type SelectedProduct } from "../lib/project-d-selected-five-manifest";
+
 import {
   useState,
 } from "react";
@@ -497,6 +499,7 @@ export default function ProjectDAutomationPanel() {
     setFinalMessage("");
 
     try {
+      const selectionRun = beginSelectionRun(window.sessionStorage, normalizedCategory);
       /*
         1단계
         Project D 시장검색 엔진으로
@@ -1021,63 +1024,15 @@ export default function ProjectDAutomationPanel() {
         )}개 제품 등록/갱신 완료`,
       );
 
-      const currentRunProductNames =
-        finalCandidates
-          .map((candidate) =>
-            cleanText(
-              candidate.detail?.productName,
-            ),
-          )
-          .filter(Boolean);
-
-      const importResults =
-        Array.isArray(
-          importResult.results,
-        )
-          ? (
-              importResult.results as Array<{
-                success?: boolean;
-                product?: {
-                  id?: string;
-                };
-              }>
-            )
-          : [];
-
-      const currentRunProductIds =
-        importResults
-          .filter(
-            (result) =>
-              result.success === true,
-          )
-          .map((result) =>
-            cleanText(
-              result.product?.id,
-            ),
-          )
-          .filter(Boolean);
-
-      if (
-        currentRunProductNames.length === 0 ||
-        currentRunProductIds.length !==
-          currentRunProductNames.length
-      ) {
-        throw new Error(
-          `상품 풀 DB 등록 결과가 일치하지 않습니다. 제품명 ${currentRunProductNames.length}개 · UUID ${currentRunProductIds.length}개입니다.`,
-        );
+      const mappedProducts = new Map<number, { dbProductId: string; originProductNo: number; productName: string }>();
+      if (importResult.category !== normalizedCategory || !Array.isArray(importResult.results)) throw new Error("현재 실행 DB 등록 결과가 잘못되었습니다.");
+      for (const item of importResult.results as Array<{ success?: boolean; product?: { id?: string; origin_product_no?: number; product_name?: string } }>) {
+        if (item.success !== true || !item.product) continue;
+        const originProductNo = Number(item.product.origin_product_no);
+        if (!Number.isSafeInteger(originProductNo) || originProductNo <= 0) continue;
+        if (mappedProducts.has(originProductNo)) throw new Error("현재 pool DB 매핑에 중복 원상품 번호가 있습니다.");
+        mappedProducts.set(originProductNo, { dbProductId: cleanText(item.product.id), originProductNo, productName: cleanText(item.product.product_name) });
       }
-
-      window.sessionStorage.setItem(
-        "projectDAutomationProductNames",
-        JSON.stringify({
-          category:
-            normalizedCategory,
-          productNames:
-            currentRunProductNames,
-          productIds:
-            currentRunProductIds,
-        }),
-      );
 
       if (safePilotMode) {
         updateStep(
@@ -1430,243 +1385,87 @@ export default function ProjectDAutomationPanel() {
           ),
       );
 
-      /*
-        6단계의 AI 분석은 아래에서 reviewCollections를 사용한다.
-
-        현재 /api/analyze-reviews에는 아직 200개 cap이 있으므로
-        실제 Admin 실행 전에 다음 패치에서 100~200개 단위 batch 분석 +
-        최종 aggregation으로 교체한다.
-      */
-      const analyzedProducts:
-        Array<{
-          productId: string;
-          productName: string;
-          analysis: unknown;
-          reviews: string[];
-          collectionStats: {
-            total: number;
-            ranking: number;
-            latest: number;
-            lowScore: number;
-          };
-        }> = [];
-
-      let skippedReviewProducts =
-        insufficientReviewProducts;
-
-      updateStep(
-        "save-reviews",
-        "working",
-        `${reviewCollections.length}개 제품 리뷰를 AI 분석하는 중...`,
-      );
-
-      for (
-        let index = 0;
-        index <
-        reviewCollections.length;
-        index++
-      ) {
-        const collection =
-          reviewCollections[index];
-
-        updateStep(
-          "save-reviews",
-          "working",
-          `${index + 1}/${reviewCollections.length} · ${collection.productName} · 리뷰 ${collection.reviews.length}개`,
-        );
-
-        const analyzeResponse =
-          await fetch(
-            "/api/analyze-reviews",
-            {
-              method:
-                "POST",
-
-              headers: {
-                "Content-Type":
-                  "application/json",
-              },
-
-              body:
-                JSON.stringify({
-                  productName:
-                    collection.productName,
-
-                  category:
-                    normalizedCategory,
-
-                  reviews:
-                    collection.reviews,
-
-                  collectionStats:
-                    collection.collectionStats,
-                }),
-            },
-          );
-
-        const analyzeResult =
-          await readJson(
-            analyzeResponse,
-          );
-
-        if (
-          !analyzeResponse.ok ||
-          analyzeResult.success !==
-            true
-        ) {
-          throw new Error(
-            `${collection.productName}: ${
-              cleanText(
-                analyzeResult.message,
-              ) ||
-              "리뷰 AI 분석 실패"
-            }`,
-          );
-        }
-
-        analyzedProducts.push({
-          productId:
-            collection.productId,
-
-          productName:
-            collection.productName,
-
-          analysis:
-            analyzeResult.analysis,
-
-          reviews:
-            collection.reviews,
-
-          collectionStats:
-            collection.collectionStats,
+      // The pool is not the recommendation set. Select only current-run mapped identities.
+      const eligible = reviewCollections.flatMap(collection => {
+        const mapping = mappedProducts.get(Number(collection.productId));
+        if (!mapping || mapping.productName !== collection.productName) return [];
+        return [{ ...collection, ...mapping, ...selectionRun }];
+      });
+      const selected = selectEligibleFive(eligible, selectionRun);
+      const profile = await fetchCategoryProfile(normalizedCategory);
+      const profileRevision = categoryProfileRevision(profile);
+      const plans = [];
+      for (const product of selected) {
+        const input = { category: normalizedCategory, productName: product.productName,
+          originProductNo: product.originProductNo, reviews: product.reviews,
+          collectionStats: product.collectionStats, executionMode: "full" };
+        const response = await fetch("/api/analyze-reviews", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...input, dryRun: true }),
         });
-      }
-
-      /*
-        6단계
-        심층/기존 리뷰 corpus를 batch AI 분석한 결과만 저장한다.
-
-        리뷰 본문 30개 미만 제품은 review_analysis를 꾸며내지 않고
-        기존 null/미분석 상태로 둔다.
-      */
-      if (
-        analyzedProducts.length >
-        0
-      ) {
-        updateStep(
-          "save-reviews",
-          "working",
-          "리뷰 batch AI 분석 결과와 실제 리뷰 corpus를 DB에 저장하는 중...",
-        );
-
-        const saveResponse =
-          await fetch(
-            "/api/save-review-analysis-batch",
-            {
-              method: "POST",
-
-              headers: {
-                "Content-Type":
-                  "application/json",
-              },
-
-              body: JSON.stringify({
-                category:
-                  normalizedCategory,
-
-                products:
-                  analyzedProducts,
-              }),
-            },
-          );
-
-        const saveResult =
-          await readJson(
-            saveResponse,
-          );
-
-        if (
-          !saveResponse.ok ||
-          saveResult.success !==
-            true
-        ) {
-          throw new Error(
-            cleanText(
-              saveResult.message,
-            ) ||
-              "리뷰 분석 DB 저장에 실패했습니다.",
-          );
+        const result = await readJson(response);
+        const maximum = Number(result.estimatedOpenAiCalls);
+        if (!response.ok || result.success !== true || result.dryRun !== true ||
+            result.paidApiCalls !== 0 || typeof result.inputFingerprint !== "string" ||
+            !/^[a-f0-9]{64}$/.test(result.inputFingerprint) || !Number.isSafeInteger(maximum) ||
+            maximum < 1 || maximum > 2 * Math.ceil(product.reviews.length / 50) + 1) {
+          throw new Error(cleanText(result.message) || "리뷰 무료 사전검증 계약이 일치하지 않습니다.");
         }
-
-        updateStep(
-          "save-reviews",
-          "done",
-          `${Number(
-            saveResult.successCount ??
-              0,
-          )}개 저장 완료` +
-            (
-              skippedReviewProducts > 0
-                ? ` · ${skippedReviewProducts}개 미분석 유지`
-                : ""
-            ),
-        );
-      } else {
-        updateStep(
-          "save-reviews",
-          "done",
-          "저장할 리뷰 분석 없음 · 리뷰 본문 30개 미만 제품은 미분석 상태로 유지",
-        );
+        plans.push({ product, input, fingerprint: result.inputFingerprint, maximum });
       }
-
-      /*
-        7단계
-        상세정보 + 리뷰 분석을 모두 사용해
-        최종 구매기준 재생성.
-      */
-      updateStep(
-        "criteria-final",
-        "working",
-        "상세정보와 리뷰 근거를 함께 사용해 구매기준을 최종 보정하는 중...",
-      );
-
-      const finalCriteriaPlan =
-        await prepareCategoryCriteria(
-          normalizedCategory,
-        );
-
-      const finalCriteriaApproved =
-        window.confirm(
-          `${normalizedCategory} 최종 구매기준 AI 보정을 시작할까요?\n\n무료 사전검증 완료 · 예상 OpenAI 호출 최대 ${finalCriteriaPlan.estimatedOpenAiCalls}회\n\n취소하면 유료 호출은 시작되지 않습니다.`,
-        );
-
-      if (!finalCriteriaApproved) {
-        updateStep(
-          "criteria-final",
-          "error",
-          "무료 사전검증 후 사용자가 유료 최종 구매기준 보정을 취소했습니다.",
-        );
-
-        setFinalMessage(
-          "중단됨 · 최종 구매기준 유료 AI 보정을 승인하지 않았습니다.",
-        );
-
-        return;
+      assertSelectionRun(window.sessionStorage, selectionRun);
+      const approved = window.confirm("현재 실행의 최종 후보 5개 리뷰를 분석할까요?\n" +
+        selected.map(p => p.productName + " (" + p.dbProductId + ")").join("\n") +
+        "\n무료 사전검증 완료 · OpenAI 최대 " + plans.reduce((sum, p) => sum + p.maximum, 0) +
+        "회. 취소하면 유료 리뷰 호출은 없습니다. 분석 결과만 저장하며 deep 원문 저장은 별도 작업입니다.");
+      if (!approved) throw new Error("무료 사전검증 후 리뷰 분석을 취소했습니다.");
+      const readyProducts: SelectedProduct[] = [];
+      for (const plan of plans) {
+        assertSelectionRun(window.sessionStorage, selectionRun);
+        if (categoryProfileRevision(await fetchCategoryProfile(normalizedCategory)) !== profileRevision) {
+          throw new Error("프로필이 변경되어 승인된 리뷰 분석을 중단합니다.");
+        }
+        assertSelectionRun(window.sessionStorage, selectionRun);
+        // Persist attempt state before sending; no transport/parse/model retry.
+        window.sessionStorage.setItem("projectDReviewLastAttempt", JSON.stringify({
+          ...selectionRun, dbProductId: plan.product.dbProductId, inputFingerprint: plan.fingerprint, status: "attempted",
+        }));
+        const response = await fetch("/api/analyze-reviews", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...plan.input, inputFingerprint: plan.fingerprint }),
+        });
+        const result = await readJson(response);
+        const analysis = result.analysis as Record<string, unknown> | undefined;
+        if (!response.ok || result.success !== true || result.inputFingerprint !== plan.fingerprint ||
+            !analysis || analysis.reviewCount !== plan.product.reviews.length) {
+          throw new Error(cleanText(result.message) || "유료 리뷰 분석 실패. 자동 재시도하지 않습니다.");
+        }
+        assertSelectionRun(window.sessionStorage, selectionRun);
+        const saveResponse = await fetch("/api/save-review-analysis-only", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ category: normalizedCategory, products: [{
+            dbProductId: plan.product.dbProductId, originProductNo: plan.product.originProductNo,
+            productName: plan.product.productName, analysis,
+          }] }),
+        });
+        const saved = await readJson(saveResponse);
+        if (!saveResponse.ok || saved.success !== true || saved.successCount !== 1 ||
+            saved.reviewRawDataTouched !== false) throw new Error(cleanText(saved.message) || "정확한 제품 identity로 분석을 저장하지 못했습니다.");
+        readyProducts.push({ dbProductId: plan.product.dbProductId, originProductNo: plan.product.originProductNo,
+          productName: plan.product.productName, readiness: { runId: selectionRun.runId,
+            reviewCount: plan.product.reviews.length, reviewAnalysisSaved: true,
+            analysisFingerprint: plan.fingerprint, rawCorpusPersisted: false } });
       }
-
-      await executeCategoryCriteria(
-        finalCriteriaPlan,
-      );
-
-      updateStep(
-        "criteria-final",
-        "done",
-        "최종 구매기준 보정 완료",
-      );
-
-      setFinalMessage(
-        `완료 · ${normalizedCategory} 유효 상품 ${finalCandidates.length}개 DB 구축과 공통 분석이 끝났습니다.`,
-      );
+      if (categoryProfileRevision(await fetchCategoryProfile(normalizedCategory)) !== profileRevision) {
+        throw new Error("프로필 revision이 변경되어 최종 5개를 발행하지 않습니다.");
+      }
+      publishSelectedFive(window.sessionStorage, {
+        ...selectionRun, schemaVersion: 1, profileRevision, products: readyProducts,
+      });
+      updateStep("save-reviews", "done", "현재 실행의 5개 분석 저장 완료 · deep 원문 저장은 H06으로 보류");
+      // Do not regenerate the profile after binding review analysis to its revision.
+      updateStep("criteria-final", "done", "분석에 사용한 프로필 revision으로 최종 5개 고정");
+      setFinalMessage("최종 5개 준비 완료. 관리자에서 같은 5개 UUID의 점수 생성을 승인한 뒤 Advisor로 진행해 주세요.");
     } catch (error) {
       const message =
         error instanceof Error

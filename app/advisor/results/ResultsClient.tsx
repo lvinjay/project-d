@@ -1,5 +1,7 @@
 "use client";
 
+import { loadSelectedFiveContext, selectedFiveIds, assertSameSelectedIds } from "../../../lib/project-d-selected-five-manifest";
+
 import {
   useEffect,
   useMemo,
@@ -156,6 +158,7 @@ async function prepareProductScoreGeneration(
 }
 
 type StoredAnswers = {
+  selectionIdentity?: string;
   category?: string;
   weights?: Record<string, number>;
   budgetChoice?: string;
@@ -197,6 +200,7 @@ type PersonalPreferenceResponse = {
 };
 
 type PersonalPreferencePlan = {
+  selectionIdentity?: string;
   input: PersonalPreferenceRequest;
   inputFingerprint: string;
   estimatedOpenAiCalls: number;
@@ -266,6 +270,9 @@ async function preparePersonalPreferenceAnalysis(
 async function executePersonalPreferenceAnalysis(
   plan: PersonalPreferencePlan,
 ) {
+  if (!plan.selectionIdentity) throw new Error("승인한 선택 실행이 없습니다.");
+  const selected = await loadSelectedFiveContext(window.sessionStorage, plan.input.category, plan.selectionIdentity);
+  assertSameSelectedIds(plan.input.productIds, selected.manifest);
   const response = await fetch(
     "/api/analyze-personal-preferences",
     {
@@ -895,92 +902,9 @@ export default function ResultsClient() {
         const weights =
           stored.weights ?? {};
 
-        const runProductsRaw =
-          window.sessionStorage.getItem(
-            "projectDAutomationProductNames",
-          );
-
-        let currentRunProductNames:
-          string[] = [];
-
-        let currentRunProductIds:
-          string[] = [];
-
-        if (runProductsRaw) {
-          try {
-            const parsed =
-              JSON.parse(
-                runProductsRaw,
-              ) as {
-                category?: unknown;
-                productNames?: unknown;
-                productIds?: unknown;
-              };
-
-            if (
-              typeof parsed.category ===
-                "string" &&
-              parsed.category.trim() ===
-                nextCategory &&
-              Array.isArray(
-                parsed.productNames,
-              )
-            ) {
-              currentRunProductNames =
-                parsed.productNames
-                  .filter(
-                    (
-                      value,
-                    ): value is string =>
-                      typeof value ===
-                        "string" &&
-                      Boolean(
-                        value.trim(),
-                      ),
-                  )
-                  .map((value) =>
-                    value.trim(),
-                  );
-
-              if (
-                Array.isArray(
-                  parsed.productIds,
-                )
-              ) {
-                currentRunProductIds =
-                  parsed.productIds
-                    .filter(
-                      (
-                        value,
-                      ): value is string =>
-                        typeof value ===
-                          "string" &&
-                        Boolean(
-                          value.trim(),
-                        ),
-                    )
-                    .map((value) =>
-                      value.trim(),
-                    );
-              }
-            }
-          } catch {
-            currentRunProductNames =
-              [];
-            currentRunProductIds =
-              [];
-          }
-        }
-
-        if (
-          currentRunProductNames.length !== 5 ||
-          currentRunProductIds.length !== 5
-        ) {
-          throw new Error(
-            "현재 자동화 실행의 최종 5개 제품명/UUID 정보가 없습니다. 관리자 자동화를 다시 실행해 주세요.",
-          );
-        }
-
+        if (!stored.selectionIdentity) throw new Error("현재 선택 실행의 질문 답변이 없습니다. Advisor부터 다시 진행해 주세요.");
+        const selected = await loadSelectedFiveContext(window.sessionStorage, nextCategory, stored.selectionIdentity);
+        const currentRunProductIds = selectedFiveIds(selected.manifest);
         if (!nextCategory) {
           throw new Error(
             "추천할 카테고리 정보가 없습니다.",
@@ -1024,8 +948,8 @@ export default function ResultsClient() {
             personalRequest,
           );
 
-        const personalCacheKey =
-          personalPlan.inputFingerprint;
+        personalPlan.selectionIdentity = selected.identity;
+        const personalCacheKey = selected.identity + ":" + personalPlan.inputFingerprint;
 
         const cachedRaw =
           window.sessionStorage.getItem(
@@ -1093,6 +1017,8 @@ export default function ResultsClient() {
         );
 
         async function requestRecommendations() {
+          const current = await loadSelectedFiveContext(window.sessionStorage, nextCategory, selected.identity);
+          assertSameSelectedIds(currentRunProductIds, current.manifest);
           const response =
             await fetch(
               "/api/advisor-recommendations",
@@ -1154,6 +1080,7 @@ export default function ResultsClient() {
           );
         }
 
+        await loadSelectedFiveContext(window.sessionStorage, nextCategory, selected.identity);
         setCategory(
           result.category ??
             nextCategory,
@@ -1219,7 +1146,7 @@ export default function ResultsClient() {
         "projectDPersonalPreferenceCache",
         JSON.stringify({
           key:
-            plan.inputFingerprint,
+            plan.selectionIdentity + ":" + plan.inputFingerprint,
           result,
         } satisfies PersonalPreferenceCache),
       );

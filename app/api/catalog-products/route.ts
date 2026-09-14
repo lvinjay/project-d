@@ -1,3 +1,4 @@
+import { UUID_PATTERN } from "../../../lib/project-d-selected-five-manifest";
 ﻿import { NextResponse } from "next/server";
 import { supabase } from "../../../lib/supabase";
 
@@ -35,13 +36,19 @@ export async function GET(request: Request) {
       searchParams.get("analyzedOnly") ===
       "true";
 
-    const { data, error } =
-      await supabase
+    const scoped = searchParams.has("productIds");
+    const productIds = (searchParams.get("productIds") ?? "").split(",");
+    if (scoped && (!category || productIds.length < 1 || productIds.length > 5 ||
+        productIds.some(id => !UUID_PATTERN.test(id)) || new Set(productIds.map(id => id.toLowerCase())).size !== productIds.length)) {
+      return NextResponse.json({ success: false, message: "1~5개의 고유 UUID와 category가 필요합니다." }, { status: 400 });
+    }
+    let productsQuery = supabase
         .from("products")
         .select(
           `
             id,
             category,
+            origin_product_no,
             product_name,
             source_url,
             review_analysis,
@@ -49,8 +56,9 @@ export async function GET(request: Request) {
             created_at,
             updated_at
           `,
-        )
-        .order("created_at", {
+        );
+    if (scoped) productsQuery = productsQuery.eq("category", category).in("id", productIds);
+    const { data, error } = await productsQuery.order("created_at", {
           ascending: false,
         });
 
@@ -144,6 +152,7 @@ export async function GET(request: Request) {
 
           return {
             id: product.id,
+            originProductNo: Number(product.origin_product_no),
             category: product.category,
             productName:
               product.product_name,
@@ -158,6 +167,9 @@ export async function GET(request: Request) {
           };
         });
 
+    if (scoped && (products.length !== productIds.length || productIds.some(id => products.filter(p => p.id === id).length !== 1))) {
+      return NextResponse.json({ success: false, products: [], count: 0, message: "요청한 UUID 전체의 카테고리·분석 상태가 일치하지 않습니다." }, { status: 409 });
+    }
     return NextResponse.json({
       success: true,
       count: products.length,

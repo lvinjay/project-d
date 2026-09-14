@@ -1,5 +1,7 @@
 ﻿"use client";
 
+import { loadSelectedFiveContext } from "../../lib/project-d-selected-five-manifest";
+
 import {
   FormEvent,
   useEffect,
@@ -209,6 +211,8 @@ export default function AdvisorPage() {
     setErrorMessage,
   ] = useState("");
 
+  const [selectionIdentity, setSelectionIdentity] = useState("");
+
   useEffect(() => {
     if (!activeCategory) {
       return;
@@ -227,65 +231,11 @@ export default function AdvisorPage() {
       setOpenHelpKey("");
 
       try {
-        const [
-          profileResponse,
-          catalogResponse,
-        ] = await Promise.all([
-          fetch(
-            `/api/category-profile?category=${encodeURIComponent(
-              activeCategory,
-            )}`,
-            {
-              cache:
-                "no-store",
-              signal:
-                controller.signal,
-            },
-          ),
-
-          fetch(
-            `/api/catalog-products?category=${encodeURIComponent(
-              activeCategory,
-            )}&analyzedOnly=true`,
-            {
-              cache:
-                "no-store",
-              signal:
-                controller.signal,
-            },
-          ),
-        ]);
-
-        const profileResult =
-          (await profileResponse.json()) as ProfileResponse;
-
-        const catalogResult =
-          (await catalogResponse.json()) as CatalogResponse;
-
-        if (
-          !profileResponse.ok ||
-          !profileResult.success ||
-          !profileResult.profile
-        ) {
-          throw new Error(
-            profileResult.message ??
-              "카테고리 구매 가이드를 불러오지 못했습니다.",
-          );
-        }
-
-        if (
-          !catalogResponse.ok ||
-          !catalogResult.success
-        ) {
-          throw new Error(
-            catalogResult.message ??
-              "비교 제품을 불러오지 못했습니다.",
-          );
-        }
-
-        const nextProfile =
-          profileResult.profile;
-
+        const selected = await loadSelectedFiveContext(window.sessionStorage, activeCategory);
+        if (controller.signal.aborted) return;
+        const nextProfile = selected.profile as unknown as CategoryProfile;
+        const catalogResult = { products: selected.products };
+        setSelectionIdentity(selected.identity);
         const nextWeights =
           Object.fromEntries(
             nextProfile.criteria.map(
@@ -310,7 +260,7 @@ export default function AdvisorPage() {
           (
             catalogResult.products ??
             []
-          ).slice(0, 5),
+          ),
         );
       } catch (error) {
         if (
@@ -386,13 +336,17 @@ export default function AdvisorPage() {
     );
   }
 
-  function continueToQuestions() {
+  async function continueToQuestions() {
     if (!profile) {
       return;
     }
 
+    let selected;
+    try { selected = await loadSelectedFiveContext(window.sessionStorage, profile.category, selectionIdentity); }
+    catch (error) { setErrorMessage(error instanceof Error ? error.message : "현재 선택을 다시 확인해 주세요."); return; }
     const params =
       new URLSearchParams({
+        runId: selected.manifest.runId,
         category:
           profile.category,
 

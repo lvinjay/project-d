@@ -1,5 +1,7 @@
 "use client";
 
+import { loadSelectedFiveContext, selectedFiveIds, assertSameSelectedIds } from "../../lib/project-d-selected-five-manifest";
+
 import {
   useCallback,
   useEffect,
@@ -200,6 +202,7 @@ type ProductScoreGenerationResponse = {
 };
 
 type ProductScoreGenerationPlan = {
+  selectionIdentity: string;
   input: ProductScoreGenerationRequest;
   inputFingerprint: string;
   estimatedOpenAiCalls: number;
@@ -313,6 +316,9 @@ async function executeCategoryCriteriaGeneration(
 async function prepareProductScoreGeneration(
   input: ProductScoreGenerationRequest,
 ): Promise<ProductScoreGenerationPlan> {
+  const selected = await loadSelectedFiveContext(window.sessionStorage, input.category);
+  if (input.productIds) assertSameSelectedIds(input.productIds, selected.manifest);
+  input = { category: selected.manifest.category, productIds: selectedFiveIds(selected.manifest) };
   const response = await fetch(
     "/api/generate-product-scores",
     {
@@ -333,6 +339,7 @@ async function prepareProductScoreGeneration(
   if (
     !response.ok ||
     !result.success ||
+    result.productCount !== 5 ||
     result.dryRun !== true ||
     result.paidApiCalls !== 0 ||
     !result.inputFingerprint
@@ -361,6 +368,7 @@ async function prepareProductScoreGeneration(
   }
 
   return {
+    selectionIdentity: selected.identity,
     input,
     inputFingerprint:
       result.inputFingerprint,
@@ -373,6 +381,8 @@ async function prepareProductScoreGeneration(
 async function executeProductScoreGeneration(
   plan: ProductScoreGenerationPlan,
 ) {
+  const selected = await loadSelectedFiveContext(window.sessionStorage, plan.input.category, plan.selectionIdentity);
+  assertSameSelectedIds(plan.input.productIds, selected.manifest);
   const response = await fetch(
     "/api/generate-product-scores",
     {
@@ -902,9 +912,14 @@ export default function AdminPage() {
       return;
     }
 
-    const categoryProducts = registeredProducts.filter(
-      (product) => product.category === category,
-    );
+    let selectedContext;
+    try { selectedContext = await loadSelectedFiveContext(window.sessionStorage, category); }
+    catch (error) { alert(error instanceof Error ? error.message : "최종 5개를 확인해 주세요."); return; }
+    const categoryProducts = selectedContext.manifest.products.map(selected => {
+      const product = registeredProducts.find(p => p.id === selected.dbProductId && p.category === category && Number(p.origin_product_no) === selected.originProductNo);
+      return product;
+    }).filter((p): p is RegisteredProduct => Boolean(p));
+    if (categoryProducts.length !== 5) { alert("현재 최종 5개 DB 제품을 다시 불러와 주세요."); return; }
 
     const targets = categoryProducts.filter(
       (product) =>
@@ -1049,6 +1064,7 @@ export default function AdminPage() {
           `${prepared.length}개 중 ${index + 1}번째: ${product.product_name} · production 리뷰 분석 중...`,
         );
 
+        await loadSelectedFiveContext(window.sessionStorage, category, selectedContext.identity);
         const analysis =
           await executeProductionReviewAnalysis(
             plan,
@@ -1079,6 +1095,7 @@ export default function AdminPage() {
       const scorePlan =
         await prepareProductScoreGeneration({
           category,
+          productIds: selectedFiveIds(selectedContext.manifest),
         });
 
       if (

@@ -1,5 +1,7 @@
 "use client";
 
+import { loadSelectedFiveContext } from "../../../lib/project-d-selected-five-manifest";
+
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Header from "../../../components/Header";
@@ -121,12 +123,14 @@ export default function QuestionsClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const requestedRunId = searchParams.get("runId");
   const category = searchParams.get("category") ?? "캠핑용 에어컨";
   const initialWeights = useMemo(
     () => safeParseWeights(searchParams.get("weights")),
     [searchParams],
   );
 
+  const [selectionIdentity, setSelectionIdentity] = useState("");
   const [questions, setQuestions] = useState<PersonalizationQuestion[]>([]);
   const [criteria, setCriteria] = useState<Criterion[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -145,18 +149,10 @@ export default function QuestionsClient() {
       setErrorMessage("");
 
       try {
-        const response = await fetch(
-          `/api/category-profile?category=${encodeURIComponent(category)}`,
-          { cache: "no-store" },
-        );
-        const data = (await response.json()) as CategoryProfileResponse;
-
-        if (!response.ok || !data.success) {
-          throw new Error(
-            data.message ?? "맞춤 질문을 불러오지 못했습니다.",
-          );
-        }
-
+        const selected = await loadSelectedFiveContext(window.sessionStorage, category);
+        if (requestedRunId !== selected.manifest.runId) throw new Error("질문 화면의 실행이 변경되었습니다. Advisor부터 다시 시작해 주세요.");
+        setSelectionIdentity(selected.identity);
+        const data = { profile: selected.profile } as unknown as CategoryProfileResponse;
         const loaded = Array.isArray(data.profile?.personalization_questions)
           ? data.profile.personalization_questions.filter(
               (question) =>
@@ -203,6 +199,7 @@ export default function QuestionsClient() {
 
           if (savedRaw) {
             const saved = JSON.parse(savedRaw) as {
+              selectionIdentity?: unknown;
               category?: unknown;
               answers?: unknown;
               budgetChoice?: unknown;
@@ -210,7 +207,7 @@ export default function QuestionsClient() {
               weights?: unknown;
             };
 
-            if (saved.category === category) {
+            if (saved.category === category && saved.selectionIdentity === selected.identity) {
               if (
                 saved.answers &&
                 typeof saved.answers === "object" &&
@@ -374,7 +371,7 @@ export default function QuestionsClient() {
     return () => {
       cancelled = true;
     };
-  }, [category]);
+  }, [category, requestedRunId]);
 
   const questionAdjustedWeights = useMemo(
     () => applyQuestionAdjustments(initialWeights, questions, answers),
@@ -418,10 +415,13 @@ export default function QuestionsClient() {
     }));
   }
 
-  function finishQuestions() {
+  async function finishQuestions() {
     if (questions.length === 0) return;
 
+    try { await loadSelectedFiveContext(window.sessionStorage, category, selectionIdentity); }
+    catch (error) { setErrorMessage(error instanceof Error ? error.message : "선택 실행이 변경되었습니다."); return; }
     const payload = {
+      selectionIdentity,
       category,
       answers,
       weights: editableWeights,
