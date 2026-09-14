@@ -6,20 +6,51 @@ import {
   createClient,
 } from "@supabase/supabase-js";
 
+import {
+  auditProductionReviewNumbering,
+  createProductionPipelineFingerprint,
+} from "../../../lib/project-d-review-production-pipeline";
+
 export const runtime =
   "nodejs";
 
 export const dynamic =
   "force-dynamic";
 
+const REVIEW_BATCH_SIZE =
+  50;
+
+const MAX_REVIEW_COUNT =
+  1000;
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+type ReviewCollectionStats = {
+  total: number;
+  ranking: number;
+  latest: number;
+  lowScore: number;
+};
+
+type DynamicCriterion = {
+  key?: string;
+  label?: string;
+  shortDescription?: string;
+  helpText?: string;
+  sourceType?: string;
+};
+
 type SaveItem = {
-  productId?: string;
+  dbProductId?: string;
+  originProductNo?: string | number;
   productName?: string;
-  reviews?: string[];
+  reviews?: unknown[];
   collectionStats?: unknown;
   sourceMode?: string;
   reviewSourceUrl?: string;
   collectionMetadata?: unknown;
+  inputFingerprint?: string;
 };
 
 type SaveRequest = {
@@ -35,96 +66,128 @@ function cleanText(
     : "";
 }
 
-function normalizeEvidenceText(
+function asRecord(
   value: unknown,
 ) {
-  return cleanText(
-    value,
-  )
-    .replace(
-      /<br\s*\/?>/gi,
-      " ",
-    )
-    .replace(
-      /&nbsp;/gi,
-      " ",
-    )
-    .replace(
-      /\s+/g,
-      " ",
-    )
-    .trim()
-    .slice(
-      0,
-      2500,
-    );
+  return value &&
+    typeof value === "object" &&
+    !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
 }
 
-function prepareReviews(
+function normalizeCollectionStats(
   value: unknown,
-) {
-  const sourceReviews =
-    Array.isArray(
-      value,
+  fallbackTotal: number,
+): ReviewCollectionStats {
+  const row =
+    asRecord(value) ??
+    {};
+
+  const safeCount = (
+    raw: unknown,
+  ) => {
+    const parsed =
+      Number(raw);
+
+    return (
+      Number.isFinite(
+        parsed,
+      ) &&
+      parsed >= 0
     )
-      ? value
-      : [];
+      ? Math.floor(
+          parsed,
+        )
+      : 0;
+  };
 
-  const reviews:
-    string[] = [];
-
-  const seen =
-    new Set<string>();
-
-  let nonEmptyReviewCount =
-    0;
-
-  for (
-    const sourceReview of
-    sourceReviews
-  ) {
-    const review =
-      cleanText(
-        sourceReview,
-      );
-
-    if (!review) {
-      continue;
-    }
-
-    nonEmptyReviewCount++;
-
-    const evidenceKey =
-      normalizeEvidenceText(
-        review,
-      );
-
-    if (
-      !evidenceKey ||
-      seen.has(
-        evidenceKey,
-      )
-    ) {
-      continue;
-    }
-
-    seen.add(
-      evidenceKey,
+  const ranking =
+    safeCount(
+      row.ranking,
     );
 
-    reviews.push(
-      review,
+  const latest =
+    safeCount(
+      row.latest,
     );
-  }
+
+  const lowScore =
+    safeCount(
+      row.lowScore,
+    );
+
+  const reportedTotal =
+    safeCount(
+      row.total,
+    );
 
   return {
-    reviews,
-    receivedReviewCount:
-      nonEmptyReviewCount,
-    duplicateReviewCount:
-      nonEmptyReviewCount -
-      reviews.length,
+    total:
+      reportedTotal > 0
+        ? reportedTotal
+        : fallbackTotal,
+
+    ranking,
+    latest,
+    lowScore,
   };
+}
+
+function normalizeCriteria(
+  value: unknown,
+) {
+  return Array.isArray(value)
+    ? (
+        value as DynamicCriterion[]
+      )
+        .map(
+          (
+            criterion,
+          ) => ({
+            key:
+              typeof criterion.key ===
+                "string"
+                ? criterion.key.trim()
+                : "",
+
+            label:
+              typeof criterion.label ===
+                "string"
+                ? criterion.label.trim()
+                : "",
+
+            shortDescription:
+              typeof criterion.shortDescription ===
+                "string"
+                ? criterion.shortDescription.trim()
+                : "",
+
+            helpText:
+              typeof criterion.helpText ===
+                "string"
+                ? criterion.helpText.trim()
+                : "",
+
+            sourceType:
+              typeof criterion.sourceType ===
+                "string"
+                ? criterion.sourceType.trim()
+                : "",
+          }),
+        )
+        .filter(
+          (
+            criterion,
+          ) =>
+            criterion.key &&
+            criterion.label,
+        )
+        .slice(
+          0,
+          8,
+        )
+    : [];
 }
 
 function getSupabase() {
@@ -211,15 +274,65 @@ export async function POST(
     const supabase =
       getSupabase();
 
+    const {
+      data: profile,
+      error: profileError,
+    } =
+      await supabase
+        .from(
+          "category_profiles",
+        )
+        .select(
+          "criteria",
+        )
+        .eq(
+          "category",
+          category,
+        )
+        .maybeSingle();
+
+    if (profileError) {
+      throw profileError;
+    }
+
+    const dynamicCriteria =
+      normalizeCriteria(
+        profile?.criteria,
+      );
+
+    const uniqueCriterionKeys =
+      new Set(
+        dynamicCriteria.map(
+          criterion =>
+            criterion.key,
+        ),
+      );
+
+    if (
+      dynamicCriteria.length !== 5 ||
+      uniqueCriterionKeys.size !== 5
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "원시 리뷰 저장에는 현재 카테고리의 정확한 5개 구매기준이 필요합니다.",
+        },
+        {
+          status: 409,
+        },
+      );
+    }
+
     const results = [];
 
     for (
       const item of
       products
     ) {
-      const productId =
+      const dbProductId =
         cleanText(
-          item.productId,
+          item.dbProductId,
         );
 
       const productName =
@@ -229,93 +342,202 @@ export async function POST(
 
       const originProductNo =
         Number(
-          productId,
+          item.originProductNo,
         );
 
-      if (!productName) {
+      const requestedInputFingerprint =
+        cleanText(
+          item.inputFingerprint,
+        );
+
+      if (
+        !UUID_PATTERN.test(
+          dbProductId,
+        ) ||
+        !productName ||
+        !Number.isSafeInteger(
+          originProductNo,
+        ) ||
+        originProductNo <= 0 ||
+        !/^[a-f0-9]{64}$/.test(
+          requestedInputFingerprint,
+        )
+      ) {
         results.push({
           success: false,
-          productId,
+          dbProductId,
+          originProductNo,
           productName,
           reason:
-            "상품명이 없습니다.",
+            "UUID·원상품 번호·상품명·분석 fingerprint가 모두 필요합니다.",
+        });
+
+        continue;
+      }
+
+      const rawReviews:
+        unknown[] =
+        Array.isArray(
+          item.reviews,
+        )
+          ? item.reviews
+          : [];
+
+      const numberingAudit =
+        auditProductionReviewNumbering(
+          rawReviews,
+        );
+
+      if (
+        !numberingAudit.compatible ||
+        rawReviews.length === 0 ||
+        rawReviews.length >
+          MAX_REVIEW_COUNT
+      ) {
+        results.push({
+          success: false,
+          dbProductId,
+          originProductNo,
+          productName,
+          reason:
+            "분석 당시와 동일한 물리적 리뷰 corpus를 저장할 수 없습니다.",
+          numberingAudit,
+        });
+
+        continue;
+      }
+
+      const collectionStats =
+        normalizeCollectionStats(
+          item.collectionStats,
+          rawReviews.length,
+        );
+
+      const analysisDbProductId =
+        `request-body:${originProductNo}`;
+
+      const inputFingerprint =
+        createProductionPipelineFingerprint({
+          category,
+          productName,
+          dbProductId:
+            analysisDbProductId,
+          originProductNo,
+          rawReviews,
+          collectionStats,
+          criteria:
+            dynamicCriteria,
+          reviewBatchSize:
+            REVIEW_BATCH_SIZE,
+        });
+
+      if (
+        inputFingerprint !==
+        requestedInputFingerprint
+      ) {
+        results.push({
+          success: false,
+          dbProductId,
+          originProductNo,
+          productName,
+          inputFingerprint,
+          reason:
+            "저장하려는 raw corpus가 승인·분석된 input fingerprint와 일치하지 않습니다.",
         });
 
         continue;
       }
 
       const {
-        reviews,
-        receivedReviewCount,
-        duplicateReviewCount,
+        data: matches,
+        error: matchError,
       } =
-        prepareReviews(
-          item.reviews,
-        );
-
-      if (
-        reviews.length === 0
-      ) {
-        results.push({
-          success: false,
-          productId,
-          productName,
-          reason:
-            "저장할 실제 리뷰 본문이 없습니다.",
-        });
-
-        continue;
-      }
-
-      let query =
-        supabase
-          .from("products")
+        await supabase
+          .from(
+            "products",
+          )
           .select(
-            "id, product_name, origin_product_no",
+            "id, product_name, origin_product_no, review_analysis",
+          )
+          .eq(
+            "id",
+            dbProductId,
           )
           .eq(
             "category",
             category,
-          );
-
-      if (
-        Number.isSafeInteger(
-          originProductNo,
-        ) &&
-        originProductNo > 0
-      ) {
-        query =
-          query.eq(
+          )
+          .eq(
             "origin_product_no",
             originProductNo,
-          );
-      } else {
-        query =
-          query.eq(
+          )
+          .eq(
             "product_name",
             productName,
+          )
+          .limit(
+            2,
           );
-      }
-
-      const {
-        data: matched,
-        error: matchError,
-      } =
-        await query
-          .limit(1)
-          .maybeSingle();
 
       if (matchError) {
         throw matchError;
       }
 
-      if (!matched) {
+      if (
+        !Array.isArray(
+          matches,
+        ) ||
+        matches.length !==
+          1
+      ) {
         results.push({
           success: false,
-          productId,
+          dbProductId,
+          originProductNo,
           productName,
           reason:
-            "DB에서 해당 제품을 찾지 못했습니다.",
+            "UUID·카테고리·원상품 번호·상품명이 정확히 일치하는 단일 DB 제품을 찾지 못했습니다.",
+        });
+
+        continue;
+      }
+
+      const matched =
+        matches[0];
+
+      const savedAnalysis =
+        asRecord(
+          matched.review_analysis,
+        );
+
+      const savedAnalysisFingerprint =
+        cleanText(
+          savedAnalysis
+            ?.inputFingerprint,
+        );
+
+      const savedAnalysisReviewCount =
+        Number(
+          savedAnalysis
+            ?.reviewCount,
+        );
+
+      if (
+        savedAnalysisFingerprint !==
+          inputFingerprint ||
+        !Number.isSafeInteger(
+          savedAnalysisReviewCount,
+        ) ||
+        savedAnalysisReviewCount !==
+          rawReviews.length
+      ) {
+        results.push({
+          success: false,
+          dbProductId,
+          originProductNo,
+          productName,
+          reason:
+            "DB의 저장된 리뷰 분석과 raw corpus fingerprint/count가 일치하지 않습니다.",
         });
 
         continue;
@@ -336,20 +558,39 @@ export async function POST(
         );
 
       const {
+        data: updated,
         error: updateError,
       } =
         await supabase
-          .from("products")
+          .from(
+            "products",
+          )
           .update({
             review_raw_data: {
               schemaVersion:
-                1,
+                2,
 
-              reviews,
+              category,
 
-              collectionStats:
-                item.collectionStats ??
+              dbProductId,
+
+              originProductNo,
+
+              productName,
+
+              inputFingerprint,
+
+              pipelineVersion:
+                cleanText(
+                  savedAnalysis
+                    ?.pipelineVersion,
+                ) ||
                 null,
+
+              reviews:
+                rawReviews,
+
+              collectionStats,
 
               collectionMetadata:
                 item.collectionMetadata ??
@@ -363,12 +604,17 @@ export async function POST(
                 reviewSourceUrl ||
                 null,
 
-              receivedReviewCount,
+              receivedReviewCount:
+                rawReviews.length,
 
               savedReviewCount:
-                reviews.length,
+                rawReviews.length,
 
-              duplicateReviewCount,
+              corpusTransform:
+                "none",
+
+              exactCorpusPersisted:
+                true,
 
               savedAt,
             },
@@ -378,23 +624,57 @@ export async function POST(
           })
           .eq(
             "id",
-            matched.id,
+            dbProductId,
+          )
+          .eq(
+            "category",
+            category,
+          )
+          .eq(
+            "origin_product_no",
+            originProductNo,
+          )
+          .eq(
+            "product_name",
+            productName,
+          )
+          .select(
+            "id",
           );
 
       if (updateError) {
         throw updateError;
       }
 
+      if (
+        !Array.isArray(
+          updated,
+        ) ||
+        updated.length !==
+          1 ||
+        cleanText(
+          updated[0]?.id,
+        ) !== dbProductId
+      ) {
+        throw new Error(
+          "원시 리뷰 저장 중 제품 identity가 변경되어 쓰기를 확정하지 못했습니다.",
+        );
+      }
+
       results.push({
         success: true,
-        productId,
+        dbProductId,
+        originProductNo,
         productName,
-        dbProductId:
-          matched.id,
-        receivedReviewCount,
+        inputFingerprint,
+        receivedReviewCount:
+          rawReviews.length,
         savedReviewCount:
-          reviews.length,
-        duplicateReviewCount,
+          rawReviews.length,
+        exactCorpusPersisted:
+          true,
+        rawCorpusPersisted:
+          true,
         reviewAnalysisPreserved:
           true,
       });
@@ -402,14 +682,19 @@ export async function POST(
 
     const successCount =
       results.filter(
-        (item) =>
+        (
+          item,
+        ) =>
           item.success,
       ).length;
 
+    const allSucceeded =
+      successCount ===
+      products.length;
+
     return NextResponse.json({
       success:
-        successCount ===
-        products.length,
+        allSucceeded,
 
       category,
 
@@ -424,6 +709,9 @@ export async function POST(
 
       reviewAnalysisPreserved:
         true,
+
+      rawCorpusPersisted:
+        allSucceeded,
 
       results,
     });

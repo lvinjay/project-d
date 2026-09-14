@@ -1090,6 +1090,7 @@ export default function ProjectDAutomationPanel() {
         Array<{
           productId: string;
           productName: string;
+          reviewSourceUrl: string;
           reviews: string[];
           reviewObjects: BrowserReview[];
           collectionStats: {
@@ -1300,6 +1301,7 @@ export default function ProjectDAutomationPanel() {
         reviewCollections.push({
           productId,
           productName,
+          reviewSourceUrl,
           reviews,
           reviewObjects:
             selectedReviewObjects,
@@ -1396,7 +1398,7 @@ export default function ProjectDAutomationPanel() {
       const approved = window.confirm("현재 실행의 최종 후보 5개 리뷰를 분석할까요?\n" +
         selected.map(p => p.productName + " (" + p.dbProductId + ")").join("\n") +
         "\n무료 사전검증 완료 · OpenAI 최대 " + plans.reduce((sum, p) => sum + p.maximum, 0) +
-        "회. 취소하면 유료 리뷰 호출은 없습니다. 분석 결과만 저장하며 deep 원문 저장은 별도 작업입니다.");
+        "회. 취소하면 유료 리뷰 호출은 없습니다. 분석 성공 후 동일 corpus 원문도 fingerprint 검증 후 저장합니다.");
       if (!approved) throw new Error("무료 사전검증 후 리뷰 분석을 취소했습니다.");
       const readyProducts: SelectedProduct[] = [];
       for (const plan of plans) {
@@ -1430,10 +1432,37 @@ export default function ProjectDAutomationPanel() {
         const saved = await readJson(saveResponse);
         if (!saveResponse.ok || saved.success !== true || saved.successCount !== 1 ||
             saved.reviewRawDataTouched !== false) throw new Error(cleanText(saved.message) || "정확한 제품 identity로 분석을 저장하지 못했습니다.");
+
+        assertSelectionRun(window.sessionStorage, selectionRun);
+        const rawSaveResponse = await fetch("/api/save-review-raw-batch", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ category: normalizedCategory, products: [{
+            dbProductId: plan.product.dbProductId, originProductNo: plan.product.originProductNo,
+            productName: plan.product.productName, reviews: plan.product.reviews,
+            collectionStats: plan.product.collectionStats, sourceMode: plan.product.sourceMode,
+            reviewSourceUrl: plan.product.reviewSourceUrl, inputFingerprint: plan.fingerprint,
+            collectionMetadata: { reviewObjects: plan.product.reviewObjects },
+          }] }),
+        });
+        const rawSaved = await readJson(rawSaveResponse);
+        const rawResults = Array.isArray(rawSaved.results) ? rawSaved.results : [];
+        const rawSavedItem =
+          rawResults[0] && typeof rawResults[0] === "object" && !Array.isArray(rawResults[0])
+            ? rawResults[0] as Record<string, unknown>
+            : null;
+        if (!rawSaveResponse.ok || rawSaved.success !== true || rawSaved.successCount !== 1 ||
+            rawSaved.rawCorpusPersisted !== true || !rawSavedItem ||
+            rawSavedItem.dbProductId !== plan.product.dbProductId ||
+            rawSavedItem.inputFingerprint !== plan.fingerprint ||
+            rawSavedItem.rawCorpusPersisted !== true ||
+            rawSavedItem.savedReviewCount !== plan.product.reviews.length) {
+          throw new Error(cleanText(rawSaved.message) || "분석에 사용한 동일 review corpus를 정확한 제품 identity로 저장하지 못했습니다.");
+        }
+
         readyProducts.push({ dbProductId: plan.product.dbProductId, originProductNo: plan.product.originProductNo,
           productName: plan.product.productName, readiness: { runId: selectionRun.runId,
             reviewCount: plan.product.reviews.length, reviewAnalysisSaved: true,
-            analysisFingerprint: plan.fingerprint, rawCorpusPersisted: false } });
+            analysisFingerprint: plan.fingerprint, rawCorpusPersisted: true } });
       }
       if (categoryProfileRevision(await fetchCategoryProfile(normalizedCategory)) !== profileRevision) {
         throw new Error("프로필 revision이 변경되어 최종 5개를 발행하지 않습니다.");
@@ -1441,7 +1470,7 @@ export default function ProjectDAutomationPanel() {
       publishSelectedFive(window.sessionStorage, {
         ...selectionRun, schemaVersion: 1, profileRevision, products: readyProducts,
       });
-      updateStep("save-reviews", "done", "현재 실행의 5개 분석 저장 완료 · deep 원문 저장은 H06으로 보류");
+      updateStep("save-reviews", "done", "현재 실행의 5개 분석 + 동일 fingerprint review corpus 저장 완료");
       // Do not regenerate the profile after binding review analysis to its revision.
       updateStep("criteria-final", "done", "분석에 사용한 프로필 revision으로 최종 5개 고정");
       setFinalMessage("최종 5개 준비 완료. 관리자에서 같은 5개 UUID의 점수 생성을 승인한 뒤 Advisor로 진행해 주세요.");

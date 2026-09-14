@@ -6,7 +6,7 @@ export type SelectionRun = { runId: string; category: string };
 export type SelectedProduct = {
   dbProductId: string; originProductNo: number; productName: string;
   readiness: { runId: string; reviewCount: number; reviewAnalysisSaved: true;
-    analysisFingerprint: string; rawCorpusPersisted: false };
+    analysisFingerprint: string; rawCorpusPersisted: true };
 };
 export type SelectedFiveManifest = SelectionRun & {
   schemaVersion: 1; profileRevision: string; products: SelectedProduct[];
@@ -49,7 +49,7 @@ export function validateSelectedFive(value: unknown, run: SelectionRun, revision
         ids.has(p.dbProductId.toLowerCase()) || typeof p.originProductNo !== "number" ||
         !Number.isSafeInteger(p.originProductNo) || p.originProductNo <= 0 || origins.has(p.originProductNo) ||
         !text(p.productName) || ready.runId !== run.runId || ready.reviewAnalysisSaved !== true ||
-        ready.rawCorpusPersisted !== false || !Number.isSafeInteger(ready.reviewCount) ||
+        ready.rawCorpusPersisted !== true || !Number.isSafeInteger(ready.reviewCount) ||
         Number(ready.reviewCount) < 30 || Number(ready.reviewCount) > 1000 ||
         typeof ready.analysisFingerprint !== "string" || !/^[a-f0-9]{64}$/.test(ready.analysisFingerprint)) {
       throw new Error("최종 5개 제품의 UUID·원상품 번호·현재 실행 준비 상태가 잘못되었습니다.");
