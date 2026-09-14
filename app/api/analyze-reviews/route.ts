@@ -491,9 +491,17 @@ function normalizeCriterionEvidence(
           )
         : [];
 
+    const hasBatchAuthority =
+      Boolean(
+        evidenceNumbersByCriterion,
+      ) &&
+      Object.prototype.hasOwnProperty.call(
+        evidenceNumbersByCriterion,
+        key,
+      );
+
     const evidenceReviewNumbers =
-      batchEvidenceNumbers.length >
-      0
+      hasBatchAuthority
         ? batchEvidenceNumbers
         : modelEvidenceNumbers;
 
@@ -6972,6 +6980,45 @@ export async function POST(
 
     const analysis = {
       ...evidenceFlooredAnalysis,
+
+      pipelineVersion,
+
+      inputFingerprint,
+
+      reviewQualitySource:
+        PRODUCTION_REVIEW_QUALITY_SOURCE,
+
+      criterionEvidenceProvenance:
+        batchResults.map(
+          (batch) => {
+            const batchAnalysisRow =
+              asRecord(
+                batch.analysis,
+              ) ??
+              {};
+
+            return {
+              batchIndex:
+                batch.batchIndex,
+
+              reviewStart:
+                batch.reviewStart,
+
+              reviewEnd:
+                batch.reviewEnd,
+
+              reviewCount:
+                batch.reviewCount,
+
+              criterionEvidence:
+                asRecord(
+                  batchAnalysisRow
+                    .criterionEvidence,
+                ) ??
+                {},
+            };
+          },
+        ),
 
       productName,
 
