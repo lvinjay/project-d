@@ -2,7 +2,7 @@
 
 import { loadSelectedFiveContext, selectedFiveIds } from "../../../lib/project-d-selected-five-manifest";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Header from "../../../components/Header";
 
@@ -87,6 +87,20 @@ function applyQuestionAdjustments(
   return next;
 }
 
+function recomputeWeights(criteria: Criterion[], adjusted: WeightMap, current: WeightMap, manual: Set<string>): WeightMap {
+  return Object.fromEntries(criteria.map(c => {
+    const value = manual.has(c.key) && Number.isFinite(current[c.key]) ? current[c.key]
+      : Number.isFinite(adjusted[c.key]) ? adjusted[c.key] : Number(c.defaultWeight ?? 5);
+    return [c.key, Math.max(1, Math.min(10, Math.round(value)))];
+  }));
+}
+function restoreManualKeys(saved: { runId?: unknown; profileRevision?: unknown; manualWeightKeys?: unknown },
+  runId: string, profileRevision: string, criteria: Criterion[], weights: WeightMap): Set<string> {
+  if (saved.runId !== runId || saved.profileRevision !== profileRevision || !Array.isArray(saved.manualWeightKeys)) return new Set();
+  return new Set(saved.manualWeightKeys.filter((key): key is string => typeof key === "string" &&
+    criteria.some(c => c.key === key) && Number.isFinite(weights[key])));
+}
+
 function QuestionGroup({
   question,
   value,
@@ -134,6 +148,7 @@ export default function QuestionsClient() {
   const [questions, setQuestions] = useState<PersonalizationQuestion[]>([]);
   const [criteria, setCriteria] = useState<Criterion[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const manualWeightKeys = useRef(new Set<string>());
   const [editableWeights, setEditableWeights] = useState<WeightMap>({});
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -145,6 +160,7 @@ export default function QuestionsClient() {
     let cancelled = false;
 
     async function loadQuestions() {
+      manualWeightKeys.current = new Set();
       setLoading(true);
       setErrorMessage("");
 
@@ -191,6 +207,7 @@ export default function QuestionsClient() {
         let storedBudgetChoice = "";
         let storedCustomPreference = "";
         let storedWeights: WeightMap = {};
+        let restoredManualKeys = new Set<string>();
 
         try {
           const savedRaw = window.sessionStorage.getItem(
@@ -200,6 +217,9 @@ export default function QuestionsClient() {
           if (savedRaw) {
             const saved = JSON.parse(savedRaw) as {
               selectionIdentity?: unknown;
+              runId?: unknown;
+              profileRevision?: unknown;
+              manualWeightKeys?: unknown;
               category?: unknown;
               answers?: unknown;
               budgetChoice?: unknown;
@@ -242,6 +262,7 @@ export default function QuestionsClient() {
                     ]),
                 );
               }
+              restoredManualKeys = restoreManualKeys(saved, selected.manifest.runId, selected.manifest.profileRevision, loadedCriteria, storedWeights);
             }
           }
         } catch {
@@ -268,51 +289,15 @@ export default function QuestionsClient() {
 
         setCustomPreference(storedCustomPreference);
 
-        const initialEditableWeights = Object.fromEntries(
-          loadedCriteria.map((criterion) => {
-            const saved = storedWeights[criterion.key];
-            const adjusted = applyQuestionAdjustments(
-              initialWeights,
-              activeQuestions,
-              Object.fromEntries(
-                activeQuestions.map((question) => {
-                  const savedValue = storedAnswers[question.key];
-                  const savedIsValid = question.options.some(
-                    (option) => option.value === savedValue,
-                  );
-
-                  return [
-                    question.key,
-                    savedIsValid
-                      ? savedValue
-                      : question.options[0]?.value ?? "",
-                  ];
-                }),
-              ),
-            )[criterion.key];
-
-            const fallback = Number(criterion.defaultWeight ?? 5);
-
-            return [
-              criterion.key,
-              Math.max(
-                1,
-                Math.min(
-                  10,
-                  Math.round(
-                    Number.isFinite(saved)
-                      ? saved
-                      : Number.isFinite(adjusted)
-                        ? adjusted
-                        : fallback,
-                  ),
-                ),
-              ),
-            ];
-          }),
-        );
-
-        setEditableWeights(initialEditableWeights);
+        manualWeightKeys.current = restoredManualKeys;
+        const validatedAnswers = Object.fromEntries(activeQuestions.map(question => {
+          const value = storedAnswers[question.key];
+          return [question.key, question.options.some(option => option.value === value) ? value : question.options[0]?.value ?? ""];
+        }));
+        const baseWeights = Object.fromEntries(loadedCriteria.map(c => [c.key,
+          Number.isFinite(initialWeights[c.key]) ? initialWeights[c.key] : Number(c.defaultWeight ?? 5)]));
+        setEditableWeights(recomputeWeights(loadedCriteria,
+          applyQuestionAdjustments(baseWeights, activeQuestions, validatedAnswers), storedWeights, restoredManualKeys));
 
         const budgetContext = await loadSelectedFiveContext(window.sessionStorage, category, selected.identity);
         if (cancelled) return;
@@ -379,38 +364,15 @@ export default function QuestionsClient() {
   }, [category, requestedRunId]);
 
   const questionAdjustedWeights = useMemo(
-    () => applyQuestionAdjustments(initialWeights, questions, answers),
-    [initialWeights, questions, answers],
+    () => applyQuestionAdjustments(Object.fromEntries(criteria.map(c => [c.key,
+      Number.isFinite(initialWeights[c.key]) ? initialWeights[c.key] : Number(c.defaultWeight ?? 5)])), questions, answers),
+    [initialWeights, criteria, questions, answers],
   );
 
   useEffect(() => {
     if (criteria.length === 0) return;
 
-    setEditableWeights((current) => {
-      const next: WeightMap = {};
-
-      for (const criterion of criteria) {
-        const fromCurrent = current[criterion.key];
-        const fromQuestion = questionAdjustedWeights[criterion.key];
-        const fallback = Number(criterion.defaultWeight ?? 5);
-
-        next[criterion.key] = Math.max(
-          1,
-          Math.min(
-            10,
-            Math.round(
-              Number.isFinite(fromCurrent)
-                ? fromCurrent
-                : Number.isFinite(fromQuestion)
-                  ? fromQuestion
-                  : fallback,
-            ),
-          ),
-        );
-      }
-
-      return next;
-    });
+    setEditableWeights(current => recomputeWeights(criteria, questionAdjustedWeights, current, manualWeightKeys.current));
   }, [criteria, questionAdjustedWeights]);
 
   function selectAnswer(questionKey: string, value: string) {
@@ -423,10 +385,14 @@ export default function QuestionsClient() {
   async function finishQuestions() {
     if (questions.length === 0) return;
 
-    try { await loadSelectedFiveContext(window.sessionStorage, category, selectionIdentity); }
+    let selected;
+    try { selected = await loadSelectedFiveContext(window.sessionStorage, category, selectionIdentity); }
     catch (error) { setErrorMessage(error instanceof Error ? error.message : "선택 실행이 변경되었습니다."); return; }
     const payload = {
       selectionIdentity,
+      runId: selected.manifest.runId,
+      profileRevision: selected.manifest.profileRevision,
+      manualWeightKeys: [...manualWeightKeys.current],
       category,
       answers,
       weights: editableWeights,
@@ -563,12 +529,13 @@ export default function QuestionsClient() {
                         max={10}
                         step={1}
                         value={value}
-                        onChange={(event) =>
+                        onChange={(event) => {
+                          manualWeightKeys.current.add(criterion.key);
                           setEditableWeights((current) => ({
                             ...current,
-                            [criterion.key]: Number(event.target.value),
-                          }))
-                        }
+                            [criterion.key]: Math.max(1, Math.min(10, Math.round(Number(event.target.value)))),
+                          }));
+                        }}
                         style={{
                           width: "100%",
                           marginTop: 16,
