@@ -214,6 +214,24 @@ function normalizeResults(
               )
             : {};
 
+        if (
+          criterionKeys.some(
+            (key) =>
+              !Object.prototype.hasOwnProperty.call(
+                rawScores,
+                key,
+              ) ||
+              !Object.prototype.hasOwnProperty.call(
+                rawReasons,
+                key,
+              ),
+          )
+        ) {
+          throw new Error(
+            "AI product score result is missing a required criterion slot.",
+          );
+        }
+
         const criterionScores:
           Record<
             string,
