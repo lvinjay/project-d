@@ -43,11 +43,18 @@ function text(value: unknown) {
 }
 
 function assertExactUniqueProductMembership(
-  results: Array<{
-    productId: string;
-  }>,
+  results: unknown,
   expectedProductIds: string[],
-) {
+): asserts results is Array<{ productId: string }> {
+  // Validate every raw row before any requested-ID filtering or reordering.
+  if (!Array.isArray(results) || results.some((row) =>
+    !row || typeof row !== "object" || Array.isArray(row) ||
+    typeof row.productId !== "string" ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(row.productId.trim())
+  )) {
+    throw new Error("AI 제품 평가 원본 배열 또는 productId 형식이 올바르지 않습니다.");
+  }
+
   const expected =
     new Set(
       expectedProductIds,
@@ -56,7 +63,7 @@ function assertExactUniqueProductMembership(
   const actualIds =
     results.map(
       (item) =>
-        item.productId,
+        item.productId.trim(),
     );
 
   const actual =
@@ -804,10 +811,11 @@ ${JSON.stringify(personalPreferenceEvidence)}
       );
     }
 
-    const rawProducts =
-      Array.isArray(parsed.products)
-        ? parsed.products
-        : [];
+    const rawProducts = parsed.products;
+    assertExactUniqueProductMembership(
+      rawProducts,
+      products.map((product) => String(product.id)),
+    );
 
     const validIds =
       new Set(
