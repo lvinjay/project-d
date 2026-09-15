@@ -14,12 +14,35 @@ type CriterionBreakdown = {
   key: string;
   label: string;
   score: number | null;
+  effectiveScore: number | null;
+  imputed: boolean;
+  criterionAverage: number | null;
   weight: number;
   contribution: number | null;
   reason: string;
-  reviewEvidenceCount?: number;
-  evidenceSummary?: string;
+  reviewEvidenceCount: number;
+  evidenceSummary: string;
 };
+
+function criterionScoreLabel(criterion: CriterionBreakdown): string {
+  if (criterion.imputed === true && criterion.score === null && typeof criterion.effectiveScore === "number") {
+    return "후보 평균으로 보완 · 보완 점수 " + criterion.effectiveScore + "점";
+  }
+  if (typeof criterion.score === "number") return "점수 " + criterion.score + "점";
+  return "평가 가능한 점수 없음";
+}
+function selectDisplaySpecs(specs: KeySpec[], category: string): KeySpec[] {
+  const valid = specs.filter(s => typeof s.name === "string" && s.name.trim() && typeof s.value === "string" && s.value.trim())
+    .map(s => ({ ...s, name: s.name.trim(), value: s.value.trim() }));
+  const preferred = /에어컨|냉방/.test(category)
+    ? valid.filter(s => /btu|냉방능력|냉방용량|냉방성능|소음|db|데시벨|소비전력|정격전력|전력소비|watt|와트|무게|중량|kg|제습량|풍량|배터리/i.test(s.name + " " + s.value)) : [];
+  const seen = new Set<string>();
+  return [...preferred, ...valid].filter(s => {
+    const key = normalizeSpecName(s.name);
+    if (!key || seen.has(key)) return false;
+    seen.add(key); return true;
+  }).slice(0, 5);
+}
 
 type KeySpec = {
   name: string;
@@ -1265,35 +1288,7 @@ export default function ResultsClient() {
         });
       }
 
-      const importantPattern =
-        /btu|냉방능력|냉방용량|냉방성능|소음|db|데시벨|소비전력|정격전력|전력소비|watt|와트|무게|중량|kg|제습량|풍량|배터리/i;
-
-      const excludedNamePattern =
-        /제품명|상품명|제조사|브랜드|모델명|모델번호|품명|색상|컬러/i;
-
-      const rawSpecs =
-        (winner.keySpecs ?? []).filter((spec) => {
-          const name = spec.name.trim();
-          const value = spec.value.trim();
-
-          if (!name || !value) {
-            return false;
-          }
-
-          if (excludedNamePattern.test(name)) {
-            return false;
-          }
-
-          if (value.length > 45) {
-            return false;
-          }
-
-          return importantPattern.test(
-            `${name} ${value}`,
-          );
-        });
-
-      const prioritized = rawSpecs;
+      const prioritized = selectDisplaySpecs(winner.keySpecs ?? [], category);
 
       const seen =
         new Set<string>();
@@ -1339,6 +1334,7 @@ export default function ResultsClient() {
     }, [
       winner,
       recommendations,
+      category,
     ]);
 
   return (
@@ -2239,11 +2235,12 @@ export default function ResultsClient() {
                           </span>
 
                           <b>
-                            {criterion.score === null
-                              ? "정보 없음"
-                              : `${criterion.score}점`}
+                            {criterionScoreLabel(criterion)}
                           </b>
 
+                          {criterion.imputed === true && criterion.score === null && criterion.effectiveScore !== null ? (
+                            <small>이 제품의 직접 점수가 없어 현재 후보군의 해당 기준 평균을 사용했습니다.</small>
+                          ) : null}
                           <small>
                             중요도{" "}
                             {criterion.weight}/10
@@ -2657,13 +2654,13 @@ export default function ResultsClient() {
                                     </span>
 
                                     <b>
-                                      {criterion.score ===
-                                      null
-                                        ? "정보 없음"
-                                        : `${criterion.score}점`}
+                                      {criterionScoreLabel(criterion)}
                                     </b>
 
-                                    <small>
+                                    {criterion.imputed === true && criterion.score === null && criterion.effectiveScore !== null ? (
+                            <small>이 제품의 직접 점수가 없어 현재 후보군의 해당 기준 평균을 사용했습니다.</small>
+                          ) : null}
+                          <small>
                                       중요도{" "}
                                       {
                                         criterion.weight
