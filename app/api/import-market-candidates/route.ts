@@ -20,7 +20,7 @@ type ReviewItem = {
 };
 
 type CandidateDetail = {
-  productId?: string;
+  productId?: string | number | null;
   productName?: string;
   brand?: string;
   manufacturer?: string;
@@ -69,6 +69,22 @@ function normalizeText(
         .replace(/\s+/g, " ")
         .trim()
     : "";
+}
+
+function classifyIncomingOrigin(value: unknown):
+  | { state: "absent" | "invalid"; value: null }
+  | { state: "valid"; value: number } {
+  if (value === undefined || value === null ||
+      (typeof value === "string" && !value.trim())) {
+    return { state: "absent", value: null };
+  }
+  if (typeof value !== "string" && typeof value !== "number") {
+    return { state: "invalid", value: null };
+  }
+  const numberValue = Number(value);
+  return Number.isSafeInteger(numberValue) && numberValue > 0
+    ? { state: "valid", value: numberValue }
+    : { state: "invalid", value: null };
 }
 
 type ExistingProductRow = {
@@ -287,10 +303,10 @@ export async function POST(
       const detail =
         candidate.detail ?? {};
 
-      const productId =
-        normalizeText(
-          detail.productId,
-        );
+      const incomingOrigin = classifyIncomingOrigin(detail.productId);
+      const productId = incomingOrigin.state === "valid"
+        ? String(incomingOrigin.value)
+        : normalizeText(detail.productId);
 
       const productName =
         normalizeText(
@@ -302,19 +318,12 @@ export async function POST(
           detail.sourceUrl,
         );
 
-      const numericProductId =
-        Number(
-          productId,
-        );
-
-      const originProductNo =
-        productId &&
-        Number.isSafeInteger(
-          numericProductId,
-        ) &&
-        numericProductId > 0
-          ? numericProductId
-          : null;
+      const originProductNo = incomingOrigin.value;
+      if (incomingOrigin.state === "invalid") {
+        results.push({ success: false, productId, productName,
+          reason: "유효하지 않은 productId입니다. 기존 상품 identity를 보호하기 위해 후보를 거부했습니다." });
+        continue;
+      }
 
       if (
         !productName ||
@@ -656,11 +665,18 @@ export async function POST(
       }
 
       if (existing) {
+        const incomingDetail: Record<string, unknown> = { ...productDetailAnalysis };
+        if (incomingOrigin.state === "absent") {
+          // Missing origin is not a request to replace established identity metadata.
+          for (const key of ["source", "sourceType", "identityKey", "productId"]) {
+            delete incomingDetail[key];
+          }
+        }
         const mergedProductDetailAnalysis =
           mergeProductDetailAnalysis(
             existing
               .product_detail_analysis,
-            productDetailAnalysis,
+            incomingDetail,
           );
 
         const {
@@ -676,8 +692,9 @@ export async function POST(
               source_url:
                 sourceUrl,
 
-              origin_product_no:
-                originProductNo,
+              ...(incomingOrigin.state === "valid"
+                ? { origin_product_no: incomingOrigin.value }
+                : {}),
 
               product_detail_analysis:
                 mergedProductDetailAnalysis,
