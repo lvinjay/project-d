@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { loadSelectedFiveContext } from "../../lib/project-d-selected-five-manifest";
 
@@ -236,6 +236,15 @@ export default function AdvisorPage() {
         const nextProfile = selected.profile as unknown as CategoryProfile;
         const catalogResult = { products: selected.products };
         setSelectionIdentity(selected.identity);
+        setCategoryInput(selected.manifest.category);
+
+        if (activeCategory !== selected.manifest.category) {
+          router.replace(
+            `/advisor?category=${encodeURIComponent(
+              selected.manifest.category,
+            )}`,
+          );
+        }
         const nextWeights =
           Object.fromEntries(
             nextProfile.criteria.map(

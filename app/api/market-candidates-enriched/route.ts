@@ -1,3 +1,5 @@
+import { strictProductModelIdentity, preferModelRepresentative } from "../../../lib/project-d-product-model-identity";
+import { evaluateCategoryRelevance, CATEGORY_RELEVANCE_POLICY_VERSION, type RelevanceResult } from "../../../lib/project-d-category-relevance";
 import {
   validateProductMatch,
 } from "../../../lib/validateProductMatch";
@@ -103,6 +105,9 @@ type CapturedProduct = {
   url: string;
   imageUrl: string;
   price: number;
+  priceVerified?: boolean;
+  priceSource?: string;
+  priceRawText?: string;
   reviewCount: number;
   rating: number;
 
@@ -118,6 +123,16 @@ type CapturedProduct = {
   >;
 
   browserCatalogTitle?: string;
+
+  browserEvidenceSourceType?: string;
+
+  browserProductTitle?: string;
+
+  browserProductUrl?: string;
+
+  browserChannelProductNo?: string;
+
+  browserOriginProductNo?: string;
 };
 
 type CaptureResponse = {
@@ -143,6 +158,7 @@ type FailureItem = {
 };
 
 type FinalCandidate = {
+  relevance?: RelevanceResult;
   position: number;
 
   canonicalSource: {
@@ -154,7 +170,8 @@ type FinalCandidate = {
     sourceType?:
       | "naver-brand"
       | "manufacturer"
-      | "naver-catalog";
+      | "naver-catalog"
+      | "naver-store";
 
     identityKey?: string;
   };
@@ -208,6 +225,10 @@ type FinalCandidate = {
     productName: string;
     seller: string;
     listedPrice: number;
+  priceVerified?: boolean;
+  priceSource?: string;
+  priceRawText?: string;
+
     reviewCount: number;
     rating: number;
     imageUrl: string;
@@ -223,7 +244,8 @@ type FinalCandidate = {
     sourceType?:
       | "naver-brand"
       | "manufacturer"
-      | "naver-catalog";
+      | "naver-catalog"
+      | "naver-store";
 
     identityKey?: string;
   };
@@ -1790,6 +1812,24 @@ export async function GET(
         "zeroPaidOnly",
       ) === "1";
 
+    const paidPlanOnly =
+      requestUrl.searchParams.get(
+        "paidPlanOnly",
+      ) === "1";
+
+    if (zeroPaidOnly && paidPlanOnly) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "zeroPaidOnly와 paidPlanOnly는 동시에 사용할 수 없습니다.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
     function isZeroPaidBrowserCatalogCandidate(
       product: CapturedProduct,
     ) {
@@ -1864,6 +1904,127 @@ export async function GET(
       );
     }
 
+    function getZeroPaidBrowserStoreEvidence(
+      product: CapturedProduct,
+    ) {
+      const reviewSourceUrl =
+        typeof product.browserReviewSourceUrl ===
+          "string"
+          ? product.browserReviewSourceUrl.trim()
+          : "";
+
+      const storeMatch =
+        reviewSourceUrl.match(
+          /^https:\/\/smartstore\.naver\.com\/[^/?#]+\/products\/(\d+)/i,
+        );
+
+      const channelProductNo =
+        typeof product.browserChannelProductNo ===
+          "string"
+          ? product.browserChannelProductNo.trim()
+          : "";
+
+      const originProductNo =
+        typeof product.browserOriginProductNo ===
+          "string"
+          ? product.browserOriginProductNo.trim()
+          : "";
+
+      const productTitle =
+        typeof product.browserProductTitle ===
+          "string"
+          ? product.browserProductTitle.trim()
+          : "";
+
+      const evidenceSourceType =
+        typeof product.browserEvidenceSourceType ===
+          "string"
+          ? product.browserEvidenceSourceType.trim()
+          : "";
+
+      const browserReviews =
+        Array.isArray(product.browserReviews)
+          ? product.browserReviews.filter(
+              (review) =>
+                Boolean(review?.text?.trim()),
+            )
+          : [];
+
+      const browserReviewTotalCount =
+        Number(
+          product.browserReviewTotalCount ??
+          0,
+        ) || 0;
+
+      const validation =
+        productTitle
+          ? validateProductMatch(
+              product.name,
+              productTitle,
+              "",
+            )
+          : null;
+
+      const urlChannelProductNo =
+        storeMatch?.[1] ?? "";
+
+      const identityValid =
+        Boolean(urlChannelProductNo) &&
+        Boolean(channelProductNo) &&
+        urlChannelProductNo ===
+          channelProductNo &&
+        /^\d+$/.test(
+          originProductNo,
+        );
+
+      return {
+        reviewSourceUrl,
+        productTitle,
+        evidenceSourceType,
+        browserReviews:
+          browserReviews.slice(0, 20),
+        browserReviewTotalCount,
+        channelProductNo,
+        originProductNo,
+        identityValid,
+        validation,
+      };
+    }
+
+    function isZeroPaidBrowserStoreCandidate(
+      product: CapturedProduct,
+    ) {
+      const evidence =
+        getZeroPaidBrowserStoreEvidence(
+          product,
+        );
+
+      return (
+        evidence.evidenceSourceType ===
+          "smartstore-native" &&
+        evidence.identityValid &&
+        evidence.productTitle.length > 0 &&
+        evidence.browserReviews.length >= 5 &&
+        evidence.browserReviewTotalCount >=
+          MIN_REVIEW_COUNT_FOR_DB &&
+        product.price > 0 &&
+        evidence.validation?.matched === true
+      );
+    }
+
+    function isZeroPaidBrowserCandidate(
+      product: CapturedProduct,
+    ) {
+      return (
+        isZeroPaidBrowserCatalogCandidate(
+          product,
+        ) ||
+        isZeroPaidBrowserStoreCandidate(
+          product,
+        )
+      );
+    }
+
     /*
       캡처 전체에서:
 
@@ -1886,11 +2047,19 @@ export async function GET(
       실제 Bright Data 호출은
       3개씩 하면서 full 유효 상품 30개가 되면 즉시 중단한다.
     */
-    const dedupedMarketProducts =
-      removeMarketDuplicates(
-        captureData.products ??
-          [],
-      );
+    const requireVerifiedPrice = requestUrl.searchParams.get("requireVerifiedPrice") === "1";
+    const priceEvidenceRejectedSamples: Array<{ productName: string; reason: string }> = [];
+    let priceEvidenceRejectedCount = 0;
+    const priceAcceptedProducts = (captureData.products ?? []).filter(product => {
+      const reject = product.priceVerified === false || (requireVerifiedPrice && product.priceVerified !== true);
+      if (reject) {
+        priceEvidenceRejectedCount++;
+        if (priceEvidenceRejectedSamples.length < 10) priceEvidenceRejectedSamples.push({ productName: product.name,
+          reason: product.priceVerified === undefined ? "legacy-price-evidence-missing" : "unverified-sale-price" });
+      }
+      return !reject;
+    });
+    const dedupedMarketProducts = removeMarketDuplicates(priceAcceptedProducts);
 
     function budgetDistance(
       price: number,
@@ -2007,7 +2176,7 @@ export async function GET(
         .filter(
           (product) =>
             !zeroPaidOnly ||
-            isZeroPaidBrowserCatalogCandidate(
+            isZeroPaidBrowserCandidate(
               product,
             ),
         )
@@ -2016,8 +2185,415 @@ export async function GET(
           MAX_CANDIDATE_COUNT,
         );
 
+    if (paidPlanOnly) {
+      type PaidPathCandidatePlan = {
+        position: number;
+        productName: string;
+        path:
+          | "browser-catalog"
+          | "browser-store"
+          | "brand-direct"
+          | "cached-canonical"
+          | "resolver-required";
+        zeroPaidProven: boolean;
+        resolverKnownRequiredIfInspected: number;
+        resolverConservativeUpperBound: number;
+        brightDataKnownRequiredIfInspected: number;
+        brightDataConservativeUpperBound: number;
+        otherExternalPathPossible: boolean;
+        detailCacheHit: boolean;
+        reason: string;
+      };
+
+      const candidatePlans:
+        PaidPathCandidatePlan[] = [];
+
+      for (
+        let index = 0;
+        index < marketCandidates.length;
+        index++
+      ) {
+        const market =
+          marketCandidates[index];
+
+        const reviewSourceUrl =
+          typeof market.browserReviewSourceUrl ===
+            "string"
+            ? market.browserReviewSourceUrl.trim()
+            : "";
+
+        const catalogMatch =
+          reviewSourceUrl.match(
+            /^https:\/\/search\.shopping\.naver\.com\/catalog\/(\d+)/i,
+          );
+
+        const catalogTitle =
+          typeof market.browserCatalogTitle ===
+            "string"
+            ? market.browserCatalogTitle.trim()
+            : "";
+
+        const catalogSpecs =
+          market.browserSpecs &&
+          typeof market.browserSpecs ===
+            "object" &&
+          !Array.isArray(
+            market.browserSpecs,
+          )
+            ? market.browserSpecs
+            : {};
+
+        const catalogReviews =
+          Array.isArray(
+            market.browserReviews,
+          )
+            ? market.browserReviews.filter(
+                (review) =>
+                  Boolean(
+                    review?.text?.trim(),
+                  ),
+              )
+            : [];
+
+        const catalogValidation =
+          catalogTitle
+            ? validateProductMatch(
+                market.name,
+                catalogTitle,
+                "",
+              )
+            : null;
+
+        const canUseBrowserCatalogCanonical =
+          Boolean(
+            catalogMatch?.[1],
+          ) &&
+          catalogTitle.length > 0 &&
+          Object.keys(
+            catalogSpecs,
+          ).length > 0 &&
+          catalogReviews.length >= 5 &&
+          market.price > 0 &&
+          catalogValidation?.matched ===
+            true;
+
+        const canUseBrowserStoreCanonical =
+          isZeroPaidBrowserStoreCandidate(
+            market,
+          );
+
+        if (
+          canUseBrowserCatalogCanonical
+        ) {
+          candidatePlans.push({
+            position: index + 1,
+            productName: market.name,
+            path: "browser-catalog",
+            zeroPaidProven: true,
+            resolverKnownRequiredIfInspected: 0,
+            resolverConservativeUpperBound: 0,
+            brightDataKnownRequiredIfInspected: 0,
+            brightDataConservativeUpperBound: 0,
+            otherExternalPathPossible: false,
+            detailCacheHit: false,
+            reason:
+              "브라우저 Catalog identity·스펙·리뷰 근거가 있어 resolver/Bright Data를 사용하지 않습니다.",
+          });
+
+          continue;
+        }
+
+        if (
+          canUseBrowserStoreCanonical
+        ) {
+          candidatePlans.push({
+            position: index + 1,
+            productName: market.name,
+            path: "browser-store",
+            zeroPaidProven: true,
+            resolverKnownRequiredIfInspected: 0,
+            resolverConservativeUpperBound: 0,
+            brightDataKnownRequiredIfInspected: 0,
+            brightDataConservativeUpperBound: 0,
+            otherExternalPathPossible: false,
+            detailCacheHit: false,
+            reason:
+              "SmartStore native identity·리뷰 근거가 있어 resolver/Bright Data를 사용하지 않습니다.",
+          });
+
+          continue;
+        }
+
+        const urlInfo =
+          getNaverProductUrlInfo(
+            market.url,
+          );
+
+        let canonicalProductId =
+          "";
+
+        let path:
+          PaidPathCandidatePlan["path"] =
+          "resolver-required";
+
+        if (
+          urlInfo?.type === "brand"
+        ) {
+          canonicalProductId =
+            urlInfo.productId;
+
+          path =
+            "brand-direct";
+        } else {
+          const cachedCanonical =
+            await getReusableCachedCanonicalResolution(
+              market.name,
+            );
+
+          if (cachedCanonical) {
+            canonicalProductId =
+              cachedCanonical.productId;
+
+            path =
+              "cached-canonical";
+          }
+        }
+
+        let detailCacheHit =
+          false;
+
+        if (canonicalProductId) {
+          detailCacheHit =
+            Boolean(
+              await getCachedProductDetail(
+                canonicalProductId,
+              ),
+            );
+        }
+
+        if (
+          path ===
+            "resolver-required"
+        ) {
+          candidatePlans.push({
+            position: index + 1,
+            productName: market.name,
+            path,
+            zeroPaidProven: false,
+            resolverKnownRequiredIfInspected: 1,
+            resolverConservativeUpperBound: 4,
+            brightDataKnownRequiredIfInspected: 0,
+            brightDataConservativeUpperBound: 2,
+            otherExternalPathPossible: true,
+            detailCacheHit,
+            reason:
+              "브라우저 canonical/DB canonical이 없어 초기 resolver가 필요합니다. 실패 시 Manufacturer·판매처 복구 경로와 reviewSource 보강이 이어질 수 있습니다.",
+          });
+
+          continue;
+        }
+
+        const brightDataKnownRequired =
+          detailCacheHit
+            ? 0
+            : 1;
+
+        candidatePlans.push({
+          position: index + 1,
+          productName: market.name,
+          path,
+          zeroPaidProven: false,
+          resolverKnownRequiredIfInspected: 0,
+          resolverConservativeUpperBound: 1,
+          brightDataKnownRequiredIfInspected:
+            brightDataKnownRequired,
+          brightDataConservativeUpperBound:
+            brightDataKnownRequired + 1,
+          otherExternalPathPossible: true,
+          detailCacheHit,
+          reason:
+            detailCacheHit
+              ? "canonical과 24시간 상세 캐시는 있으나 판매처 재검색/reviewSource 보강 경로에서 resolver 또는 Bright Data가 추가될 수 있습니다."
+              : "canonical은 확보됐지만 24시간 상세 캐시가 없어 Brand 상세 Bright Data 1회가 필요하며 reviewSource 보강 1회가 추가될 수 있습니다.",
+        });
+      }
+
+      const zeroPaidProvenCount =
+        candidatePlans.filter(
+          (plan) =>
+            plan.zeroPaidProven,
+        ).length;
+
+      const paidPossibleCount =
+        candidatePlans.length -
+        zeroPaidProvenCount;
+
+      const resolverKnownRequiredIfAllInspected =
+        candidatePlans.reduce(
+          (sum, plan) =>
+            sum +
+            plan.resolverKnownRequiredIfInspected,
+          0,
+        );
+
+      const resolverConservativeUpperBound =
+        candidatePlans.reduce(
+          (sum, plan) =>
+            sum +
+            plan.resolverConservativeUpperBound,
+          0,
+        );
+
+      const brightDataKnownRequiredIfAllInspected =
+        candidatePlans.reduce(
+          (sum, plan) =>
+            sum +
+            plan.brightDataKnownRequiredIfInspected,
+          0,
+        );
+
+      const brightDataConservativeUpperBound =
+        candidatePlans.reduce(
+          (sum, plan) =>
+            sum +
+            plan.brightDataConservativeUpperBound,
+          0,
+        );
+
+      const otherExternalPathPossibleCount =
+        candidatePlans.filter(
+          (plan) =>
+            plan.otherExternalPathPossible,
+        ).length;
+
+      return NextResponse.json({
+        success: true,
+        category,
+        paidPlanOnly: true,
+        readOnly: true,
+        paidApiCalls: 0,
+        resolverCalls: 0,
+        brightDataCalls: 0,
+        targetCount: TARGET_COUNT,
+        marketCandidateCount:
+          marketCandidates.length,
+        zeroPaidProvenCount,
+        paidPossibleCount,
+        resolverKnownRequiredIfAllInspected,
+        resolverConservativeUpperBound,
+        brightDataKnownRequiredIfAllInspected,
+        brightDataConservativeUpperBound,
+        otherExternalPathPossibleCount,
+        priceEvidenceRejectedCount,
+        priceEvidenceRejectedSamples,
+        candidatePlans,
+        note:
+          "사전계획은 resolver/Bright Data/searchProductOffers/Manufacturer 수집을 실행하지 않습니다. 실제 실행은 FULL 30개 확보 시 조기 중단되므로 상한보다 적을 수 있습니다.",
+      });
+    }
+
+    const requestedExecutionTargetCount = Number(
+      requestUrl.searchParams.get(
+        "executionTargetCount",
+      ) ?? TARGET_COUNT,
+    );
+
+    const executionTargetCount =
+      Number.isSafeInteger(
+        requestedExecutionTargetCount,
+      ) &&
+      requestedExecutionTargetCount >= 1 &&
+      requestedExecutionTargetCount <= TARGET_COUNT
+        ? requestedExecutionTargetCount
+        : TARGET_COUNT;
+
+    const requestedPaidCandidateLimit =
+      requestUrl.searchParams.get(
+        "paidCandidateLimit",
+      );
+
+    const parsedPaidCandidateLimit =
+      requestedPaidCandidateLimit === null
+        ? null
+        : Number(
+            requestedPaidCandidateLimit,
+          );
+
+    const paidCandidateLimit =
+      parsedPaidCandidateLimit === null
+        ? null
+        : Number.isSafeInteger(
+              parsedPaidCandidateLimit,
+            ) &&
+            parsedPaidCandidateLimit >= 0 &&
+            parsedPaidCandidateLimit <= MAX_CANDIDATE_COUNT
+          ? parsedPaidCandidateLimit
+          : null;
+
+    const requestedPaidCandidateOffset = Number(
+      requestUrl.searchParams.get(
+        "paidCandidateOffset",
+      ) ?? 0,
+    );
+
+    const paidCandidateOffset =
+      Number.isSafeInteger(
+        requestedPaidCandidateOffset,
+      ) &&
+      requestedPaidCandidateOffset >= 0
+        ? requestedPaidCandidateOffset
+        : 0;
+
+    let paidCandidateSeenForQueue = 0;
+    let paidCandidateIncludedForQueue = 0;
+
+    const executionCandidates =
+      paidCandidateLimit === null
+        ? marketCandidates
+        : marketCandidates.filter(
+            (product) => {
+              if (
+                isZeroPaidBrowserCandidate(
+                  product,
+                )
+              ) {
+                return true;
+              }
+
+              const paidIndex =
+                paidCandidateSeenForQueue;
+
+              paidCandidateSeenForQueue += 1;
+
+              if (
+                paidIndex <
+                paidCandidateOffset
+              ) {
+                return false;
+              }
+
+              if (
+                paidCandidateIncludedForQueue >=
+                paidCandidateLimit
+              ) {
+                return false;
+              }
+
+              paidCandidateIncludedForQueue += 1;
+              return true;
+            },
+          );
+
+    const modelRepresentatives = new Map<string, number>();
+    const duplicateNeedsReview: string[] = [];
+    let modelDuplicateCount = 0;
     const finalCandidates:
       FinalCandidate[] = [];
+    type RelevanceSample = { productName: string; status: RelevanceResult["status"]; reason: string;
+      positiveSignals: string[]; negativeSignals: string[]; evidence: RelevanceResult["evidence"] };
+    const relevance = { policyVersion: CATEGORY_RELEVANCE_POLICY_VERSION, eligibleCount: 0,
+      excludedCount: 0, needsReviewCount: 0,
+      excludedSamples: [] as RelevanceSample[], needsReviewSamples: [] as RelevanceSample[] };
 
     /*
       URL/상세 확보에 실패한 partial 후보는
@@ -2052,7 +2628,7 @@ export async function GET(
         Date.now();
 
       console.log(
-        `[ENRICH ${position}/${marketCandidates.length}] 시작`,
+        `[ENRICH ${position}/${executionCandidates.length}] 시작`,
         market.name,
       );
 
@@ -2071,7 +2647,8 @@ export async function GET(
       let canonicalSourceType:
         | "naver-brand"
         | "manufacturer"
-        | "naver-catalog" =
+        | "naver-catalog"
+        | "naver-store" =
         "naver-brand";
 
       let identityKey =
@@ -2162,6 +2739,32 @@ export async function GET(
         browserCatalogCanonicalReviews.length >= 5 &&
         market.price > 0 &&
         browserCatalogCanonicalValidation?.matched === true;
+
+      const browserStoreEvidence =
+        getZeroPaidBrowserStoreEvidence(
+          market,
+        );
+
+      const canUseBrowserStoreCanonical =
+        isZeroPaidBrowserStoreCandidate(
+          market,
+        );
+
+      const browserStoreCanonicalUrl =
+        browserStoreEvidence.reviewSourceUrl;
+
+      const browserStoreCanonicalProductId =
+        browserStoreEvidence.originProductNo;
+
+      const browserStoreCanonicalTitle =
+        browserStoreEvidence.productTitle;
+
+      const browserStoreCanonicalReviews =
+        browserStoreEvidence.browserReviews;
+
+      const browserStoreCanonicalTotalReviews =
+        browserStoreEvidence
+          .browserReviewTotalCount;
 
       const urlInfo =
         getNaverProductUrlInfo(
@@ -2297,6 +2900,42 @@ export async function GET(
               Object.keys(browserCatalogCanonicalSpecs).length,
             reviewCount:
               browserCatalogCanonicalReviews.length,
+            url: resolvedUrl,
+          },
+        );
+      } else if (
+        canUseBrowserStoreCanonical
+      ) {
+        canonicalSourceType =
+          "naver-store";
+
+        resolvedProductId =
+          browserStoreCanonicalProductId;
+
+        resolvedUrl =
+          browserStoreCanonicalUrl;
+
+        resolvedBrandName =
+          market.seller;
+
+        resolvedBrandSite =
+          browserStoreCanonicalUrl.replace(
+            /\/products\/\d+.*$/i,
+            "",
+          );
+
+        console.log(
+          `[ENRICH ${position}] SmartStore native canonical 직접 사용 → resolver/SerpApi 생략`,
+          {
+            productId: resolvedProductId,
+            channelProductNo:
+              browserStoreEvidence.channelProductNo,
+            title:
+              browserStoreCanonicalTitle,
+            totalReviews:
+              browserStoreCanonicalTotalReviews,
+            reviewCount:
+              browserStoreCanonicalReviews.length,
             url: resolvedUrl,
           },
         );
@@ -2959,6 +3598,12 @@ export async function GET(
       ) {
         identityKey =
           `naver-catalog:${resolvedProductId}`;
+      } else if (
+        canonicalSourceType ===
+          "naver-store"
+      ) {
+        identityKey =
+          `naver-store:${resolvedProductId}`;
       } else {
         identityKey =
           buildCanonicalPipelineIdentity({
@@ -3134,6 +3779,94 @@ export async function GET(
         console.log(
           `[ENRICH ${position}] Manufacturer 상세 사용`,
           detail.title,
+        );
+      } else if (
+        canonicalSourceType ===
+          "naver-store" &&
+        canUseBrowserStoreCanonical
+      ) {
+        detail = {
+          url:
+            browserStoreCanonicalUrl,
+
+          productId:
+            browserStoreCanonicalProductId,
+
+          title:
+            browserStoreCanonicalTitle,
+
+          originalPrice:
+            market.price,
+
+          finalPrice:
+            market.price,
+
+          discountRate: 0,
+
+          currency:
+            "KRW",
+
+          imageUrl:
+            market.imageUrl,
+
+          totalReviews:
+            Math.max(
+              browserStoreCanonicalTotalReviews,
+              Number(
+                market.reviewCount ?? 0,
+              ),
+              browserStoreCanonicalReviews.length,
+            ),
+
+          averageRating:
+            market.rating > 0
+              ? market.rating
+              : null,
+
+          soldOut: false,
+
+          sellerName:
+            market.seller,
+
+          sellers: [],
+
+          purchaseSeller: "",
+
+          purchasePrice: 0,
+
+          purchaseUrl: "",
+
+          brand: "",
+
+          manufacturer: "",
+
+          modelName: "",
+
+          categoryName:
+            category,
+
+          keySpecs: {},
+
+          evaluationEvidence: {},
+
+          topReviews:
+            browserStoreCanonicalReviews,
+        } as NaverProductDetail;
+
+        console.log(
+          `[ENRICH ${position}] SmartStore native 브라우저 상세 사용 → resolver/Bright Data 생략`,
+          {
+            productId:
+              browserStoreCanonicalProductId,
+            title:
+              browserStoreCanonicalTitle,
+            totalReviews:
+              browserStoreCanonicalTotalReviews,
+            reviewCount:
+              browserStoreCanonicalReviews.length,
+            url:
+              browserStoreCanonicalUrl,
+          },
         );
       } else if (
         canonicalSourceType ===
@@ -3745,7 +4478,9 @@ export async function GET(
         if (
           !offerSearch &&
           canonicalSourceType !==
-            "naver-catalog"
+            "naver-catalog" &&
+          canonicalSourceType !==
+            "naver-store"
         ) {
           offerSearch =
             await searchProductOffers(
@@ -3806,7 +4541,9 @@ export async function GET(
           canonicalSourceType ===
             "naver-brand" ||
           canonicalSourceType ===
-            "naver-catalog"
+            "naver-catalog" ||
+          canonicalSourceType ===
+            "naver-store"
         )
           ? String(
               detail.productId,
@@ -4525,6 +5262,9 @@ export async function GET(
             seller:
               market.seller,
 
+            priceVerified: market.priceVerified,
+            priceSource: market.priceSource,
+            priceRawText: market.priceRawText,
             listedPrice:
               market.price,
 
@@ -4646,19 +5386,19 @@ export async function GET(
     for (
       let start = 0;
       start <
-      marketCandidates.length;
+      executionCandidates.length;
       start +=
         BATCH_SIZE
     ) {
       if (
         finalCandidates.length >=
-        TARGET_COUNT
+        executionTargetCount
       ) {
         break;
       }
 
       const batch =
-        marketCandidates.slice(
+        executionCandidates.slice(
           start,
           start +
             BATCH_SIZE,
@@ -4782,7 +5522,7 @@ export async function GET(
 
         if (
           finalCandidates.length >=
-          TARGET_COUNT
+          executionTargetCount
         ) {
           /*
             이 배치에서 이미 full 상품 풀 목표 30개가 찼으면
@@ -4796,13 +5536,47 @@ export async function GET(
             resultIdentityKey,
           );
 
+        const assessment = evaluateCategoryRelevance({ category,
+          marketName: result.candidate.market.productName,
+          detailTitle: result.candidate.detail.productName,
+          detailModelName: result.candidate.detail.modelName,
+          keySpecs: result.candidate.detail.keySpecs,
+          evaluationEvidence: result.candidate.detail.evaluationEvidence,
+        });
+        result.candidate.relevance = assessment;
+        if (assessment.status !== "eligible") {
+          const samples = assessment.status === "excluded" ? relevance.excludedSamples : relevance.needsReviewSamples;
+          if (assessment.status === "excluded") relevance.excludedCount++;
+          else relevance.needsReviewCount++;
+          if (samples.length < 10) samples.push({ productName: result.candidate.detail.productName,
+            status: assessment.status, reason: assessment.reason,
+            positiveSignals: assessment.matchedPositiveSignals, negativeSignals: assessment.matchedNegativeSignals,
+            evidence: assessment.evidence.slice(0, 10).map(e => ({ ...e, text: e.text.slice(0, 300) })),
+          });
+          continue; // Technical FULL remains FULL; neither rejection consumes a pool slot nor becomes partial.
+        }
+        relevance.eligibleCount++;
+        const modelIdentity = strictProductModelIdentity(result.candidate.detail);
+        if (!modelIdentity) {
+          if (duplicateNeedsReview.length < 10) duplicateNeedsReview.push(result.candidate.detail.productName);
+        } else {
+          const existingIndex = modelRepresentatives.get(modelIdentity);
+          if (existingIndex !== undefined) {
+            modelDuplicateCount++;
+            if (preferModelRepresentative(result.candidate, finalCandidates[existingIndex])) {
+              finalCandidates[existingIndex] = result.candidate;
+            }
+            continue;
+          }
+          modelRepresentatives.set(modelIdentity, finalCandidates.length);
+        }
         finalCandidates.push(
           result.candidate,
         );
 
         console.log(
           `[ENRICH ${result.position}] full 최종 후보 확정`,
-          `${finalCandidates.length}/${TARGET_COUNT}`,
+          `${finalCandidates.length}/${executionTargetCount}`,
           result.candidate
             .detail
             .productName,
@@ -4811,7 +5585,7 @@ export async function GET(
 
       console.log(
         `[ENRICH BATCH] 완료`,
-        `현재 최종 ${finalCandidates.length}/${TARGET_COUNT}`,
+        `현재 최종 ${finalCandidates.length}/${executionTargetCount}`,
       );
     }
 
@@ -4845,7 +5619,7 @@ export async function GET(
         zeroPaidOnly,
 
         marketCandidateCount:
-          marketCandidates.length,
+          executionCandidates.length,
 
         resolverAttempts,
 
@@ -4859,7 +5633,7 @@ export async function GET(
 
         targetReached:
           finalCandidates.length >=
-          TARGET_COUNT,
+          executionTargetCount,
 
         failureCount:
           failures.length,
@@ -4891,16 +5665,34 @@ export async function GET(
             ),
         ).length,
 
+      zeroPaidStoreQualifiedCount:
+        marketCandidates.filter(
+          (product) =>
+            isZeroPaidBrowserStoreCandidate(
+              product,
+            ),
+        ).length,
+
       budget: {
         minBudget,
         maxBudget,
       },
 
       targetCount:
-        TARGET_COUNT,
+        executionTargetCount,
 
       marketCandidateCount:
+        executionCandidates.length,
+
+      sourceMarketCandidateCount:
         marketCandidates.length,
+
+      paidCandidateLimit,
+
+      paidCandidateOffset,
+
+      paidCandidatesIncluded:
+        paidCandidateIncludedForQueue,
 
       resolverAttempts,
 
@@ -4914,9 +5706,12 @@ export async function GET(
 
       targetReached:
         finalCandidates.length >=
-        TARGET_COUNT,
+        executionTargetCount,
 
       finalCandidates,
+      priceEvidenceRejectedCount, priceEvidenceRejectedSamples,
+      modelDuplicateCount, duplicateNeedsReview,
+      relevance,
 
       partialCandidates,
 

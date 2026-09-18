@@ -18,6 +18,9 @@ function object(value: unknown): Record<string, unknown> {
 function text(value: unknown): value is string {
   return typeof value === "string" && value.length > 0 && value === value.trim();
 }
+export function normalizeCategoryKey(value: string): string {
+  return value.normalize("NFKC").trim().replace(/\s+/g, "").toLowerCase();
+}
 function canonical(value: unknown): string {
   if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]";
   if (value && typeof value === "object") {
@@ -72,7 +75,7 @@ export function assertSelectionRun(storage: Store, run: SelectionRun) {
 }
 export function readSelectedFive(storage: Store, category?: string) {
   const run = object(JSON.parse(storage.getItem(CURRENT_RUN_KEY) ?? "null"));
-  if (!text(run.runId) || !text(run.category) || (category && run.category !== category)) throw new Error("현재 선택 실행이 없습니다.");
+  if (!text(run.runId) || !text(run.category) || (category && normalizeCategoryKey(run.category) !== normalizeCategoryKey(category))) throw new Error("현재 선택 실행이 없습니다.");
   return validateSelectedFive(JSON.parse(storage.getItem(SELECTED_FIVE_KEY) ?? "null"), run as SelectionRun);
 }
 export function selectedFiveIdentity(manifest: SelectedFiveManifest) { return canonical(manifest); }
@@ -107,15 +110,231 @@ export async function fetchCategoryProfile(category: string): Promise<Record<str
   categoryProfileRevision(data.profile);
   return data.profile;
 }
+export type PublishedSelectedFive = {
+  manifest: SelectedFiveManifest;
+  profile: Record<string, unknown>;
+};
+
+function selectionRunFromManifest(
+  value: unknown,
+): SelectionRun {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value)
+  ) {
+    throw new Error("공개된 최종 5개 manifest 형식이 올바르지 않습니다.");
+  }
+
+  const row =
+    value as Record<
+      string,
+      unknown
+    >;
+
+  return {
+    runId:
+      typeof row.runId === "string"
+        ? row.runId
+        : "",
+    category:
+      typeof row.category === "string"
+        ? row.category
+        : "",
+  };
+}
+
+export async function fetchPublishedSelectedFive(
+  category: string,
+): Promise<PublishedSelectedFive> {
+  const response =
+    await fetch(
+      "/api/selected-five-manifest?category=" +
+        encodeURIComponent(
+          category,
+        ),
+      {
+        cache: "no-store",
+      },
+    );
+
+  const data =
+    (await response.json()) as {
+      success?: unknown;
+      message?: unknown;
+      manifest?: unknown;
+      profile?: unknown;
+    };
+
+  if (
+    !response.ok ||
+    data.success !== true
+  ) {
+    throw new Error(
+      typeof data.message === "string"
+        ? data.message
+        : "공개된 최종 5개를 불러오지 못했습니다.",
+    );
+  }
+
+  const manifest =
+    validateSelectedFive(
+      data.manifest,
+      selectionRunFromManifest(
+        data.manifest,
+      ),
+    );
+
+  if (
+    normalizeCategoryKey(
+      manifest.category,
+    ) !==
+    normalizeCategoryKey(
+      category,
+    )
+  ) {
+    throw new Error(
+      "공개된 최종 5개의 카테고리가 요청과 일치하지 않습니다.",
+    );
+  }
+
+  if (
+    !data.profile ||
+    typeof data.profile !== "object" ||
+    Array.isArray(
+      data.profile,
+    )
+  ) {
+    throw new Error(
+      "공개된 카테고리 프로필 형식이 올바르지 않습니다.",
+    );
+  }
+
+  const profile =
+    data.profile as Record<
+      string,
+      unknown
+    >;
+
+  if (
+    categoryProfileRevision(
+      profile,
+    ) !==
+    manifest.profileRevision
+  ) {
+    throw new Error(
+      "공개된 최종 5개의 프로필 revision이 현재 프로필과 다릅니다.",
+    );
+  }
+
+  return {
+    manifest,
+    profile,
+  };
+}
+
+export async function persistPublishedSelectedFive(
+  manifest: SelectedFiveManifest,
+): Promise<SelectedFiveManifest> {
+  validateSelectedFive(
+    manifest,
+    manifest,
+  );
+
+  const response =
+    await fetch(
+      "/api/selected-five-manifest",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+        body: JSON.stringify({
+          manifest,
+        }),
+      },
+    );
+
+  const data =
+    (await response.json()) as {
+      success?: unknown;
+      message?: unknown;
+      manifest?: unknown;
+    };
+
+  if (
+    !response.ok ||
+    data.success !== true
+  ) {
+    throw new Error(
+      typeof data.message === "string"
+        ? data.message
+        : "최종 5개 공개 저장에 실패했습니다.",
+    );
+  }
+
+  const saved =
+    validateSelectedFive(
+      data.manifest,
+      selectionRunFromManifest(
+        data.manifest,
+      ),
+    );
+
+  if (
+    selectedFiveIdentity(
+      saved,
+    ) !==
+    selectedFiveIdentity(
+      manifest,
+    )
+  ) {
+    throw new Error(
+      "서버에 저장된 최종 5개 manifest가 발행한 내용과 정확히 일치하지 않습니다.",
+    );
+  }
+
+  return saved;
+}
 export type SelectedCatalogProduct = {
   id: string; originProductNo: number; category: string; productName: string;
   sourceUrl: string; price: string; representativeImageUrl: string; analyzed: boolean;
 };
 export async function loadSelectedFiveContext(storage: Store, category?: string, expectedIdentity?: string) {
-  const manifest = readSelectedFive(storage, category);
+  let manifest: SelectedFiveManifest | null = null;
+  let publishedProfile: Record<string, unknown> | null = null;
+
+  try {
+    manifest = readSelectedFive(storage, category);
+  } catch (localError) {
+    if (!category) throw localError;
+  }
+
+  if (category) {
+    let published: PublishedSelectedFive | null = null;
+    try {
+      published = await fetchPublishedSelectedFive(category);
+    } catch (publishedError) {
+      // A validated local selection remains usable when publication is unavailable.
+      if (!manifest) throw publishedError;
+    }
+    if (published) {
+      publishedProfile = published.profile;
+      if (!manifest || selectedFiveIdentity(manifest) !== selectedFiveIdentity(published.manifest)) {
+        storage.setItem(CURRENT_RUN_KEY, JSON.stringify({
+          runId: published.manifest.runId, category: published.manifest.category,
+        }));
+        storage.setItem(SELECTED_FIVE_KEY, JSON.stringify(published.manifest));
+        manifest = readSelectedFive(storage, published.manifest.category);
+      }
+    }
+  }
+
+  if (!manifest) throw new Error("현재 선택 실행이 없습니다.");
   const identity = selectedFiveIdentity(manifest);
   if (expectedIdentity !== undefined && identity !== expectedIdentity) throw new Error("최종 5개 선택이 변경되었습니다. 다시 시작해 주세요.");
-  const profile = await fetchCategoryProfile(manifest.category);
+  const profile = publishedProfile ?? await fetchCategoryProfile(manifest.category);
   validateSelectedFive(manifest, manifest, categoryProfileRevision(profile));
   const params = new URLSearchParams({ category: manifest.category, analyzedOnly: "true", productIds: selectedFiveIds(manifest).join(",") });
   const response = await fetch("/api/catalog-products?" + params, { cache: "no-store" });

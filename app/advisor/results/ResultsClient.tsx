@@ -862,6 +862,10 @@ export default function ResultsClient() {
     category,
     setCategory,
   ] = useState("");
+  const [selectionForReentry, setSelectionForReentry] = useState<{
+    category: string;
+    runId: string;
+  } | null>(null);
 
   const [
     recommendations,
@@ -927,6 +931,7 @@ export default function ResultsClient() {
 
         if (!stored.selectionIdentity) throw new Error("현재 선택 실행의 질문 답변이 없습니다. Advisor부터 다시 진행해 주세요.");
         const selected = await loadSelectedFiveContext(window.sessionStorage, nextCategory, stored.selectionIdentity);
+        setSelectionForReentry({ category: selected.manifest.category, runId: selected.manifest.runId });
         const currentRunProductIds = selectedFiveIds(selected.manifest);
         if (!nextCategory) {
           throw new Error(
@@ -2747,12 +2752,17 @@ export default function ResultsClient() {
                 중요도 다시 설정
               </Link>
 
-              <Link
-                href="/advisor/questions?category=캠핑용%20에어컨"
-                className="primaryButton"
-              >
-                질문 다시 답하기
-              </Link>
+              {selectionForReentry ? (
+                <Link
+                  href={`/advisor/questions?${new URLSearchParams({
+                    category: selectionForReentry.category,
+                    runId: selectionForReentry.runId,
+                  }).toString()}`}
+                  className="primaryButton"
+                >
+                  질문 다시 답하기
+                </Link>
+              ) : null}
             </div>
           </>
         ) : null}

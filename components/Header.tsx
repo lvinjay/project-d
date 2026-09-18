@@ -47,14 +47,14 @@ export default function Header() {
           className={`nav ${isOpen ? "navOpen" : ""}`}
           aria-label="주요 메뉴"
         >
-          <Link href="/advisor?category=캠핑용%20에어컨">
+          <Link href="/advisor">
             AI 구매 상담
           </Link>
           <Link href="/assistant">분석 결과</Link>
           <Link href="/#how">이용 방법</Link>
           <Link
             className="headerCta"
-            href="/advisor?category=캠핑용%20에어컨"
+            href="/advisor"
           >
             무료 체험
           </Link>

@@ -47,6 +47,10 @@ type Candidate = {
   market?: {
     productName?: string;
     listedPrice?: number;
+  priceVerified?: boolean;
+  priceSource?: string;
+  priceRawText?: string;
+
     reviewCount?: number;
     rating?: number;
     imageUrl?: string;
@@ -59,6 +63,7 @@ type Candidate = {
 type ImportRequest = {
   category?: string;
   candidates?: Candidate[];
+  requireVerifiedPrice?: boolean;
 };
 
 function normalizeText(
@@ -91,6 +96,7 @@ type ExistingProductRow = {
   id: string;
   category: string;
   source_url: string;
+  review_analysis?: unknown;
   origin_product_no: number | null;
   product_detail_analysis:
     | Record<string, unknown>
@@ -107,6 +113,21 @@ function asRecord(
   )
     ? value as Record<string, unknown>
     : null;
+}
+
+function refreshAnalyzedMarketDetail(existing: unknown, market: Candidate["market"], now = new Date().toISOString()) {
+  const preserved = { ...(asRecord(existing) ?? {}) };
+  const verified = market?.priceVerified === true && Number.isFinite(market.listedPrice) && Number(market.listedPrice) > 0;
+  if (verified) {
+    preserved.price = { ...(asRecord(preserved.price) ?? {}), finalPrice: market!.listedPrice };
+  }
+  preserved.marketObservation = {
+    refreshedAt: now, priceVerified: verified,
+    ...(verified ? { price: market!.listedPrice } : {}),
+    priceSource: market?.priceSource ?? "", priceRawText: market?.priceRawText ?? "",
+    observedProductName: market?.productName ?? "", observedSourceUrl: market?.sourceUrl ?? "",
+  };
+  return preserved;
 }
 
 function mergeMeaningfulValue(
@@ -348,7 +369,16 @@ export async function POST(
         따라서 별도의 상세페이지 재수집 없이
         category criteria 생성에 사용할 수 있다.
       */
+      const verifiedPrice = candidate.market?.priceVerified === true &&
+        Number.isFinite(candidate.market?.listedPrice) && Number(candidate.market?.listedPrice) > 0;
+      if (body.requireVerifiedPrice === true && !verifiedPrice) {
+        results.push({ success: false, productName, productId, reason: "검증된 판매가 근거가 없습니다." });
+        continue;
+      }
       const productDetailAnalysis = {
+        priceVerified: candidate.market?.priceVerified,
+        priceSource: candidate.market?.priceSource,
+        priceRawText: candidate.market?.priceRawText,
         source:
           productId
             ? "market_candidate_naver"
@@ -516,7 +546,7 @@ export async function POST(
       };
 
       const identitySelect =
-        "id, category, source_url, origin_product_no, product_detail_analysis";
+        "id, category, source_url, origin_product_no, product_detail_analysis, review_analysis";
 
       const {
         data: sourceMatches,
@@ -672,6 +702,11 @@ export async function POST(
             delete incomingDetail[key];
           }
         }
+        // Explicitly unverified incoming prices cannot replace an existing price.
+        if (candidate.market?.priceVerified === false) {
+          delete incomingDetail.price;
+          delete incomingDetail.marketListedPrice;
+        }
         const mergedProductDetailAnalysis =
           mergeProductDetailAnalysis(
             existing
@@ -685,23 +720,15 @@ export async function POST(
         } =
           await supabase
             .from("products")
-            .update({
-              product_name:
-                productName,
-
-              source_url:
-                sourceUrl,
-
-              ...(incomingOrigin.state === "valid"
-                ? { origin_product_no: incomingOrigin.value }
-                : {}),
-
-              product_detail_analysis:
-                mergedProductDetailAnalysis,
-
-              updated_at:
-                new Date()
-                  .toISOString(),
+            .update(existing.review_analysis ? {
+              product_detail_analysis: refreshAnalyzedMarketDetail(existing.product_detail_analysis, candidate.market),
+              updated_at: new Date().toISOString(),
+            } : {
+              product_name: productName,
+              source_url: sourceUrl,
+              ...(incomingOrigin.state === "valid" ? { origin_product_no: incomingOrigin.value } : {}),
+              product_detail_analysis: mergedProductDetailAnalysis,
+              updated_at: new Date().toISOString(),
             })
             .eq(
               "id",
@@ -729,6 +756,10 @@ export async function POST(
         continue;
       }
 
+      if (candidate.market?.priceVerified === false) {
+        results.push({ success: false, productName, productId, reason: "미검증 판매가로 신규 상품을 등록할 수 없습니다." });
+        continue;
+      }
       const {
         data,
         error,

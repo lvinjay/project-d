@@ -32,7 +32,58 @@ type BrowserReviewCapture = {
   browserReviewTotalCount: number;
   browserSpecs: Record<string, string>;
   browserCatalogTitle: string;
+  browserEvidenceSourceType: string;
+  browserProductTitle: string;
+  browserProductUrl: string;
+  browserChannelProductNo: string;
+  browserOriginProductNo: string;
 };
+
+type CaptureDiagnostics = {
+  observedProductCardCount?: number;
+  priceEvidenceDiagnostics?: { rejectedCount: number; samples: Array<{
+    name: string; reason: string; detectedAmounts: number[]; snippet: string; cardType: string;
+  }> };
+  probeFailureCount?: number;
+  deadlineReached?: boolean;
+  probeFailures?: Array<{ position?: number; index?: number; productName: string;
+    reason: string; lastObservedUrl: string; stage: string }>;
+};
+
+function captureDiagnostics(value: unknown): CaptureDiagnostics | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const row = value as Record<string, unknown>;
+  const count = (value: unknown) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : undefined;
+  const safeSnippet = (value: unknown, limit: number) => text(value)
+    .replace(/\S*(?:https?:\/\/|www\.|\?|[&=])\S*/gi, " ").replace(/\s+/g, " ").trim().slice(0, limit);
+  const price = row.priceEvidenceDiagnostics && typeof row.priceEvidenceDiagnostics === "object" && !Array.isArray(row.priceEvidenceDiagnostics)
+    ? row.priceEvidenceDiagnostics as Record<string, unknown> : undefined;
+  const allowedReasons = new Set(["no-money-token", "excluded-prefix", "excluded-tail", "no-sale-context", "multiple-sale-values", "ambiguous", "verified-sale-label", "verified-single-price"]);
+  return {
+    observedProductCardCount: count(row.observedProductCardCount),
+    priceEvidenceDiagnostics: price ? {
+      rejectedCount: count(price.rejectedCount) ?? 0,
+      samples: Array.isArray(price.samples) ? price.samples.slice(0, 20).flatMap(item => {
+        if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+        const sample = item as Record<string, unknown>;
+        return [{ name: safeSnippet(sample.name, 160),
+          reason: allowedReasons.has(String(sample.reason)) ? String(sample.reason) : "ambiguous",
+          detectedAmounts: Array.isArray(sample.detectedAmounts) ? sample.detectedAmounts.filter((v): v is number => typeof v === "number" && Number.isFinite(v) && v >= 0).slice(0, 10) : [],
+          snippet: safeSnippet(sample.snippet, 250), cardType: sample.cardType === "ad" ? "ad" : sample.cardType === "normal" ? "normal" : "unknown" }];
+      }) : [],
+    } : undefined,
+    probeFailureCount: count(row.probeFailureCount),
+    deadlineReached: typeof row.deadlineReached === "boolean" ? row.deadlineReached : undefined,
+    probeFailures: Array.isArray(row.probeFailures) ? row.probeFailures.flatMap(item => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+      const failure = item as Record<string, unknown>;
+      return [{ position: count(failure.position), index: count(failure.index),
+        productName: text(failure.productName) || text(failure.name),
+        reason: text(failure.reason), lastObservedUrl: text(failure.lastObservedUrl) || text(failure.finalUrl),
+        stage: text(failure.stage) }];
+    }) : undefined,
+  };
+}
 
 type CaptureData = {
   category: string;
@@ -49,6 +100,9 @@ type IncomingProduct = {
   url?: unknown;
   imageUrl?: unknown;
   price?: unknown;
+  priceVerified?: unknown;
+  priceSource?: unknown;
+  priceRawText?: unknown;
   reviewCount?: unknown;
   rating?: unknown;
   browserReviews?: unknown;
@@ -56,9 +110,15 @@ type IncomingProduct = {
   browserReviewTotalCount?: unknown;
   browserSpecs?: unknown;
   browserCatalogTitle?: unknown;
+  browserEvidenceSourceType?: unknown;
+  browserProductTitle?: unknown;
+  browserProductUrl?: unknown;
+  browserChannelProductNo?: unknown;
+  browserOriginProductNo?: unknown;
 };
 
 declare global {
+  var projectDNaverCaptureDiagnostics: Map<string, CaptureDiagnostics> | undefined;
   var projectDNaverCaptures:
     Map<string, CaptureData>
     | undefined;
@@ -66,6 +126,10 @@ declare global {
   var projectDNaverBrowserReviewCaptures:
     Map<string, BrowserReviewCapture[]>
     | undefined;
+}
+
+function getDiagnosticsStore() {
+  return globalThis.projectDNaverCaptureDiagnostics ??= new Map<string, CaptureDiagnostics>();
 }
 
 function getStore() {
@@ -304,6 +368,9 @@ export async function POST(
                 raw.imageUrl,
               ),
 
+            priceVerified: typeof raw.priceVerified === "boolean" ? raw.priceVerified : undefined,
+            priceSource: text(raw.priceSource).slice(0, 100),
+            priceRawText: text(raw.priceRawText).slice(0, 300),
             price:
               number(
                 raw.price,
@@ -397,12 +464,40 @@ export async function POST(
               text(
                 source?.browserCatalogTitle,
               ),
+
+            browserEvidenceSourceType:
+              text(
+                source?.browserEvidenceSourceType,
+              ),
+
+            browserProductTitle:
+              text(
+                source?.browserProductTitle,
+              ),
+
+            browserProductUrl:
+              text(
+                source?.browserProductUrl,
+              ),
+
+            browserChannelProductNo:
+              text(
+                source?.browserChannelProductNo,
+              ),
+
+            browserOriginProductNo:
+              text(
+                source?.browserOriginProductNo,
+              ),
           };
         },
       );
 
     const id =
       crypto.randomUUID();
+
+    const diagnostics = captureDiagnostics(body.diagnostics);
+    if (diagnostics) getDiagnosticsStore().set(id, diagnostics);
 
     getStore().set(
       id,
@@ -511,9 +606,11 @@ export async function GET(
       .get(id) ??
     [];
 
+  const diagnostics = getDiagnosticsStore().get(id);
   return NextResponse.json({
     success: true,
 
+    ...(diagnostics ? { diagnostics } : {}),
     category:
       capture.category,
 
@@ -559,6 +656,36 @@ export async function GET(
             browserReviewEntries[
               index
             ]?.browserCatalogTitle ??
+            "",
+
+          browserEvidenceSourceType:
+            browserReviewEntries[
+              index
+            ]?.browserEvidenceSourceType ??
+            "",
+
+          browserProductTitle:
+            browserReviewEntries[
+              index
+            ]?.browserProductTitle ??
+            "",
+
+          browserProductUrl:
+            browserReviewEntries[
+              index
+            ]?.browserProductUrl ??
+            "",
+
+          browserChannelProductNo:
+            browserReviewEntries[
+              index
+            ]?.browserChannelProductNo ??
+            "",
+
+          browserOriginProductNo:
+            browserReviewEntries[
+              index
+            ]?.browserOriginProductNo ??
             "",
         }),
       ),

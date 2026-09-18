@@ -2,9 +2,10 @@
 
 import { fetchCurrentReviewAnalysisSnapshot, storeAndSaveReviewAnalysis, retryStoredReviewAnalysisPersistence } from "../lib/project-d-review-cas-client";
 
-import { beginSelectionRun, assertSelectionRun, selectEligibleFive, fetchCategoryProfile, categoryProfileRevision, publishSelectedFive, type SelectedProduct } from "../lib/project-d-selected-five-manifest";
+import { beginSelectionRun, assertSelectionRun, selectEligibleFive, fetchCategoryProfile, categoryProfileRevision, publishSelectedFive, persistPublishedSelectedFive, type SelectedFiveManifest, type SelectedProduct } from "../lib/project-d-selected-five-manifest";
 
 import {
+  useRef,
   useState,
 } from "react";
 
@@ -24,6 +25,9 @@ type MarketCandidate = {
   productName?: string;
   seller?: string;
   price?: number;
+  priceVerified?: boolean;
+  priceSource?: string;
+  priceRawText?: string;
   imageUrl?: string;
   sourceUrl?: string;
   reviewCount?: number;
@@ -33,12 +37,20 @@ type MarketCandidate = {
   browserReviewTotalCount?: number;
   browserSpecs?: Record<string, string>;
   browserCatalogTitle?: string;
+  browserEvidenceSourceType?: string;
+  browserProductTitle?: string;
+  browserProductUrl?: string;
+  browserChannelProductNo?: string;
+  browserOriginProductNo?: string;
 };
 
 type BrowserBridgeCandidate = {
   name?: string;
   seller?: string;
   price?: number;
+  priceVerified?: boolean;
+  priceSource?: string;
+  priceRawText?: string;
   imageUrl?: string;
   url?: string;
   reviewCount?: number;
@@ -51,15 +63,31 @@ type BrowserBridgeCandidate = {
     totalAvailableReviews?: number;
     specs?: Record<string, string>;
     catalogTitle?: string;
+    productName?: string;
+    productUrl?: string;
+    channelProductNo?: string;
+    originProductNo?: string;
   };
 };
 
-type BrowserBridgeResponse = {
+type MarketProbeDiagnostics = {
+  observedProductCardCount?: number;
+  priceEvidenceDiagnostics?: { rejectedCount: number; samples: Array<{
+    name: string; reason: string; detectedAmounts: number[]; snippet: string; cardType: string;
+  }> };
+  probeFailureCount?: number;
+  probeFailures?: Array<{ position?: number; index?: number; name?: string; productName?: string;
+    reason?: string; lastObservedUrl?: string; finalUrl?: string; stage?: string }>;
+  deadlineReached?: boolean;
+};
+
+type BrowserBridgeResponse = MarketProbeDiagnostics & {
   rawProducts?: number;
   candidates?: BrowserBridgeCandidate[];
 };
 
 type FinalCandidate = {
+  relevance?: { status?: "eligible" | "excluded" | "needs-review" };
   detail?: {
     productId?: string;
     productName?: string;
@@ -158,6 +186,47 @@ const INITIAL_STEPS: Step[] = [
   },
 ];
 
+const ANALYSIS_REVIEW_LIMIT = 100;
+
+function selectAnalysisReviewObjects(
+  reviews: BrowserReview[],
+  limit: number,
+) {
+  const safeLimit =
+    Math.max(
+      1,
+      Math.floor(limit),
+    );
+
+  if (
+    reviews.length <=
+    safeLimit
+  ) {
+    return [...reviews];
+  }
+
+  if (safeLimit === 1) {
+    return [reviews[0]];
+  }
+
+  const lastIndex =
+    reviews.length - 1;
+
+  return Array.from(
+    { length: safeLimit },
+    (_, slot) => {
+      const index =
+        Math.round(
+          slot *
+            lastIndex /
+            (safeLimit - 1),
+        );
+
+      return reviews[index];
+    },
+  );
+}
+
 function cleanText(
   value: unknown,
 ) {
@@ -186,6 +255,14 @@ async function readJson(
     );
   }
 }
+
+
+type ApprovalDialogState = {
+  title: string;
+  lines: string[];
+  confirmLabel: string;
+  cancelLabel: string;
+};
 
 type CategoryCriteriaPlan = {
   category: string;
@@ -334,6 +411,59 @@ export default function ProjectDAutomationPanel() {
     finalMessage,
     setFinalMessage,
   ] = useState("");
+
+  const [
+    approvalDialog,
+    setApprovalDialog,
+  ] = useState<ApprovalDialogState | null>(null);
+
+  const approvalDecisionRef =
+    useRef<((approved: boolean) => void) | null>(
+      null,
+    );
+
+  function requestApproval(
+    dialog: ApprovalDialogState,
+  ) {
+    if (approvalDecisionRef.current) {
+      throw new Error(
+        "승인 대화상자가 이미 열려 있습니다.",
+      );
+    }
+
+    return new Promise<boolean>(
+      (resolve) => {
+        approvalDecisionRef.current =
+          resolve;
+
+        setApprovalDialog(
+          dialog,
+        );
+      },
+    );
+  }
+
+  function resolveApproval(
+    approved: boolean,
+  ) {
+    const resolve =
+      approvalDecisionRef.current;
+
+    if (!resolve) {
+      return;
+    }
+
+    approvalDecisionRef.current =
+      null;
+
+    setApprovalDialog(
+      null,
+    );
+
+    resolve(
+      approved,
+    );
+  }
 
   function updateStep(
     key: string,
@@ -578,7 +708,7 @@ export default function ProjectDAutomationPanel() {
                 category: normalizedCategory,
                 minBudget: 0,
                 maxBudget: 0,
-                targetCount: 100,
+                targetCount: 40,
               },
             },
             window.location.origin,
@@ -596,6 +726,9 @@ export default function ProjectDAutomationPanel() {
             productName: cleanText(candidate.name),
             seller: cleanText(candidate.seller),
             price: Number(candidate.price ?? 0),
+            priceVerified: candidate.priceVerified,
+            priceSource: candidate.priceSource,
+            priceRawText: candidate.priceRawText,
             imageUrl: cleanText(candidate.imageUrl),
             sourceUrl: cleanText(candidate.url),
             reviewCount: Number(candidate.reviewCount ?? 0),
@@ -642,6 +775,41 @@ export default function ProjectDAutomationPanel() {
                 candidate
                   .smartstoreReviewProbe
                   ?.catalogTitle,
+              ),
+
+            browserEvidenceSourceType:
+              cleanText(
+                candidate
+                  .smartstoreReviewProbe
+                  ?.sourceType,
+              ),
+
+            browserProductTitle:
+              cleanText(
+                candidate
+                  .smartstoreReviewProbe
+                  ?.productName,
+              ),
+
+            browserProductUrl:
+              cleanText(
+                candidate
+                  .smartstoreReviewProbe
+                  ?.productUrl,
+              ),
+
+            browserChannelProductNo:
+              cleanText(
+                candidate
+                  .smartstoreReviewProbe
+                  ?.channelProductNo,
+              ),
+
+            browserOriginProductNo:
+              cleanText(
+                candidate
+                  .smartstoreReviewProbe
+                  ?.originProductNo,
               ),
           }))
           .filter(
@@ -749,6 +917,9 @@ export default function ProjectDAutomationPanel() {
                 candidate.imageUrl,
               ),
 
+            priceVerified: candidate.priceVerified,
+            priceSource: candidate.priceSource,
+            priceRawText: candidate.priceRawText,
             price:
               Number(
                 candidate.price ??
@@ -798,6 +969,31 @@ export default function ProjectDAutomationPanel() {
               cleanText(
                 candidate.browserCatalogTitle,
               ),
+
+            browserEvidenceSourceType:
+              cleanText(
+                candidate.browserEvidenceSourceType,
+              ),
+
+            browserProductTitle:
+              cleanText(
+                candidate.browserProductTitle,
+              ),
+
+            browserProductUrl:
+              cleanText(
+                candidate.browserProductUrl,
+              ),
+
+            browserChannelProductNo:
+              cleanText(
+                candidate.browserChannelProductNo,
+              ),
+
+            browserOriginProductNo:
+              cleanText(
+                candidate.browserOriginProductNo,
+              ),
           }),
         );
 
@@ -824,6 +1020,13 @@ export default function ProjectDAutomationPanel() {
 
               products:
                 captureProducts,
+              diagnostics: {
+                observedProductCardCount: bridgeResult.observedProductCardCount,
+                priceEvidenceDiagnostics: bridgeResult.priceEvidenceDiagnostics,
+                probeFailureCount: bridgeResult.probeFailureCount,
+                probeFailures: bridgeResult.probeFailures,
+                deadlineReached: bridgeResult.deadlineReached,
+              },
             }),
           },
         );
@@ -870,38 +1073,387 @@ export default function ProjectDAutomationPanel() {
       const enrichedParams =
         new URLSearchParams({
           captureId,
+          requireVerifiedPrice: "1",
         });
+
+      let zeroPaidEnrichedOverride:
+        Record<string, unknown> | null =
+        null;
 
       if (safePilotMode) {
         enrichedParams.set(
           "zeroPaidOnly",
           "1",
         );
+      } else {
+        updateStep(
+          "enrich",
+          "working",
+          "resolver/Bright Data를 호출하지 않고 현재 후보의 유료 경로를 사전계획하는 중...",
+        );
+
+        const paidPlanParams =
+          new URLSearchParams({
+            captureId,
+            requireVerifiedPrice: "1",
+            paidPlanOnly: "1",
+          });
+
+        const paidPlanResponse =
+          await fetch(
+            `/api/market-candidates-enriched?${paidPlanParams.toString()}`,
+            {
+              cache: "no-store",
+            },
+          );
+
+        const paidPlan =
+          await readJson(
+            paidPlanResponse,
+          );
+
+        if (
+          !paidPlanResponse.ok ||
+          paidPlan.success !== true ||
+          paidPlan.paidPlanOnly !== true ||
+          paidPlan.readOnly !== true ||
+          Number(
+            paidPlan.paidApiCalls ??
+              -1,
+          ) !== 0 ||
+          Number(
+            paidPlan.resolverCalls ??
+              -1,
+          ) !== 0 ||
+          Number(
+            paidPlan.brightDataCalls ??
+              -1,
+          ) !== 0
+        ) {
+          throw new Error(
+            cleanText(
+              paidPlan.message,
+            ) ||
+              "유료 경로 사전계획의 무과금 계약을 검증하지 못했습니다.",
+          );
+        }
+
+        const planCandidateCount =
+          Number(
+            paidPlan.marketCandidateCount ??
+              0,
+          );
+
+        const zeroPaidProvenCount =
+          Number(
+            paidPlan.zeroPaidProvenCount ??
+              0,
+          );
+
+        const paidPossibleCount =
+          Number(
+            paidPlan.paidPossibleCount ??
+              0,
+          );
+
+        const resolverRequired =
+          Number(
+            paidPlan.resolverKnownRequiredIfAllInspected ??
+              0,
+          );
+
+        const resolverUpperBound =
+          Number(
+            paidPlan.resolverConservativeUpperBound ??
+              0,
+          );
+
+        const brightDataRequired =
+          Number(
+            paidPlan.brightDataKnownRequiredIfAllInspected ??
+              0,
+          );
+
+        const brightDataUpperBound =
+          Number(
+            paidPlan.brightDataConservativeUpperBound ??
+              0,
+          );
+
+        const otherExternalPossible =
+          Number(
+            paidPlan.otherExternalPathPossibleCount ??
+              0,
+          );
+
+        /*
+          유료 승인 판단은 반드시 같은 captureId의 무과금 실제 검증 결과를
+          기준으로 한다. 별도 파일럿을 다시 실행하면 네이버 캡처 후보 수가
+          달라질 수 있으므로 paid-plan과 다른 표본을 비교하게 된다.
+        */
+        updateStep(
+          "enrich",
+          "working",
+          `같은 ${planCandidateCount}개 후보에서 resolver/Bright Data 0회 실제 검증을 먼저 수행하는 중...`,
+        );
+
+        const zeroPaidPreviewParams =
+          new URLSearchParams({
+            captureId,
+            requireVerifiedPrice: "1",
+            zeroPaidOnly: "1",
+          });
+
+        const zeroPaidPreviewResponse =
+          await fetch(
+            `/api/market-candidates-enriched?${zeroPaidPreviewParams.toString()}`,
+            {
+              cache: "no-store",
+            },
+          );
+
+        const zeroPaidPreview =
+          await readJson(
+            zeroPaidPreviewResponse,
+          );
+
+        if (
+          !zeroPaidPreviewResponse.ok ||
+          zeroPaidPreview.success !== true ||
+          Number(
+            zeroPaidPreview.resolverAttempts ??
+              -1,
+          ) !== 0 ||
+          Number(
+            zeroPaidPreview.brightDataCalls ??
+              -1,
+          ) !== 0
+        ) {
+          throw new Error(
+            cleanText(
+              zeroPaidPreview.message,
+            ) ||
+              "같은 캡처의 무과금 실제 검증에서 resolver/Bright Data 0회 계약을 확인하지 못했습니다.",
+          );
+        }
+
+        const zeroPaidPreviewCandidates =
+          Array.isArray(
+            zeroPaidPreview.finalCandidates,
+          )
+            ? (
+                zeroPaidPreview.finalCandidates as FinalCandidate[]
+              ).filter(
+                (candidate) =>
+                  candidate.detail
+                    ?.detailStatus ===
+                    "full" &&
+                  candidate.relevance
+                    ?.status ===
+                    "eligible",
+              )
+            : [];
+
+        const zeroPaidFullCount =
+          zeroPaidPreviewCandidates.length;
+
+        const zeroPaidRelevance =
+          zeroPaidPreview.relevance &&
+          typeof zeroPaidPreview.relevance ===
+            "object" &&
+          !Array.isArray(
+            zeroPaidPreview.relevance,
+          )
+            ? zeroPaidPreview.relevance as Record<string, unknown>
+            : null;
+
+        const zeroPaidEligibleCount =
+          Number(
+            zeroPaidRelevance
+              ?.eligibleCount ??
+              zeroPaidFullCount,
+          ) || 0;
+
+        const zeroPaidExcludedCount =
+          Number(
+            zeroPaidRelevance
+              ?.excludedCount ??
+              0,
+          ) || 0;
+
+        const zeroPaidNeedsReviewCount =
+          Number(
+            zeroPaidRelevance
+              ?.needsReviewCount ??
+              0,
+          ) || 0;
+
+        if (zeroPaidFullCount >= 5) {
+          const freeFiveNames =
+            zeroPaidPreviewCandidates
+              .slice(0, 5)
+              .map(
+                (candidate, index) =>
+                  `${index + 1}. ${cleanText(candidate.detail?.productName) || "상품명 없음"}`,
+              );
+
+          const approvedFreeFive =
+            await requestApproval({
+              title:
+                "무과금 FULL 5개 확보",
+              lines: [
+                `검증 후보 ${planCandidateCount}개`,
+                `같은 캡처 무과금 실제 검증 FULL ${zeroPaidFullCount}개`,
+                `제품군 적합성: 적합 ${zeroPaidEligibleCount}개 / 제외 ${zeroPaidExcludedCount}개 / 검토 필요 ${zeroPaidNeedsReviewCount}개`,
+                "",
+                "이번 E2E에서는 아래 FULL 5개만 사용하면 resolver/Bright Data 호출 0회로 다음 단계까지 진행할 수 있습니다.",
+                ...freeFiveNames,
+                "",
+                "확인하면 유료 시장 검증은 건너뛰고 이 5개만 DB 등록 → 무료 심층리뷰 수집 → 이후 OpenAI 승인 단계로 진행합니다.",
+                "OpenAI는 별도 승인창 전에는 호출되지 않습니다.",
+                "취소하면 이 실행을 중단하며 resolver/Bright Data/OpenAI 호출은 0회입니다.",
+              ],
+              confirmLabel:
+                "무료 FULL 5개로 계속",
+              cancelLabel:
+                "중단",
+            });
+
+          if (!approvedFreeFive) {
+            throw new Error(
+              "무과금 FULL 5개 확보 후 실행을 중단했습니다. resolver/Bright Data/OpenAI 호출 0회.",
+            );
+          }
+
+          zeroPaidEnrichedOverride = {
+            ...zeroPaidPreview,
+            finalCandidates:
+              zeroPaidPreviewCandidates.slice(
+                0,
+                5,
+              ),
+            targetCount: 5,
+            resolverAttempts: 0,
+            brightDataCalls: 0,
+          };
+
+          updateStep(
+            "enrich",
+            "working",
+            "무과금 FULL 5개 승인 완료 · resolver/Bright Data 0회로 현재 5개만 사용",
+          );
+        } else {
+          const candidatePlans =
+            Array.isArray(
+              paidPlan.candidatePlans,
+            )
+              ? paidPlan.candidatePlans as Record<string, unknown>[]
+              : [];
+
+          const firstPaidPlan =
+            candidatePlans.find(
+              (plan) =>
+                plan.zeroPaidProven !==
+                true,
+            ) ?? null;
+
+          const singleResolverUpper =
+            Number(
+              firstPaidPlan
+                ?.resolverConservativeUpperBound ??
+                0,
+            ) || 0;
+
+          const singleBrightDataUpper =
+            Number(
+              firstPaidPlan
+                ?.brightDataConservativeUpperBound ??
+                0,
+            ) || 0;
+
+          const approvedPaidEnrichment =
+            await requestApproval({
+              title:
+                "무료 FULL 5개까지 1개만 유료 보충",
+              lines: [
+                `검증 후보 ${planCandidateCount}개`,
+                `같은 캡처 무과금 실제 검증 FULL ${zeroPaidFullCount}개`,
+                `최종 5개까지 부족 ${Math.max(0, 5 - zeroPaidFullCount)}개`,
+                `유료 가능 후보 ${paidPossibleCount}개`,
+                "",
+                "이번 실행은 유료 가능 후보를 전부 검사하지 않습니다.",
+                "첫 유료 후보 1개만 허용하고, 나머지 유료 후보는 route에서 실행 대상에서 제외합니다.",
+                "그 1개가 FULL이면 정확히 5개에서 즉시 중단합니다.",
+                "실패해도 두 번째 유료 후보로 자동 진행하지 않습니다.",
+                "",
+                `이번 1개 후보 보수적 상한: resolver ${singleResolverUpper}회 · Bright Data ${singleBrightDataUpper}회`,
+                "OpenAI는 이후 별도 승인창 전에는 호출되지 않습니다.",
+                "취소하면 이 실행의 resolver/Bright Data 호출은 0회입니다.",
+              ],
+              confirmLabel:
+                "유료 후보 1개만 시도",
+              cancelLabel:
+                "취소",
+            });
+
+          if (!approvedPaidEnrichment) {
+            throw new Error(
+              "1개 유료 보충 실행을 취소했습니다. resolver/Bright Data 호출 0회.",
+            );
+          }
+
+          enrichedParams.set(
+            "executionTargetCount",
+            "5",
+          );
+          enrichedParams.set(
+            "paidCandidateLimit",
+            "1",
+          );
+          enrichedParams.set(
+            "paidCandidateOffset",
+            "0",
+          );
+
+          updateStep(
+            "enrich",
+            "working",
+            `무과금 FULL ${zeroPaidFullCount}개 + 유료 후보 최대 1개만 검증 · 최종 5개에서 즉시 중단`,
+          );
+        }
       }
 
-      const enrichedResponse =
-        await fetch(
-          `/api/market-candidates-enriched?${enrichedParams.toString()}`,
-          {
-            cache: "no-store",
-          },
-        );
+      let enriched:
+        Record<string, unknown>;
 
-      const enriched =
-        await readJson(
-          enrichedResponse,
-        );
+      if (zeroPaidEnrichedOverride) {
+        enriched =
+          zeroPaidEnrichedOverride;
+      } else {
+        const enrichedResponse =
+          await fetch(
+            `/api/market-candidates-enriched?${enrichedParams.toString()}`,
+            {
+              cache: "no-store",
+            },
+          );
 
-      if (
-        !enrichedResponse.ok ||
-        enriched.success !== true
-      ) {
-        throw new Error(
-          cleanText(
-            enriched.message,
-          ) ||
-            "최종 후보 검증에 실패했습니다.",
-        );
+        enriched =
+          await readJson(
+            enrichedResponse,
+          );
+
+        if (
+          !enrichedResponse.ok ||
+          enriched.success !== true
+        ) {
+          throw new Error(
+            cleanText(
+              enriched.message,
+            ) ||
+              "최종 후보 검증에 실패했습니다.",
+          );
+        }
       }
 
       if (
@@ -941,8 +1493,28 @@ export default function ProjectDAutomationPanel() {
           (candidate) =>
             candidate.detail
               ?.detailStatus ===
-            "full",
+            "full" && candidate.relevance?.status === "eligible",
         );
+
+      const relevanceDiagnostics = enriched.relevance && typeof enriched.relevance === "object" && !Array.isArray(enriched.relevance)
+        ? enriched.relevance as Record<string, unknown> : null;
+      const relevanceSummary = relevanceDiagnostics
+        ? `제품군 적합성: 적합 ${Number(relevanceDiagnostics.eligibleCount ?? 0)}개 / 제외 ${Number(relevanceDiagnostics.excludedCount ?? 0)}개 / 검토 필요 ${Number(relevanceDiagnostics.needsReviewCount ?? 0)}개`
+        : "제품군 적합성 진단 없음";
+      if (
+        !safePilotMode &&
+        Number(
+          enriched.paidCandidateLimit ??
+            -1,
+        ) === 1 &&
+        finalCandidates.length < 5
+      ) {
+        throw new Error(
+          `유료 후보 1개만 검증했지만 FULL은 ${finalCandidates.length}개입니다. ` +
+          `이번 실제 호출: resolver ${Number(enriched.resolverAttempts ?? 0)}회 · Bright Data ${Number(enriched.brightDataCalls ?? 0)}회. ` +
+          "두 번째 유료 후보는 자동 호출하지 않았습니다.",
+        );
+      }
 
       if (
         finalCandidates.length === 0
@@ -954,7 +1526,7 @@ export default function ProjectDAutomationPanel() {
           ) || 0;
 
         throw new Error(
-          "DB에 등록할 full 유효 상품을 확보하지 못했습니다." +
+          "DB에 등록할 제품군 적합 full 유효 상품을 확보하지 못했습니다. " + relevanceSummary +
             (partialCount > 0
               ? ` · partial 예비 후보 ${partialCount}개`
               : ""),
@@ -970,7 +1542,7 @@ export default function ProjectDAutomationPanel() {
         )}개 · Bright Data ${Number(
           enriched.brightDataCalls ??
             0,
-        )}회`,
+        )}회 · ${relevanceSummary}`,
       );
 
       /*
@@ -998,6 +1570,7 @@ export default function ProjectDAutomationPanel() {
               category:
                 normalizedCategory,
 
+              requireVerifiedPrice: true,
               candidates:
                 finalCandidates,
             }),
@@ -1067,7 +1640,7 @@ export default function ProjectDAutomationPanel() {
         );
 
         setFinalMessage(
-          `파일럿 완료 · ${normalizedCategory} Catalog 검증 상품 ${finalCandidates.length}개 DB 등록/갱신 · resolver 0회 · Bright Data 0회 · OpenAI 0회`,
+          `파일럿 완료 · ${normalizedCategory} 브라우저 검증 상품 ${finalCandidates.length}개 DB 등록/갱신 · resolver 0회 · Bright Data 0회 · OpenAI 0회`,
         );
 
         return;
@@ -1245,10 +1818,16 @@ export default function ProjectDAutomationPanel() {
           shallowFallbackProducts++;
         }
 
+        const analysisReviewObjects =
+          selectAnalysisReviewObjects(
+            selectedReviewObjects,
+            ANALYSIS_REVIEW_LIMIT,
+          );
+
         const reviews =
           Array.from(
             new Set(
-              selectedReviewObjects
+              analysisReviewObjects
                 .map(
                   (review) =>
                     cleanText(
@@ -1262,11 +1841,11 @@ export default function ProjectDAutomationPanel() {
             ),
           ).slice(
             0,
-            1000,
+            ANALYSIS_REVIEW_LIMIT,
           );
 
         const lowScore =
-          selectedReviewObjects.filter(
+          analysisReviewObjects.filter(
             (review) => {
               const rating =
                 Number(
@@ -1306,7 +1885,7 @@ export default function ProjectDAutomationPanel() {
           reviewSourceUrl,
           reviews,
           reviewObjects:
-            selectedReviewObjects,
+            analysisReviewObjects,
           collectionStats: {
             total:
               reviews.length,
@@ -1334,6 +1913,7 @@ export default function ProjectDAutomationPanel() {
         "reviews",
         "done",
         `${reviewCollections.length}개 분석용 리뷰 corpus 확보` +
+          ` · AI 분석 corpus 제품당 최대 ${ANALYSIS_REVIEW_LIMIT}개` +
           ` · SmartStore/Catalog/Brand 심층 ${deepCollectedProducts}개` +
           (
             shallowFallbackProducts >
@@ -1357,26 +1937,117 @@ export default function ProjectDAutomationPanel() {
       });
       const selected = selectEligibleFive(eligible, selectionRun);
       assertSelectionRun(window.sessionStorage, selectionRun);
+
+      let profile: Record<string, unknown>;
+
       if (normalizedCategory !== "로봇청소기") {
-        const productIds = selected.map(product => product.dbProductId);
-        if (productIds.length !== 5) throw new Error("기준 생성에는 현재 실행의 정확한 5개가 필요합니다.");
-        updateStep("criteria-first", "working", "선택한 5개 제품의 구매기준 사전검증 중...");
-        const criteriaPlan = await prepareCategoryCriteria(normalizedCategory, productIds);
-        assertSelectionRun(window.sessionStorage, selectionRun);
-        if (!window.confirm("선택한 5개 제품으로 구매기준을 생성할까요?\n" +
-            selected.map(p => p.productName + " (" + p.dbProductId + ")").join("\n") +
-            "\n예상 OpenAI 최대 " + criteriaPlan.estimatedOpenAiCalls + "회")) {
-          throw new Error("구매기준 유료 생성을 취소했습니다.");
+        try {
+          profile =
+            await fetchCategoryProfile(
+              normalizedCategory,
+            );
+
+          updateStep(
+            "criteria-first",
+            "done",
+            "기존 카테고리 구매기준 5개 재사용 · OpenAI 0회",
+          );
+        } catch {
+          const productIds =
+            selected.map(
+              (product) =>
+                product.dbProductId,
+            );
+
+          if (productIds.length !== 5) {
+            throw new Error(
+              "기준 생성에는 현재 실행의 정확한 5개가 필요합니다.",
+            );
+          }
+
+          updateStep(
+            "criteria-first",
+            "working",
+            "카테고리 구매기준이 없어 선택한 5개 제품으로 무료 사전검증 중...",
+          );
+
+          const criteriaPlan =
+            await prepareCategoryCriteria(
+              normalizedCategory,
+              productIds,
+            );
+
+          assertSelectionRun(
+            window.sessionStorage,
+            selectionRun,
+          );
+
+          const approvedCriteria =
+            await requestApproval({
+              title:
+                "카테고리 구매기준이 없습니다. 선택한 5개 제품으로 최초 생성할까요?",
+              lines: [
+                ...selected.map(
+                  (product) =>
+                    `${product.productName} (${product.dbProductId})`,
+                ),
+                "",
+                `예상 OpenAI 최대 ${criteriaPlan.estimatedOpenAiCalls}회`,
+              ],
+              confirmLabel:
+                "구매기준 최초 생성",
+              cancelLabel:
+                "취소",
+            });
+
+          if (!approvedCriteria) {
+            throw new Error(
+              "구매기준 유료 생성을 취소했습니다.",
+            );
+          }
+
+          assertSelectionRun(
+            window.sessionStorage,
+            selectionRun,
+          );
+
+          await executeCategoryCriteria(
+            criteriaPlan,
+          );
+
+          assertSelectionRun(
+            window.sessionStorage,
+            selectionRun,
+          );
+
+          profile =
+            await fetchCategoryProfile(
+              normalizedCategory,
+            );
+
+          updateStep(
+            "criteria-first",
+            "done",
+            "카테고리 구매기준 최초 생성 완료",
+          );
         }
-        assertSelectionRun(window.sessionStorage, selectionRun);
-        await executeCategoryCriteria(criteriaPlan);
-        assertSelectionRun(window.sessionStorage, selectionRun);
-        updateStep("criteria-first", "done", "선택한 5개 구매기준 생성 완료");
       } else {
-        updateStep("criteria-first", "done", "기존 frozen 로봇청소기 구매기준 사용");
+        profile =
+          await fetchCategoryProfile(
+            normalizedCategory,
+          );
+
+        updateStep(
+          "criteria-first",
+          "done",
+          "기존 frozen 로봇청소기 구매기준 사용",
+        );
       }
-      const profile = await fetchCategoryProfile(normalizedCategory);
-      const profileRevision = categoryProfileRevision(profile);
+
+      const profileRevision =
+        categoryProfileRevision(
+          profile,
+        );
       const plans = [];
       for (const product of selected) {
         const input = { category: normalizedCategory, productName: product.productName,
@@ -1388,20 +2059,71 @@ export default function ProjectDAutomationPanel() {
         });
         const result = await readJson(response);
         const maximum = Number(result.estimatedOpenAiCalls);
+        const pipelineVersion = cleanText(result.pipelineVersion);
+        const reviewQualitySource = cleanText(result.reviewQualitySource);
         if (!response.ok || result.success !== true || result.dryRun !== true ||
             result.paidApiCalls !== 0 || typeof result.inputFingerprint !== "string" ||
-            !/^[a-f0-9]{64}$/.test(result.inputFingerprint) || !Number.isSafeInteger(maximum) ||
+            !/^[a-f0-9]{64}$/.test(result.inputFingerprint) || !pipelineVersion ||
+            !reviewQualitySource || !Number.isSafeInteger(maximum) ||
             maximum < 1 || maximum > 2 * Math.ceil(product.reviews.length / 50) + 1) {
           throw new Error(cleanText(result.message) || "리뷰 무료 사전검증 계약이 일치하지 않습니다.");
         }
-        plans.push({ product, input, fingerprint: result.inputFingerprint, maximum });
+
+        const identity = { category: normalizedCategory, dbProductId: product.dbProductId,
+          originProductNo: product.originProductNo, productName: product.productName };
+        const existingAnalysis =
+          await fetchCurrentReviewAnalysisSnapshot(identity);
+        const reusable =
+          existingAnalysis !== null &&
+          cleanText(existingAnalysis.inputFingerprint) === result.inputFingerprint &&
+          cleanText(existingAnalysis.pipelineVersion) === pipelineVersion &&
+          cleanText(existingAnalysis.reviewQualitySource) === reviewQualitySource &&
+          Number(existingAnalysis.reviewCount) === product.reviews.length;
+
+        plans.push({ product, input, fingerprint: result.inputFingerprint, maximum,
+          pipelineVersion, reviewQualitySource, existingAnalysis, reusable });
       }
       assertSelectionRun(window.sessionStorage, selectionRun);
-      const approved = window.confirm("현재 실행의 최종 후보 5개 리뷰를 분석할까요?\n" +
-        selected.map(p => p.productName + " (" + p.dbProductId + ")").join("\n") +
-        "\n무료 사전검증 완료 · OpenAI 최대 " + plans.reduce((sum, p) => sum + p.maximum, 0) +
-        "회. 취소하면 유료 리뷰 호출은 없습니다. 분석 성공 후 동일 corpus 원문도 fingerprint 검증 후 저장합니다.");
-      if (!approved) throw new Error("무료 사전검증 후 리뷰 분석을 취소했습니다.");
+      const paidMaximum =
+        plans.reduce(
+          (sum, plan) =>
+            sum +
+            (plan.reusable
+              ? 0
+              : plan.maximum),
+          0,
+        );
+      const reusableCount =
+        plans.filter(
+          (plan) => plan.reusable,
+        ).length;
+      const approved =
+        paidMaximum === 0 ||
+        await requestApproval({
+          title:
+            "현재 실행의 최종 후보 5개 리뷰를 분석할까요?",
+          lines: [
+            ...plans.map(
+              (plan) =>
+                `${plan.product.productName} (${plan.product.dbProductId}) · 리뷰 ${plan.product.reviews.length}개 · ${plan.reusable ? "기존 동일 fingerprint 분석 재사용 · 0회" : `최대 ${plan.maximum}회`}`,
+            ),
+            "",
+            `무료 사전검증 완료 · 기존 분석 재사용 ${reusableCount}개 · OpenAI 최대 ${paidMaximum}회`,
+            "동일 fingerprint·pipeline·reviewCount가 확인된 분석만 재사용합니다.",
+            "취소하면 유료 리뷰 호출은 없습니다.",
+            "분석/재사용 성공 후 동일 corpus 원문도 서버 fingerprint 검증 후 저장합니다.",
+          ],
+          confirmLabel:
+            "필요한 리뷰 분석만 실행",
+          cancelLabel:
+            "취소",
+        });
+
+      if (!approved) {
+        throw new Error(
+          "무료 사전검증 후 리뷰 분석을 취소했습니다.",
+        );
+      }
       const readyProducts: SelectedProduct[] = [];
       for (const plan of plans) {
         assertSelectionRun(window.sessionStorage, selectionRun);
@@ -1411,34 +2133,31 @@ export default function ProjectDAutomationPanel() {
         assertSelectionRun(window.sessionStorage, selectionRun);
         const identity = { category: normalizedCategory, dbProductId: plan.product.dbProductId,
           originProductNo: plan.product.originProductNo, productName: plan.product.productName };
-        const retried = await retryStoredReviewAnalysisPersistence(identity, plan.fingerprint);
-        if (!retried) {
-        const expectedReviewAnalysis = await fetchCurrentReviewAnalysisSnapshot({
-          category: normalizedCategory, dbProductId: plan.product.dbProductId,
-          originProductNo: plan.product.originProductNo, productName: plan.product.productName,
-        });
-        assertSelectionRun(window.sessionStorage, selectionRun);
-        // Persist attempt state before sending; no transport/parse/model retry.
-        window.sessionStorage.setItem("projectDReviewLastAttempt", JSON.stringify({
-          ...selectionRun, dbProductId: plan.product.dbProductId, inputFingerprint: plan.fingerprint, status: "attempted",
-        }));
-        const response = await fetch("/api/analyze-reviews", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...plan.input, inputFingerprint: plan.fingerprint }),
-        });
-        const result = await readJson(response);
-        const analysis = result.analysis as Record<string, unknown> | undefined;
-        if (!response.ok || result.success !== true || result.inputFingerprint !== plan.fingerprint ||
-            !analysis || analysis.reviewCount !== plan.product.reviews.length) {
-          throw new Error(cleanText(result.message) || "유료 리뷰 분석 실패. 자동 재시도하지 않습니다.");
-        }
-        assertSelectionRun(window.sessionStorage, selectionRun);
-        await storeAndSaveReviewAnalysis({
-          category: normalizedCategory, dbProductId: plan.product.dbProductId,
-          originProductNo: plan.product.originProductNo, productName: plan.product.productName,
-          expectedReviewAnalysis, analysis, inputFingerprint: plan.fingerprint,
-        });
-
+        if (!plan.reusable) {
+          const retried = await retryStoredReviewAnalysisPersistence(identity, plan.fingerprint);
+          if (!retried) {
+            const expectedReviewAnalysis = await fetchCurrentReviewAnalysisSnapshot(identity);
+            assertSelectionRun(window.sessionStorage, selectionRun);
+            // Persist attempt state before sending; no transport/parse/model retry.
+            window.sessionStorage.setItem("projectDReviewLastAttempt", JSON.stringify({
+              ...selectionRun, dbProductId: plan.product.dbProductId, inputFingerprint: plan.fingerprint, status: "attempted",
+            }));
+            const response = await fetch("/api/analyze-reviews", {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ ...plan.input, inputFingerprint: plan.fingerprint }),
+            });
+            const result = await readJson(response);
+            const analysis = result.analysis as Record<string, unknown> | undefined;
+            if (!response.ok || result.success !== true || result.inputFingerprint !== plan.fingerprint ||
+                !analysis || analysis.reviewCount !== plan.product.reviews.length) {
+              throw new Error(cleanText(result.message) || "유료 리뷰 분석 실패. 자동 재시도하지 않습니다.");
+            }
+            assertSelectionRun(window.sessionStorage, selectionRun);
+            await storeAndSaveReviewAnalysis({
+              ...identity,
+              expectedReviewAnalysis, analysis, inputFingerprint: plan.fingerprint,
+            });
+          }
         }
         assertSelectionRun(window.sessionStorage, selectionRun);
         const rawSaveResponse = await fetch("/api/save-review-raw-batch", {
@@ -1474,9 +2193,26 @@ export default function ProjectDAutomationPanel() {
       if (categoryProfileRevision(await fetchCategoryProfile(normalizedCategory)) !== profileRevision) {
         throw new Error("프로필 revision이 변경되어 최종 5개를 발행하지 않습니다.");
       }
-      publishSelectedFive(window.sessionStorage, {
-        ...selectionRun, schemaVersion: 1, profileRevision, products: readyProducts,
-      });
+      const selectedFiveManifest: SelectedFiveManifest = {
+        ...selectionRun,
+        schemaVersion: 1,
+        profileRevision,
+        products: readyProducts,
+      };
+
+      assertSelectionRun(
+        window.sessionStorage,
+        selectionRun,
+      );
+
+      await persistPublishedSelectedFive(
+        selectedFiveManifest,
+      );
+
+      publishSelectedFive(
+        window.sessionStorage,
+        selectedFiveManifest,
+      );
       updateStep("save-reviews", "done", "현재 실행의 5개 분석 + 동일 fingerprint review corpus 저장 완료");
       // Do not regenerate the profile after binding review analysis to its revision.
       updateStep("criteria-final", "done", "분석에 사용한 프로필 revision으로 최종 5개 고정");
@@ -1636,7 +2372,7 @@ export default function ProjectDAutomationPanel() {
               fontSize: 13,
             }}
           >
-            브라우저에서 검증된 Naver Catalog 상품만 사용해 1~3단계까지만 실행합니다. resolver · Bright Data · OpenAI 호출은 0회로 강제합니다.
+            브라우저에서 동일 상품·리뷰 근거가 검증된 Naver Catalog/SmartStore 상품만 사용해 1~3단계까지만 실행합니다. resolver · Bright Data · OpenAI 호출은 0회로 강제합니다.
           </span>
         </span>
       </label>
@@ -1761,6 +2497,139 @@ export default function ProjectDAutomationPanel() {
           }}
         >
           {finalMessage}
+        </div>
+      ) : null}
+
+      {approvalDialog ? (
+        <div
+          role="presentation"
+          style={{
+            position:
+              "fixed",
+            inset: 0,
+            zIndex: 10000,
+            display:
+              "flex",
+            alignItems:
+              "center",
+            justifyContent:
+              "center",
+            padding: 24,
+            background:
+              "rgba(16, 24, 40, 0.58)",
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={
+              approvalDialog.title
+            }
+            style={{
+              width:
+                "min(680px, 100%)",
+              maxHeight:
+                "80vh",
+              overflowY:
+                "auto",
+              borderRadius: 16,
+              background:
+                "#ffffff",
+              border:
+                "1px solid #d0d5dd",
+              boxShadow:
+                "0 20px 60px rgba(16, 24, 40, 0.24)",
+              padding: 24,
+            }}
+          >
+            <h3
+              style={{
+                margin:
+                  "0 0 16px",
+              }}
+            >
+              {approvalDialog.title}
+            </h3>
+
+            <div
+              style={{
+                display:
+                  "grid",
+                gap: 6,
+                whiteSpace:
+                  "pre-wrap",
+                lineHeight: 1.6,
+                color:
+                  "#344054",
+              }}
+            >
+              {approvalDialog.lines.map(
+                (line, index) => (
+                  <div
+                    key={`${index}:${line}`}
+                    style={{
+                      minHeight:
+                        line
+                          ? undefined
+                          : 8,
+                    }}
+                  >
+                    {line}
+                  </div>
+                ),
+              )}
+            </div>
+
+            <div
+              style={{
+                marginTop: 22,
+                display:
+                  "flex",
+                justifyContent:
+                  "flex-end",
+                gap: 10,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() =>
+                  resolveApproval(
+                    false,
+                  )
+                }
+                style={{
+                  minWidth: 100,
+                  padding:
+                    "10px 16px",
+                  borderRadius: 10,
+                  border:
+                    "1px solid #d0d5dd",
+                  background:
+                    "#ffffff",
+                  cursor:
+                    "pointer",
+                  fontWeight: 700,
+                }}
+              >
+                {approvalDialog.cancelLabel}
+              </button>
+
+              <button
+                type="button"
+                className="primaryButton"
+                onClick={() =>
+                  resolveApproval(
+                    true,
+                  )
+                }
+                style={{
+                  minWidth: 130,
+                }}
+              >
+                {approvalDialog.confirmLabel}
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
     </div>
