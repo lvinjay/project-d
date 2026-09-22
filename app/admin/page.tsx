@@ -12,6 +12,7 @@ import {
 import { useRouter } from "next/navigation";
 
 import Header from "../../components/Header";
+import { ProjectDApprovalDialog, usePersistentApproval } from "../../components/ProjectDApprovalDialog";
 import ProjectDAutomationPanel from "../../components/ProjectDAutomationPanel";
 import BookmarkletCopyButton from "../../components/BookmarkletCopyButton";
 import DetailBookmarkletCopyButton from "../../components/DetailBookmarkletCopyButton";
@@ -308,9 +309,11 @@ async function prepareCategoryCriteriaGeneration(
 
 async function executeCategoryCriteriaGeneration(
   plan: CategoryCriteriaGenerationPlan,
+  isActive: () => boolean,
 ) {
   const selected = await loadSelectedFiveContext(window.sessionStorage, plan.category, plan.selectionIdentity);
   assertSameSelectedIds(plan.productIds, selected.manifest);
+  if (!isActive()) throw new Error("화면이 닫혀 구매기준 생성을 취소했습니다.");
   const response = await fetch(
     "/api/generate-category-criteria",
     {
@@ -532,6 +535,7 @@ function readStoredProductScorePersistenceRetry(
 
 async function retryStoredProductScorePersistence(
   category: string,
+  isActive: () => boolean,
 ) {
   const stored =
     readStoredProductScorePersistenceRetry(
@@ -564,6 +568,7 @@ async function retryStoredProductScorePersistence(
     );
   }
 
+  if (!isActive()) throw new Error("화면이 닫혀 제품 점수 저장 재시도를 취소했습니다.");
   const response =
     await fetch(
       "/api/generate-product-scores",
@@ -644,9 +649,11 @@ async function retryStoredProductScorePersistence(
 
 async function executeProductScoreGeneration(
   plan: ProductScoreGenerationPlan,
+  isActive: () => boolean,
 ) {
   const selected = await loadSelectedFiveContext(window.sessionStorage, plan.input.category, plan.selectionIdentity);
   assertSameSelectedIds(plan.input.productIds, selected.manifest);
+  if (!isActive()) throw new Error("화면이 닫혀 제품 점수 생성을 취소했습니다.");
   const response = await fetch(
     "/api/generate-product-scores",
     {
@@ -794,6 +801,7 @@ function hasReviewCollectionInfo(
 
 export default function AdminPage() {
   const router = useRouter();
+  const { dialog: approvalDialog, requestApproval, resolveApproval, runExclusive } = usePersistentApproval();
 
   const [draft, setDraft] =
     useState<ProductDraft>(initialDraft);
@@ -1249,7 +1257,11 @@ export default function AdminPage() {
     );
   }
 
-  async function bulkReanalyzeReviewEvidence() {
+  function bulkReanalyzeReviewEvidence() {
+    return runExclusive(bulkReanalyzeReviewEvidenceOnce);
+  }
+
+  async function bulkReanalyzeReviewEvidenceOnce(isActive: () => boolean) {
     const category = draft.category.trim();
 
     if (!category) {
@@ -1260,6 +1272,7 @@ export default function AdminPage() {
     let selectedContext;
     try { selectedContext = await loadSelectedFiveContext(window.sessionStorage, category); }
     catch (error) { alert(error instanceof Error ? error.message : "최종 5개를 확인해 주세요."); return; }
+    if (!isActive()) return;
     const categoryProducts = selectedContext.manifest.products.map(selected => {
       const product = registeredProducts.find(p => p.id === selected.dbProductId && p.category === category && Number(p.origin_product_no) === selected.originProductNo);
       return product;
@@ -1383,11 +1396,17 @@ export default function AdminPage() {
         estimatedOpenAiCalls +
         estimatedScoreOpenAiCalls;
 
-      const confirmed =
-        window.confirm(
-          `무료 사전검증이 완료되었습니다.\n\n제품 ${prepared.length}개\n리뷰 분석 예상 최대 ${estimatedOpenAiCalls}회\n제품 점수 재생성 예상 최대 ${estimatedScoreOpenAiCalls}회\n총 예상 OpenAI 호출 최대 ${approvedMaxOpenAiCalls}회\n\n확인을 누르기 전까지 유료 리뷰 분석이나 제품 점수 생성은 실행되지 않았습니다.\n실제 유료 분석을 시작할까요?`,
-        );
+      if (!isActive()) return;
 
+      const confirmed =
+        await requestApproval({
+          title: "저장 리뷰 재분석 및 제품 점수 생성",
+          lines: [`무료 사전검증이 완료되었습니다.\n\n제품 ${prepared.length}개\n리뷰 분석 예상 최대 ${estimatedOpenAiCalls}회\n제품 점수 재생성 예상 최대 ${estimatedScoreOpenAiCalls}회\n총 예상 OpenAI 호출 최대 ${approvedMaxOpenAiCalls}회\n\n확인을 누르기 전까지 유료 리뷰 분석이나 제품 점수 생성은 실행되지 않았습니다.\n실제 유료 분석을 시작할까요?`],
+          confirmLabel: "유료 재분석 실행",
+          cancelLabel: "취소",
+        });
+
+      if (!isActive()) return;
       if (!confirmed) {
         setBulkReviewMessage(
           `무료 사전검증만 완료했습니다. 실제 유료 분석은 취소했습니다. 총 예상 OpenAI 호출 최대 ${approvedMaxOpenAiCalls}회 · 실제 유료 호출 시작 안 함.`,
@@ -1410,6 +1429,7 @@ export default function AdminPage() {
         );
 
         await loadSelectedFiveContext(window.sessionStorage, category, selectedContext.identity);
+        if (!isActive()) return;
         const originProductNo = Number(product.origin_product_no);
         if (!Number.isSafeInteger(originProductNo) || originProductNo <= 0) throw new Error("원상품 번호가 유효하지 않습니다.");
         const identity = { category: product.category, dbProductId: product.id, originProductNo, productName: product.product_name };
@@ -1419,6 +1439,7 @@ export default function AdminPage() {
           category: product.category, dbProductId: product.id, originProductNo, productName: product.product_name,
         });
         await loadSelectedFiveContext(window.sessionStorage, category, selectedContext.identity);
+        if (!isActive()) return;
         const analysis =
           await executeProductionReviewAnalysis(
             plan,
@@ -1455,6 +1476,7 @@ export default function AdminPage() {
       const scoreResult =
         await executeProductScoreGeneration(
           scorePlan,
+          isActive,
         );
 
       setBulkReviewMessage(
@@ -1463,6 +1485,7 @@ export default function AdminPage() {
 
       await loadProducts();
     } catch (error) {
+      if (!isActive()) return;
       console.error(
         "리뷰 근거 일괄 재분석 실패:",
         error,
@@ -1476,11 +1499,15 @@ export default function AdminPage() {
       setErrorMessage(message);
       alert(message);
     } finally {
-      setIsBulkReanalyzingReviews(false);
+      if (isActive()) setIsBulkReanalyzingReviews(false);
     }
   }
 
-  async function generateCategoryCriteria() {
+  function generateCategoryCriteria() {
+    return runExclusive(generateCategoryCriteriaOnce);
+  }
+
+  async function generateCategoryCriteriaOnce(isActive: () => boolean) {
     const category = draft.category.trim();
 
     if (!category) {
@@ -1499,10 +1526,14 @@ export default function AdminPage() {
         );
 
       const confirmed =
-        window.confirm(
-          `구매기준 AI 생성 무료 사전검증이 완료되었습니다.\n\n카테고리: ${category}\n예상 OpenAI 호출 최대 ${plan.estimatedOpenAiCalls}회\n\n확인을 누르기 전까지 유료 AI 생성은 실행되지 않았습니다.\n실제 유료 구매기준 생성을 시작할까요?`,
-        );
+        await requestApproval({
+          title: "구매기준 AI 생성",
+          lines: [`구매기준 AI 생성 무료 사전검증이 완료되었습니다.\n\n카테고리: ${category}\n예상 OpenAI 호출 최대 ${plan.estimatedOpenAiCalls}회\n\n확인을 누르기 전까지 유료 AI 생성은 실행되지 않았습니다.\n실제 유료 구매기준 생성을 시작할까요?`],
+          confirmLabel: "유료 구매기준 생성 실행",
+          cancelLabel: "취소",
+        });
 
+      if (!isActive()) return;
       if (!confirmed) {
         setCriteriaMessage(
           `무료 사전검증만 완료했습니다. 실제 유료 구매기준 생성은 취소했습니다. 예상 OpenAI 호출 최대 ${plan.estimatedOpenAiCalls}회 · 실제 유료 호출 시작 안 함.`,
@@ -1513,6 +1544,7 @@ export default function AdminPage() {
       const result =
         await executeCategoryCriteriaGeneration(
           plan,
+          isActive,
         );
 
       const labels =
@@ -1534,6 +1566,7 @@ export default function AdminPage() {
           : "프로필 revision이 변경되어 이전 최종 5개 실행은 만료되었습니다. 점수 생성/추천 전에 자동화·최종 5개 준비를 다시 실행하세요.",
       );
     } catch (error) {
+      if (!isActive()) return;
       console.error(
         "구매기준 자동 생성 실패:",
         error,
@@ -1547,11 +1580,15 @@ export default function AdminPage() {
       setErrorMessage(message);
       alert(message);
     } finally {
-      setIsGeneratingCriteria(false);
+      if (isActive()) setIsGeneratingCriteria(false);
     }
   }
 
-  async function generateProductScores() {
+  function generateProductScores() {
+    return runExclusive(generateProductScoresOnce);
+  }
+
+  async function generateProductScoresOnce(isActive: () => boolean) {
     const category = draft.category.trim();
 
     if (!category) {
@@ -1576,6 +1613,7 @@ export default function AdminPage() {
       const retryResult =
         await retryStoredProductScorePersistence(
           category,
+          isActive,
         );
 
       if (retryResult) {
@@ -1598,10 +1636,14 @@ export default function AdminPage() {
         plan.estimatedOpenAiCalls > 0
       ) {
         const confirmed =
-          window.confirm(
-            `제품별 점수 생성 무료 사전검증이 완료되었습니다.\n\n카테고리: ${category}\n예상 OpenAI 호출 최대 ${plan.estimatedOpenAiCalls}회\n\n확인을 누르기 전까지 유료 제품 평가는 실행되지 않았습니다.\n실제 유료 제품 점수 생성을 시작할까요?`,
-          );
+          await requestApproval({
+            title: "제품별 점수 생성",
+            lines: [`제품별 점수 생성 무료 사전검증이 완료되었습니다.\n\n카테고리: ${category}\n예상 OpenAI 호출 최대 ${plan.estimatedOpenAiCalls}회\n\n확인을 누르기 전까지 유료 제품 평가는 실행되지 않았습니다.\n실제 유료 제품 점수 생성을 시작할까요?`],
+            confirmLabel: "유료 제품 점수 생성 실행",
+            cancelLabel: "취소",
+          });
 
+        if (!isActive()) return;
         if (!confirmed) {
           setProductScoresMessage(
             `무료 사전검증만 완료했습니다. 실제 유료 제품 점수 생성은 취소했습니다. 예상 OpenAI 호출 최대 ${plan.estimatedOpenAiCalls}회 · 실제 유료 호출 시작 안 함.`,
@@ -1613,6 +1655,7 @@ export default function AdminPage() {
       const result =
         await executeProductScoreGeneration(
           plan,
+          isActive,
         );
 
       const count =
@@ -1629,13 +1672,14 @@ export default function AdminPage() {
                 : "제품별 비교 점수 생성이 완료되었습니다."),
       );
     } catch (error) {
+      if (!isActive()) return;
       console.error("제품별 점수 자동 생성 실패:", error);
       const message =
         error instanceof Error ? error.message : "제품별 점수 자동 생성에 실패했습니다.";
       setErrorMessage(message);
       alert(message);
     } finally {
-      setIsGeneratingProductScores(false);
+      if (isActive()) setIsGeneratingProductScores(false);
     }
   }
 
@@ -1648,6 +1692,7 @@ export default function AdminPage() {
 
   return (
     <main>
+      <ProjectDApprovalDialog dialog={approvalDialog} onDecision={resolveApproval} />
       <Header />
 
       <section className="container">
@@ -2328,4 +2373,3 @@ export default function AdminPage() {
     </main>
   );
 }
-

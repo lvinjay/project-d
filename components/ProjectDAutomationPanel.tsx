@@ -1,5 +1,7 @@
 "use client";
 
+import { ProjectDApprovalDialog, type ApprovalDialogState } from "./ProjectDApprovalDialog";
+
 import { fetchCurrentReviewAnalysisSnapshot, storeAndSaveReviewAnalysis, retryStoredReviewAnalysisPersistence } from "../lib/project-d-review-cas-client";
 
 import { beginSelectionRun, assertSelectionRun, selectEligibleFive, fetchCategoryProfile, categoryProfileRevision, publishSelectedFive, persistPublishedSelectedFive, type SelectedFiveManifest, type SelectedProduct } from "../lib/project-d-selected-five-manifest";
@@ -256,13 +258,6 @@ async function readJson(
   }
 }
 
-
-type ApprovalDialogState = {
-  title: string;
-  lines: string[];
-  confirmLabel: string;
-  cancelLabel: string;
-};
 
 type CategoryCriteriaPlan = {
   category: string;
@@ -634,6 +629,22 @@ export default function ProjectDAutomationPanel() {
     );
 
     setFinalMessage("");
+
+    // Run-local progress survives catch, but never carries into another run.
+    const reviewProgress = {
+      active: false, total: 0, completed: 0, productName: "", failure: "",
+    };
+    function reviewProgressMessage(stage: string) {
+      return `완료 ${reviewProgress.completed}/${reviewProgress.total}` +
+        (reviewProgress.productName ? ` · ${reviewProgress.productName}` : "") +
+        ` · ${stage}`;
+    }
+    function showReviewProgress(stage: string, failure: string, productName = reviewProgress.productName, displayMessage?: string) {
+      reviewProgress.active = true;
+      reviewProgress.productName = productName;
+      reviewProgress.failure = failure;
+      updateStep("save-reviews", "working", displayMessage ?? reviewProgressMessage(stage));
+    }
 
     try {
       const selectionRun = beginSelectionRun(window.sessionStorage, normalizedCategory);
@@ -2048,8 +2059,11 @@ export default function ProjectDAutomationPanel() {
         categoryProfileRevision(
           profile,
         );
+      reviewProgress.total = selected.length;
+      showReviewProgress("무료 사전검증 시작", "무료 사전검증 실패");
       const plans = [];
       for (const product of selected) {
+        showReviewProgress("무료 사전검증 중", "무료 사전검증 실패", product.productName);
         const input = { category: normalizedCategory, productName: product.productName,
           originProductNo: product.originProductNo, reviews: product.reviews,
           collectionStats: product.collectionStats, executionMode: "full" };
@@ -2071,6 +2085,7 @@ export default function ProjectDAutomationPanel() {
 
         const identity = { category: normalizedCategory, dbProductId: product.dbProductId,
           originProductNo: product.originProductNo, productName: product.productName };
+        showReviewProgress("기존 분석 재사용 조건 확인 중", "기존 분석 확인 실패");
         const existingAnalysis =
           await fetchCurrentReviewAnalysisSnapshot(identity);
         const reusable =
@@ -2083,6 +2098,7 @@ export default function ProjectDAutomationPanel() {
         plans.push({ product, input, fingerprint: result.inputFingerprint, maximum,
           pipelineVersion, reviewQualitySource, existingAnalysis, reusable });
       }
+      showReviewProgress("현재 실행 확인 중", "현재 실행 확인 실패", "");
       assertSelectionRun(window.sessionStorage, selectionRun);
       const paidMaximum =
         plans.reduce(
@@ -2097,6 +2113,10 @@ export default function ProjectDAutomationPanel() {
         plans.filter(
           (plan) => plan.reusable,
         ).length;
+      showReviewProgress(
+        paidMaximum === 0 ? "기존 동일 분석 재사용 준비" : "무료 사전검증 완료 · 실행 승인 대기",
+        "실행 승인 확인 실패",
+      );
       const approved =
         paidMaximum === 0 ||
         await requestApproval({
@@ -2120,12 +2140,16 @@ export default function ProjectDAutomationPanel() {
         });
 
       if (!approved) {
+        reviewProgress.failure = "사용자 취소";
         throw new Error(
           "무료 사전검증 후 리뷰 분석을 취소했습니다.",
         );
       }
+      showReviewProgress("승인 완료 · 리뷰 분석 준비", "분석 준비 실패", "");
       const readyProducts: SelectedProduct[] = [];
       for (const plan of plans) {
+        const productProgressMessage = `리뷰 분석 중 · ${reviewProgress.completed + 1}/${reviewProgress.total} · ${plan.product.productName}`;
+        showReviewProgress("현재 실행·프로필 확인 중", "현재 실행·프로필 확인 실패", plan.product.productName, productProgressMessage);
         assertSelectionRun(window.sessionStorage, selectionRun);
         if (categoryProfileRevision(await fetchCategoryProfile(normalizedCategory)) !== profileRevision) {
           throw new Error("프로필이 변경되어 승인된 리뷰 분석을 중단합니다.");
@@ -2134,14 +2158,17 @@ export default function ProjectDAutomationPanel() {
         const identity = { category: normalizedCategory, dbProductId: plan.product.dbProductId,
           originProductNo: plan.product.originProductNo, productName: plan.product.productName };
         if (!plan.reusable) {
+          showReviewProgress("보관 결과 확인·저장 재시도 중", "보관 결과 확인·저장 재시도 실패");
           const retried = await retryStoredReviewAnalysisPersistence(identity, plan.fingerprint);
           if (!retried) {
+            showReviewProgress("분석 전 DB snapshot 확인 중", "분석 전 DB snapshot 확인 실패");
             const expectedReviewAnalysis = await fetchCurrentReviewAnalysisSnapshot(identity);
             assertSelectionRun(window.sessionStorage, selectionRun);
             // Persist attempt state before sending; no transport/parse/model retry.
             window.sessionStorage.setItem("projectDReviewLastAttempt", JSON.stringify({
               ...selectionRun, dbProductId: plan.product.dbProductId, inputFingerprint: plan.fingerprint, status: "attempted",
             }));
+            showReviewProgress("AI 분석 중", "AI 분석 결과 확인 실패", plan.product.productName, productProgressMessage);
             const response = await fetch("/api/analyze-reviews", {
               method: "POST", headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ ...plan.input, inputFingerprint: plan.fingerprint }),
@@ -2153,12 +2180,18 @@ export default function ProjectDAutomationPanel() {
               throw new Error(cleanText(result.message) || "유료 리뷰 분석 실패. 자동 재시도하지 않습니다.");
             }
             assertSelectionRun(window.sessionStorage, selectionRun);
+            showReviewProgress("분석 결과 저장 중", "분석 결과 저장 확인 실패");
             await storeAndSaveReviewAnalysis({
               ...identity,
               expectedReviewAnalysis, analysis, inputFingerprint: plan.fingerprint,
             });
           }
         }
+        showReviewProgress(
+          plan.reusable ? "기존 동일 분석 재사용 · 동일 fingerprint 원문 저장 확인 중"
+            : "분석 저장 확인됨 · 동일 fingerprint 원문 저장 중",
+          "동일 fingerprint 원문 저장 확인 실패",
+        );
         assertSelectionRun(window.sessionStorage, selectionRun);
         const rawSaveResponse = await fetch("/api/save-review-raw-batch", {
           method: "POST", headers: { "Content-Type": "application/json" },
@@ -2189,7 +2222,16 @@ export default function ProjectDAutomationPanel() {
           productName: plan.product.productName, readiness: { runId: selectionRun.runId,
             reviewCount: plan.product.reviews.length, reviewAnalysisSaved: true,
             analysisFingerprint: plan.fingerprint, rawCorpusPersisted: true } });
+        // Count only products that passed analysis persistence and raw-corpus checks.
+        reviewProgress.completed = readyProducts.length;
+        showReviewProgress(
+          plan.reusable ? "기존 분석 재사용·동일 원문 저장 확인 완료" : "분석·동일 원문 저장 확인 완료",
+          "제품 처리 후 확인 실패",
+          plan.product.productName,
+          `리뷰 분석 저장 완료 · ${reviewProgress.completed}/${reviewProgress.total}`,
+        );
       }
+      showReviewProgress("제품 처리 완료 · 최종 프로필 검증 중", "최종 프로필 검증 실패", "");
       if (categoryProfileRevision(await fetchCategoryProfile(normalizedCategory)) !== profileRevision) {
         throw new Error("프로필 revision이 변경되어 최종 5개를 발행하지 않습니다.");
       }
@@ -2200,20 +2242,24 @@ export default function ProjectDAutomationPanel() {
         products: readyProducts,
       };
 
+      showReviewProgress("제품 처리 완료 · 최종 선택 실행 검증 중", "최종 선택 실행 검증 실패");
       assertSelectionRun(
         window.sessionStorage,
         selectionRun,
       );
 
+      showReviewProgress("제품 처리 완료 · 최종 선택 발행 중", "최종 선택 발행 확인 실패");
       await persistPublishedSelectedFive(
         selectedFiveManifest,
       );
 
+      showReviewProgress("제품 처리 완료 · 발행된 선택 로컬 반영 중", "발행된 선택 로컬 반영 실패");
       publishSelectedFive(
         window.sessionStorage,
         selectedFiveManifest,
       );
       updateStep("save-reviews", "done", "현재 실행의 5개 분석 + 동일 fingerprint review corpus 저장 완료");
+      reviewProgress.active = false;
       // Do not regenerate the profile after binding review analysis to its revision.
       updateStep("criteria-final", "done", "분석에 사용한 프로필 revision으로 최종 5개 고정");
       setFinalMessage("최종 5개 준비 완료. 관리자에서 같은 5개 UUID의 점수 생성을 승인한 뒤 Advisor로 진행해 주세요.");
@@ -2223,39 +2269,46 @@ export default function ProjectDAutomationPanel() {
           ? error.message
           : "자동 실행 중 오류가 발생했습니다.";
 
-      setSteps(
-        (current) => {
-          let changed =
-            false;
+      const progressError = reviewProgress.active
+        ? reviewProgressMessage(`${reviewProgress.failure} · ${message}`)
+        : null;
+      if (progressError) {
+        updateStep("save-reviews", "error", progressError);
+      } else {
+        setSteps(
+          (current) => {
+            let changed =
+              false;
 
-          return current.map(
-            (step) => {
-              if (
-                !changed &&
-                step.status ===
-                  "working"
-              ) {
-                changed =
-                  true;
+            return current.map(
+              (step) => {
+                if (
+                  !changed &&
+                  step.status ===
+                    "working"
+                ) {
+                  changed =
+                    true;
 
-                return {
-                  ...step,
+                  return {
+                    ...step,
 
-                  status:
-                    "error",
+                    status:
+                      "error",
 
-                  message,
-                };
-              }
+                    message,
+                  };
+                }
 
-              return step;
-            },
-          );
-        },
-      );
+                return step;
+              },
+            );
+          },
+        );
+      }
 
       setFinalMessage(
-        `중단됨 · ${message}`,
+        `중단됨 · ${progressError ?? message}`,
       );
     } finally {
       setIsRunning(false);
@@ -2500,138 +2553,7 @@ export default function ProjectDAutomationPanel() {
         </div>
       ) : null}
 
-      {approvalDialog ? (
-        <div
-          role="presentation"
-          style={{
-            position:
-              "fixed",
-            inset: 0,
-            zIndex: 10000,
-            display:
-              "flex",
-            alignItems:
-              "center",
-            justifyContent:
-              "center",
-            padding: 24,
-            background:
-              "rgba(16, 24, 40, 0.58)",
-          }}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label={
-              approvalDialog.title
-            }
-            style={{
-              width:
-                "min(680px, 100%)",
-              maxHeight:
-                "80vh",
-              overflowY:
-                "auto",
-              borderRadius: 16,
-              background:
-                "#ffffff",
-              border:
-                "1px solid #d0d5dd",
-              boxShadow:
-                "0 20px 60px rgba(16, 24, 40, 0.24)",
-              padding: 24,
-            }}
-          >
-            <h3
-              style={{
-                margin:
-                  "0 0 16px",
-              }}
-            >
-              {approvalDialog.title}
-            </h3>
-
-            <div
-              style={{
-                display:
-                  "grid",
-                gap: 6,
-                whiteSpace:
-                  "pre-wrap",
-                lineHeight: 1.6,
-                color:
-                  "#344054",
-              }}
-            >
-              {approvalDialog.lines.map(
-                (line, index) => (
-                  <div
-                    key={`${index}:${line}`}
-                    style={{
-                      minHeight:
-                        line
-                          ? undefined
-                          : 8,
-                    }}
-                  >
-                    {line}
-                  </div>
-                ),
-              )}
-            </div>
-
-            <div
-              style={{
-                marginTop: 22,
-                display:
-                  "flex",
-                justifyContent:
-                  "flex-end",
-                gap: 10,
-              }}
-            >
-              <button
-                type="button"
-                onClick={() =>
-                  resolveApproval(
-                    false,
-                  )
-                }
-                style={{
-                  minWidth: 100,
-                  padding:
-                    "10px 16px",
-                  borderRadius: 10,
-                  border:
-                    "1px solid #d0d5dd",
-                  background:
-                    "#ffffff",
-                  cursor:
-                    "pointer",
-                  fontWeight: 700,
-                }}
-              >
-                {approvalDialog.cancelLabel}
-              </button>
-
-              <button
-                type="button"
-                className="primaryButton"
-                onClick={() =>
-                  resolveApproval(
-                    true,
-                  )
-                }
-                style={{
-                  minWidth: 130,
-                }}
-              >
-                {approvalDialog.confirmLabel}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <ProjectDApprovalDialog dialog={approvalDialog} onDecision={resolveApproval} />
     </div>
   );
 }

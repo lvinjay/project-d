@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Header from "../../../components/Header";
+import { ProjectDApprovalDialog, usePersistentApproval } from "../../../components/ProjectDApprovalDialog";
 import AutoReviewReceiver, {
   type ReviewCollectionStats,
 } from "../../../components/AutoReviewReceiver";
@@ -176,6 +177,7 @@ async function executeProductionReviewAnalysis(
 
 function AdminReviewContent() {
   const router = useRouter();
+  const { dialog: approvalDialog, requestApproval, resolveApproval, runExclusive } = usePersistentApproval();
   const searchParams = useSearchParams();
 
   const productId = searchParams.get("id") ?? "";
@@ -355,7 +357,11 @@ function AdminReviewContent() {
     }
   }
 
-  async function analyzeReviews() {
+  function analyzeReviews() {
+    return runExclusive(analyzeReviewsOnce);
+  }
+
+  async function analyzeReviewsOnce(isActive: () => boolean) {
     const normalizedProductName =
       productName.trim();
 
@@ -409,10 +415,14 @@ function AdminReviewContent() {
         });
 
       const confirmed =
-        window.confirm(
-          `무료 사전검증이 완료되었습니다.\n\n제품: ${normalizedProductName}\n리뷰: ${reviews.length}개\n예상 OpenAI 호출 최대 ${plan.estimatedOpenAiCalls}회\n\n확인을 누르기 전까지 유료 리뷰 분석은 실행되지 않았습니다.\n실제 유료 리뷰 분석을 시작할까요?`,
-        );
+        await requestApproval({
+          title: "제품 리뷰 AI 분석",
+          lines: [`무료 사전검증이 완료되었습니다.\n\n제품: ${normalizedProductName}\n리뷰: ${reviews.length}개\n예상 OpenAI 호출 최대 ${plan.estimatedOpenAiCalls}회\n\n확인을 누르기 전까지 유료 리뷰 분석은 실행되지 않았습니다.\n실제 유료 리뷰 분석을 시작할까요?`],
+          confirmLabel: "유료 리뷰 분석 실행",
+          cancelLabel: "취소",
+        });
 
+      if (!isActive()) return;
       if (!confirmed) {
         alert(
           "실제 유료 리뷰 분석을 취소했습니다. 무료 사전검증만 완료했으며 유료 분석은 시작하지 않았습니다.",
@@ -431,6 +441,7 @@ function AdminReviewContent() {
       const expectedReviewAnalysis = await fetchCurrentReviewAnalysisSnapshot({
         category: product.category, dbProductId: product.id, originProductNo, productName: product.product_name,
       });
+      if (!isActive()) return;
       nextAnalysis =
         await executeProductionReviewAnalysis(
           plan,
@@ -442,6 +453,7 @@ function AdminReviewContent() {
       await saveAnalysis(nextAnalysis);
       setAnalysis(nextAnalysis);
     } catch (error) {
+      if (!isActive()) return;
       console.error(
         "리뷰 분석 또는 저장 실패:",
         error,
@@ -453,7 +465,7 @@ function AdminReviewContent() {
           : "리뷰 분석 중 오류가 발생했습니다.",
       );
     } finally {
-      setIsAnalyzing(false);
+      if (isActive()) setIsAnalyzing(false);
     }
   }
 
@@ -497,6 +509,7 @@ function AdminReviewContent() {
 
   return (
     <main>
+      <ProjectDApprovalDialog dialog={approvalDialog} onDecision={resolveApproval} />
       <Header />
 
       <section className="container">
