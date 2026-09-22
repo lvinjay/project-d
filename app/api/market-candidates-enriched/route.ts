@@ -2215,6 +2215,123 @@ export async function GET(
       }
       return reasons.length ? reasons : ["other"];
     }
+    // PAID RECOVERY PRIORITY HELPERS START
+    type PaidRecoveryTier =
+      | "A"
+      | "B"
+      | "C";
+
+    function paidRecoveryTier(
+      product: CapturedProduct,
+    ): PaidRecoveryTier {
+      const reasons =
+        poolDiagnosticZeroPaidReasons(
+          product,
+          false,
+        );
+
+      const reviewSamples =
+        (
+          product.browserReviews ??
+          []
+        ).filter(
+          (review) =>
+            Boolean(
+              review?.text?.trim(),
+            ),
+        ).length;
+
+      const source =
+        typeof product.browserReviewSourceUrl ===
+          "string"
+          ? product.browserReviewSourceUrl.trim()
+          : "";
+
+      const catalog =
+        /^https:\/\/search\.shopping\.naver\.com\/catalog\/(\d+)/i.test(
+          source,
+        );
+
+      const reviewTotal =
+        Number(
+          product.browserReviewTotalCount ??
+            (
+              catalog
+                ? product.reviewCount
+                : 0
+            ),
+        ) || 0;
+
+      const hasNative =
+        !reasons.includes(
+          "nativeMetadataMissing",
+        );
+
+      const hasReviewSource =
+        !reasons.includes(
+          "reviewSourceInvalid",
+        );
+
+      const hasIdentity =
+        !reasons.includes(
+          "identityMismatch",
+        );
+
+      const hasPrice =
+        !reasons.includes(
+          "priceEvidenceInvalid",
+        );
+
+      /*
+        A:
+        이미 identity/native/reviewSource/가격/본문 근거가 있고
+        리뷰 총량 같은 마지막 조건만 보강하면 될 가능성이 높은 후보.
+
+        B:
+        완전하지는 않지만 리뷰 총량 또는 실제 본문 샘플이 있어
+        유료 canonical/reviewSource 보강 가치가 있는 후보.
+
+        C:
+        무료 리뷰 근거가 사실상 없어 마지막에 시도할 후보.
+      */
+      if (
+        hasNative &&
+        hasReviewSource &&
+        hasIdentity &&
+        hasPrice &&
+        reviewSamples >= 5
+      ) {
+        return "A";
+      }
+
+      if (
+        reviewTotal > 0 ||
+        reviewSamples >= 5
+      ) {
+        return "B";
+      }
+
+      return "C";
+    }
+
+    function comparePaidRecoveryPriority(
+      a: CapturedProduct,
+      b: CapturedProduct,
+    ) {
+      const rank:
+        Record<PaidRecoveryTier, number> = {
+          A: 0,
+          B: 1,
+          C: 2,
+        };
+
+      return (
+        rank[paidRecoveryTier(a)] -
+        rank[paidRecoveryTier(b)]
+      );
+    }
+    // PAID RECOVERY PRIORITY HELPERS END
+
     const poolDiagnosticInput = captureData.products ?? [];
     const poolDiagnosticReasons: Record<string, number> = {
       reviewCountBelowMinimum: 0, reviewSampleInsufficient: 0, nativeMetadataMissing: 0,
@@ -2699,6 +2816,64 @@ export async function GET(
         });
       }
 
+      // PAID RECOVERY PRIORITY PLAN SORT START
+      candidatePlans.sort(
+        (a, b) => {
+          if (
+            a.zeroPaidProven !==
+            b.zeroPaidProven
+          ) {
+            return a.zeroPaidProven
+              ? -1
+              : 1;
+          }
+
+          if (
+            a.zeroPaidProven &&
+            b.zeroPaidProven
+          ) {
+            return (
+              a.position -
+              b.position
+            );
+          }
+
+          const aProduct =
+            marketCandidates[
+              a.position - 1
+            ];
+
+          const bProduct =
+            marketCandidates[
+              b.position - 1
+            ];
+
+          if (
+            !aProduct ||
+            !bProduct
+          ) {
+            return (
+              a.position -
+              b.position
+            );
+          }
+
+          const priorityDifference =
+            comparePaidRecoveryPriority(
+              aProduct,
+              bProduct,
+            );
+
+          return (
+            priorityDifference !== 0
+              ? priorityDifference
+              : a.position -
+                b.position
+          );
+        },
+      );
+      // PAID RECOVERY PRIORITY PLAN SORT END
+
       const zeroPaidProvenCount =
         candidatePlans.filter(
           (plan) =>
@@ -2773,6 +2948,21 @@ export async function GET(
 
               path:
                 plan.path,
+
+              recoveryTier:
+                plan.zeroPaidProven
+                  ? "FREE"
+                  : (
+                      marketCandidates[
+                        plan.position - 1
+                      ]
+                        ? paidRecoveryTier(
+                            marketCandidates[
+                              plan.position - 1
+                            ],
+                          )
+                        : "C"
+                    ),
 
               resolverKnownRequiredIfInspected:
                 plan.resolverKnownRequiredIfInspected,
@@ -2874,7 +3064,7 @@ export async function GET(
         : 0;
 
     // PAID RELEVANCE PREFLIGHT EXECUTION START
-    let paidCandidateSeenForQueue = 0;
+    // PAID RECOVERY PRIORITY EXECUTION SELECTION
     let paidCandidateIncludedForQueue = 0;
 
     const executionSourceCandidates =
@@ -2882,41 +3072,59 @@ export async function GET(
         ? marketCandidates
         : paidRelevancePreflightCandidates;
 
-    const executionCandidates =
+    const rankedPaidExecutionCandidates =
+      executionSourceCandidates
+        .filter(
+          (product) =>
+            !isZeroPaidBrowserCandidate(
+              product,
+            ),
+        )
+        .sort(
+          (
+            a,
+            b,
+          ) =>
+            comparePaidRecoveryPriority(
+              a,
+              b,
+            ),
+        );
+
+    const selectedPaidExecutionCandidates =
       paidCandidateLimit === null
+        ? null
+        : rankedPaidExecutionCandidates.slice(
+            paidCandidateOffset,
+            paidCandidateOffset +
+              paidCandidateLimit,
+          );
+
+    const selectedPaidExecutionSet =
+      selectedPaidExecutionCandidates
+        ? new Set(
+            selectedPaidExecutionCandidates,
+          )
+        : null;
+
+    if (
+      selectedPaidExecutionCandidates
+    ) {
+      paidCandidateIncludedForQueue =
+        selectedPaidExecutionCandidates.length;
+    }
+
+    const executionCandidates =
+      selectedPaidExecutionSet === null
         ? executionSourceCandidates
         : executionSourceCandidates.filter(
-            (product) => {
-              if (
-                isZeroPaidBrowserCandidate(
-                  product,
-                )
-              ) {
-                return true;
-              }
-
-              const paidIndex =
-                paidCandidateSeenForQueue;
-
-              paidCandidateSeenForQueue += 1;
-
-              if (
-                paidIndex <
-                paidCandidateOffset
-              ) {
-                return false;
-              }
-
-              if (
-                paidCandidateIncludedForQueue >=
-                paidCandidateLimit
-              ) {
-                return false;
-              }
-
-              paidCandidateIncludedForQueue += 1;
-              return true;
-            },
+            (product) =>
+              isZeroPaidBrowserCandidate(
+                product,
+              ) ||
+              selectedPaidExecutionSet.has(
+                product,
+              ),
           );
     // PAID RELEVANCE PREFLIGHT EXECUTION END
 

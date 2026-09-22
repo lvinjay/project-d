@@ -617,6 +617,12 @@ function poolDiagnosticCandidateLines(
           ? plan.path
           : "미제공";
 
+      const recoveryTier =
+        typeof plan?.recoveryTier ===
+          "string"
+          ? plan.recoveryTier
+          : "미제공";
+
       const resolverUpper =
         countText(
           plan?.resolverConservativeUpperBound,
@@ -636,6 +642,7 @@ function poolDiagnosticCandidateLines(
         `가격 ${boolText(row.priceEvidenceValid)}`,
         `identity ${boolText(row.identityMatched)}`,
         `탈락: ${reasons}`,
+        `paid 우선순위: ${recoveryTier}`,
         `paid path: ${path}`,
         `resolver 상한 ${resolverUpper}회`,
         `Bright Data 상한 ${brightUpper}회`,

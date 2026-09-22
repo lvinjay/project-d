@@ -281,6 +281,30 @@ const legacyCaptureControl = "      capture();\n\n      let previousCount = capt
 const legacyStep4ExecutionSelection = "    let paidCandidateSeenForQueue = 0;\n    let paidCandidateIncludedForQueue = 0;\n\n    const executionCandidates =\n      paidCandidateLimit === null\n        ? marketCandidates\n        : marketCandidates.filter(\n            (product) => {\n              if (\n                isZeroPaidBrowserCandidate(\n                  product,\n                )\n              ) {\n                return true;\n              }\n\n              const paidIndex =\n                paidCandidateSeenForQueue;\n\n              paidCandidateSeenForQueue += 1;\n\n              if (\n                paidIndex <\n                paidCandidateOffset\n              ) {\n                return false;\n              }\n\n              if (\n                paidCandidateIncludedForQueue >=\n                paidCandidateLimit\n              ) {\n                return false;\n              }\n\n              paidCandidateIncludedForQueue += 1;\n              return true;\n            },\n          );";
 
 function withoutPoolDiagnostics(source, restoreCaptureControl = false) {
+  // STEP5_PAID_PRIORITY_HASH_RESTORE
+  if (
+    source.includes(
+      "// PAID RECOVERY PRIORITY HELPERS START",
+    )
+  ) {
+    source =
+      source.replace(
+        /    \/\/ PAID RECOVERY PRIORITY HELPERS START[\s\S]*?    \/\/ PAID RECOVERY PRIORITY HELPERS END\r?\n\r?\n?/,
+        "",
+      );
+  }
+
+  if (
+    source.includes(
+      "// PAID RECOVERY PRIORITY PLAN SORT START",
+    )
+  ) {
+    source =
+      source.replace(
+        /      \/\/ PAID RECOVERY PRIORITY PLAN SORT START[\s\S]*?      \/\/ PAID RECOVERY PRIORITY PLAN SORT END\r?\n\r?\n?/,
+        "",
+      );
+  }
   // STEP4_RELEVANCE_HASH_RESTORE
   if (
     source.includes(
@@ -966,6 +990,129 @@ check(
   "resolver-required",
 );
 
+// STEP5_PAID_RECOVERY_PRIORITY_REGRESSION
+
+/*
+  시장순서는 C → B → A로 일부러 뒤집는다.
+  paidPlan 결과는 반드시 A → B → C여야 한다.
+*/
+
+const step5A = {
+  ...freeProduct(
+    1201,
+    "캠핑용 이동식 에어컨 STEP5-A",
+  ),
+
+  reviewCount: 27,
+  browserReviewTotalCount: 27,
+};
+
+const step5B = {
+  ...freeProduct(
+    1202,
+    "캠핑용 이동식 에어컨 STEP5-B",
+  ),
+
+  reviewCount: 0,
+  browserReviewTotalCount: 0,
+
+  browserReviewSourceUrl: "",
+  browserChannelProductNo: "",
+  browserOriginProductNo: "",
+  browserProductTitle: "",
+  browserCatalogTitle: "",
+  browserSpecs: {},
+  browserEvidenceSourceType: "",
+};
+
+const step5C = {
+  ...freeProduct(
+    1203,
+    "캠핑용 이동식 에어컨 STEP5-C",
+  ),
+
+  reviewCount: 0,
+  browserReviewTotalCount: 0,
+  browserReviews: [],
+
+  browserReviewSourceUrl: "",
+  browserChannelProductNo: "",
+  browserOriginProductNo: "",
+  browserProductTitle: "",
+  browserCatalogTitle: "",
+  browserSpecs: {},
+  browserEvidenceSourceType: "",
+};
+
+const step5Plan =
+  await runFreeHandler(
+    serverSource,
+    [
+      step5C,
+      step5B,
+      step5A,
+    ],
+    "paidPlanOnly",
+  );
+
+const step5PaidPlans =
+  step5Plan.candidatePlans.filter(
+    plan =>
+      plan.zeroPaidProven !== true,
+  );
+
+check(
+  step5PaidPlans.map(
+    plan =>
+      plan.productName,
+  ),
+  [
+    step5A.name,
+    step5B.name,
+    step5C.name,
+  ],
+);
+
+check(
+  step5Plan
+    .diagnostics
+    .paidCandidatePlans
+    .map(
+      plan =>
+        plan.recoveryTier,
+    ),
+  [
+    "A",
+    "B",
+    "C",
+  ],
+);
+
+/*
+  실제 execution 후보 제한 역시
+  rankedPaidExecutionCandidates에서 slice해야 한다.
+*/
+
+assert.match(
+  serverSource,
+  /const rankedPaidExecutionCandidates\s*=[\s\S]*?comparePaidRecoveryPriority/s,
+);
+
+assert.match(
+  serverSource,
+  /const selectedPaidExecutionCandidates\s*=\s*paidCandidateLimit === null[\s\S]*?rankedPaidExecutionCandidates\.slice\(/s,
+);
+
+assert.match(
+  serverSource,
+  /selectedPaidExecutionSet\.has\(\s*product,?\s*\)/s,
+);
+
+assert.match(
+  panel,
+  /paid 우선순위/,
+);
+
 // Capture transport is also local: verify before/after normalization counts
 // and collector diagnostics survive POST -> memory -> GET without any client.
 const captureSandbox = { exports: {}, URL, crypto: { randomUUID: () => 'capture-fixture' },
@@ -1061,4 +1208,4 @@ check(
 check(diagnosticLines({ captureId: 'fixture', collector: null, free: null, paid: null }).some(line => line.includes('미제공 / 미실행')), true);
 check(diagnosticLines({ captureId: 'fixture', collector: { rawCardCount: 0 }, free: { captureId: 'other', full: { finalCandidateCount: 99 } }, paid: null }).some(line => line.includes('99개')), false);
 check(diagnosticLines({ captureId: 'fixture', collector: { rawCardCount: 0 }, free: null, paid: null })[0], '브라우저 카드 관측: 0개');
-console.log(`STEP 4 FINAL PASS: ${assertions} counted assertions; original 269 preserved. Fake DOM/VM fixtures only; external calls and DB writes: 0.`);
+console.log(`STEP 5 FINAL PASS: ${assertions} counted assertions; original 269 preserved. Fake DOM/VM fixtures only; external calls and DB writes: 0.`);
