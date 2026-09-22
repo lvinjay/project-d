@@ -136,6 +136,8 @@ type CapturedProduct = {
 };
 
 type CaptureResponse = {
+  captureCounts?: { receivedCount: number; normalizedCount: number };
+  collectorDiagnostics?: Record<string, unknown>;
   success: boolean;
   message?: string;
   category?: string;
@@ -2185,6 +2187,71 @@ export async function GET(
           MAX_CANDIDATE_COUNT,
         );
 
+    // Observational only: scan normalized input, independently of queue filtering/caps.
+    function poolDiagnosticZeroPaidReasons(product: CapturedProduct, qualified: boolean): string[] {
+      if (qualified) return [];
+      const reasons: string[] = [];
+      const source = (product.browserReviewSourceUrl ?? "").trim();
+      const catalog = /^https:\/\/search\.shopping\.naver\.com\/catalog\/(\d+)/i.test(source);
+      const store = source.match(/^https:\/\/smartstore\.naver\.com\/[^/?#]+\/products\/(\d+)/i);
+      const title = (catalog ? product.browserCatalogTitle : product.browserProductTitle)?.trim() ?? "";
+      const reviews = (product.browserReviews ?? []).filter(review => Boolean(review?.text?.trim()));
+      const total = Number(product.browserReviewTotalCount ?? (catalog ? product.reviewCount : 0)) || 0;
+      if (total < MIN_REVIEW_COUNT_FOR_DB) reasons.push("reviewCountBelowMinimum");
+      if (reviews.length < 5) reasons.push("reviewSampleInsufficient");
+      if (!(product.price > 0) || product.priceVerified === false || (requireVerifiedPrice && product.priceVerified !== true)) {
+        reasons.push("priceEvidenceInvalid");
+      }
+      if (!catalog && !store) reasons.push("reviewSourceInvalid");
+      if (!title || (catalog
+        ? !product.browserSpecs || typeof product.browserSpecs !== "object" || Array.isArray(product.browserSpecs) || Object.keys(product.browserSpecs).length === 0
+        : product.browserEvidenceSourceType !== "smartstore-native" || !product.browserChannelProductNo?.trim() || !product.browserOriginProductNo?.trim())) {
+        reasons.push("nativeMetadataMissing");
+      }
+      if ((title && !validateProductMatch(product.name, title, "").matched) ||
+          (!catalog && ((store && product.browserChannelProductNo?.trim() && store[1] !== product.browserChannelProductNo.trim()) ||
+            (product.browserOriginProductNo?.trim() && !/^\d+$/.test(product.browserOriginProductNo.trim()))))) {
+        reasons.push("identityMismatch");
+      }
+      return reasons.length ? reasons : ["other"];
+    }
+    const poolDiagnosticInput = captureData.products ?? [];
+    const poolDiagnosticReasons: Record<string, number> = {
+      reviewCountBelowMinimum: 0, reviewSampleInsufficient: 0, nativeMetadataMissing: 0,
+      priceEvidenceInvalid: 0, identityMismatch: 0, reviewSourceInvalid: 0, other: 0,
+    };
+    let poolDiagnosticQualified = 0;
+    for (const product of poolDiagnosticInput) {
+      const qualified = product.priceVerified !== false && (!requireVerifiedPrice || product.priceVerified === true) &&
+        isZeroPaidBrowserCandidate(product);
+      if (qualified) poolDiagnosticQualified++;
+      for (const reason of poolDiagnosticZeroPaidReasons(product, qualified)) poolDiagnosticReasons[reason]++;
+    }
+    const poolDiagnostics = {
+      schemaVersion: 1, captureId, mode: paidPlanOnly ? "paid-plan" : zeroPaidOnly ? "zero-paid" : "execution",
+      collector: captureData.collectorDiagnostics ?? null,
+      capture: { receivedCount: captureData.captureCounts?.receivedCount ?? null,
+        normalizedCount: poolDiagnosticInput.length },
+      earlyValidation: { verifiedPriceCount: poolDiagnosticInput.filter(p => p.priceVerified === true && p.price > 0).length,
+        priceAcceptedCount: priceAcceptedProducts.length, initialDedupedCount: dedupedMarketProducts.length,
+        inspectionCandidateCount: marketCandidates.length },
+      zeroPaid: { zeroPaidEvaluatedCount: poolDiagnosticInput.length,
+        zeroPaidQualifiedCount: poolDiagnosticQualified,
+        zeroPaidRejectedCount: poolDiagnosticInput.length - poolDiagnosticQualified, rejectReasons: poolDiagnosticReasons },
+      full: { technicalFullCount: null as number | null, fullBeforeRelevanceCount: null as number | null,
+        relevanceEligibleCount: null as number | null, relevanceRejectedCount: null as number | null,
+        canonicalDuplicateRejectedCount: null as number | null, modelDuplicateRejectedCount: null as number | null,
+        finalCandidateCount: null as number | null },
+      paidPlanning: { paidPossibleCount: null as number | null, resolverRequiredCount: null as number | null,
+        brightDataPossibleCount: null as number | null },
+      notes: [
+        "무료 자격 평가는 정규화 입력 전체 기준(초기 중복 제거·검사 상한 적용 전)이며 FULL 통과 수가 아닙니다. 탈락 원인은 중복 집계됩니다.",
+        "fullBeforeRelevanceCount는 canonical 중복·partial·목표 초과를 제외하고 relevance 평가에 도달한 FULL 수입니다. 미실행 단계는 null입니다.",
+        "paidPlanning은 paidPlanOnly 응답에서만 집계합니다. 계획의 무료 판정과 실제 무료 자격 조건은 다를 수 있습니다.",
+        "비용 카운터는 실제 비용 차단용으로 불완전하며 이번 진단은 비용 집계나 실행 정책을 변경하지 않습니다.",
+      ],
+    };
+
     if (paidPlanOnly) {
       type PaidPathCandidatePlan = {
         position: number;
@@ -2466,7 +2533,13 @@ export async function GET(
             plan.otherExternalPathPossible,
         ).length;
 
+      poolDiagnostics.paidPlanning = {
+        paidPossibleCount,
+        resolverRequiredCount: candidatePlans.filter(plan => plan.resolverKnownRequiredIfInspected > 0).length,
+        brightDataPossibleCount: candidatePlans.filter(plan => plan.brightDataConservativeUpperBound > 0).length,
+      };
       return NextResponse.json({
+        diagnostics: poolDiagnostics,
         success: true,
         category,
         paidPlanOnly: true,
@@ -2585,6 +2658,8 @@ export async function GET(
           );
 
     const modelRepresentatives = new Map<string, number>();
+    poolDiagnostics.full = { technicalFullCount: 0, fullBeforeRelevanceCount: 0, relevanceEligibleCount: 0,
+      relevanceRejectedCount: 0, canonicalDuplicateRejectedCount: 0, modelDuplicateRejectedCount: 0, finalCandidateCount: 0 };
     const duplicateNeedsReview: string[] = [];
     let modelDuplicateCount = 0;
     const finalCandidates:
@@ -5448,6 +5523,7 @@ export async function GET(
           동일 canonical 상품이 동시에 통과했을 수 있으므로
           여기서 최종 중복검사.
         */
+        if (result.candidate.detail.detailStatus === "full") poolDiagnostics.full.technicalFullCount!++;
         const resultIdentityKey =
           result.identityKey ||
           (
@@ -5461,6 +5537,7 @@ export async function GET(
             resultIdentityKey,
           )
         ) {
+          poolDiagnostics.full.canonicalDuplicateRejectedCount!++;
           const failure:
             FailureItem = {
               position:
@@ -5536,6 +5613,7 @@ export async function GET(
             resultIdentityKey,
           );
 
+        poolDiagnostics.full.fullBeforeRelevanceCount!++;
         const assessment = evaluateCategoryRelevance({ category,
           marketName: result.candidate.market.productName,
           detailTitle: result.candidate.detail.productName,
@@ -5650,7 +5728,12 @@ export async function GET(
       );
     }
 
+    poolDiagnostics.full.relevanceEligibleCount = relevance.eligibleCount;
+    poolDiagnostics.full.relevanceRejectedCount = relevance.excludedCount + relevance.needsReviewCount;
+    poolDiagnostics.full.modelDuplicateRejectedCount = modelDuplicateCount;
+    poolDiagnostics.full.finalCandidateCount = finalCandidates.length;
     return NextResponse.json({
+      diagnostics: poolDiagnostics,
       success: true,
 
       category,

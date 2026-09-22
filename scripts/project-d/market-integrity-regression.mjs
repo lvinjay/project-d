@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
+import crypto from 'node:crypto';
 
 // Compile pure functions only. Never import routes, extension entry points or clients.
 function pureFunctions(path, names, prefix = '') {
@@ -267,3 +268,422 @@ const liveNormalized = normalizeDiagnostics({ priceEvidenceDiagnostics: { reject
 }] } });
 check(liveNormalized.priceEvidenceDiagnostics.samples[0].reason, liveBad.reason);
 console.log(`FINAL PASS: ${assertions} counted assertions = ${historicalAssertions} preserved historical + ${assertions - historicalAssertions} active-parser assertions (${activeCases.length} price cases), plus diagnostic bounds and static guards.`);
+
+// STEP 1: strip only the additive diagnostic nodes, then verify the entire
+// pre-STEP-1 executable collector/route fingerprints. No Git or network needed.
+const compile = source => ts.transpileModule(source, { compilerOptions: {
+  target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, removeComments: true,
+} }).outputText;
+// STEP 2 intentionally replaces only the capture controller. Restoring its
+// frozen predecessor for the original hash assertion keeps every filtering,
+// dedupe, price, order and response expression covered by the original hash.
+const legacyCaptureControl = "      capture();\n\n      let previousCount = captured.size;\n      let stableCount = 0;\n      let scrollSteps = 0;\n      let stopReason = \"max-scroll-steps\";\n\n      for (let step = 1; step <= 35; step++) {\n        if (captured.size >= targetCount) { stopReason = \"target-count\"; break; }\n        scrollSteps = step;\n        window.scrollBy({\n          top: Math.max(window.innerHeight * 0.8, 600),\n          behavior: \"smooth\",\n        });\n\n        await sleep(1200);\n        capture();\n\n        const currentCount = captured.size;\n\n        if (currentCount <= previousCount) {\n          stableCount++;\n        } else {\n          stableCount = 0;\n        }\n\n        previousCount = currentCount;\n\n        if (currentCount >= targetCount || (currentCount >= 30 && stableCount >= 7)) {\n          stopReason = currentCount >= targetCount ? \"target-count\" : \"stable-after-minimum\";\n          break;\n        }\n      }\n\n      window.scrollTo({\n        top: document.documentElement.scrollHeight,\n        behavior: \"smooth\",\n      });\n\n      await sleep(1800);\n      capture();";
+function withoutPoolDiagnostics(source, restoreCaptureControl = false) {
+  if (restoreCaptureControl) {
+    assert.equal((source.match(/\/\/ ADAPTIVE CAPTURE START/g) || []).length, 1);
+    source = source.replace(/\/\/ ADAPTIVE CAPTURE START[\s\S]*?\/\/ ADAPTIVE CAPTURE END/, legacyCaptureControl);
+  }
+  const tree = ts.createSourceFile('baseline.js', compile(source), ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+  const diagnostic = node => node && /^poolDiagnostic/.test(node.getText(tree));
+  const transformed = ts.transform(tree, [context => {
+    function visit(node) {
+      if (ts.isFunctionDeclaration(node) && diagnostic(node.name)) return undefined;
+      if (restoreCaptureControl && ts.isFunctionDeclaration(node) && ['adaptiveFinalCandidateCount', 'adaptiveCaptureProgress', 'adaptiveCaptureStop'].includes(node.name?.text)) return undefined;
+      if (ts.isVariableStatement(node) && node.declarationList.declarations.every(d => diagnostic(d.name))) return undefined;
+      if (ts.isForOfStatement(node) && diagnostic(node.expression)) return undefined;
+      if (ts.isExpressionStatement(node) && diagnostic(node.expression)) return undefined;
+      if (ts.isIfStatement(node) && !node.elseStatement && ts.isExpressionStatement(node.thenStatement) && diagnostic(node.thenStatement.expression)) return undefined;
+      if (ts.isPropertyAssignment(node) && ['diagnostics', 'collectorDiagnostics'].includes(node.name.getText(tree))) return undefined;
+      return ts.visitEachChild(node, visit, context);
+    }
+    return root => ts.visitNode(root, visit);
+  }]);
+  const result = ts.createPrinter({ removeComments: true }).printFile(transformed.transformed[0]);
+  transformed.dispose();
+  return result;
+}
+for (const [file, expected] of [
+  ['tools/project-d-extension/naver-collector.js', '3402418d060d1b3c08e912551f0fecf27b4e66cf5e91223ae9e611d5db0dbc85'],
+  ['app/api/market-candidates-enriched/route.ts', 'b3b2a222624176736757b2f89361c9a885e60c2eff64cda0948f3344f9b4d028'],
+]) check(crypto.createHash('sha256').update(withoutPoolDiagnostics(fs.readFileSync(file, 'utf8'), file.endsWith('naver-collector.js'))).digest('hex'), expected);
+
+const { poolDiagnosticRecordCard: recordCard, poolDiagnosticCollectorSummary: collectorSummary } = pureFunctions(
+  'tools/project-d-extension/naver-collector.js', ['poolDiagnosticRecordCard', 'poolDiagnosticCollectorSummary']);
+const cards = new Map(), cardA = {}, cardB = {}, cardC = {};
+for (let scan = 0; scan < 20; scan++) {
+  recordCard(cards, cardA, 'AC400', 300000, 'https://example.test/1');
+  recordCard(cards, cardB, 'AC400', 300000, 'https://example.test/2');
+  recordCard(cards, cardC, 'AC500', 0, '');
+}
+let cardSummary = collectorSummary(cards, 1, 1, 'target-count', 3);
+check([cardSummary.rawCardCount, cardSummary.initialEligibleCardCount, cardSummary.duplicateByNameCount], [3, 2, 1]);
+recordCard(cards, cardC, 'AC500', 400000, 'https://example.test/3');
+// A virtualized DOM element displaying another listing must not hide that card.
+recordCard(cards, cardC, 'AC600', 500000, 'https://example.test/4');
+cardSummary = collectorSummary(cards, 1, 3, 'stable-after-minimum', 7);
+check([cardSummary.rawCardCount, cardSummary.initialEligibleCardCount, cardSummary.finalCapturedCount], [4, 4, 3]);
+check(cardSummary.finalCapturedCount <= cardSummary.initialEligibleCardCount, true);
+for (const [key, value] of Object.entries(cardSummary)) if (key.endsWith('Count')) check(Number.isSafeInteger(value) && value >= 0, true);
+check(normalizeDiagnostics({ collectorDiagnostics: cardSummary }).collectorDiagnostics.finalCapturedCount, 3);
+check(normalizeDiagnostics({ collectorDiagnostics: { rawCardCount: -1, finalCapturedCount: 1.5, stopReason: '<invalid>' } }).collectorDiagnostics,
+  { stopReason: 'unknown' });
+check(normalizeDiagnostics({}).collectorDiagnostics === undefined, true);
+
+// The actual collector runs against a fake DOM and synchronous timers. Compare
+// all legacy response fields with the same executable code minus diagnostics.
+function fakeCard(name, price, url) {
+  const link = { href: url, innerText: name, className: 'product_link__fixture', getAttribute: () => null };
+  const image = { src: 'https://example.test/image.png', alt: name, getAttribute: key => key === 'src' ? 'https://example.test/image.png' : key === 'alt' ? name : null };
+  return { innerText: `${name}\n판매가 ${price}원`, matches: () => false,
+    querySelectorAll: selector => selector === 'a' ? [link] : [],
+    querySelector: selector => selector === 'img' ? image : null };
+}
+async function runCollector(source, fixture, options = {}) {
+  let delivered;
+  let elapsed = 0, loop = 0, bottomCaptures = 0;
+  const sandbox = { URLSearchParams, Date: { now: () => elapsed },
+    location: { search: `?pd_request=test&pd_admin=1&pd_target=${options.target ?? 2}` },
+    setTimeout: (fn, ms) => { elapsed += Math.max(ms, options.minimumTimerElapsed ?? 0); fn(); return 0; },
+    window: { innerHeight: 900, scrollBy() { loop++; }, scrollTo() { bottomCaptures++; } },
+    document: { querySelectorAll: () => typeof fixture === 'function' ? fixture({ loop, bottomCaptures }) : fixture,
+      documentElement: { scrollHeight: 1000 } },
+    chrome: { runtime: { sendMessage: message => { delivered = message; } } },
+    console: { log() {}, error() {}, warn() {} } };
+  vm.runInNewContext(compile(source), sandbox);
+  for (let tick = 0; tick < 1000 && !delivered; tick++) await Promise.resolve();
+  assert.ok(delivered, 'mock collector must finish');
+  return JSON.parse(JSON.stringify(delivered));
+}
+const collectorSource = fs.readFileSync('tools/project-d-extension/naver-collector.js', 'utf8');
+const collectorFixture = [fakeCard('Example 캠핑 AC400', '300,000', 'https://smartstore.naver.com/test/products/100'),
+  fakeCard('Example 캠핑 AC400 화이트', '310,000', 'https://smartstore.naver.com/test/products/101'),
+  fakeCard('Example 캠핑 AC500', '400,000', 'https://smartstore.naver.com/test/products/102')];
+const currentCollector = await runCollector(collectorSource, collectorFixture);
+const legacyCollector = await runCollector(withoutPoolDiagnostics(collectorSource), collectorFixture);
+const { collectorDiagnostics: observedCollector, ...legacyCollectorResult } = currentCollector.result;
+check({ ...currentCollector, result: legacyCollectorResult }, legacyCollector);
+check(observedCollector.finalCapturedCount, currentCollector.result.candidates.length);
+check(observedCollector.finalCapturedCount > 0, true);
+
+const {
+  adaptiveCaptureProgress: adaptiveProgressForTest,
+  adaptiveCaptureStop: adaptiveStopForTest,
+} = pureFunctions(
+  'tools/project-d-extension/naver-collector.js',
+  [
+    'adaptiveCaptureProgress',
+    'adaptiveCaptureStop'
+  ]
+);
+
+const adaptiveLimitsFixture = {
+  maxScrollLoops: 60,
+  minimumScrollLoops: 12,
+  noGrowthThreshold: 10,
+  maxCaptureMs: 120000,
+};
+
+// TARGET_REACHED
+let adaptiveState =
+  adaptiveProgressForTest(
+    null,
+    10,
+    7,
+    0,
+    false
+  );
+
+check(
+  adaptiveStopForTest(
+    adaptiveState,
+    0,
+    7,
+    0,
+    adaptiveLimitsFixture
+  ),
+  'target-reached'
+);
+
+// TIMEOUT
+check(
+  adaptiveStopForTest(
+    adaptiveState,
+    0,
+    40,
+    120000,
+    adaptiveLimitsFixture
+  ),
+  'timeout'
+);
+
+// MARKET_SATURATED
+// niche category처럼 후보가 20개 미만이어도
+// 충분한 무성장이 확인되면 정상 포화 가능.
+adaptiveState =
+  adaptiveProgressForTest(
+    null,
+    12,
+    7,
+    0,
+    false
+  );
+
+for (let loop = 1; loop <= 12; loop++) {
+  adaptiveState =
+    adaptiveProgressForTest(
+      adaptiveState,
+      12,
+      7,
+      loop,
+      true
+    );
+}
+
+check(
+  adaptiveState.consecutiveNoGrowth,
+  12
+);
+
+check(
+  adaptiveState.finalCount < 20,
+  true
+);
+
+check(
+  adaptiveStopForTest(
+    adaptiveState,
+    12,
+    40,
+    12000,
+    adaptiveLimitsFixture
+  ),
+  'market-saturated'
+);
+
+// HARD_CAP_REACHED (= max-scroll)
+// 후보가 계속 증가 중이면 saturation으로 오인하지 않고
+// hard cap에서만 종료.
+adaptiveState =
+  adaptiveProgressForTest(
+    null,
+    1,
+    1,
+    0,
+    false
+  );
+
+for (let loop = 1; loop <= 60; loop++) {
+  adaptiveState =
+    adaptiveProgressForTest(
+      adaptiveState,
+      loop + 1,
+      loop + 1,
+      loop,
+      true
+    );
+}
+
+check(
+  adaptiveState.consecutiveNoGrowth,
+  0
+);
+
+check(
+  adaptiveStopForTest(
+    adaptiveState,
+    60,
+    100,
+    72000,
+    adaptiveLimitsFixture
+  ),
+  'max-scroll'
+);
+
+// 새로운 카드/후보가 생기면 no-growth streak reset.
+let resetState =
+  adaptiveProgressForTest(
+    null,
+    10,
+    5,
+    0,
+    false
+  );
+
+for (let loop = 1; loop <= 9; loop++) {
+  resetState =
+    adaptiveProgressForTest(
+      resetState,
+      10,
+      5,
+      loop,
+      true
+    );
+}
+
+check(
+  resetState.consecutiveNoGrowth,
+  9
+);
+
+resetState =
+  adaptiveProgressForTest(
+    resetState,
+    11,
+    6,
+    10,
+    true
+  );
+
+check(
+  resetState.consecutiveNoGrowth,
+  0
+);
+
+check(
+  resetState.lastRawCardGrowthLoop,
+  10
+);
+
+check(
+  resetState.lastFinalCandidateGrowthLoop,
+  10
+);
+
+// STEP 2 설정값 자체도 잠금.
+check(
+  /maxScrollLoops:\s*60/.test(collectorSource),
+  true
+);
+
+check(
+  /minimumScrollLoops:\s*12/.test(collectorSource),
+  true
+);
+
+check(
+  /noGrowthThreshold:\s*10/.test(collectorSource),
+  true
+);
+
+check(
+  /maxCaptureMs:\s*120000/.test(collectorSource),
+  true
+);
+
+// 관리자 최초 capture 목표는 40 유지.
+check(
+  /targetCount:\s*40/.test(panel),
+  true
+);
+
+
+// Execute the handler only in a sealed VM with an in-memory capture and null DB
+// reads. All external services and DB mutations throw; no endpoint is contacted.
+const pureModules = new Map();
+function pureModule(name) {
+  if (!pureModules.has(name)) {
+    const sandbox = { exports: {} };
+    vm.runInNewContext(compile(fs.readFileSync(`lib/${name}.ts`, 'utf8')), sandbox);
+    pureModules.set(name, sandbox.exports);
+  }
+  return pureModules.get(name);
+}
+async function runFreeHandler(source, products, mode = 'zeroPaidOnly') {
+  const forbidden = () => { throw new Error('External call or DB mutation forbidden in regression'); };
+  let externalAttempts = 0;
+  const deny = () => { externalAttempts++; return forbidden(); };
+  const query = new Proxy({}, { get: (_, key) => key === 'then'
+    ? resolve => resolve({ data: null, error: null })
+    : ['insert', 'update', 'upsert', 'delete'].includes(key) ? deny : () => query });
+  const sandbox = { exports: {}, URL, console: { log() {}, warn() {}, error() {} },
+    fetch: async url => {
+      if (String(url) !== 'http://local.test/api/naver-capture?id=fixture') return deny();
+      return { ok: true, json: async () => ({ success: true, category: '캠핑용 에어컨', products,
+        captureCounts: { receivedCount: products.length + 1, normalizedCount: products.length } }) };
+    },
+    require: name => {
+      if (name === 'next/server') return { NextResponse: { json: body => body } };
+      if (name.endsWith('/supabaseAdmin')) return { supabaseAdmin: { from: () => query } };
+      const base = name.split('/').at(-1);
+      if (['validateProductMatch', 'project-d-category-relevance', 'project-d-product-model-identity', 'canonicalPipelineIdentity', 'buildResolverSearchPlan'].includes(base)) return pureModule(base);
+      return new Proxy({}, { get: () => deny });
+    } };
+  vm.runInNewContext(compile(source), sandbox);
+  const result = await sandbox.exports.GET({ url: `http://local.test/api/market-candidates-enriched?captureId=fixture&${mode}=1&requireVerifiedPrice=1` });
+  check(externalAttempts, 0);
+  assert.equal(result.success, true, result.message);
+  return JSON.parse(JSON.stringify(result));
+}
+function freeProduct(id, title = 'Example 캠핑 AC400') {
+  return { name: title, text: '', seller: '', url: `https://smartstore.naver.com/test/products/${id}`, imageUrl: '',
+    price: 300000, priceVerified: true, reviewCount: 40, rating: 4,
+    browserReviewSourceUrl: `https://smartstore.naver.com/test/products/${id}`,
+    browserChannelProductNo: String(id), browserOriginProductNo: String(id), browserProductTitle: title,
+    browserEvidenceSourceType: 'smartstore-native', browserReviewTotalCount: 40,
+    browserReviews: Array.from({ length: 5 }, (_, i) => ({ text: `충분한 리뷰 본문 ${i}`, rating: 4, date: '', helpfulCount: 0 })) };
+}
+const serverSource = fs.readFileSync('app/api/market-candidates-enriched/route.ts', 'utf8');
+const serverFixtures = [[], [freeProduct(100), freeProduct(101, 'Example 산업용 AC500'),
+  { ...freeProduct(102), browserReviewTotalCount: 29 }, { ...freeProduct(103), browserReviews: [] },
+  { ...freeProduct(104), browserOriginProductNo: '' }, { ...freeProduct(105), priceVerified: false },
+  { ...freeProduct(106), browserChannelProductNo: '999' }, { ...freeProduct(107), browserReviewSourceUrl: 'https://invalid.test/' },
+  freeProduct(100)]];
+for (const fixture of serverFixtures) {
+  const actual = await runFreeHandler(serverSource, fixture);
+  const before = await runFreeHandler(withoutPoolDiagnostics(serverSource), fixture);
+  const { diagnostics, ...legacyFields } = actual;
+  check(legacyFields, before);
+  check(diagnostics.capture.receivedCount, fixture.length + 1);
+  const z = diagnostics.zeroPaid, f = diagnostics.full;
+  check(z.zeroPaidQualifiedCount + z.zeroPaidRejectedCount, z.zeroPaidEvaluatedCount);
+  check(z.zeroPaidQualifiedCount <= z.zeroPaidEvaluatedCount, true);
+  check(f.finalCandidateCount <= f.relevanceEligibleCount, true);
+  check(f.fullBeforeRelevanceCount, f.relevanceEligibleCount + f.relevanceRejectedCount);
+  check(f.finalCandidateCount, actual.finalCandidates.length);
+  for (const section of [diagnostics.capture, diagnostics.earlyValidation, z, z.rejectReasons, f]) {
+    for (const value of Object.values(section)) if (typeof value === 'number') check(Number.isSafeInteger(value) && value >= 0, true);
+  }
+  if (fixture.length) {
+    check(f.finalCandidateCount, 1);
+    check(f.relevanceRejectedCount, 1);
+    for (const reason of ['reviewCountBelowMinimum', 'reviewSampleInsufficient', 'nativeMetadataMissing', 'priceEvidenceInvalid', 'identityMismatch', 'reviewSourceInvalid']) check(z.rejectReasons[reason] > 0, true);
+  }
+}
+const planResult = await runFreeHandler(serverSource, [freeProduct(100)], 'paidPlanOnly');
+check(planResult.diagnostics.full.finalCandidateCount, null);
+check(planResult.diagnostics.paidPlanning, { paidPossibleCount: 0, resolverRequiredCount: 0, brightDataPossibleCount: 0 });
+const mixedPlanFixture = [freeProduct(100), { ...freeProduct(101), browserReviews: [] }];
+const mixedPlan = await runFreeHandler(serverSource, mixedPlanFixture, 'paidPlanOnly');
+const legacyPlan = await runFreeHandler(withoutPoolDiagnostics(serverSource), mixedPlanFixture, 'paidPlanOnly');
+const { diagnostics: planDiagnostics, ...legacyPlanFields } = mixedPlan;
+check(legacyPlanFields, legacyPlan);
+check(planDiagnostics.paidPlanning, { paidPossibleCount: 1, resolverRequiredCount: 1, brightDataPossibleCount: 1 });
+
+// Capture transport is also local: verify before/after normalization counts
+// and collector diagnostics survive POST -> memory -> GET without any client.
+const captureSandbox = { exports: {}, URL, crypto: { randomUUID: () => 'capture-fixture' },
+  require: name => { assert.equal(name, 'next/server'); return { NextResponse: { json: body => body } }; } };
+vm.runInNewContext(compile(capture), captureSandbox);
+const captureInput = Array.from({ length: 102 }, (_, i) => ({ ...freeProduct(i + 100), price: i === 0 ? 0 : 300000 }));
+const capturePost = await captureSandbox.exports.POST({ json: async () => ({ category: '캠핑용 에어컨',
+  products: captureInput, diagnostics: { collectorDiagnostics: observedCollector } }) });
+check(capturePost.success, true);
+const captureGet = await captureSandbox.exports.GET({ url: 'http://local.test/api/naver-capture?id=capture-fixture' });
+check(captureGet.captureCounts, { receivedCount: 102, normalizedCount: 99 });
+check(captureGet.count, 99);
+check(captureGet.products.map(p => p.name), captureInput.slice(1, 100).map(p => p.name));
+check(captureGet.collectorDiagnostics.finalCapturedCount, observedCollector.finalCapturedCount);
+
+// Explicitly retain the administrator's E2E shortcut and paid top-up contract.
+assert.match(panel, /zeroPaidPreviewCandidates\.slice\(\s*0,\s*5,?\s*\)/);
+assert.match(panel, /targetCount: 5/);
+assert.match(panel, /enrichedParams\.set\(\s*"executionTargetCount",\s*"5",?\s*\)/);
+assert.match(panel, /enrichedParams\.set\(\s*"paidCandidateLimit",\s*"1",?\s*\)/);
+assert.match(panel, /enrichedParams\.set\(\s*"paidCandidateOffset",\s*"0",?\s*\)/);
+assert.match(panel, /index <\s*finalCandidates\.length/);
+assert.match(panel, /const selected = selectEligibleFive\(eligible, selectionRun\)/);
+const { poolDiagnosticLines: diagnosticLines } = pureFunctions('components/ProjectDAutomationPanel.tsx', ['poolDiagnosticLines']);
+check(diagnosticLines({ captureId: 'fixture', collector: null, free: null, paid: null }).some(line => line.includes('미제공 / 미실행')), true);
+check(diagnosticLines({ captureId: 'fixture', collector: { rawCardCount: 0 }, free: { captureId: 'other', full: { finalCandidateCount: 99 } }, paid: null }).some(line => line.includes('99개')), false);
+check(diagnosticLines({ captureId: 'fixture', collector: { rawCardCount: 0 }, free: null, paid: null })[0], '브라우저 카드 관측: 0개');
+console.log(`STEP 2 FINAL PASS: ${assertions} counted assertions; original 269 preserved. Fake DOM/VM fixtures only; external calls and DB writes: 0.`);

@@ -40,6 +40,8 @@ type BrowserReviewCapture = {
 };
 
 type CaptureDiagnostics = {
+  captureCounts?: { receivedCount: number; normalizedCount: number };
+  collectorDiagnostics?: Record<string, number | string | boolean | undefined>;
   observedProductCardCount?: number;
   priceEvidenceDiagnostics?: { rejectedCount: number; samples: Array<{
     name: string; reason: string; detectedAmounts: number[]; snippet: string; cardType: string;
@@ -59,7 +61,21 @@ function captureDiagnostics(value: unknown): CaptureDiagnostics | undefined {
   const price = row.priceEvidenceDiagnostics && typeof row.priceEvidenceDiagnostics === "object" && !Array.isArray(row.priceEvidenceDiagnostics)
     ? row.priceEvidenceDiagnostics as Record<string, unknown> : undefined;
   const allowedReasons = new Set(["no-money-token", "excluded-prefix", "excluded-tail", "no-sale-context", "multiple-sale-values", "ambiguous", "verified-sale-label", "verified-single-price"]);
+  const collector = row.collectorDiagnostics && typeof row.collectorDiagnostics === "object" && !Array.isArray(row.collectorDiagnostics)
+    ? row.collectorDiagnostics as Record<string, unknown> : undefined;
+  const collectorCounts = collector ? Object.fromEntries([
+    "rawCardCount", "cardWithNameCount", "cardWithPositivePriceCount", "cardWithUrlCount",
+    "initialEligibleCardCount", "duplicateByNameCount", "duplicateByModelKeyCount",
+    "finalCapturedCount", "scrollLoopCount",
+    "targetCount", "maxScrollLoops", "actualScrollLoops", "minimumScrollLoops", "noGrowthThreshold",
+    "maxCaptureMs", "elapsedCaptureMs", "lastRawCardGrowthLoop", "lastFinalCandidateGrowthLoop",
+    "consecutiveNoGrowthAtStop", "rawGrowthCount",
+  ].map(key => [key, count(collector[key])])) : undefined;
   return {
+    collectorDiagnostics: collector ? { ...collectorCounts,
+      stopReason: ["max-scroll-steps", "target-count", "stable-after-minimum", "target-reached", "market-saturated", "max-scroll", "timeout"].includes(String(collector.stopReason))
+        ? String(collector.stopReason) : "unknown",
+      saturationDetected: typeof collector.saturationDetected === "boolean" ? collector.saturationDetected : undefined } : undefined,
     observedProductCardCount: count(row.observedProductCardCount),
     priceEvidenceDiagnostics: price ? {
       rejectedCount: count(price.rejectedCount) ?? 0,
@@ -496,7 +512,8 @@ export async function POST(
     const id =
       crypto.randomUUID();
 
-    const diagnostics = captureDiagnostics(body.diagnostics);
+    const diagnostics = { ...captureDiagnostics(body.diagnostics),
+      captureCounts: { receivedCount: incoming.length, normalizedCount: products.length } };
     if (diagnostics) getDiagnosticsStore().set(id, diagnostics);
 
     getStore().set(
@@ -622,6 +639,8 @@ export async function GET(
 
     count:
       capture.products.length,
+    captureCounts: getDiagnosticsStore().get(id)?.captureCounts,
+    collectorDiagnostics: getDiagnosticsStore().get(id)?.collectorDiagnostics,
 
     products:
       capture.products.map(

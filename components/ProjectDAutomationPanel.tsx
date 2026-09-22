@@ -73,6 +73,7 @@ type BrowserBridgeCandidate = {
 };
 
 type MarketProbeDiagnostics = {
+  collectorDiagnostics?: unknown;
   observedProductCardCount?: number;
   priceEvidenceDiagnostics?: { rejectedCount: number; samples: Array<{
     name: string; reason: string; detectedAmounts: number[]; snippet: string; cardType: string;
@@ -377,7 +378,70 @@ async function executeCategoryCriteria(
   return result;
 }
 
+type PoolDiagnosticView = { captureId: string; collector: unknown; free: unknown; paid: unknown };
+
+function poolDiagnosticLines(view: PoolDiagnosticView): string[] {
+  const record = (value: unknown): Record<string, unknown> =>
+    value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  const matching = (value: unknown) => {
+    const row = record(value);
+    return row.captureId === view.captureId ? row : {};
+  };
+  const free = matching(view.free);
+  const paid = matching(view.paid);
+  const count = (value: unknown) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+    ? `${value}개` : "미제공 / 미실행";
+  const lines: string[] = [];
+  const add = (section: unknown, fields: Array<[string, string]>) => {
+    const values = record(section);
+    for (const [key, label] of fields) lines.push(`${label}: ${count(values[key])}`);
+  };
+  add(view.collector, [
+    ["rawCardCount", "브라우저 카드 관측"], ["cardWithNameCount", "이름 있음"],
+    ["cardWithPositivePriceCount", "양수 판매가 있음"], ["cardWithUrlCount", "URL 있음"],
+    ["initialEligibleCardCount", "이름·판매가·URL 동시 통과"], ["duplicateByNameCount", "동일 이름 중복 관측"],
+    ["duplicateByModelKeyCount", "수집 modelKey 중복 제외"], ["finalCapturedCount", "브라우저 최종 후보"],
+  ]);
+  const collector = record(view.collector);
+  const stopLabels: Record<string, string> = { "target-count": "기존 이름 기준 수집 목표 도달", "stable-after-minimum": "기존 최소 수집 후 정체", "max-scroll-steps": "기존 최대 스크롤 도달",
+    "target-reached": "고유 후보 목표 도달", "market-saturated": "현재 검색 결과 포화 추정",
+    "max-scroll": "안전 스크롤 상한 도달 · 포화로 판정하지 않음", "timeout": "수집 시간 상한 도달 · 포화로 판정하지 않음" };
+  lines.push(`수집 종료: ${typeof collector.stopReason === "string" ? stopLabels[collector.stopReason] ?? "미제공" : "미제공"}`);
+  const loops = collector.scrollLoopCount;
+  lines.push(`스크롤 반복: ${typeof loops === "number" && Number.isSafeInteger(loops) && loops >= 0 ? `${loops}회` : "미제공"}`);
+  add(collector, [["targetCount", "목표 고유 후보"], ["rawGrowthCount", "성장 판단용 고유 카드 근거"]]);
+  for (const [key, label, unit] of [
+    ["maxScrollLoops", "안전 스크롤 상한", "회"], ["actualScrollLoops", "실제 스크롤", "회"],
+    ["minimumScrollLoops", "포화 판단 최소 스크롤", "회"], ["noGrowthThreshold", "연속 무성장 기준", "회"],
+    ["lastRawCardGrowthLoop", "마지막 카드 근거 증가", "번째 스크롤"],
+    ["lastFinalCandidateGrowthLoop", "마지막 고유 후보 증가", "번째 스크롤"],
+    ["consecutiveNoGrowthAtStop", "카드 근거·후보 모두 무성장 연속", "회"],
+  ]) {
+    const value = collector[key];
+    lines.push(`${label}: ${typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+      ? value === 0 && key.startsWith("last") ? "초기 capture" : `${value}${unit}` : "미제공"}`);
+  }
+  lines.push(`포화 추정: ${collector.saturationDetected === true ? "예 · 현재 검색 결과/수집 방식에 한정" : collector.saturationDetected === false ? "아니오" : "미제공"}`);
+  add(free.capture, [["receivedCount", "서버 수신 후보"], ["normalizedCount", "서버 정규화 후"]]);
+  add(free.earlyValidation, [["verifiedPriceCount", "검증 가격 근거 있음"], ["initialDedupedCount", "서버 초기 중복 제거 후"],
+    ["inspectionCandidateCount", "무료 검사 큐(자격 필터·상한 적용 후)"]]);
+  add(free.zeroPaid, [["zeroPaidEvaluatedCount", "무료 자격 평가(정규화 전체)"], ["zeroPaidQualifiedCount", "무료 자격 충족"],
+    ["zeroPaidRejectedCount", "무료 자격 미충족"]]);
+  add(free.full, [["technicalFullCount", "상세 FULL 결과"], ["fullBeforeRelevanceCount", "relevance 평가 도달 FULL"],
+    ["relevanceEligibleCount", "relevance 통과"], ["relevanceRejectedCount", "relevance 제외·검토 필요"],
+    ["canonicalDuplicateRejectedCount", "canonical 중복 제외"], ["modelDuplicateRejectedCount", "모델 중복 제외"],
+    ["finalCandidateCount", "최종 무료 검증 후보(shortcut 적용 전)"]]);
+  add(record(free.zeroPaid).rejectReasons, [["reviewCountBelowMinimum", "무료 자격 탈락 · 리뷰 총량 부족"],
+    ["reviewSampleInsufficient", "무료 자격 탈락 · 본문 샘플 부족"], ["nativeMetadataMissing", "무료 자격 탈락 · 상세/native metadata 부족"],
+    ["priceEvidenceInvalid", "무료 자격 탈락 · 가격 근거 부족"], ["identityMismatch", "무료 자격 탈락 · 상품 identity 불일치"],
+    ["reviewSourceInvalid", "무료 자격 탈락 · 리뷰 소스 부적합"], ["other", "무료 자격 탈락 · 기타"]]);
+  add(paid.paidPlanning, [["paidPossibleCount", "사전계획 · 유료 가능 후보"], ["resolverRequiredCount", "사전계획 · resolver 필요 후보"],
+    ["brightDataPossibleCount", "사전계획 · Bright Data 가능 후보"]]);
+  return lines;
+}
+
 export default function ProjectDAutomationPanel() {
+  const [poolDiagnosticView, setPoolDiagnosticView] = useState<PoolDiagnosticView | null>(null);
   const [
     category,
     setCategory,
@@ -619,6 +683,7 @@ export default function ProjectDAutomationPanel() {
     }
 
     setIsRunning(true);
+    setPoolDiagnosticView(null);
 
     setSteps(
       INITIAL_STEPS.map(
@@ -1032,6 +1097,7 @@ export default function ProjectDAutomationPanel() {
               products:
                 captureProducts,
               diagnostics: {
+                collectorDiagnostics: bridgeResult.collectorDiagnostics,
                 observedProductCardCount: bridgeResult.observedProductCardCount,
                 priceEvidenceDiagnostics: bridgeResult.priceEvidenceDiagnostics,
                 probeFailureCount: bridgeResult.probeFailureCount,
@@ -1069,6 +1135,7 @@ export default function ProjectDAutomationPanel() {
           "내부 후보 ID가 생성되지 않았습니다.",
         );
       }
+      setPoolDiagnosticView({ captureId, collector: bridgeResult.collectorDiagnostics, free: null, paid: null });
 
       /*
         2단계
@@ -1149,6 +1216,8 @@ export default function ProjectDAutomationPanel() {
           );
         }
 
+        setPoolDiagnosticView(current => current?.captureId === captureId
+          ? { ...current, paid: paidPlan.diagnostics } : current);
         const planCandidateCount =
           Number(
             paidPlan.marketCandidateCount ??
@@ -1248,6 +1317,8 @@ export default function ProjectDAutomationPanel() {
           );
         }
 
+        setPoolDiagnosticView(current => current?.captureId === captureId
+          ? { ...current, free: zeroPaidPreview.diagnostics } : current);
         const zeroPaidPreviewCandidates =
           Array.isArray(
             zeroPaidPreview.finalCandidates,
@@ -1485,6 +1556,8 @@ export default function ProjectDAutomationPanel() {
         );
       }
 
+      if (safePilotMode) setPoolDiagnosticView(current => current?.captureId === captureId
+        ? { ...current, free: enriched.diagnostics } : current);
       const returnedCandidates =
         Array.isArray(
           enriched.finalCandidates,
@@ -2511,6 +2584,19 @@ export default function ProjectDAutomationPanel() {
           ),
         )}
       </div>
+
+      {poolDiagnosticView ? (
+        <details style={{ marginTop: 16 }}>
+          <summary>같은 capture 기준 후보 감소 진단</summary>
+          <p>Capture: {poolDiagnosticView.captureId}</p>
+          <p>카드 수는 DOM 요소와 상품명 기준 관측 수이며 고유 상품 수가 아닙니다. 이름·가격·URL 수와 탈락 원인은 중복될 수 있습니다.</p>
+          <p>포화는 현재 검색 결과에서 고유 카드 근거와 최종 후보가 함께 늘지 않는다는 추정입니다. 성장 판단은 같은 이름·URL의 DOM 재생성을 새 상품으로 세지 않으며, 전체 시장에 상품이 없다는 뜻은 아닙니다.</p>
+          <p>향후 MARKET POOL 20~30개는 strict-valid 상품이 충분할 때의 희망 범위이며 강제 최소치가 아닙니다. 이번 단계는 기존 DB 저장·추천 5개 정책을 유지합니다.</p>
+          <p>무료 자격 평가는 정규화 전체, FULL 결과는 실제 검사한 후보 기준입니다. 최종 무료 수는 5개 shortcut 적용 전입니다. 미제공 값은 0을 뜻하지 않습니다.</p>
+          <ul>{poolDiagnosticLines(poolDiagnosticView).map(line => <li key={line}>{line}</li>)}</ul>
+          <p>유료 계획은 예상 경로입니다. 기존 비용 카운터는 실제 비용 차단용으로 불완전합니다.</p>
+        </details>
+      ) : null}
 
       <button
         type="button"

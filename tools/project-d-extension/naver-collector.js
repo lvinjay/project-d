@@ -264,6 +264,40 @@
         }
       }
       const captured = new Map();
+      // Count each DOM-card/listing observation once, even when scanned again.
+      // These observations never determine candidate eligibility or ordering.
+      const poolDiagnosticCards = new Map();
+      let poolDiagnosticModelDuplicates = 0;
+      function poolDiagnosticRecordCard(cards, root, nameKey, price, url, hasName = Boolean(nameKey)) {
+        const listings = cards.get(root) || new Map();
+        const key = nameKey || url || "anonymous";
+        const old = listings.get(key) || {};
+        const eligible = Boolean(nameKey && price > 0 && url);
+        listings.set(key, {
+          hasName: Boolean(old.hasName || hasName),
+          hasPositivePrice: Boolean(old.hasPositivePrice || price > 0),
+          hasUrl: Boolean(old.hasUrl || url),
+          eligibleName: eligible ? nameKey : old.eligibleName || "",
+        });
+        cards.set(root, listings);
+      }
+      function poolDiagnosticCollectorSummary(cards, modelDuplicates, finalCount, stopReason, scrollLoopCount) {
+        const rows = [...cards.values()].flatMap(listings => [...listings.values()]);
+        const eligible = rows.filter(row => row.eligibleName);
+        return {
+          rawCardCount: rows.length,
+          cardWithNameCount: rows.filter(row => row.hasName).length,
+          cardWithPositivePriceCount: rows.filter(row => row.hasPositivePrice).length,
+          cardWithUrlCount: rows.filter(row => row.hasUrl).length,
+          initialEligibleCardCount: eligible.length,
+          duplicateByNameCount: eligible.length - new Set(eligible.map(row => row.eligibleName)).size,
+          duplicateByModelKeyCount: modelDuplicates,
+          finalCapturedCount: finalCount,
+          stopReason,
+          scrollLoopCount,
+          countScope: "Unique DOM-element + normalized-name (or URL/anonymous) observations, not unique products. Repeated identical scans count once; recycled elements with different names count separately. Name/price/URL counts overlap; initial eligibility requires all three together.",
+        };
+      }
 
       function capture() {
         const roots = [
@@ -278,6 +312,7 @@
           const linkData = getProductLink(root);
           const imageData = getImage(root);
           const name = chooseName(root, linkData, imageData);
+          poolDiagnosticRecordCard(poolDiagnosticCards, root, normalizeName(name), price, linkData.href, Boolean(name));
 
           const diagnosticKey = name ? "name:" + normalizeName(name) : linkData.href ? "link:" + linkData.href : "";
           if (!diagnosticKey && !anonymousCards.has(root)) { anonymousCards.add(root); anonymousCardCount++; }
@@ -317,47 +352,67 @@
         }
       }
 
-      capture();
-
-      let previousCount = captured.size;
-      let stableCount = 0;
-      let scrollSteps = 0;
-      let stopReason = "max-scroll-steps";
-
-      for (let step = 1; step <= 35; step++) {
-        if (captured.size >= targetCount) { stopReason = "target-count"; break; }
-        scrollSteps = step;
-        window.scrollBy({
-          top: Math.max(window.innerHeight * 0.8, 600),
-          behavior: "smooth",
-        });
-
-        await sleep(1200);
-        capture();
-
-        const currentCount = captured.size;
-
-        if (currentCount <= previousCount) {
-          stableCount++;
-        } else {
-          stableCount = 0;
+      // Read-only projection of the unchanged final filtering below. Target and
+      // saturation use actual unique candidates, never the pre-model name Map.
+      function adaptiveFinalCandidateCount() {
+        const keys = new Set();
+        for (const product of captured.values()) {
+          if (minBudget > 0 && product.price < minBudget) continue;
+          if (maxBudget > 0 && product.price > maxBudget) continue;
+          if (!product.name || !product.url || !product.price) continue;
+          const key = modelKey(product.name);
+          if (key) keys.add(key);
         }
-
-        previousCount = currentCount;
-
-        if (currentCount >= targetCount || (currentCount >= 30 && stableCount >= 7)) {
-          stopReason = currentCount >= targetCount ? "target-count" : "stable-after-minimum";
-          break;
-        }
+        return keys.size;
+      }
+      function adaptiveCaptureProgress(previous, rawCount, finalCount, loop, countNoGrowth = true) {
+        const rawGrew = !previous || rawCount > previous.rawHighWater;
+        const finalGrew = !previous || finalCount > previous.finalHighWater;
+        return {
+          rawHighWater: Math.max(previous?.rawHighWater ?? 0, rawCount),
+          finalHighWater: Math.max(previous?.finalHighWater ?? 0, finalCount),
+          finalCount,
+          lastRawCardGrowthLoop: rawGrew ? loop : previous.lastRawCardGrowthLoop,
+          lastFinalCandidateGrowthLoop: finalGrew ? loop : previous.lastFinalCandidateGrowthLoop,
+          consecutiveNoGrowth: rawGrew || finalGrew ? 0 : (previous?.consecutiveNoGrowth ?? 0) + Number(countNoGrowth),
+        };
+      }
+      function adaptiveCaptureStop(progress, loop, target, elapsedMs, limits) {
+        if (progress.finalCount >= target) return "target-reached";
+        if (elapsedMs >= limits.maxCaptureMs) return "timeout";
+        if (loop >= limits.minimumScrollLoops && progress.consecutiveNoGrowth >= limits.noGrowthThreshold) return "market-saturated";
+        if (loop >= limits.maxScrollLoops) return "max-scroll";
+        return null;
       }
 
-      window.scrollTo({
-        top: document.documentElement.scrollHeight,
-        behavior: "smooth",
-      });
-
-      await sleep(1800);
+      // ADAPTIVE CAPTURE START: timing/termination only; no eligibility changes.
+      const adaptiveLimits = { maxScrollLoops: 60, minimumScrollLoops: 12, noGrowthThreshold: 10, maxCaptureMs: 120000 };
+      const adaptiveStartedAt = Date.now();
+      const adaptiveReadRawCount = () => priceDiagnosticState.observed.size + anonymousCardCount;
       capture();
+      let scrollSteps = 0;
+      let adaptiveProgress = adaptiveCaptureProgress(null, adaptiveReadRawCount(), adaptiveFinalCandidateCount(), 0, false);
+      const adaptiveDecide = () => adaptiveCaptureStop(adaptiveProgress, scrollSteps, targetCount, Date.now() - adaptiveStartedAt, adaptiveLimits);
+      let stopReason = adaptiveDecide();
+      while (!stopReason) {
+        scrollSteps++;
+        window.scrollBy({ top: Math.max(window.innerHeight * 0.8, 600), behavior: "smooth" });
+        await sleep(Math.min(1200, Math.max(0, adaptiveLimits.maxCaptureMs - (Date.now() - adaptiveStartedAt))));
+        capture();
+        adaptiveProgress = adaptiveCaptureProgress(adaptiveProgress, adaptiveReadRawCount(), adaptiveFinalCandidateCount(), scrollSteps);
+        stopReason = adaptiveDecide();
+        if (stopReason && stopReason !== "target-reached" && stopReason !== "timeout") {
+          // Retain the bottom-of-page lazy-load capture before claiming saturation
+          // or a scroll cap. New evidence cancels saturation and resumes scrolling
+          // while budget remains. This extra capture is not another scroll loop.
+          window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
+          await sleep(Math.min(1800, Math.max(0, adaptiveLimits.maxCaptureMs - (Date.now() - adaptiveStartedAt))));
+          capture();
+          adaptiveProgress = adaptiveCaptureProgress(adaptiveProgress, adaptiveReadRawCount(), adaptiveFinalCandidateCount(), scrollSteps, false);
+          stopReason = adaptiveDecide();
+        }
+      }
+      // ADAPTIVE CAPTURE END
 
       const allProducts = [...captured.values()];
 
@@ -374,6 +429,7 @@
         if (!product.name || !product.url || !product.price) continue;
 
         const key = modelKey(product.name);
+        if (key && seenModel.has(key)) poolDiagnosticModelDuplicates++;
         if (!key || seenModel.has(key)) continue;
 
         seenModel.add(key);
@@ -381,6 +437,18 @@
       }
 
       return {
+        collectorDiagnostics: {
+          ...poolDiagnosticCollectorSummary(poolDiagnosticCards, poolDiagnosticModelDuplicates, candidates.length, stopReason, scrollSteps),
+          targetCount, maxScrollLoops: adaptiveLimits.maxScrollLoops, actualScrollLoops: scrollSteps,
+          minimumScrollLoops: adaptiveLimits.minimumScrollLoops, noGrowthThreshold: adaptiveLimits.noGrowthThreshold,
+          maxCaptureMs: adaptiveLimits.maxCaptureMs, elapsedCaptureMs: Date.now() - adaptiveStartedAt,
+          lastRawCardGrowthLoop: adaptiveProgress.lastRawCardGrowthLoop,
+          lastFinalCandidateGrowthLoop: adaptiveProgress.lastFinalCandidateGrowthLoop,
+          consecutiveNoGrowthAtStop: adaptiveProgress.consecutiveNoGrowth,
+          saturationDetected: stopReason === "market-saturated",
+          rawGrowthCount: adaptiveProgress.rawHighWater,
+          saturationScope: "현재 검색 결과/수집 방식의 고유 카드 근거와 최종 후보 증가 없음. 전체 시장 상품의 부재를 뜻하지 않습니다.",
+        },
         stopReason,
         scrollSteps,
         observedProductCardCount: priceDiagnosticState.observed.size + anonymousCardCount,
