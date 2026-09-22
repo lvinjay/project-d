@@ -86,6 +86,7 @@ export type ProductionPipelineFailureDetails = {
   stage: ProductionPipelineStage;
   paidApiCalls: number;
   message: string;
+  stageInputFingerprint?: string;
   stage0?: unknown;
   criteria?: unknown;
   openAiResponse?: {
@@ -3147,6 +3148,12 @@ namespace CriteriaV14Core {
           type:
             "array",
 
+          minItems:
+            eligibleReviewNumbers.length,
+
+          maxItems:
+            eligibleReviewNumbers.length,
+
           items: {
             type:
               "object",
@@ -3166,6 +3173,12 @@ namespace CriteriaV14Core {
               a: {
                 type:
                   "array",
+
+                minItems:
+                  criterionCount,
+
+                maxItems:
+                  criterionCount,
 
                 items: {
                   type:
@@ -3360,6 +3373,18 @@ namespace CriteriaV14Core {
         eligibleReviewNumbers,
       );
 
+    const expectedAliases =
+      criteria.map(
+        (_criterion, index) =>
+          criterionAlias(
+            index,
+          ),
+      );
+
+    const expectedAliasSet =
+      new Set(
+        expectedAliases,
+      );
     const seenReviewSet =
       new Set<
         number
@@ -3441,33 +3466,25 @@ namespace CriteriaV14Core {
         );
       }
 
-      const seenCriteria =
-        new Set<
-          string
+      const slotByAlias =
+        new Map<
+          string,
+          Record<string, unknown>
         >();
 
-      const resolvedCriteria:
-        ResolvedCriterionSlot[] =
-        [];
-
       for (
-        let index =
-          0;
-        index <
-          criteria.length;
-        index++
+        const rawSlot of row.a
       ) {
         const slot =
           asRecord(
-            row.a[
-              index
-            ],
+            rawSlot,
           );
 
-        const expectedAlias =
-          criterionAlias(
-            index,
-          );
+        const alias =
+          typeof slot?.c ===
+            "string"
+            ? slot.c
+            : "";
 
         if (
           !slot ||
@@ -3482,17 +3499,58 @@ namespace CriteriaV14Core {
                 key,
               ),
           ) ||
-          slot.c !==
-            expectedAlias ||
-          seenCriteria.has(
-            expectedAlias,
+          !expectedAliasSet.has(
+            alias,
+          ) ||
+          slotByAlias.has(
+            alias,
           )
         ) {
           throw new Error(
-            `Invalid or out-of-order criterion slot for R${reviewNumber}.`,
+            `Invalid, duplicate, or unknown criterion slot for R${reviewNumber}.`,
           );
         }
 
+        slotByAlias.set(
+          alias,
+          slot,
+        );
+      }
+
+      if (
+        slotByAlias.size !==
+          criteria.length
+      ) {
+        throw new Error(
+          `Missing criterion slot for R${reviewNumber}.`,
+        );
+      }
+      const resolvedCriteria:
+        ResolvedCriterionSlot[] =
+        [];
+
+      for (
+        let index =
+          0;
+        index <
+          criteria.length;
+        index++
+      ) {
+        const expectedAlias =
+          criterionAlias(
+            index,
+          );
+
+        const slot =
+          slotByAlias.get(
+            expectedAlias,
+          );
+
+        if (!slot) {
+          throw new Error(
+            `Missing criterion slot ${expectedAlias} for R${reviewNumber}.`,
+          );
+        }
         const { positiveIds, negativeIds, neutralIds } =
           resolveEvidenceEvents(
             slot.e,
@@ -3560,9 +3618,6 @@ namespace CriteriaV14Core {
           neutralEvidence,
         });
 
-        seenCriteria.add(
-          expectedAlias,
-        );
       }
 
       seenReviewSet.add(
@@ -4252,6 +4307,9 @@ namespace CriteriaV14Core {
             paidApiCalls:
               1,
 
+            stageInputFingerprint:
+              inputFingerprint,
+
             message:
               error instanceof Error
                 ? error.message
@@ -4616,6 +4674,9 @@ namespace CriteriaV14Core {
 
             paidApiCalls:
               1,
+
+            stageInputFingerprint:
+              inputFingerprint,
 
             message:
               error instanceof Error

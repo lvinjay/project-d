@@ -2607,6 +2607,8 @@ reviewCollections.push({
               ...selectionRun, dbProductId: plan.product.dbProductId, inputFingerprint: plan.fingerprint, status: "attempted",
             }));
             showReviewProgress("AI 분석 중", "AI 분석 결과 확인 실패", plan.product.productName, productProgressMessage);
+            window.sessionStorage.removeItem("projectDReviewPaidFailureArtifact");
+            window.sessionStorage.removeItem("projectDReviewPaidFailureArtifactMeta");
             const response = await fetch("/api/analyze-reviews", {
               method: "POST", headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ ...plan.input, inputFingerprint: plan.fingerprint }),
@@ -2615,6 +2617,124 @@ reviewCollections.push({
             const analysis = result.analysis as Record<string, unknown> | undefined;
             if (!response.ok || result.success !== true || result.inputFingerprint !== plan.fingerprint ||
                 !analysis || analysis.reviewCount !== plan.product.reviews.length) {
+              const failedStage0 =
+                result.stage0 &&
+                typeof result.stage0 ===
+                  "object" &&
+                !Array.isArray(
+                  result.stage0,
+                )
+                  ? (result.stage0 as Record<string, unknown>)
+                  : null;
+
+              const replayReady =
+                result.stage ===
+                  "criteria_validation" &&
+                failedStage0 !== null &&
+                typeof failedStage0.inputFingerprint ===
+                  "string" &&
+                typeof failedStage0.rawModelOutputText ===
+                  "string" &&
+                failedStage0.openAiResponse !== null &&
+                typeof failedStage0.openAiResponse ===
+                  "object" &&
+                failedStage0.apiUsage !== null &&
+                typeof failedStage0.apiUsage ===
+                  "object" &&
+                typeof result.stageInputFingerprint ===
+                  "string" &&
+                typeof result.rawModelOutputText ===
+                  "string" &&
+                result.openAiResponse !== null &&
+                typeof result.openAiResponse ===
+                  "object" &&
+                result.apiUsage !== null &&
+                typeof result.apiUsage ===
+                  "object";
+
+              const replayArtifacts =
+                replayReady &&
+                failedStage0
+                  ? {
+                      stage0: {
+                        inputFingerprint:
+                          failedStage0.inputFingerprint,
+                        rawModelOutputText:
+                          failedStage0.rawModelOutputText,
+                        openAiResponse:
+                          failedStage0.openAiResponse,
+                        apiUsage:
+                          failedStage0.apiUsage,
+                      },
+                      criteria: {
+                        inputFingerprint:
+                          result.stageInputFingerprint,
+                        rawModelOutputText:
+                          result.rawModelOutputText,
+                        openAiResponse:
+                          result.openAiResponse,
+                        apiUsage:
+                          result.apiUsage,
+                      },
+                    }
+                  : null;
+
+              const paidFailureArtifact = {
+                schemaVersion: 1,
+                savedAt:
+                  new Date().toISOString(),
+                ...selectionRun,
+                identity,
+                inputFingerprint:
+                  plan.fingerprint,
+                responseStatus:
+                  response.status,
+                stage:
+                  cleanText(
+                    result.stage,
+                  ),
+                paidApiCalls:
+                  Number(
+                    result.paidApiCalls,
+                  ) || 0,
+                replayReady,
+                replayArtifacts,
+                result,
+              };
+
+              try {
+                window.sessionStorage.setItem(
+                  "projectDReviewPaidFailureArtifact",
+                  JSON.stringify(
+                    paidFailureArtifact,
+                  ),
+                );
+              } catch {
+                try {
+                  window.sessionStorage.setItem(
+                    "projectDReviewPaidFailureArtifactMeta",
+                    JSON.stringify({
+                      schemaVersion: 1,
+                      savedAt:
+                        paidFailureArtifact.savedAt,
+                      ...selectionRun,
+                      identity,
+                      inputFingerprint:
+                        plan.fingerprint,
+                      responseStatus:
+                        response.status,
+                      stage:
+                        paidFailureArtifact.stage,
+                      paidApiCalls:
+                        paidFailureArtifact.paidApiCalls,
+                      replayReady: false,
+                      storageError: "full-artifact-storage-failed",
+                    }),
+                  );
+                } catch {
+                  // Preserve the original paid failure even if browser storage is unavailable.
+                }
+              }
               throw new Error(cleanText(result.message) || "유료 리뷰 분석 실패. 자동 재시도하지 않습니다.");
             }
             assertSelectionRun(window.sessionStorage, selectionRun);

@@ -1681,3 +1681,134 @@ for (const badChild of ['{"-"}', '{""}', '{undefined}']) {
   check(true, true);
 }
 console.log(`STEP 16 RENDER CHECK PASS: ${assertions} counted assertions; all prior 487 preserved. Actual JSX, 3/27 rejected rows and dash/empty/undefined mutations checked. Browser symptom remains unverified offline.`);
+
+
+// STEP19_REVIEW_FAILURE_GUARDS
+{
+  const {
+    readFileSync: step19ReadFileSync,
+  } = await import("node:fs");
+
+  const step19Pipeline =
+    step19ReadFileSync(
+      "lib/project-d-review-production-pipeline.ts",
+      "utf8",
+    ).replace(/\r\n/g, "\n");
+
+  const step19Panel =
+    step19ReadFileSync(
+      "components/ProjectDAutomationPanel.tsx",
+      "utf8",
+    ).replace(/\r\n/g, "\n");
+
+  const validatorStart =
+    step19Pipeline.indexOf(
+      "  function validateAndResolve(",
+    );
+
+  const validatorEnd =
+    step19Pipeline.indexOf(
+      "  function safeUsageCount(",
+      validatorStart,
+    );
+
+  const validator =
+    step19Pipeline.slice(
+      validatorStart,
+      validatorEnd,
+    );
+
+  const checks = [
+    [
+      "review row exact min",
+      /reviewClassifications:\s*\{[\s\S]*?minItems:\s*eligibleReviewNumbers\.length/.test(
+        step19Pipeline,
+      ),
+    ],
+    [
+      "review row exact max",
+      /reviewClassifications:\s*\{[\s\S]*?maxItems:\s*eligibleReviewNumbers\.length/.test(
+        step19Pipeline,
+      ),
+    ],
+    [
+      "criterion slot exact min",
+      /\ba:\s*\{[\s\S]*?minItems:\s*criterionCount/.test(
+        step19Pipeline,
+      ),
+    ],
+    [
+      "criterion slot exact max",
+      /\ba:\s*\{[\s\S]*?maxItems:\s*criterionCount/.test(
+        step19Pipeline,
+      ),
+    ],
+    [
+      "alias canonicalization map",
+      validator.includes(
+        "const slotByAlias =",
+      ) &&
+        validator.includes(
+          "!expectedAliasSet.has(",
+        ) &&
+        validator.includes(
+          "slotByAlias.get(",
+        ),
+    ],
+    [
+      "old positional hard-fail removed",
+      !/slot\.c\s*!==\s*expectedAlias/.test(
+        validator,
+      ),
+    ],
+    [
+      "criteria failure stage fingerprint retained",
+      (
+        step19Pipeline.match(
+          /stageInputFingerprint:\s*\n\s*inputFingerprint,/g,
+        ) ?? []
+      ).length >= 2,
+    ],
+    [
+      "browser paid failure artifact retained",
+      step19Panel.includes(
+        '"projectDReviewPaidFailureArtifact"',
+      ),
+    ],
+    [
+      "browser replay artifact retained",
+      step19Panel.includes(
+        "const replayArtifacts =",
+      ) &&
+        step19Panel.includes(
+          "stageInputFingerprint",
+        ),
+    ],
+    [
+      "paid failure remains fail-closed",
+      step19Panel.includes(
+        "유료 리뷰 분석 실패. 자동 재시도하지 않습니다.",
+      ),
+    ],
+  ];
+
+  for (
+    const [
+      name,
+      passed,
+    ] of checks
+  ) {
+    if (!passed) {
+      throw new Error(
+        "STEP19 regression failed: " +
+          name,
+      );
+    }
+  }
+
+  console.log(
+    "STEP 19 REGRESSION PASS: " +
+      checks.length +
+      " assertions; schema/validator/paid-failure replay guards.",
+  );
+}
