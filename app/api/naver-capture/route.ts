@@ -41,7 +41,7 @@ type BrowserReviewCapture = {
 
 type CaptureDiagnostics = {
   captureCounts?: { receivedCount: number; normalizedCount: number };
-  collectorDiagnostics?: Record<string, number | string | boolean | undefined>;
+  collectorDiagnostics?: Record<string, unknown>;
   observedProductCardCount?: number;
   priceEvidenceDiagnostics?: { rejectedCount: number; samples: Array<{
     name: string; reason: string; detectedAmounts: number[]; snippet: string; cardType: string;
@@ -71,8 +71,27 @@ function captureDiagnostics(value: unknown): CaptureDiagnostics | undefined {
     "maxCaptureMs", "elapsedCaptureMs", "lastRawCardGrowthLoop", "lastFinalCandidateGrowthLoop",
     "consecutiveNoGrowthAtStop", "rawGrowthCount",
   ].map(key => [key, count(collector[key])])) : undefined;
+  const scrollLoops = Array.isArray(collector?.scrollLoops) ? collector.scrollLoops.slice(0, 60).flatMap(value => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+    const loop = value as Record<string, unknown>;
+    if (typeof loop.loop !== "number" || !Number.isSafeInteger(loop.loop) || loop.loop < 1 || loop.loop > 60) return [];
+    const geometry = Object.fromEntries([
+      "scrollYBefore", "scrollYAfter", "scrollYFinal", "scrollHeightBefore", "scrollHeightAfter", "scrollHeightFinal", "viewportHeight",
+    ].map(key => [key, typeof loop[key] === "number" && Number.isFinite(loop[key]) && loop[key] >= 0 && loop[key] <= 1e9 ? loop[key] : null]));
+    const counts = Object.fromEntries([
+      "elapsedMs", "rawCardCount", "productItemHits", "adProductItemHits", "uniqueEvidenceCount", "finalCandidateCount", "noGrowth",
+    ].map(key => [key, count(loop[key]) ?? null]));
+    const deltas = Object.fromEntries(["newUniqueEvidenceCount", "newFinalCandidateCount"].map(key =>
+      [key, typeof loop[key] === "number" && Number.isSafeInteger(loop[key]) ? loop[key] : null]));
+    const flags = Object.fromEntries(["scrollPositionIncreased", "scrollHeightChanged", "atBottom", "bottomCapturePerformed"].map(key =>
+      [key, typeof loop[key] === "boolean" ? loop[key] : null]));
+    return [{ loop: loop.loop, ...geometry, ...counts, ...deltas, ...flags,
+      stopReason: ["target-reached", "market-saturated", "max-scroll", "timeout"].includes(String(loop.stopReason)) ? loop.stopReason : null,
+      loadingState: "not-observed" }];
+  }) : undefined;
   return {
     collectorDiagnostics: collector ? { ...collectorCounts,
+      scrollLoops,
       stopReason: ["max-scroll-steps", "target-count", "stable-after-minimum", "target-reached", "market-saturated", "max-scroll", "timeout"].includes(String(collector.stopReason))
         ? String(collector.stopReason) : "unknown",
       saturationDetected: typeof collector.saturationDetected === "boolean" ? collector.saturationDetected : undefined } : undefined,

@@ -480,6 +480,29 @@ function poolDiagnosticLines(view: PoolDiagnosticView): string[] {
   return lines;
 }
 
+function poolDiagnosticScrollLines(value: unknown): string[] {
+  const record = (v: unknown): Record<string, unknown> => v && typeof v === "object" && !Array.isArray(v) ? v as Record<string, unknown> : {};
+  const rows = record(value).scrollLoops;
+  if (!Array.isArray(rows)) return ["스크롤 루프 진단: 미제공 (확장프로그램 새로고침 후 새 capture에서 제공)"];
+  if (rows.length === 0) return ["실행된 스크롤 루프 없음 · 초기 capture 종료 여부는 수집 종료 이유 참조"];
+  const number = (v: unknown) => typeof v === "number" && Number.isFinite(v) ? String(v) : "미제공";
+  const delta = (v: unknown) => typeof v === "number" && Number.isFinite(v) ? `${v >= 0 ? "+" : ""}${v}` : "미제공";
+  const flag = (v: unknown) => v === true ? "예" : v === false ? "아니오" : "미제공";
+  const reasons: Record<string, string> = { "target-reached": "목표 도달", "market-saturated": "현재 검색 결과 포화 추정", "max-scroll": "스크롤 상한", "timeout": "시간 상한" };
+  return rows.slice(0, 60).map(value => {
+    const row = record(value);
+    const maxY = typeof row.scrollHeightFinal === "number" && typeof row.viewportHeight === "number"
+      ? Math.max(0, row.scrollHeightFinal - row.viewportHeight) : null;
+    return `L${number(row.loop)} · ${number(row.elapsedMs)}ms · y ${number(row.scrollYBefore)}→${number(row.scrollYAfter)}` +
+      (row.bottomCapturePerformed === true ? `→${number(row.scrollYFinal)}(마지막 하단 capture)` : "") +
+      ` / ${number(maxY)} · height ${number(row.scrollHeightBefore)}→${number(row.scrollHeightAfter)}→${number(row.scrollHeightFinal)}` +
+      ` · viewport ${number(row.viewportHeight)} · raw ${number(row.rawCardCount)} (일반 ${number(row.productItemHits)}, 광고 ${number(row.adProductItemHits)})` +
+      ` · unique ${number(row.uniqueEvidenceCount)} (${delta(row.newUniqueEvidenceCount)}) · final ${number(row.finalCandidateCount)} (${delta(row.newFinalCandidateCount)})` +
+      ` · noGrowth ${number(row.noGrowth)} · 스크롤 증가 ${flag(row.scrollPositionIncreased)} · 높이 변경 ${flag(row.scrollHeightChanged)} · 바닥 ${flag(row.atBottom)}` +
+      (typeof row.stopReason === "string" && reasons[row.stopReason] ? ` · 종료: ${reasons[row.stopReason]}` : "");
+  });
+}
+
 function poolDiagnosticCandidateLines(
   view: PoolDiagnosticView,
 ): string[] {
@@ -2936,6 +2959,11 @@ reviewCollections.push({
           <p>향후 MARKET POOL 20~30개는 strict-valid 상품이 충분할 때의 희망 범위이며 강제 최소치가 아닙니다. 이번 단계는 기존 DB 저장·추천 5개 정책을 유지합니다.</p>
           <p>무료 자격 평가는 정규화 전체, FULL 결과는 실제 검사한 후보 기준입니다. 최종 무료 수는 5개 shortcut 적용 전입니다. 미제공 값은 0을 뜻하지 않습니다.</p>
           <ul>{poolDiagnosticLines(poolDiagnosticView).map(line => <li key={line}>{line}</li>)}</ul>
+          <details style={{ marginTop: 8 }}>
+            <summary>스크롤 루프별 진단</summary>
+            <p>raw는 해당 capture의 selector 매칭 수, unique는 누적 고유 카드 근거입니다. 일반·광고 hit는 중복될 수 있습니다. 높이는 스크롤 전→후→최종 하단 capture 순서입니다. 로딩·스피너·더보기 상태는 기존 collector가 탐지하지 않아 미관측입니다.</p>
+            <ul>{poolDiagnosticScrollLines(poolDiagnosticView.collector).map((line, index) => <li key={index}>{line}</li>)}</ul>
+          </details>
 
           <details style={{ marginTop: 8 }}>
             <summary>무료 자격 탈락 후보별 진단</summary>

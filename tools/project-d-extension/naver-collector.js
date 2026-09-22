@@ -299,12 +299,39 @@
         };
       }
 
+      const poolDiagnosticLoops = [];
+      let poolDiagnosticDom = { rawCardCount: 0, productItemHits: 0, adProductItemHits: 0 };
+      function poolDiagnosticViewport() {
+        const number = value => typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
+        return { y: number(window.scrollY), height: number(document.documentElement.scrollHeight), viewport: number(window.innerHeight) };
+      }
+      function poolDiagnosticLoopRow(loop, elapsedMs, before, after, final, previous, progress, dom, stopReason, bottomCapturePerformed) {
+        return {
+          loop, elapsedMs,
+          scrollYBefore: before.y, scrollYAfter: after.y, scrollYFinal: final.y,
+          scrollHeightBefore: before.height, scrollHeightAfter: after.height, scrollHeightFinal: final.height,
+          viewportHeight: final.viewport,
+          rawCardCount: dom.rawCardCount, productItemHits: dom.productItemHits, adProductItemHits: dom.adProductItemHits,
+          uniqueEvidenceCount: progress.rawHighWater, finalCandidateCount: progress.finalCount,
+          newUniqueEvidenceCount: progress.rawHighWater - previous.rawHighWater,
+          newFinalCandidateCount: progress.finalCount - previous.finalCount,
+          noGrowth: progress.consecutiveNoGrowth,
+          scrollPositionIncreased: before.y === null || after.y === null ? null : after.y > before.y,
+          scrollHeightChanged: before.height === null || final.height === null ? null : final.height !== before.height,
+          atBottom: final.y === null || final.height === null || final.viewport === null ? null : final.y + final.viewport >= final.height - 2,
+          bottomCapturePerformed, stopReason,
+          loadingState: "not-observed",
+        };
+      }
       function capture() {
         const roots = [
           ...document.querySelectorAll(
             '[class*="product_item"],[class*="adProduct_item"]',
           ),
         ];
+        poolDiagnosticDom = { rawCardCount: roots.length,
+          productItemHits: roots.filter(root => root.matches('[class*="product_item"]')).length,
+          adProductItemHits: roots.filter(root => root.matches('[class*="adProduct_item"]')).length };
 
         for (const root of roots) {
           const priceEvidence = getPrice(root);
@@ -395,13 +422,18 @@
       const adaptiveDecide = () => adaptiveCaptureStop(adaptiveProgress, scrollSteps, targetCount, Date.now() - adaptiveStartedAt, adaptiveLimits);
       let stopReason = adaptiveDecide();
       while (!stopReason) {
+        const poolDiagnosticBefore = poolDiagnosticViewport();
+        const poolDiagnosticPrevious = adaptiveProgress;
+        let poolDiagnosticBottom = false;
         scrollSteps++;
         window.scrollBy({ top: Math.max(window.innerHeight * 0.8, 600), behavior: "smooth" });
         await sleep(Math.min(1200, Math.max(0, adaptiveLimits.maxCaptureMs - (Date.now() - adaptiveStartedAt))));
         capture();
         adaptiveProgress = adaptiveCaptureProgress(adaptiveProgress, adaptiveReadRawCount(), adaptiveFinalCandidateCount(), scrollSteps);
         stopReason = adaptiveDecide();
+        const poolDiagnosticAfter = poolDiagnosticViewport();
         if (stopReason && stopReason !== "target-reached" && stopReason !== "timeout") {
+          poolDiagnosticBottom = true;
           // Retain the bottom-of-page lazy-load capture before claiming saturation
           // or a scroll cap. New evidence cancels saturation and resumes scrolling
           // while budget remains. This extra capture is not another scroll loop.
@@ -411,6 +443,9 @@
           adaptiveProgress = adaptiveCaptureProgress(adaptiveProgress, adaptiveReadRawCount(), adaptiveFinalCandidateCount(), scrollSteps, false);
           stopReason = adaptiveDecide();
         }
+        if (poolDiagnosticLoops.length < adaptiveLimits.maxScrollLoops) poolDiagnosticLoops.push(
+          poolDiagnosticLoopRow(scrollSteps, Date.now() - adaptiveStartedAt, poolDiagnosticBefore, poolDiagnosticAfter,
+            poolDiagnosticViewport(), poolDiagnosticPrevious, adaptiveProgress, poolDiagnosticDom, stopReason, poolDiagnosticBottom));
       }
       // ADAPTIVE CAPTURE END
 
@@ -438,6 +473,7 @@
 
       return {
         collectorDiagnostics: {
+          scrollLoops: poolDiagnosticLoops,
           ...poolDiagnosticCollectorSummary(poolDiagnosticCards, poolDiagnosticModelDuplicates, candidates.length, stopReason, scrollSteps),
           targetCount, maxScrollLoops: adaptiveLimits.maxScrollLoops, actualScrollLoops: scrollSteps,
           minimumScrollLoops: adaptiveLimits.minimumScrollLoops, noGrowthThreshold: adaptiveLimits.noGrowthThreshold,

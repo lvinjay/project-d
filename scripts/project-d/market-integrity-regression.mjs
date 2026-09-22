@@ -3,6 +3,8 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
 import crypto from 'node:crypto';
+import * as jsxRuntime from 'react/jsx-runtime';
+import { renderToStaticMarkup } from 'react-dom/server';
 
 // Compile pure functions only. Never import routes, extension entry points or clients.
 function pureFunctions(path, names, prefix = '') {
@@ -418,12 +420,13 @@ function fakeCard(name, price, url) {
 async function runCollector(source, fixture, options = {}) {
   let delivered;
   let elapsed = 0, loop = 0, bottomCaptures = 0;
+  const geometry = () => options.geometry?.({ loop, bottomCaptures }) ?? { y: 0, height: 1000, viewport: 900 };
   const sandbox = { URLSearchParams, Date: { now: () => elapsed },
     location: { search: `?pd_request=test&pd_admin=1&pd_target=${options.target ?? 2}` },
     setTimeout: (fn, ms) => { elapsed += Math.max(ms, options.minimumTimerElapsed ?? 0); fn(); return 0; },
-    window: { innerHeight: 900, scrollBy() { loop++; }, scrollTo() { bottomCaptures++; } },
+    window: { get innerHeight() { return geometry().viewport; }, get scrollY() { return geometry().y; }, scrollBy() { loop++; }, scrollTo() { bottomCaptures++; } },
     document: { querySelectorAll: () => typeof fixture === 'function' ? fixture({ loop, bottomCaptures }) : fixture,
-      documentElement: { scrollHeight: 1000 } },
+      documentElement: { get scrollHeight() { return geometry().height; } } },
     chrome: { runtime: { sendMessage: message => { delivered = message; } } },
     console: { log() {}, error() {}, warn() {} } };
   vm.runInNewContext(compile(source), sandbox);
@@ -1525,3 +1528,156 @@ check(diagnosticLines({ captureId: 'fixture', collector: null, free: null, paid:
 check(diagnosticLines({ captureId: 'fixture', collector: { rawCardCount: 0 }, free: { captureId: 'other', full: { finalCandidateCount: 99 } }, paid: null }).some(line => line.includes('99개')), false);
 check(diagnosticLines({ captureId: 'fixture', collector: { rawCardCount: 0 }, free: null, paid: null })[0], '브라우저 카드 관측: 0개');
 console.log(`STEP 7 FINAL PASS: ${assertions} counted assertions; original 269 preserved. Fake DOM/VM fixtures only; external calls and DB writes: 0.`);
+
+// STEP 15: all executable capture control (including the adaptive loop) must
+// still match the pre-instrumentation fingerprint after diagnostic-only nodes
+// are removed. Unlike the historical STEP 1 check, do not restore old control.
+check(crypto.createHash('sha256').update(withoutPoolDiagnostics(collectorSource)).digest('hex'),
+  '75378b84d596af04a0b6bd2c419645b73e59c48adc4da355e2b5757a16b66467');
+const { poolDiagnosticLoopRow: loopRow } = pureFunctions('tools/project-d-extension/naver-collector.js', ['poolDiagnosticLoopRow']);
+const observedLoop = loopRow(12, 16200,
+  { y: 5000, height: 6000, viewport: 900 }, { y: 5100, height: 6210, viewport: 900 },
+  { y: 5310, height: 6210, viewport: 900 }, { rawHighWater: 12, finalCount: 5 },
+  { rawHighWater: 14, finalCount: 6, consecutiveNoGrowth: 10 },
+  { rawCardCount: 14, productItemHits: 10, adProductItemHits: 4 }, 'market-saturated', true);
+check(observedLoop, { loop: 12, elapsedMs: 16200,
+  scrollYBefore: 5000, scrollYAfter: 5100, scrollYFinal: 5310,
+  scrollHeightBefore: 6000, scrollHeightAfter: 6210, scrollHeightFinal: 6210, viewportHeight: 900,
+  rawCardCount: 14, productItemHits: 10, adProductItemHits: 4,
+  uniqueEvidenceCount: 14, finalCandidateCount: 6, newUniqueEvidenceCount: 2, newFinalCandidateCount: 1,
+  noGrowth: 10, scrollPositionIncreased: true, scrollHeightChanged: true, atBottom: true,
+  bottomCapturePerformed: true, stopReason: 'market-saturated', loadingState: 'not-observed' });
+const normalizedLoop = normalizeDiagnostics({ collectorDiagnostics: { scrollLoops: [observedLoop] } }).collectorDiagnostics.scrollLoops[0];
+check(normalizedLoop, JSON.parse(JSON.stringify(observedLoop)));
+check(captureGet.collectorDiagnostics.scrollLoops, JSON.parse(JSON.stringify(observedCollector.scrollLoops)));
+const stuckLoop = loopRow(3, 3600,
+  { y: 100, height: 1000, viewport: 900 }, { y: 100, height: 1000, viewport: 900 },
+  { y: 100, height: 1000, viewport: 900 }, { rawHighWater: 14, finalCount: 6 },
+  { rawHighWater: 14, finalCount: 6, consecutiveNoGrowth: 1 },
+  { rawCardCount: 14, productItemHits: 14, adProductItemHits: 0 }, null, false);
+check([stuckLoop.scrollPositionIncreased, stuckLoop.scrollHeightChanged, stuckLoop.atBottom,
+  stuckLoop.newUniqueEvidenceCount, stuckLoop.newFinalCandidateCount, stuckLoop.noGrowth, stuckLoop.stopReason],
+  [false, false, true, 0, 0, 1, null]);
+check(normalizeDiagnostics({ collectorDiagnostics: { scrollLoops: Array(100).fill(observedLoop) } }).collectorDiagnostics.scrollLoops.length, 60);
+check(normalizeDiagnostics({ collectorDiagnostics: { scrollLoops: [{ loop: 61 }, { loop: -1 }, null] } }).collectorDiagnostics.scrollLoops.length, 0);
+const malformedLoop = normalizeDiagnostics({ collectorDiagnostics: { scrollLoops: [{ loop: 1, scrollYBefore: 'HTML', html: '<div>secret</div>', stopReason: 'secret', rawCardCount: -1 }] } }).collectorDiagnostics.scrollLoops[0];
+check([malformedLoop.scrollYBefore, malformedLoop.rawCardCount, malformedLoop.stopReason, 'html' in malformedLoop], [null, null, null, false]);
+
+const loopCards = Array.from({ length: 65 }, (_, index) => {
+  const card = fakeCard(`AC${100 + index} 캠핑 에어컨`, '300,000', `https://smartstore.naver.com/test/products/${100 + index}`);
+  card.matches = selector => selector === '[class*="product_item"]';
+  return card;
+});
+for (const scenario of [
+  { fixture: loopCards.slice(0, 2), options: { target: 2 }, reason: 'target-reached', loops: 0 },
+  { fixture: ({ loop }) => loopCards.slice(0, Math.min(3, loop + 1)), options: { target: 3 }, reason: 'target-reached', loops: 2 },
+  { fixture: loopCards.slice(0, 2), options: { target: 40 }, reason: 'market-saturated', loops: 12 },
+  { fixture: ({ loop }) => loopCards.slice(0, loop + 1), options: { target: 1000 }, reason: 'max-scroll', loops: 60 },
+  { fixture: loopCards.slice(0, 2), options: { target: 40, minimumTimerElapsed: 10000 }, reason: 'timeout', loops: 12 },
+  { fixture: ({ bottomCaptures }) => loopCards.slice(0, bottomCaptures ? 3 : 2), options: { target: 40 }, reason: 'market-saturated', loops: 22 },
+]) {
+  const options = { ...scenario.options, geometry: ({ loop, bottomCaptures }) => ({ y: Math.min(loop * 720, 5000) + (bottomCaptures ? 100 : 0), height: 6000, viewport: 900 }) };
+  const observed = await runCollector(collectorSource, scenario.fixture, options);
+  const preserved = await runCollector(withoutPoolDiagnostics(collectorSource), scenario.fixture, options);
+  const { collectorDiagnostics: diagnostics, ...legacy } = observed.result;
+  check({ ...observed, result: legacy }, preserved);
+  check([legacy.stopReason, legacy.scrollSteps], [scenario.reason, scenario.loops]);
+  check(diagnostics.scrollLoops.length, legacy.scrollSteps);
+  check(diagnostics.scrollLoops.length <= 60, true);
+  if (scenario.loops) {
+    const last = diagnostics.scrollLoops.at(-1);
+    check([last.loop, last.stopReason, last.finalCandidateCount], [scenario.loops, scenario.reason, legacy.candidates.length]);
+    check(last.noGrowth, diagnostics.consecutiveNoGrowthAtStop);
+    check(last.rawCardCount, last.productItemHits + last.adProductItemHits);
+    const first = diagnostics.scrollLoops[0];
+    check([first.scrollYBefore, first.scrollYAfter, first.scrollHeightBefore, first.viewportHeight], [0, 720, 6000, 900]);
+  }
+}
+const { poolDiagnosticScrollLines: scrollLines } = pureFunctions('components/ProjectDAutomationPanel.tsx', ['poolDiagnosticScrollLines']);
+check(scrollLines({ scrollLoops: [observedLoop] })[0].includes('unique 14 (+2) · final 6 (+1) · noGrowth 10'), true);
+check(scrollLines({ scrollLoops: [observedLoop] })[0].includes('종료: 현재 검색 결과 포화 추정'), true);
+check(scrollLines({})[0].includes('미제공'), true);
+check(scrollLines({ scrollLoops: [] })[0].includes('실행된 스크롤 루프 없음'), true);
+console.log(`STEP 15 FINAL PASS: ${assertions} counted assertions; prior 431 and historical 269 preserved. No external calls, DB writes or browser runs.`);
+
+// STEP 16: exercise the actual rejected-candidate JSX section, not a copy of its map.
+// Only extract the pure formatter and JSX; never load the panel's network/event code.
+const diagnosticPanelSource = fs.readFileSync('components/ProjectDAutomationPanel.tsx', 'utf8');
+const diagnosticPanelTree = ts.createSourceFile('panel.tsx', diagnosticPanelSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+const diagnosticSections = [];
+let diagnosticFormatterSource;
+function visitDiagnosticRender(node) {
+  if (ts.isFunctionDeclaration(node) && node.name?.text === 'poolDiagnosticCandidateLines') {
+    diagnosticFormatterSource = node.getText(diagnosticPanelTree);
+  }
+  if (ts.isJsxElement(node) && node.openingElement.tagName.getText(diagnosticPanelTree) === 'details' &&
+      node.children.some(child => ts.isJsxElement(child) &&
+        child.openingElement.tagName.getText(diagnosticPanelTree) === 'summary' &&
+        child.children.some(text => ts.isJsxText(text) && text.text.trim() === '무료 자격 탈락 후보별 진단'))) {
+    diagnosticSections.push(node.getText(diagnosticPanelTree));
+  }
+  ts.forEachChild(node, visitDiagnosticRender);
+}
+visitDiagnosticRender(diagnosticPanelTree);
+check(diagnosticSections.length, 1);
+check(typeof diagnosticFormatterSource, 'string');
+function renderDiagnosticSection(rows, section = diagnosticSections[0]) {
+  const sandbox = {
+    exports: {},
+    poolDiagnosticView: { captureId: 'step16-render', collector: null, paid: null,
+      free: { captureId: 'step16-render', zeroPaidCandidateDiagnostics: rows } },
+    require(id) {
+      assert.equal(id, 'react/jsx-runtime');
+      return jsxRuntime;
+    },
+  };
+  const code = ts.transpileModule(`${diagnosticFormatterSource}\nexports.section = (${section});`, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX },
+  }).outputText;
+  vm.runInNewContext(code, sandbox);
+  const markup = renderToStaticMarkup(sandbox.exports.section);
+  return [...markup.matchAll(/<li(?:\s[^>]*)?>([\s\S]*?)<\/li>/g)].map(match => match[1]);
+}
+const rejectedRenderFixtures = [
+  { productName: '캠핑 에어컨 A', reviewTotalCount: 0, reviewSampleCount: 0,
+    nativeMetadataPresent: true, reviewSourceValid: true, priceEvidenceValid: true, identityMatched: true,
+    reasons: ['reviewCountBelowMinimum', 'reviewSampleInsufficient'] },
+  { productName: '이동식 에어컨 B', reviewTotalCount: 42, reviewSampleCount: 2,
+    nativeMetadataPresent: false, reviewSourceValid: true, priceEvidenceValid: true, identityMatched: true,
+    reasons: ['reviewSampleInsufficient', 'nativeMetadataMissing'] },
+  { productName: '휴대용 에어컨 C', reviewTotalCount: 80, reviewSampleCount: 5,
+    nativeMetadataPresent: true, reviewSourceValid: false, priceEvidenceValid: false, identityMatched: false,
+    reasons: ['reviewSourceInvalid', 'priceEvidenceInvalid', 'identityMismatch'] },
+];
+const expectedRenderReasons = ['리뷰 총량 부족, 본문 샘플 부족', '본문 샘플 부족, native metadata 부족',
+  '리뷰 소스 부적합, 가격 근거 부족, 상품 identity 불일치'];
+function assertDiagnosticRender(lines, rows) {
+  assert.equal(lines.length, rows.length);
+  lines.forEach((line, index) => {
+    assert.equal(typeof line, 'string');
+    assert.notEqual(line.trim(), '');
+    assert.notEqual(line.trim(), '-');
+    assert.ok(line.startsWith(`${index + 1}. ${rows[index].productName} · 리뷰 총량 ${rows[index].reviewTotalCount}/30 · `));
+    assert.ok(line.includes(`탈락: ${expectedRenderReasons[index % 3]}`));
+  });
+}
+const renderedRejectedRows = renderDiagnosticSection(rejectedRenderFixtures);
+assertDiagnosticRender(renderedRejectedRows, rejectedRenderFixtures);
+check(renderedRejectedRows.length, 3);
+for (let index = 0; index < 3; index++) {
+  check(renderedRejectedRows[index].includes(rejectedRenderFixtures[index].productName), true);
+  check(renderedRejectedRows[index].includes(`탈락: ${expectedRenderReasons[index]}`), true);
+}
+const twentySevenRejectedRows = Array.from({ length: 27 }, (_, index) => ({
+  ...rejectedRenderFixtures[index % 3], productName: `실행 후보 ${index + 1}`,
+}));
+assertDiagnosticRender(renderDiagnosticSection(twentySevenRejectedRows), twentySevenRejectedRows);
+check(renderDiagnosticSection(twentySevenRejectedRows).length, 27);
+// Mutation checks prove the test fails for the reported symptom at the JSX boundary.
+for (const badChild of ['{"-"}', '{""}', '{undefined}']) {
+  const mutatedSection = diagnosticSections[0].replace(/>\s*\{line\}\s*<\/li>/, `>${badChild}</li>`);
+  check(mutatedSection !== diagnosticSections[0], true);
+  assert.throws(() => assertDiagnosticRender(renderDiagnosticSection(rejectedRenderFixtures, mutatedSection), rejectedRenderFixtures));
+  check(true, true);
+}
+console.log(`STEP 16 RENDER CHECK PASS: ${assertions} counted assertions; all prior 487 preserved. Actual JSX, 3/27 rejected rows and dash/empty/undefined mutations checked. Browser symptom remains unverified offline.`);
