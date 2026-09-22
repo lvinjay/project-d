@@ -1152,7 +1152,7 @@ assert.match(
 
 assert.match(
   panel,
-  /reviewCollections\.length\s*>=\s*5[\s\S]*?break;/s,
+  /shouldStopAdvisorReview\(\s*reviewCollections\.length,?\s*\)[\s\S]*?break;/s,
 );
 
 assert.match(
@@ -1167,7 +1167,7 @@ assert.match(
 
 assert.match(
   panel,
-  /advisorReviewOrigins\.has\([\s\S]*?currentPoolMapping\.originProductNo/s,
+  /ADVISOR FIVE PRE-DEEP IDENTITY GATE[\s\S]*?isAdvisorReviewIdentityReady\(\s*currentPoolMapping,[\s\S]*?advisorReviewDbIds,[\s\S]*?advisorReviewOrigins/s,
 );
 assert.match(panel, /enrichedParams\.set\(\s*"executionTargetCount",\s*"5",?\s*\)/);
 assert.match(panel, /enrichedParams\.set\(\s*"paidCandidateLimit",\s*"1",?\s*\)/);
@@ -1184,6 +1184,274 @@ assert.match(
   panel,
   /const selected = selectEligibleFive\(eligible, selectionRun\)/,
 );
+// STEP7_ADVISOR_REVIEW_CONTROL_FIXTURES
+
+/*
+  Execute the exact production pure control functions.
+  No browser, route, API or DB code is invoked here.
+*/
+const {
+  shouldStopAdvisorReview:
+    stopAdvisorReviewForTest,
+  isAdvisorReviewIdentityReady:
+    advisorIdentityReadyForTest,
+  markAdvisorReviewIdentityReady:
+    markAdvisorIdentityForTest,
+} = pureFunctions(
+  'components/ProjectDAutomationPanel.tsx',
+  [
+    'shouldStopAdvisorReview',
+    'isAdvisorReviewIdentityReady',
+    'markAdvisorReviewIdentityReady',
+  ],
+);
+
+function runAdvisorReviewControlFixture(
+  rows,
+) {
+  const dbIds =
+    new Set();
+
+  const origins =
+    new Set();
+
+  const deepCalls =
+    [];
+
+  const ready =
+    [];
+
+  for (const row of rows) {
+    if (
+      stopAdvisorReviewForTest(
+        ready.length,
+      )
+    ) {
+      break;
+    }
+
+    if (
+      row.mapped === false
+    ) {
+      continue;
+    }
+
+    const mapping = {
+      dbProductId:
+        row.dbProductId,
+      originProductNo:
+        row.originProductNo,
+    };
+
+    if (
+      advisorIdentityReadyForTest(
+        mapping,
+        dbIds,
+        origins,
+      )
+    ) {
+      continue;
+    }
+
+    /*
+      This represents the exact point where production is
+      now allowed to call collectDeepNaverReviews().
+    */
+    deepCalls.push(
+      row.name,
+    );
+
+    if (
+      row.reviewCount <
+      30
+    ) {
+      continue;
+    }
+
+    markAdvisorIdentityForTest(
+      mapping,
+      dbIds,
+      origins,
+    );
+
+    ready.push(
+      row.name,
+    );
+  }
+
+  return {
+    deepCalls,
+    ready,
+  };
+}
+
+function step7Row(
+  id,
+  reviewCount = 30,
+  overrides = {},
+) {
+  return {
+    name:
+      `P${id}`,
+    dbProductId:
+      `00000000-0000-4000-8000-${String(id).padStart(12, '0')}`,
+    originProductNo:
+      id,
+    reviewCount,
+    mapped:
+      true,
+    ...overrides,
+  };
+}
+
+/*
+  CASE 1:
+  6개 모두 정상.
+  앞 5개가 준비되면 6번째는 deep 호출 자체가 없어야 한다.
+*/
+const step7AllReady =
+  runAdvisorReviewControlFixture(
+    [
+      step7Row(1),
+      step7Row(2),
+      step7Row(3),
+      step7Row(4),
+      step7Row(5),
+      step7Row(6),
+    ],
+  );
+
+check(
+  step7AllReady.ready,
+  [
+    'P1',
+    'P2',
+    'P3',
+    'P4',
+    'P5',
+  ],
+);
+
+check(
+  step7AllReady.deepCalls,
+  [
+    'P1',
+    'P2',
+    'P3',
+    'P4',
+    'P5',
+  ],
+);
+
+/*
+  CASE 2:
+  세 번째 후보가 리뷰 30개 미만.
+  6번째까지 inspect해서 최종 ready 5개를 채워야 한다.
+*/
+const step7Insufficient =
+  runAdvisorReviewControlFixture(
+    [
+      step7Row(11),
+      step7Row(12),
+      step7Row(
+        13,
+        29,
+      ),
+      step7Row(14),
+      step7Row(15),
+      step7Row(16),
+    ],
+  );
+
+check(
+  step7Insufficient.ready,
+  [
+    'P11',
+    'P12',
+    'P14',
+    'P15',
+    'P16',
+  ],
+);
+
+check(
+  step7Insufficient.deepCalls,
+  [
+    'P11',
+    'P12',
+    'P13',
+    'P14',
+    'P15',
+    'P16',
+  ],
+);
+
+/*
+  CASE 3:
+  5번째 후보가 1번째와 같은 DB UUID/origin.
+  중복 후보는 deep 호출 자체가 없어야 하고,
+  6번째가 다섯 번째 ready 자리를 채워야 한다.
+*/
+const step7Duplicate =
+  runAdvisorReviewControlFixture(
+    [
+      step7Row(21),
+      step7Row(22),
+      step7Row(23),
+      step7Row(24),
+      step7Row(
+        25,
+        30,
+        {
+          dbProductId:
+            step7Row(21).dbProductId,
+          originProductNo:
+            21,
+        },
+      ),
+      step7Row(26),
+    ],
+  );
+
+check(
+  step7Duplicate.ready,
+  [
+    'P21',
+    'P22',
+    'P23',
+    'P24',
+    'P26',
+  ],
+);
+
+check(
+  step7Duplicate.deepCalls,
+  [
+    'P21',
+    'P22',
+    'P23',
+    'P24',
+    'P26',
+  ],
+);
+
+assert.match(
+  panel,
+  /ADVISOR FIVE PRE-DEEP IDENTITY GATE[\s\S]*?isAdvisorReviewIdentityReady[\s\S]*?const reviewSourceUrl/s,
+);
+
+assert.ok(
+  panel.indexOf(
+    'ADVISOR FIVE PRE-DEEP IDENTITY GATE',
+  ) <
+  panel.indexOf(
+    'collectDeepNaverReviews(',
+    panel.indexOf(
+      'ADVISOR FIVE REVIEW EARLY STOP',
+    ),
+  ),
+);
+
 const { poolDiagnosticLines: diagnosticLines } = pureFunctions('components/ProjectDAutomationPanel.tsx', ['poolDiagnosticLines']);
 const {
   poolDiagnosticCandidateLines:
@@ -1256,4 +1524,4 @@ check(
 check(diagnosticLines({ captureId: 'fixture', collector: null, free: null, paid: null }).some(line => line.includes('미제공 / 미실행')), true);
 check(diagnosticLines({ captureId: 'fixture', collector: { rawCardCount: 0 }, free: { captureId: 'other', full: { finalCandidateCount: 99 } }, paid: null }).some(line => line.includes('99개')), false);
 check(diagnosticLines({ captureId: 'fixture', collector: { rawCardCount: 0 }, free: null, paid: null })[0], '브라우저 카드 관측: 0개');
-console.log(`STEP 6 FINAL PASS: ${assertions} counted assertions; original 269 preserved. Fake DOM/VM fixtures only; external calls and DB writes: 0.`);
+console.log(`STEP 7 FINAL PASS: ${assertions} counted assertions; original 269 preserved. Fake DOM/VM fixtures only; external calls and DB writes: 0.`);

@@ -651,6 +651,54 @@ function poolDiagnosticCandidateLines(
   );
 }
 
+/*
+  Advisor FIVE review-control primitives.
+
+  These functions are intentionally pure so the regression
+  suite can execute the exact production control contract
+  without browser/API/DB access.
+*/
+function shouldStopAdvisorReview(
+  readyCount: number,
+) {
+  return readyCount >= 5;
+}
+
+function isAdvisorReviewIdentityReady(
+  mapping: {
+    dbProductId: string;
+    originProductNo: number;
+  },
+  dbIds: Set<string>,
+  origins: Set<number>,
+) {
+  return (
+    dbIds.has(
+      mapping.dbProductId.toLowerCase(),
+    ) ||
+    origins.has(
+      mapping.originProductNo,
+    )
+  );
+}
+
+function markAdvisorReviewIdentityReady(
+  mapping: {
+    dbProductId: string;
+    originProductNo: number;
+  },
+  dbIds: Set<string>,
+  origins: Set<number>,
+) {
+  dbIds.add(
+    mapping.dbProductId.toLowerCase(),
+  );
+
+  origins.add(
+    mapping.originProductNo,
+  );
+}
+
 export default function ProjectDAutomationPanel() {
   const [poolDiagnosticView, setPoolDiagnosticView] = useState<PoolDiagnosticView | null>(null);
   const [
@@ -2021,8 +2069,9 @@ export default function ProjectDAutomationPanel() {
       ) {
         // ADVISOR FIVE REVIEW EARLY STOP
         if (
-          reviewCollections.length >=
-          5
+          shouldStopAdvisorReview(
+            reviewCollections.length,
+          )
         ) {
           break;
         }
@@ -2061,6 +2110,23 @@ export default function ProjectDAutomationPanel() {
             "reviews",
             "working",
             `${index + 1}/${finalCandidates.length} · ${productName || "상품명 없음"} · 현재 실행 DB mapping 없음 → Advisor FIVE 대상 제외`,
+          );
+
+          continue;
+        }
+
+        // ADVISOR FIVE PRE-DEEP IDENTITY GATE
+        if (
+          isAdvisorReviewIdentityReady(
+            currentPoolMapping,
+            advisorReviewDbIds,
+            advisorReviewOrigins,
+          )
+        ) {
+          updateStep(
+            "reviews",
+            "working",
+            `${index + 1}/${finalCandidates.length} · ${productName} · 현재 Advisor FIVE 준비 identity와 중복 → 심층리뷰 수집 생략`,
           );
 
           continue;
@@ -2233,31 +2299,13 @@ export default function ProjectDAutomationPanel() {
           continue;
         }
 
-        const advisorDbKey =
-          currentPoolMapping
-            .dbProductId
-            .toLowerCase();
-
-        if (
-          advisorReviewDbIds.has(
-            advisorDbKey,
-          ) ||
-          advisorReviewOrigins.has(
-            currentPoolMapping.originProductNo,
-          )
-        ) {
-          continue;
-        }
-
-        advisorReviewDbIds.add(
-          advisorDbKey,
+        markAdvisorReviewIdentityReady(
+          currentPoolMapping,
+          advisorReviewDbIds,
+          advisorReviewOrigins,
         );
 
-        advisorReviewOrigins.add(
-          currentPoolMapping.originProductNo,
-        );
-
-        reviewCollections.push({
+reviewCollections.push({
           productId,
           productName,
           reviewSourceUrl,
