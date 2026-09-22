@@ -2221,15 +2221,113 @@ export async function GET(
       priceEvidenceInvalid: 0, identityMismatch: 0, reviewSourceInvalid: 0, other: 0,
     };
     let poolDiagnosticQualified = 0;
-    for (const product of poolDiagnosticInput) {
-      const qualified = product.priceVerified !== false && (!requireVerifiedPrice || product.priceVerified === true) &&
+    const poolDiagnosticRejectedCandidates: Record<string, unknown>[] = [];
+
+    for (const [diagnosticIndex, product] of poolDiagnosticInput.entries()) {
+      const qualified =
+        product.priceVerified !== false &&
+        (!requireVerifiedPrice || product.priceVerified === true) &&
         isZeroPaidBrowserCandidate(product);
-      if (qualified) poolDiagnosticQualified++;
-      for (const reason of poolDiagnosticZeroPaidReasons(product, qualified)) poolDiagnosticReasons[reason]++;
+
+      const reasons =
+        poolDiagnosticZeroPaidReasons(
+          product,
+          qualified,
+        );
+
+      if (qualified) {
+        poolDiagnosticQualified++;
+      } else {
+        const source =
+          product.browserReviewSourceUrl?.trim() ??
+          "";
+
+        const catalog =
+          /^https:\/\/search\.shopping\.naver\.com\/catalog\/(\d+)/i.test(
+            source,
+          );
+
+        const store =
+          /^https:\/\/smartstore\.naver\.com\/[^/?#]+\/products\/(\d+)/i.test(
+            source,
+          );
+
+        const reviewSampleCount =
+          (
+            product.browserReviews ??
+            []
+          ).filter(
+            (review) =>
+              Boolean(
+                review?.text?.trim(),
+              ),
+          ).length;
+
+        const reviewTotalCount =
+          Number(
+            product.browserReviewTotalCount ??
+              (
+                catalog
+                  ? product.reviewCount
+                  : 0
+              ),
+          ) || 0;
+
+        poolDiagnosticRejectedCandidates.push({
+          position:
+            diagnosticIndex + 1,
+
+          productName:
+            product.name,
+
+          reviewTotalCount,
+
+          reviewSampleCount,
+
+          reviewSourceType:
+            catalog
+              ? "naver-catalog"
+              : store
+                ? "smartstore-native"
+                : "invalid-or-missing",
+
+          nativeMetadataPresent:
+            !reasons.includes(
+              "nativeMetadataMissing",
+            ),
+
+          reviewSourceValid:
+            !reasons.includes(
+              "reviewSourceInvalid",
+            ),
+
+          priceEvidenceValid:
+            !reasons.includes(
+              "priceEvidenceInvalid",
+            ),
+
+          identityMatched:
+            !reasons.includes(
+              "identityMismatch",
+            ),
+
+          reasons,
+        });
+      }
+
+      for (const reason of reasons) {
+        poolDiagnosticReasons[reason]++;
+      }
     }
     const poolDiagnostics = {
       schemaVersion: 1, captureId, mode: paidPlanOnly ? "paid-plan" : zeroPaidOnly ? "zero-paid" : "execution",
       collector: captureData.collectorDiagnostics ?? null,
+      zeroPaidCandidateDiagnostics:
+        poolDiagnosticRejectedCandidates,
+
+      paidCandidatePlans:
+        [] as Record<string, unknown>[],
+
       capture: { receivedCount: captureData.captureCounts?.receivedCount ?? null,
         normalizedCount: poolDiagnosticInput.length },
       earlyValidation: { verifiedPriceCount: poolDiagnosticInput.filter(p => p.priceVerified === true && p.price > 0).length,
@@ -2538,6 +2636,48 @@ export async function GET(
         resolverRequiredCount: candidatePlans.filter(plan => plan.resolverKnownRequiredIfInspected > 0).length,
         brightDataPossibleCount: candidatePlans.filter(plan => plan.brightDataConservativeUpperBound > 0).length,
       };
+      poolDiagnostics.paidCandidatePlans =
+        candidatePlans
+          .filter(
+            (plan) =>
+              plan.zeroPaidProven !==
+              true,
+          )
+          .slice(
+            0,
+            MAX_CANDIDATE_COUNT,
+          )
+          .map(
+            (plan) => ({
+              position:
+                plan.position,
+
+              productName:
+                plan.productName,
+
+              path:
+                plan.path,
+
+              resolverKnownRequiredIfInspected:
+                plan.resolverKnownRequiredIfInspected,
+
+              resolverConservativeUpperBound:
+                plan.resolverConservativeUpperBound,
+
+              brightDataKnownRequiredIfInspected:
+                plan.brightDataKnownRequiredIfInspected,
+
+              brightDataConservativeUpperBound:
+                plan.brightDataConservativeUpperBound,
+
+              detailCacheHit:
+                plan.detailCacheHit,
+
+              reason:
+                plan.reason,
+            }),
+          );
+
       return NextResponse.json({
         diagnostics: poolDiagnostics,
         success: true,

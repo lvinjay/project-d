@@ -293,7 +293,7 @@ function withoutPoolDiagnostics(source, restoreCaptureControl = false) {
       if (ts.isForOfStatement(node) && diagnostic(node.expression)) return undefined;
       if (ts.isExpressionStatement(node) && diagnostic(node.expression)) return undefined;
       if (ts.isIfStatement(node) && !node.elseStatement && ts.isExpressionStatement(node.thenStatement) && diagnostic(node.thenStatement.expression)) return undefined;
-      if (ts.isPropertyAssignment(node) && ['diagnostics', 'collectorDiagnostics'].includes(node.name.getText(tree))) return undefined;
+      if (ts.isPropertyAssignment(node) && ['diagnostics', 'collectorDiagnostics', 'zeroPaidCandidateDiagnostics', 'paidCandidatePlans'].includes(node.name.getText(tree))) return undefined;
       return ts.visitEachChild(node, visit, context);
     }
     return root => ts.visitNode(root, visit);
@@ -637,6 +637,35 @@ for (const fixture of serverFixtures) {
   const z = diagnostics.zeroPaid, f = diagnostics.full;
   check(z.zeroPaidQualifiedCount + z.zeroPaidRejectedCount, z.zeroPaidEvaluatedCount);
   check(z.zeroPaidQualifiedCount <= z.zeroPaidEvaluatedCount, true);
+  const rejectedRows =
+    Array.isArray(
+      diagnostics.zeroPaidCandidateDiagnostics,
+    )
+      ? diagnostics.zeroPaidCandidateDiagnostics
+      : [];
+
+  check(
+    rejectedRows.length,
+    z.zeroPaidRejectedCount,
+  );
+
+  check(
+    rejectedRows.every(
+      row =>
+        typeof row.productName === "string" &&
+        Number.isSafeInteger(
+          row.reviewTotalCount,
+        ) &&
+        row.reviewTotalCount >= 0 &&
+        Number.isSafeInteger(
+          row.reviewSampleCount,
+        ) &&
+        row.reviewSampleCount >= 0 &&
+        Array.isArray(row.reasons) &&
+        row.reasons.length > 0,
+    ),
+    true,
+  );
   check(f.finalCandidateCount <= f.relevanceEligibleCount, true);
   check(f.fullBeforeRelevanceCount, f.relevanceEligibleCount + f.relevanceRejectedCount);
   check(f.finalCandidateCount, actual.finalCandidates.length);
@@ -658,6 +687,37 @@ const legacyPlan = await runFreeHandler(withoutPoolDiagnostics(serverSource), mi
 const { diagnostics: planDiagnostics, ...legacyPlanFields } = mixedPlan;
 check(legacyPlanFields, legacyPlan);
 check(planDiagnostics.paidPlanning, { paidPossibleCount: 1, resolverRequiredCount: 1, brightDataPossibleCount: 1 });
+check(
+  Array.isArray(
+    planDiagnostics.paidCandidatePlans,
+  ),
+  true,
+);
+
+check(
+  planDiagnostics.paidCandidatePlans.length,
+  1,
+);
+
+assert.equal(
+  planDiagnostics.paidCandidatePlans[0].zeroPaidProven,
+  undefined,
+);
+
+check(
+  typeof planDiagnostics.paidCandidatePlans[0].productName,
+  "string",
+);
+
+check(
+  planDiagnostics.paidCandidatePlans[0].resolverConservativeUpperBound >= 0,
+  true,
+);
+
+check(
+  planDiagnostics.paidCandidatePlans[0].brightDataConservativeUpperBound >= 0,
+  true,
+);
 
 // Capture transport is also local: verify before/after normalization counts
 // and collector diagnostics survive POST -> memory -> GET without any client.
@@ -683,7 +743,75 @@ assert.match(panel, /enrichedParams\.set\(\s*"paidCandidateOffset",\s*"0",?\s*\)
 assert.match(panel, /index <\s*finalCandidates\.length/);
 assert.match(panel, /const selected = selectEligibleFive\(eligible, selectionRun\)/);
 const { poolDiagnosticLines: diagnosticLines } = pureFunctions('components/ProjectDAutomationPanel.tsx', ['poolDiagnosticLines']);
+const {
+  poolDiagnosticCandidateLines:
+    candidateDiagnosticLines,
+} = pureFunctions(
+  'components/ProjectDAutomationPanel.tsx',
+  ['poolDiagnosticCandidateLines'],
+);
+
+const candidateDiagnosticFixture =
+  candidateDiagnosticLines({
+    captureId: 'fixture',
+    collector: null,
+    free: {
+      captureId: 'fixture',
+      zeroPaidCandidateDiagnostics: [
+        {
+          productName: 'Example AC',
+          reviewTotalCount: 12,
+          reviewSampleCount: 2,
+          nativeMetadataPresent: false,
+          reviewSourceValid: false,
+          priceEvidenceValid: true,
+          identityMatched: true,
+          reasons: [
+            'reviewCountBelowMinimum',
+            'nativeMetadataMissing',
+          ],
+        },
+      ],
+    },
+    paid: {
+      captureId: 'fixture',
+      paidCandidatePlans: [
+        {
+          productName: 'Example AC',
+          path: 'resolver-required',
+          resolverConservativeUpperBound: 4,
+          brightDataConservativeUpperBound: 2,
+        },
+      ],
+    },
+  });
+
+check(
+  candidateDiagnosticFixture.length,
+  1,
+);
+
+check(
+  candidateDiagnosticFixture[0].includes(
+    '리뷰 총량 12/30',
+  ),
+  true,
+);
+
+check(
+  candidateDiagnosticFixture[0].includes(
+    'resolver-required',
+  ),
+  true,
+);
+
+check(
+  candidateDiagnosticFixture[0].includes(
+    'resolver 상한 4회',
+  ),
+  true,
+);
 check(diagnosticLines({ captureId: 'fixture', collector: null, free: null, paid: null }).some(line => line.includes('미제공 / 미실행')), true);
 check(diagnosticLines({ captureId: 'fixture', collector: { rawCardCount: 0 }, free: { captureId: 'other', full: { finalCandidateCount: 99 } }, paid: null }).some(line => line.includes('99개')), false);
 check(diagnosticLines({ captureId: 'fixture', collector: { rawCardCount: 0 }, free: null, paid: null })[0], '브라우저 카드 관측: 0개');
-console.log(`STEP 2 FINAL PASS: ${assertions} counted assertions; original 269 preserved. Fake DOM/VM fixtures only; external calls and DB writes: 0.`);
+console.log(`STEP 3 FINAL PASS: ${assertions} counted assertions; original 269 preserved. Fake DOM/VM fixtures only; external calls and DB writes: 0.`);

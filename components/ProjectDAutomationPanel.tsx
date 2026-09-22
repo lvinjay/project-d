@@ -440,6 +440,170 @@ function poolDiagnosticLines(view: PoolDiagnosticView): string[] {
   return lines;
 }
 
+function poolDiagnosticCandidateLines(
+  view: PoolDiagnosticView,
+): string[] {
+  const record = (
+    value: unknown,
+  ): Record<string, unknown> =>
+    value &&
+    typeof value === "object" &&
+    !Array.isArray(value)
+      ? value as Record<string, unknown>
+      : {};
+
+  const matching = (
+    value: unknown,
+  ) => {
+    const row =
+      record(value);
+
+    return row.captureId ===
+      view.captureId
+      ? row
+      : {};
+  };
+
+  const free =
+    matching(view.free);
+
+  const paid =
+    matching(view.paid);
+
+  const rejectedProvided =
+    Array.isArray(
+      free.zeroPaidCandidateDiagnostics,
+    );
+
+  const rejected =
+    rejectedProvided
+      ? free.zeroPaidCandidateDiagnostics as Record<string, unknown>[]
+      : [];
+
+  const plans =
+    Array.isArray(
+      paid.paidCandidatePlans,
+    )
+      ? paid.paidCandidatePlans as Record<string, unknown>[]
+      : [];
+
+  if (!rejectedProvided) {
+    return [
+      "제품별 진단: 미제공 / 미실행",
+    ];
+  }
+
+  if (rejected.length === 0) {
+    return [
+      "무료 자격 탈락 후보 없음",
+    ];
+  }
+
+  const reasonLabels:
+    Record<string, string> = {
+      reviewCountBelowMinimum:
+        "리뷰 총량 부족",
+
+      reviewSampleInsufficient:
+        "본문 샘플 부족",
+
+      nativeMetadataMissing:
+        "native metadata 부족",
+
+      priceEvidenceInvalid:
+        "가격 근거 부족",
+
+      identityMismatch:
+        "상품 identity 불일치",
+
+      reviewSourceInvalid:
+        "리뷰 소스 부적합",
+
+      other:
+        "기타",
+    };
+
+  const boolText = (
+    value: unknown,
+  ) =>
+    value === true
+      ? "O"
+      : value === false
+        ? "X"
+        : "미제공";
+
+  const countText = (
+    value: unknown,
+  ) =>
+    typeof value === "number" &&
+    Number.isSafeInteger(value) &&
+    value >= 0
+      ? String(value)
+      : "미제공";
+
+  return rejected.map(
+    (row, index) => {
+      const name =
+        typeof row.productName ===
+          "string"
+          ? row.productName
+          : `후보 ${index + 1}`;
+
+      const reasons =
+        Array.isArray(
+          row.reasons,
+        )
+          ? row.reasons
+              .map(
+                (reason) =>
+                  reasonLabels[
+                    String(reason)
+                  ] ??
+                  String(reason),
+              )
+              .join(", ")
+          : "미제공";
+
+      const plan =
+        plans.find(
+          (candidate) =>
+            candidate.productName ===
+              row.productName,
+        );
+
+      const path =
+        typeof plan?.path ===
+          "string"
+          ? plan.path
+          : "미제공";
+
+      const resolverUpper =
+        countText(
+          plan?.resolverConservativeUpperBound,
+        );
+
+      const brightUpper =
+        countText(
+          plan?.brightDataConservativeUpperBound,
+        );
+
+      return [
+        `${index + 1}. ${name}`,
+        `리뷰 총량 ${countText(row.reviewTotalCount)}/30`,
+        `본문 ${countText(row.reviewSampleCount)}/5`,
+        `native ${boolText(row.nativeMetadataPresent)}`,
+        `review source ${boolText(row.reviewSourceValid)}`,
+        `가격 ${boolText(row.priceEvidenceValid)}`,
+        `identity ${boolText(row.identityMatched)}`,
+        `탈락: ${reasons}`,
+        `paid path: ${path}`,
+        `resolver 상한 ${resolverUpper}회`,
+        `Bright Data 상한 ${brightUpper}회`,
+      ].join(" · ");
+    },
+  );
+}
+
 export default function ProjectDAutomationPanel() {
   const [poolDiagnosticView, setPoolDiagnosticView] = useState<PoolDiagnosticView | null>(null);
   const [
@@ -2594,6 +2758,24 @@ export default function ProjectDAutomationPanel() {
           <p>향후 MARKET POOL 20~30개는 strict-valid 상품이 충분할 때의 희망 범위이며 강제 최소치가 아닙니다. 이번 단계는 기존 DB 저장·추천 5개 정책을 유지합니다.</p>
           <p>무료 자격 평가는 정규화 전체, FULL 결과는 실제 검사한 후보 기준입니다. 최종 무료 수는 5개 shortcut 적용 전입니다. 미제공 값은 0을 뜻하지 않습니다.</p>
           <ul>{poolDiagnosticLines(poolDiagnosticView).map(line => <li key={line}>{line}</li>)}</ul>
+
+          <details style={{ marginTop: 8 }}>
+            <summary>무료 자격 탈락 후보별 진단</summary>
+
+            <ul>
+              {poolDiagnosticCandidateLines(
+                poolDiagnosticView,
+              ).map(
+                (line, index) => (
+                  <li
+                    key={`${index}-${line}`}
+                  >
+                    {line}
+                  </li>
+                ),
+              )}
+            </ul>
+          </details>
           <p>유료 계획은 예상 경로입니다. 기존 비용 카운터는 실제 비용 차단용으로 불완전합니다.</p>
         </details>
       ) : null}
