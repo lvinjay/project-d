@@ -437,6 +437,46 @@ function poolDiagnosticLines(view: PoolDiagnosticView): string[] {
     ["reviewSourceInvalid", "무료 자격 탈락 · 리뷰 소스 부적합"], ["other", "무료 자격 탈락 · 기타"]]);
   add(paid.paidPlanning, [["paidPossibleCount", "사전계획 · 유료 가능 후보"], ["resolverRequiredCount", "사전계획 · resolver 필요 후보"],
     ["brightDataPossibleCount", "사전계획 · Bright Data 가능 후보"]]);
+
+  const paidPreflight =
+    record(
+      paid.relevancePreflight,
+    );
+
+  const freePreflight =
+    record(
+      free.relevancePreflight,
+    );
+
+  const relevancePreflight =
+    Object.keys(
+      paidPreflight,
+    ).length > 0
+      ? paidPreflight
+      : freePreflight;
+
+  add(
+    relevancePreflight,
+    [
+      [
+        "evaluatedCount",
+        "유료 전 relevance 평가",
+      ],
+      [
+        "eligibleCount",
+        "유료 전 relevance 이름 기준 통과",
+      ],
+      [
+        "needsReviewCount",
+        "유료 전 relevance 보류(유지)",
+      ],
+      [
+        "excludedCount",
+        "유료 전 relevance 명백 제외",
+      ],
+    ],
+  );
+
   return lines;
 }
 
@@ -2776,6 +2816,7 @@ export default function ProjectDAutomationPanel() {
               )}
             </ul>
           </details>
+          <p>유료 전 relevance 사전판정은 현재 상품명만 사용하며, 명백한 excluded만 비용 경로에서 제외합니다. needs-review는 유지하고 최종 FULL relevance는 기존대로 다시 실행합니다.</p>
           <p>유료 계획은 예상 경로입니다. 기존 비용 카운터는 실제 비용 차단용으로 불완전합니다.</p>
         </details>
       ) : null}

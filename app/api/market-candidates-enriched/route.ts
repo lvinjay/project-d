@@ -2319,6 +2319,68 @@ export async function GET(
         poolDiagnosticReasons[reason]++;
       }
     }
+    // PAID RELEVANCE PREFLIGHT DECLARATIONS START
+    const relevancePreflightRows =
+      marketCandidates.map(
+        (product, index) => ({
+          position:
+            index + 1,
+
+          product,
+
+          assessment:
+            evaluateCategoryRelevance({
+              category,
+              marketName:
+                product.name,
+            }),
+        }),
+      );
+
+    const relevancePreflightExcludedRows =
+      relevancePreflightRows.filter(
+        (row) =>
+          row.assessment.status ===
+          "excluded",
+      );
+
+    const relevancePreflightExcludedProducts =
+      new Set(
+        relevancePreflightExcludedRows.map(
+          (row) =>
+            row.product,
+        ),
+      );
+
+    const paidRelevancePreflightCandidates =
+      marketCandidates.filter(
+        (product) =>
+          !relevancePreflightExcludedProducts.has(
+            product,
+          ),
+      );
+
+    const relevancePreflightEligibleCount =
+      relevancePreflightRows.filter(
+        (row) =>
+          row.assessment.status ===
+          "eligible",
+      ).length;
+
+    const relevancePreflightNeedsReviewCount =
+      relevancePreflightRows.filter(
+        (row) =>
+          row.assessment.status ===
+          "needs-review",
+      ).length;
+
+    const relevancePreflightPolicyAppliedCount =
+      relevancePreflightRows.filter(
+        (row) =>
+          row.assessment.policyApplied,
+      ).length;
+    // PAID RELEVANCE PREFLIGHT DECLARATIONS END
+
     const poolDiagnostics = {
       schemaVersion: 1, captureId, mode: paidPlanOnly ? "paid-plan" : zeroPaidOnly ? "zero-paid" : "execution",
       collector: captureData.collectorDiagnostics ?? null,
@@ -2336,6 +2398,50 @@ export async function GET(
       zeroPaid: { zeroPaidEvaluatedCount: poolDiagnosticInput.length,
         zeroPaidQualifiedCount: poolDiagnosticQualified,
         zeroPaidRejectedCount: poolDiagnosticInput.length - poolDiagnosticQualified, rejectReasons: poolDiagnosticReasons },
+      relevancePreflight: {
+        evaluatedCount:
+          relevancePreflightRows.length,
+
+        policyAppliedCount:
+          relevancePreflightPolicyAppliedCount,
+
+        eligibleCount:
+          relevancePreflightEligibleCount,
+
+        needsReviewCount:
+          relevancePreflightNeedsReviewCount,
+
+        excludedCount:
+          relevancePreflightExcludedRows.length,
+
+        excludedSamples:
+          relevancePreflightExcludedRows
+            .slice(
+              0,
+              20,
+            )
+            .map(
+              (row) => ({
+                position:
+                  row.position,
+
+                productName:
+                  row.product.name,
+
+                reason:
+                  row.assessment.reason,
+
+                positiveSignals:
+                  row.assessment
+                    .matchedPositiveSignals,
+
+                negativeSignals:
+                  row.assessment
+                    .matchedNegativeSignals,
+              }),
+            ),
+      },
+
       full: { technicalFullCount: null as number | null, fullBeforeRelevanceCount: null as number | null,
         relevanceEligibleCount: null as number | null, relevanceRejectedCount: null as number | null,
         canonicalDuplicateRejectedCount: null as number | null, modelDuplicateRejectedCount: null as number | null,
@@ -2380,6 +2486,16 @@ export async function GET(
       ) {
         const market =
           marketCandidates[index];
+
+        // PAID RELEVANCE PREFLIGHT PLAN SKIP START
+        if (
+          relevancePreflightExcludedProducts.has(
+            market,
+          )
+        ) {
+          continue;
+        }
+        // PAID RELEVANCE PREFLIGHT PLAN SKIP END
 
         const reviewSourceUrl =
           typeof market.browserReviewSourceUrl ===
@@ -2757,13 +2873,19 @@ export async function GET(
         ? requestedPaidCandidateOffset
         : 0;
 
+    // PAID RELEVANCE PREFLIGHT EXECUTION START
     let paidCandidateSeenForQueue = 0;
     let paidCandidateIncludedForQueue = 0;
 
+    const executionSourceCandidates =
+      zeroPaidOnly
+        ? marketCandidates
+        : paidRelevancePreflightCandidates;
+
     const executionCandidates =
       paidCandidateLimit === null
-        ? marketCandidates
-        : marketCandidates.filter(
+        ? executionSourceCandidates
+        : executionSourceCandidates.filter(
             (product) => {
               if (
                 isZeroPaidBrowserCandidate(
@@ -2796,6 +2918,7 @@ export async function GET(
               return true;
             },
           );
+    // PAID RELEVANCE PREFLIGHT EXECUTION END
 
     const modelRepresentatives = new Map<string, number>();
     poolDiagnostics.full = { technicalFullCount: 0, fullBeforeRelevanceCount: 0, relevanceEligibleCount: 0,

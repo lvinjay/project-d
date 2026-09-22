@@ -278,7 +278,60 @@ const compile = source => ts.transpileModule(source, { compilerOptions: {
 // frozen predecessor for the original hash assertion keeps every filtering,
 // dedupe, price, order and response expression covered by the original hash.
 const legacyCaptureControl = "      capture();\n\n      let previousCount = captured.size;\n      let stableCount = 0;\n      let scrollSteps = 0;\n      let stopReason = \"max-scroll-steps\";\n\n      for (let step = 1; step <= 35; step++) {\n        if (captured.size >= targetCount) { stopReason = \"target-count\"; break; }\n        scrollSteps = step;\n        window.scrollBy({\n          top: Math.max(window.innerHeight * 0.8, 600),\n          behavior: \"smooth\",\n        });\n\n        await sleep(1200);\n        capture();\n\n        const currentCount = captured.size;\n\n        if (currentCount <= previousCount) {\n          stableCount++;\n        } else {\n          stableCount = 0;\n        }\n\n        previousCount = currentCount;\n\n        if (currentCount >= targetCount || (currentCount >= 30 && stableCount >= 7)) {\n          stopReason = currentCount >= targetCount ? \"target-count\" : \"stable-after-minimum\";\n          break;\n        }\n      }\n\n      window.scrollTo({\n        top: document.documentElement.scrollHeight,\n        behavior: \"smooth\",\n      });\n\n      await sleep(1800);\n      capture();";
+const legacyStep4ExecutionSelection = "    let paidCandidateSeenForQueue = 0;\n    let paidCandidateIncludedForQueue = 0;\n\n    const executionCandidates =\n      paidCandidateLimit === null\n        ? marketCandidates\n        : marketCandidates.filter(\n            (product) => {\n              if (\n                isZeroPaidBrowserCandidate(\n                  product,\n                )\n              ) {\n                return true;\n              }\n\n              const paidIndex =\n                paidCandidateSeenForQueue;\n\n              paidCandidateSeenForQueue += 1;\n\n              if (\n                paidIndex <\n                paidCandidateOffset\n              ) {\n                return false;\n              }\n\n              if (\n                paidCandidateIncludedForQueue >=\n                paidCandidateLimit\n              ) {\n                return false;\n              }\n\n              paidCandidateIncludedForQueue += 1;\n              return true;\n            },\n          );";
+
 function withoutPoolDiagnostics(source, restoreCaptureControl = false) {
+  // STEP4_RELEVANCE_HASH_RESTORE
+  if (
+    source.includes(
+      "// PAID RELEVANCE PREFLIGHT DECLARATIONS START",
+    )
+  ) {
+    assert.equal(
+      (
+        source.match(
+          /\/\/ PAID RELEVANCE PREFLIGHT DECLARATIONS START/g,
+        ) || []
+      ).length,
+      1,
+    );
+
+    assert.equal(
+      (
+        source.match(
+          /\/\/ PAID RELEVANCE PREFLIGHT PLAN SKIP START/g,
+        ) || []
+      ).length,
+      1,
+    );
+
+    assert.equal(
+      (
+        source.match(
+          /\/\/ PAID RELEVANCE PREFLIGHT EXECUTION START/g,
+        ) || []
+      ).length,
+      1,
+    );
+
+    source =
+      source.replace(
+        /    \/\/ PAID RELEVANCE PREFLIGHT DECLARATIONS START[\s\S]*?    \/\/ PAID RELEVANCE PREFLIGHT DECLARATIONS END\r?\n\r?\n?/,
+        "",
+      );
+
+    source =
+      source.replace(
+        /        \/\/ PAID RELEVANCE PREFLIGHT PLAN SKIP START[\s\S]*?        \/\/ PAID RELEVANCE PREFLIGHT PLAN SKIP END\r?\n\r?\n?/,
+        "",
+      );
+
+    source =
+      source.replace(
+        /    \/\/ PAID RELEVANCE PREFLIGHT EXECUTION START[\s\S]*?    \/\/ PAID RELEVANCE PREFLIGHT EXECUTION END/,
+        legacyStep4ExecutionSelection,
+      );
+  }
   if (restoreCaptureControl) {
     assert.equal((source.match(/\/\/ ADAPTIVE CAPTURE START/g) || []).length, 1);
     source = source.replace(/\/\/ ADAPTIVE CAPTURE START[\s\S]*?\/\/ ADAPTIVE CAPTURE END/, legacyCaptureControl);
@@ -293,7 +346,7 @@ function withoutPoolDiagnostics(source, restoreCaptureControl = false) {
       if (ts.isForOfStatement(node) && diagnostic(node.expression)) return undefined;
       if (ts.isExpressionStatement(node) && diagnostic(node.expression)) return undefined;
       if (ts.isIfStatement(node) && !node.elseStatement && ts.isExpressionStatement(node.thenStatement) && diagnostic(node.thenStatement.expression)) return undefined;
-      if (ts.isPropertyAssignment(node) && ['diagnostics', 'collectorDiagnostics', 'zeroPaidCandidateDiagnostics', 'paidCandidatePlans'].includes(node.name.getText(tree))) return undefined;
+      if (ts.isPropertyAssignment(node) && ['diagnostics', 'collectorDiagnostics', 'zeroPaidCandidateDiagnostics', 'paidCandidatePlans', 'relevancePreflight'].includes(node.name.getText(tree))) return undefined;
       return ts.visitEachChild(node, visit, context);
     }
     return root => ts.visitNode(root, visit);
@@ -719,6 +772,200 @@ check(
   true,
 );
 
+// STEP4_PREFLIGHT_REGRESSION
+
+/*
+  실제 execution은 zeroPaidOnly가 아닐 때
+  preflight-filtered source를 사용해야 한다.
+*/
+assert.match(
+  serverSource,
+  /const executionSourceCandidates\s*=\s*zeroPaidOnly\s*\?\s*marketCandidates\s*:\s*paidRelevancePreflightCandidates;/s,
+);
+
+assert.match(
+  serverSource,
+  /relevancePreflightExcludedProducts\.has\(\s*market,?\s*\)/s,
+);
+
+assert.match(
+  panel,
+  /유료 전 relevance 명백 제외/,
+);
+
+assert.match(
+  panel,
+  /유료 전 relevance 사전판정은 현재 상품명만 사용/,
+);
+
+/*
+  positive + negative:
+  캠핑 신호가 있어도 산업용 신호가 있으면 excluded.
+*/
+const step4ExcludedProduct = {
+  ...freeProduct(
+    991,
+    "캠핑 산업용 에어컨 AC-991",
+  ),
+
+  browserReviewSourceUrl: "",
+  browserChannelProductNo: "",
+  browserOriginProductNo: "",
+  browserProductTitle: "",
+  browserCatalogTitle: "",
+  browserSpecs: {},
+  browserEvidenceSourceType: "",
+};
+
+const step4ExcludedPlan =
+  await runFreeHandler(
+    serverSource,
+    [
+      step4ExcludedProduct,
+    ],
+    "paidPlanOnly",
+  );
+
+check(
+  step4ExcludedPlan
+    .diagnostics
+    .relevancePreflight
+    .evaluatedCount,
+  1,
+);
+
+check(
+  step4ExcludedPlan
+    .diagnostics
+    .relevancePreflight
+    .excludedCount,
+  1,
+);
+
+check(
+  step4ExcludedPlan
+    .diagnostics
+    .relevancePreflight
+    .needsReviewCount,
+  0,
+);
+
+check(
+  step4ExcludedPlan
+    .candidatePlans
+    .length,
+  0,
+);
+
+check(
+  step4ExcludedPlan
+    .paidPossibleCount,
+  0,
+);
+
+/*
+  실제 execution에서도 excluded 후보는
+  processCandidate에 들어가기 전에 사라져야 한다.
+  runFreeHandler는 외부 호출을 전부 금지하므로
+  이 호출이 성공하는 것 자체가 비용 경로 미진입 증거다.
+*/
+const step4ExcludedExecution =
+  await runFreeHandler(
+    serverSource,
+    [
+      step4ExcludedProduct,
+    ],
+    "execution",
+  );
+
+check(
+  step4ExcludedExecution
+    .sourceMarketCandidateCount,
+  1,
+);
+
+check(
+  step4ExcludedExecution
+    .marketCandidateCount,
+  0,
+);
+
+check(
+  step4ExcludedExecution
+    .resolverAttempts,
+  0,
+);
+
+check(
+  step4ExcludedExecution
+    .brightDataCalls,
+  0,
+);
+
+/*
+  이름만으로 명백한 제외 근거가 없는 이동식 상품은
+  needs-review로 남기고 paid plan에서도 유지한다.
+*/
+const step4NeedsReviewProduct = {
+  ...freeProduct(
+    992,
+    "이동식 에어컨 AC-992",
+  ),
+
+  browserReviewSourceUrl: "",
+  browserChannelProductNo: "",
+  browserOriginProductNo: "",
+  browserProductTitle: "",
+  browserCatalogTitle: "",
+  browserSpecs: {},
+  browserEvidenceSourceType: "",
+};
+
+const step4NeedsReviewPlan =
+  await runFreeHandler(
+    serverSource,
+    [
+      step4NeedsReviewProduct,
+    ],
+    "paidPlanOnly",
+  );
+
+check(
+  step4NeedsReviewPlan
+    .diagnostics
+    .relevancePreflight
+    .excludedCount,
+  0,
+);
+
+check(
+  step4NeedsReviewPlan
+    .diagnostics
+    .relevancePreflight
+    .needsReviewCount,
+  1,
+);
+
+check(
+  step4NeedsReviewPlan
+    .candidatePlans
+    .length,
+  1,
+);
+
+check(
+  step4NeedsReviewPlan
+    .paidPossibleCount,
+  1,
+);
+
+check(
+  step4NeedsReviewPlan
+    .candidatePlans[0]
+    .path,
+  "resolver-required",
+);
+
 // Capture transport is also local: verify before/after normalization counts
 // and collector diagnostics survive POST -> memory -> GET without any client.
 const captureSandbox = { exports: {}, URL, crypto: { randomUUID: () => 'capture-fixture' },
@@ -814,4 +1061,4 @@ check(
 check(diagnosticLines({ captureId: 'fixture', collector: null, free: null, paid: null }).some(line => line.includes('미제공 / 미실행')), true);
 check(diagnosticLines({ captureId: 'fixture', collector: { rawCardCount: 0 }, free: { captureId: 'other', full: { finalCandidateCount: 99 } }, paid: null }).some(line => line.includes('99개')), false);
 check(diagnosticLines({ captureId: 'fixture', collector: { rawCardCount: 0 }, free: null, paid: null })[0], '브라우저 카드 관측: 0개');
-console.log(`STEP 3 FINAL PASS: ${assertions} counted assertions; original 269 preserved. Fake DOM/VM fixtures only; external calls and DB writes: 0.`);
+console.log(`STEP 4 FINAL PASS: ${assertions} counted assertions; original 269 preserved. Fake DOM/VM fixtures only; external calls and DB writes: 0.`);
