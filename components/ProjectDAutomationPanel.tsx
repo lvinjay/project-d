@@ -1581,51 +1581,69 @@ export default function ProjectDAutomationPanel() {
               0,
           ) || 0;
 
-        if (zeroPaidFullCount >= 5) {
-          const freeFiveNames =
-            zeroPaidPreviewCandidates
-              .slice(0, 5)
-              .map(
-                (candidate, index) =>
-                  `${index + 1}. ${cleanText(candidate.detail?.productName) || "상품명 없음"}`,
-              );
+        if (zeroPaidFullCount >= 5) {        const freePoolPreviewNames =
+          zeroPaidPreviewCandidates
+            .slice(
+              0,
+              10,
+            )
+            .map(
+              (
+                candidate,
+                index,
+              ) =>
+                `${index + 1}. ${cleanText(candidate.detail?.productName) || "상품명 없음"}`,
+            );
 
-          const approvedFreeFive =
+        const freePoolRemainingCount =
+          Math.max(
+            0,
+            zeroPaidFullCount -
+              freePoolPreviewNames.length,
+          );
+
+
+          const approvedFreePool =
             await requestApproval({
               title:
-                "무과금 FULL 5개 확보",
+                "무과금 MARKET POOL 확보",
               lines: [
                 `검증 후보 ${planCandidateCount}개`,
                 `같은 캡처 무과금 실제 검증 FULL ${zeroPaidFullCount}개`,
                 `제품군 적합성: 적합 ${zeroPaidEligibleCount}개 / 제외 ${zeroPaidExcludedCount}개 / 검토 필요 ${zeroPaidNeedsReviewCount}개`,
                 "",
-                "이번 E2E에서는 아래 FULL 5개만 사용하면 resolver/Bright Data 호출 0회로 다음 단계까지 진행할 수 있습니다.",
-                ...freeFiveNames,
+                "검증된 FULL 상품은 5개로 자르지 않고 MARKET POOL 전체를 DB에 등록합니다.",
+                "Advisor 단계는 이 MARKET POOL에서 현재 실행의 정확한 5개만 준비합니다.",
+                ...freePoolPreviewNames,
+                ...(
+                  freePoolRemainingCount >
+                  0
+                    ? [
+                        `외 ${freePoolRemainingCount}개 MARKET POOL 상품`,
+                      ]
+                    : []
+                ),
                 "",
-                "확인하면 유료 시장 검증은 건너뛰고 이 5개만 DB 등록 → 무료 심층리뷰 수집 → 이후 OpenAI 승인 단계로 진행합니다.",
+                "확인하면 유료 시장 검증은 건너뛰고 검증된 MARKET POOL 전체를 DB 등록한 뒤, Advisor FIVE가 준비될 때까지만 심층리뷰를 확인합니다.",
                 "OpenAI는 별도 승인창 전에는 호출되지 않습니다.",
                 "취소하면 이 실행을 중단하며 resolver/Bright Data/OpenAI 호출은 0회입니다.",
               ],
               confirmLabel:
-                "무료 FULL 5개로 계속",
+                "MARKET POOL 전체로 계속",
               cancelLabel:
                 "중단",
             });
 
-          if (!approvedFreeFive) {
+          if (!approvedFreePool) {
             throw new Error(
-              "무과금 FULL 5개 확보 후 실행을 중단했습니다. resolver/Bright Data/OpenAI 호출 0회.",
+              "무과금 MARKET POOL 확인 후 실행을 중단했습니다. resolver/Bright Data/OpenAI 호출 0회.",
             );
           }
 
           zeroPaidEnrichedOverride = {
             ...zeroPaidPreview,
             finalCandidates:
-              zeroPaidPreviewCandidates.slice(
-                0,
-                5,
-              ),
-            targetCount: 5,
+              zeroPaidPreviewCandidates,
             resolverAttempts: 0,
             brightDataCalls: 0,
           };
@@ -1633,7 +1651,7 @@ export default function ProjectDAutomationPanel() {
           updateStep(
             "enrich",
             "working",
-            "무과금 FULL 5개 승인 완료 · resolver/Bright Data 0회로 현재 5개만 사용",
+            `무과금 MARKET POOL ${zeroPaidFullCount}개 유지 · resolver/Bright Data 0회`,
           );
         } else {
           const candidatePlans =
@@ -1946,14 +1964,15 @@ export default function ProjectDAutomationPanel() {
         DB 등록이 끝난 상품만 심층 리뷰를 수집한다.
 
         중요:
-        - 시장 후보 전체를 1,000개씩 수집하지 않는다.
+        - MARKET POOL 전체를 무조건 1,000개씩 수집하지 않는다.
+        - DB mapping이 확인된 상품만 Advisor FIVE 후보로 검토한다.
         - SmartStore, Naver Catalog, Brand Store reviewSource는 deep mode를 사용한다.
-        - 세 소스 모두 DB 등록이 끝난 상품에 한해서만 deep mode를 사용한다.
+        - 고유한 리뷰 준비 상품 5개가 확보되는 즉시 다음 MARKET POOL 상품의 심층 수집을 중단한다.
       */
       updateStep(
         "reviews",
         "working",
-        `${finalCandidates.length}개 DB 상품의 리뷰 소스를 확인하는 중...`,
+        `MARKET POOL ${finalCandidates.length}개 중 Advisor FIVE 준비를 위한 리뷰 소스를 확인하는 중...`,
       );
 
       const reviewCollections:
@@ -1985,12 +2004,29 @@ export default function ProjectDAutomationPanel() {
       let insufficientReviewProducts =
         0;
 
+      let unmappedReviewProducts =
+        0;
+
+      const advisorReviewDbIds =
+        new Set<string>();
+
+      const advisorReviewOrigins =
+        new Set<number>();
+
       for (
         let index = 0;
         index <
         finalCandidates.length;
         index++
       ) {
+        // ADVISOR FIVE REVIEW EARLY STOP
+        if (
+          reviewCollections.length >=
+          5
+        ) {
+          break;
+        }
+
         const candidate =
           finalCandidates[index];
 
@@ -2006,6 +2042,29 @@ export default function ProjectDAutomationPanel() {
           cleanText(
             detail.productName,
           );
+
+        const currentPoolMapping =
+          mappedProducts.get(
+            Number(
+              productId,
+            ),
+          );
+
+        if (
+          !currentPoolMapping ||
+          currentPoolMapping.productName !==
+            productName
+        ) {
+          unmappedReviewProducts++;
+
+          updateStep(
+            "reviews",
+            "working",
+            `${index + 1}/${finalCandidates.length} · ${productName || "상품명 없음"} · 현재 실행 DB mapping 없음 → Advisor FIVE 대상 제외`,
+          );
+
+          continue;
+        }
 
         const reviewSourceUrl =
           cleanText(
@@ -2173,6 +2232,30 @@ export default function ProjectDAutomationPanel() {
 
           continue;
         }
+
+        const advisorDbKey =
+          currentPoolMapping
+            .dbProductId
+            .toLowerCase();
+
+        if (
+          advisorReviewDbIds.has(
+            advisorDbKey,
+          ) ||
+          advisorReviewOrigins.has(
+            currentPoolMapping.originProductNo,
+          )
+        ) {
+          continue;
+        }
+
+        advisorReviewDbIds.add(
+          advisorDbKey,
+        );
+
+        advisorReviewOrigins.add(
+          currentPoolMapping.originProductNo,
+        );
 
         reviewCollections.push({
           productId,

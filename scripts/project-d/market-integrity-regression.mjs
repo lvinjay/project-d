@@ -1129,13 +1129,61 @@ check(captureGet.products.map(p => p.name), captureInput.slice(1, 100).map(p => 
 check(captureGet.collectorDiagnostics.finalCapturedCount, observedCollector.finalCapturedCount);
 
 // Explicitly retain the administrator's E2E shortcut and paid top-up contract.
-assert.match(panel, /zeroPaidPreviewCandidates\.slice\(\s*0,\s*5,?\s*\)/);
-assert.match(panel, /targetCount: 5/);
+// STEP6_MARKET_POOL_ADVISOR_FIVE_REGRESSION
+assert.match(
+  panel,
+  /finalCandidates:\s*zeroPaidPreviewCandidates,/s,
+);
+
+assert.doesNotMatch(
+  panel,
+  /finalCandidates:\s*zeroPaidPreviewCandidates\.slice/s,
+);
+
+assert.doesNotMatch(
+  panel,
+  /finalCandidates:[\s\S]*?targetCount:\s*5,[\s\S]*?resolverAttempts:\s*0/s,
+);
+
+assert.match(
+  panel,
+  /MARKET POOL 전체를 DB에 등록합니다/,
+);
+
+assert.match(
+  panel,
+  /reviewCollections\.length\s*>=\s*5[\s\S]*?break;/s,
+);
+
+assert.match(
+  panel,
+  /const currentPoolMapping\s*=\s*mappedProducts\.get\([\s\S]*?Number\(\s*productId/s,
+);
+
+assert.match(
+  panel,
+  /const advisorReviewDbIds\s*=\s*new Set<string>\(\)/,
+);
+
+assert.match(
+  panel,
+  /advisorReviewOrigins\.has\([\s\S]*?currentPoolMapping\.originProductNo/s,
+);
 assert.match(panel, /enrichedParams\.set\(\s*"executionTargetCount",\s*"5",?\s*\)/);
 assert.match(panel, /enrichedParams\.set\(\s*"paidCandidateLimit",\s*"1",?\s*\)/);
 assert.match(panel, /enrichedParams\.set\(\s*"paidCandidateOffset",\s*"0",?\s*\)/);
 assert.match(panel, /index <\s*finalCandidates\.length/);
 assert.match(panel, /const selected = selectEligibleFive\(eligible, selectionRun\)/);
+// STEP6_SELECTED_FIVE_CONTRACT_GUARD
+assert.match(
+  panel,
+  /const eligible = reviewCollections\.flatMap/,
+);
+
+assert.match(
+  panel,
+  /const selected = selectEligibleFive\(eligible, selectionRun\)/,
+);
 const { poolDiagnosticLines: diagnosticLines } = pureFunctions('components/ProjectDAutomationPanel.tsx', ['poolDiagnosticLines']);
 const {
   poolDiagnosticCandidateLines:
@@ -1208,4 +1256,4 @@ check(
 check(diagnosticLines({ captureId: 'fixture', collector: null, free: null, paid: null }).some(line => line.includes('미제공 / 미실행')), true);
 check(diagnosticLines({ captureId: 'fixture', collector: { rawCardCount: 0 }, free: { captureId: 'other', full: { finalCandidateCount: 99 } }, paid: null }).some(line => line.includes('99개')), false);
 check(diagnosticLines({ captureId: 'fixture', collector: { rawCardCount: 0 }, free: null, paid: null })[0], '브라우저 카드 관측: 0개');
-console.log(`STEP 5 FINAL PASS: ${assertions} counted assertions; original 269 preserved. Fake DOM/VM fixtures only; external calls and DB writes: 0.`);
+console.log(`STEP 6 FINAL PASS: ${assertions} counted assertions; original 269 preserved. Fake DOM/VM fixtures only; external calls and DB writes: 0.`);
