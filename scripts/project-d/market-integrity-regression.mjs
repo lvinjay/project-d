@@ -2393,3 +2393,168 @@ console.log(`STEP 16 RENDER CHECK PASS: ${assertions} counted assertions; all pr
     `STEP 60 FINAL PASS: ${assertions - before} new assertions; ${assertions} shared-counter + 10 STEP19 = ${assertions + 10} total counted assertions. Buy links allow only parsed absolute HTTP(S) URLs; invalid URLs render no anchor.`,
   );
 }
+
+// STEP62_TOP_CRITERIA_VISIBILITY_GUARDS
+{
+  const before = assertions;
+
+  const {
+    selectTopCriteria,
+    criterionScoreLabel,
+  } = pureFunctions(
+    'app/advisor/results/ResultsClient.tsx',
+    [
+      'selectTopCriteria',
+      'criterionScoreLabel',
+    ],
+  );
+
+  const criteria = [
+    {
+      key: 'missing-high',
+      label: 'Missing High',
+      score: null,
+      effectiveScore: null,
+      imputed: false,
+      weight: 10,
+    },
+    {
+      key: 'imputed-high',
+      label: 'Imputed High',
+      score: null,
+      effectiveScore: 7.3,
+      imputed: true,
+      weight: 9,
+    },
+    {
+      key: 'direct-eight',
+      label: 'Direct Eight',
+      score: 8,
+      effectiveScore: 8,
+      imputed: false,
+      weight: 8,
+    },
+    {
+      key: 'direct-seven',
+      label: 'Direct Seven',
+      score: 7,
+      effectiveScore: 7,
+      imputed: false,
+      weight: 7,
+    },
+    {
+      key: 'direct-low',
+      label: 'Direct Low',
+      score: 10,
+      effectiveScore: 10,
+      imputed: false,
+      weight: 1,
+    },
+  ];
+
+  const selected =
+    selectTopCriteria(
+      criteria,
+    );
+
+  check(
+    selected.length,
+    4,
+  );
+
+  check(
+    selected.map(
+      (item) => item.key,
+    ),
+    [
+      'missing-high',
+      'imputed-high',
+      'direct-eight',
+      'direct-seven',
+    ],
+  );
+
+  check(
+    selected.some(
+      (item) =>
+        item.key ===
+          'missing-high',
+    ),
+    true,
+  );
+
+  check(
+    selected.some(
+      (item) =>
+        item.key ===
+          'imputed-high',
+    ),
+    true,
+  );
+
+  check(
+    selected.some(
+      (item) =>
+        item.key ===
+          'direct-low',
+    ),
+    false,
+  );
+
+  check(
+    criteria.map(
+      (item) => item.key,
+    ),
+    [
+      'missing-high',
+      'imputed-high',
+      'direct-eight',
+      'direct-seven',
+      'direct-low',
+    ],
+  );
+
+  check(
+    selectTopCriteria([]),
+    [],
+  );
+
+  check(
+    criterionScoreLabel(
+      {
+        score: null,
+        effectiveScore: 7.3,
+        imputed: true,
+      },
+    ),
+    '\uD6C4\uBCF4 \uD3C9\uADE0\uC73C\uB85C \uBCF4\uC644 \u00B7 \uBCF4\uC644 \uC810\uC218 7.3\uC810',
+  );
+
+  const {
+    readFileSync: step62ReadFileSync,
+  } = await import('node:fs');
+
+  const step62Results =
+    step62ReadFileSync(
+      'app/advisor/results/ResultsClient.tsx',
+      'utf8',
+    ).replace(/\r\n/g, '\n');
+
+  check(
+    step62Results.includes(
+      'selectTopCriteria(',
+    ),
+    true,
+  );
+
+  check(
+    step62Results.split(
+      'criterionScoreLabel(',
+    ).length - 1 >= 4,
+    true,
+  );
+
+  console.log(
+    `STEP 62 FINAL PASS: ${assertions - before} new assertions; ${assertions} shared-counter + 10 STEP19 = ${assertions + 10} total counted assertions. High-priority criteria remain visible even without a direct score; display-only change.`,
+  );
+}

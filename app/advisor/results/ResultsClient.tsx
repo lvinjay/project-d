@@ -31,6 +31,17 @@ function criterionScoreLabel(criterion: CriterionBreakdown): string {
   if (typeof criterion.score === "number") return "점수 " + criterion.score + "점";
   return "평가 가능한 점수 없음";
 }
+
+function selectTopCriteria(
+  criteria: CriterionBreakdown[],
+): CriterionBreakdown[] {
+  return [...criteria]
+    .sort(
+      (a, b) =>
+        b.weight - a.weight,
+    )
+    .slice(0, 4);
+}
 function selectDisplaySpecs(
   specs: KeySpec[],
   category: string,
@@ -1452,22 +1463,13 @@ export default function ResultsClient() {
         )
       : null;
 
-  const topCriteria =
+    const topCriteria =
     useMemo(
       () =>
-        winner?.criterionBreakdown
-          .filter(
-            (item) =>
-              item.score !==
-              null,
-          )
-          .sort(
-            (a, b) =>
-              b.weight -
-              a.weight,
-          )
-          .slice(0, 4) ??
-        [],
+        selectTopCriteria(
+          winner?.criterionBreakdown ??
+            [],
+        ),
       [winner],
     );
 
@@ -2294,6 +2296,20 @@ export default function ResultsClient() {
                         }
                         /10
                       </strong>
+
+                      <small
+                        style={{
+                          display: "block",
+                          marginTop: 6,
+                          color: "#667085",
+                          fontSize: 12,
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        {criterionScoreLabel(
+                          criterion,
+                        )}
+                      </small>
                     </article>
                   ),
                 )}
