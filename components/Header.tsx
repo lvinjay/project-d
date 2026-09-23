@@ -50,7 +50,7 @@ export default function Header() {
           <Link href="/advisor">
             AI 구매 상담
           </Link>
-          <Link href="/assistant">분석 결과</Link>
+          <Link href="/#categories">체험 제품군</Link>
           <Link href="/#how">이용 방법</Link>
           <Link
             className="headerCta"
