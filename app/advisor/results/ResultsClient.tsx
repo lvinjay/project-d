@@ -226,6 +226,21 @@ function getRankingScore(
   );
 }
 
+function buildAdvisorCategoryHref(
+  value: string | null | undefined,
+) {
+  const normalized =
+    typeof value === "string"
+      ? value.trim()
+      : "";
+
+  return normalized
+    ? `/advisor?category=${encodeURIComponent(
+        normalized,
+      )}`
+    : "/advisor";
+}
+
 type RecommendationResponse = {
   success: boolean;
   category?: string;
@@ -1643,7 +1658,7 @@ export default function ResultsClient() {
             </p>
 
             <Link
-              href="/advisor?category=캠핑용%20에어컨"
+              href={buildAdvisorCategoryHref(selectionForReentry?.category ?? category)}
               className="primaryButton"
             >
               구매 가이드로 돌아가기
@@ -2987,7 +3002,7 @@ export default function ResultsClient() {
 
             <div className="advisorResultActions">
               <Link
-                href="/advisor?category=캠핑용%20에어컨"
+                href={buildAdvisorCategoryHref(selectionForReentry?.category ?? category)}
                 className="secondaryButton"
               >
                 중요도 다시 설정

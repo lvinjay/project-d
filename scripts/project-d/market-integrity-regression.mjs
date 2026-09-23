@@ -2139,3 +2139,80 @@ console.log(`STEP 16 RENDER CHECK PASS: ${assertions} counted assertions; all pr
     `STEP 56 FINAL PASS: ${assertions - before} new assertions; ${assertions} shared-counter + 10 STEP19 = ${assertions + 10} total counted assertions. Rank 2+ price and concise cautions rendered; no endpoint execution.`,
   );
 }
+
+// STEP58_CATEGORY_REENTRY_LINK_GUARDS
+{
+  const before = assertions;
+
+  const { buildAdvisorCategoryHref } =
+    pureFunctions(
+      'app/advisor/results/ResultsClient.tsx',
+      ['buildAdvisorCategoryHref'],
+    );
+
+  check(
+    buildAdvisorCategoryHref(
+      '\uB85C\uBD07\uCCAD\uC18C\uAE30',
+    ),
+    '/advisor?category=%EB%A1%9C%EB%B4%87%EC%B2%AD%EC%86%8C%EA%B8%B0',
+  );
+
+  check(
+    buildAdvisorCategoryHref(
+      '  \uCEA0\uD551\uC6A9 \uC5D0\uC5B4\uCEE8  ',
+    ),
+    '/advisor?category=%EC%BA%A0%ED%95%91%EC%9A%A9%20%EC%97%90%EC%96%B4%EC%BB%A8',
+  );
+
+  check(
+    buildAdvisorCategoryHref(''),
+    '/advisor',
+  );
+
+  check(
+    buildAdvisorCategoryHref('   '),
+    '/advisor',
+  );
+
+  const { readFileSync: step58ReadFileSync } =
+    await import('node:fs');
+
+  const step58Results =
+    step58ReadFileSync(
+      'app/advisor/results/ResultsClient.tsx',
+      'utf8',
+    ).replace(/\r\n/g, '\n');
+
+  const dynamicHref =
+    'href={buildAdvisorCategoryHref(selectionForReentry?.category ?? category)}';
+
+  check(
+    step58Results.split(dynamicHref).length - 1,
+    2,
+  );
+
+  check(
+    /href="\/advisor\?category=[^"]+"/.test(
+      step58Results,
+    ),
+    false,
+  );
+
+  check(
+    step58Results.includes(
+      'category: selectionForReentry.category',
+    ),
+    true,
+  );
+
+  check(
+    step58Results.includes(
+      'function buildAdvisorCategoryHref(',
+    ),
+    true,
+  );
+
+  console.log(
+    `STEP 58 FINAL PASS: ${assertions - before} new assertions; ${assertions} shared-counter + 10 STEP19 = ${assertions + 10} total counted assertions. Category reentry links follow current selection; no endpoint execution.`,
+  );
+}
