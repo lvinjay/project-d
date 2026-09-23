@@ -81,6 +81,30 @@ function normalizeText(value: unknown) {
     : "";
 }
 
+function getAdvisorImageUrl(
+  detail: ProductDetailAnalysis | null | undefined,
+): string | null {
+  const candidates = [
+    detail?.representativeImageUrl,
+    detail?.imageUrl,
+  ];
+
+  for (const value of candidates) {
+    if (typeof value !== "string") {
+      continue;
+    }
+
+    const normalized =
+      value.trim();
+
+    if (normalized) {
+      return normalized;
+    }
+  }
+
+  return null;
+}
+
 function normalizeWeights(value: unknown) {
   if (
     !value ||
@@ -1490,6 +1514,11 @@ export async function POST(
               product.product_name,
             sourceUrl:
               product.source_url,
+
+            imageUrl:
+              getAdvisorImageUrl(
+                product.product_detail_analysis,
+              ),
 
             matchScore,
             rankingScore,

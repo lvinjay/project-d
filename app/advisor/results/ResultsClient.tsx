@@ -165,6 +165,7 @@ type Recommendation = {
   rank: number;
   productName: string;
   sourceUrl: string;
+  imageUrl?: string | null;
   matchScore: number;
   rankingScore?: number;
   baseMatchScore?: number;
@@ -1505,6 +1506,13 @@ export default function ResultsClient() {
         )
       : null;
 
+  const winnerImageUrl =
+    winner
+      ? getSafeBuyUrl(
+          winner.imageUrl,
+        )
+      : null;
+
   const winnerBestFor =
     winner
       ? normalizeWinnerBestFor(
@@ -1759,6 +1767,24 @@ export default function ResultsClient() {
                 <span className="advisorWinnerBadge">
                   1위 추천
                 </span>
+
+                {winnerImageUrl ? (
+                  <img
+                    src={winnerImageUrl}
+                    alt={winner.productName}
+                    decoding="async"
+                    style={{
+                      display: "block",
+                      width: 120,
+                      height: 120,
+                      margin: "12px 0",
+                      objectFit: "contain",
+                      borderRadius: 16,
+                      border: "1px solid #e4e7ec",
+                      background: "#fff",
+                    }}
+                  />
+                ) : null}
 
                 <h2>
                   {
@@ -2703,6 +2729,11 @@ export default function ResultsClient() {
                         item.sourceUrl,
                       );
 
+                    const imageUrl =
+                      getSafeBuyUrl(
+                        item.imageUrl,
+                      );
+
                     const rankCautions =
                       getRankCardCautions(
                         item,
@@ -2723,6 +2754,25 @@ export default function ResultsClient() {
                           </div>
 
                           <div className="advisorRankContent">
+                            {imageUrl ? (
+                              <img
+                                src={imageUrl}
+                                alt={item.productName}
+                                loading="lazy"
+                                decoding="async"
+                                style={{
+                                  display: "block",
+                                  width: 88,
+                                  height: 88,
+                                  marginBottom: 10,
+                                  objectFit: "contain",
+                                  borderRadius: 12,
+                                  border: "1px solid #e4e7ec",
+                                  background: "#fff",
+                                }}
+                              />
+                            ) : null}
+
                             <h3>
                               {
                                 item.productName

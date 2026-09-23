@@ -2664,3 +2664,125 @@ console.log(`STEP 16 RENDER CHECK PASS: ${assertions} counted assertions; all pr
     `STEP 64 FINAL PASS: ${assertions - before} new assertions; ${assertions} shared-counter + 10 STEP19 = ${assertions + 10} total counted assertions. Winner card shows review count, data coverage and normalized best-for context; display-only change.`,
   );
 }
+
+// STEP66_ADVISOR_IMAGE_GUARDS
+{
+  const before = assertions;
+
+  const { getAdvisorImageUrl } =
+    pureFunctions(
+      'app/api/advisor-recommendations/route.ts',
+      ['getAdvisorImageUrl'],
+    );
+
+  check(
+    getAdvisorImageUrl({
+      representativeImageUrl:
+        'https://img.example.com/rep.jpg',
+      imageUrl:
+        'https://img.example.com/market.jpg',
+    }),
+    'https://img.example.com/rep.jpg',
+  );
+
+  check(
+    getAdvisorImageUrl({
+      representativeImageUrl: null,
+      imageUrl:
+        'https://img.example.com/market.jpg',
+    }),
+    'https://img.example.com/market.jpg',
+  );
+
+  check(
+    getAdvisorImageUrl({
+      representativeImageUrl:
+        '   ',
+      imageUrl:
+        '  https://img.example.com/a.jpg  ',
+    }),
+    'https://img.example.com/a.jpg',
+  );
+
+  check(
+    getAdvisorImageUrl({
+      representativeImageUrl: 123,
+      imageUrl: null,
+    }),
+    null,
+  );
+
+  check(
+    getAdvisorImageUrl(null),
+    null,
+  );
+
+  const {
+    readFileSync: step66ReadFileSync,
+  } = await import('node:fs');
+
+  const step66Api =
+    step66ReadFileSync(
+      'app/api/advisor-recommendations/route.ts',
+      'utf8',
+    ).replace(/\r\n/g, '\n');
+
+  const step66Results =
+    step66ReadFileSync(
+      'app/advisor/results/ResultsClient.tsx',
+      'utf8',
+    ).replace(/\r\n/g, '\n');
+
+  check(
+    step66Api.includes(
+      'detail?.representativeImageUrl',
+    ),
+    true,
+  );
+
+  check(
+    step66Api.includes(
+      'detail?.imageUrl',
+    ),
+    true,
+  );
+
+  check(
+    step66Api.includes(
+      'getAdvisorImageUrl(',
+    ),
+    true,
+  );
+
+  check(
+    step66Results.includes(
+      'src={winnerImageUrl}',
+    ),
+    true,
+  );
+
+  check(
+    step66Results.includes(
+      'src={imageUrl}',
+    ),
+    true,
+  );
+
+  check(
+    step66Results.includes(
+      'getSafeBuyUrl(\n          winner.imageUrl',
+    ),
+    true,
+  );
+
+  check(
+    step66Results.includes(
+      'getSafeBuyUrl(\n                        item.imageUrl',
+    ),
+    true,
+  );
+
+  console.log(
+    `STEP 66 FINAL PASS: ${assertions - before} new assertions; ${assertions} shared-counter + 10 STEP19 = ${assertions + 10} total counted assertions. Advisor images reuse persisted product_detail_analysis and render only safe HTTP(S) URLs; no paid collection.`,
+  );
+}
