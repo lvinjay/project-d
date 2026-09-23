@@ -155,6 +155,7 @@ type Recommendation = {
   productName: string;
   sourceUrl: string;
   matchScore: number;
+  rankingScore?: number;
   baseMatchScore?: number;
   blendedMatchScore?: number;
   valueScore?: number;
@@ -183,6 +184,47 @@ type Recommendation = {
   budgetPenalty?: number;
   budgetReason?: string;
 };
+
+function getRankingScore(
+  recommendation: Recommendation,
+) {
+  if (
+    typeof recommendation.rankingScore ===
+      "number" &&
+    Number.isFinite(
+      recommendation.rankingScore,
+    )
+  ) {
+    return recommendation.rankingScore;
+  }
+
+  const matchScore =
+    typeof recommendation.matchScore ===
+      "number" &&
+    Number.isFinite(
+      recommendation.matchScore,
+    )
+      ? recommendation.matchScore
+      : 0;
+
+  const budgetPenalty =
+    typeof recommendation.budgetPenalty ===
+      "number" &&
+    Number.isFinite(
+      recommendation.budgetPenalty,
+    ) &&
+    recommendation.budgetPenalty > 0
+      ? recommendation.budgetPenalty
+      : 0;
+
+  return Math.max(
+    0,
+    Math.min(
+      100,
+      matchScore - budgetPenalty,
+    ),
+  );
+}
 
 type RecommendationResponse = {
   success: boolean;
@@ -2296,9 +2338,10 @@ export default function ResultsClient() {
                       <span>→</span>
 
                       <span>
-                        최종{" "}
+                        최종 순위 점수{" "}
                         <b>
-                          {winner.matchScore}점
+                          {getRankingScore(winner)}
+                          점
                         </b>
                       </span>
                     </div>
@@ -2672,11 +2715,9 @@ export default function ResultsClient() {
                                 </span>
 
                                 <span>
-                                  최종{" "}
+                                  최종 순위 점수{" "}
                                   <b>
-                                    {
-                                      item.matchScore
-                                    }
+                                    {getRankingScore(item)}
                                     점
                                   </b>
                                 </span>

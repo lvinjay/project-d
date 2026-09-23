@@ -1906,3 +1906,101 @@ console.log(`STEP 16 RENDER CHECK PASS: ${assertions} counted assertions; all pr
   console.log(`STEP 49 same-unit observation (not a permanent contract): ${JSON.stringify(comparison('10000Pa', '22000Pa'))}`);
   console.log(`STEP 49 FINAL PASS: ${assertions - before} new assertions; ${assertions} shared-counter + 10 STEP19 = ${assertions + 10} total counted assertions. No endpoints or paid calls.`);
 }
+
+// STEP54_BUDGET_RANKING_SCORE_GUARDS
+{
+  const before = assertions;
+  const { getRankingScore } = pureFunctions(
+    'app/advisor/results/ResultsClient.tsx',
+    ['getRankingScore'],
+  );
+
+  // API rankingScore is authoritative when present.
+  check(
+    getRankingScore({
+      matchScore: 90,
+      rankingScore: 80,
+      budgetPenalty: 10,
+    }),
+    80,
+  );
+
+  // No budget penalty keeps fit and ranking score aligned.
+  check(
+    getRankingScore({
+      matchScore: 90,
+      rankingScore: 90,
+      budgetPenalty: 0,
+    }),
+    90,
+  );
+
+  // Missing-price / old-response fallback must not invent a penalty.
+  check(
+    getRankingScore({
+      matchScore: 90,
+      budgetPenalty: 0,
+      budgetReason:
+        '\uAC00\uACA9 \uC815\uBCF4\uAC00 \uC5C6\uC5B4 \uAC10\uC810\uD558\uC9C0 \uC54A\uC74C',
+    }),
+    90,
+  );
+
+  // Explicit API rankingScore wins over locally derivable fallback.
+  check(
+    getRankingScore({
+      matchScore: 90,
+      rankingScore: 77,
+      budgetPenalty: 10,
+    }),
+    77,
+  );
+
+  const { readFileSync: step54ReadFileSync } =
+    await import("node:fs");
+
+  const step54Results =
+    step54ReadFileSync(
+      'app/advisor/results/ResultsClient.tsx',
+      'utf8',
+    ).replace(/\r\n/g, '\n');
+
+  check(
+    /rankingScore\?:\s*number/.test(
+      step54Results,
+    ),
+    true,
+  );
+
+  check(
+    (step54Results.match(
+      /getRankingScore\(winner\)/g,
+    ) ?? []).length,
+    1,
+  );
+
+  check(
+    (step54Results.match(
+      /getRankingScore\(item\)/g,
+    ) ?? []).length,
+    1,
+  );
+
+  check(
+    (step54Results.match(
+      /\uCD5C\uC885 \uC21C\uC704 \uC810\uC218/g,
+    ) ?? []).length,
+    2,
+  );
+
+  check(
+    /budgetPenalty\s*>\s*0/.test(
+      step54Results,
+    ),
+    true,
+  );
+
+  console.log(
+    `STEP 54 FINAL PASS: ${assertions - before} new assertions; ${assertions} shared-counter + 10 STEP19 = ${assertions + 10} total counted assertions. Budget-adjusted ranking score UI aligned; no endpoint execution.`,
+  );
+}
