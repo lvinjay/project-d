@@ -1283,8 +1283,7 @@ export default function ResultsClient() {
               stored.budgetChoice ??
               "no_limit",
             customPreference:
-              stored.customPreference ??
-              "",
+              process.env.NODE_ENV === "production" ? "" : (stored.customPreference ?? ""),
             productIds:
               currentRunProductIds,
           };
@@ -1306,7 +1305,7 @@ export default function ResultsClient() {
           | PersonalPreferenceResponse
           | null = null;
 
-        if (cachedRaw) {
+        if (process.env.NODE_ENV !== "production" && cachedRaw) {
           try {
             const cached =
               JSON.parse(

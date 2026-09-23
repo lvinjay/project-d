@@ -399,7 +399,7 @@ export default function QuestionsClient() {
       personalizationQuestions: questions,
       budgetChoice,
       budgetOptions,
-      customPreference: customPreference.trim(),
+      customPreference: process.env.NODE_ENV === "production" ? "" : customPreference.trim(),
     };
 
     window.sessionStorage.setItem(
@@ -570,7 +570,7 @@ export default function QuestionsClient() {
               </div>
             </section>
 
-            <section className="questionBlock">
+            {process.env.NODE_ENV !== "production" && <section className="questionBlock">
               <div className="questionHeading">
                 <h2>추가로 원하는 조건이 있나요?</h2>
                 <p>
@@ -600,7 +600,7 @@ export default function QuestionsClient() {
               <div style={{ marginTop: 8, textAlign: "right", color: "#6b7280", fontSize: 13 }}>
                 {customPreference.length}/500
               </div>
-            </section>
+            </section>}
           </>
         ) : null}
 

@@ -603,6 +603,15 @@ export async function POST(
         await request.json()
       ) as RequestBody;
 
+    // Production permits preflight only; persistence retries also write to DB.
+    if (process.env.NODE_ENV === "production" &&
+        (body.dryRun !== true || body.persistenceOnly === true)) {
+      return NextResponse.json(
+        { success: false, paidApiCalls: 0, dbWrites: 0, message: "Not available." },
+        { status: 403 },
+      );
+    }
+
     const category =
       normalizeText(
         body.category,
@@ -1807,4 +1816,3 @@ ${criterionKeys.join(
     );
   }
 }
-

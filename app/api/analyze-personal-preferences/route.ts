@@ -440,6 +440,14 @@ export async function POST(request: Request) {
 
   try {
     const body = (await request.json()) as Body;
+    // Budget options and dry-run are read-only; public production never generates AI output.
+    if (process.env.NODE_ENV === "production" &&
+        body.dryRun !== true && text(body.mode) !== "budget_options") {
+      return NextResponse.json(
+        { success: false, paidApiCalls: 0, dbWrites: 0, message: "Not available." },
+        { status: 403 },
+      );
+    }
     const category = text(body.category);
     const mode = text(body.mode);
     const budgetChoice = text(body.budgetChoice) || "no_limit";
