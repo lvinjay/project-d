@@ -2558,3 +2558,109 @@ console.log(`STEP 16 RENDER CHECK PASS: ${assertions} counted assertions; all pr
     `STEP 62 FINAL PASS: ${assertions - before} new assertions; ${assertions} shared-counter + 10 STEP19 = ${assertions + 10} total counted assertions. High-priority criteria remain visible even without a direct score; display-only change.`,
   );
 }
+
+// STEP64_WINNER_INFO_GUARDS
+{
+  const before = assertions;
+
+  const { normalizeWinnerBestFor } =
+    pureFunctions(
+      'app/advisor/results/ResultsClient.tsx',
+      ['normalizeWinnerBestFor'],
+    );
+
+  const rawBestFor = [
+    '  Small   Home  ',
+    'small home',
+    '',
+    null,
+    'Pet Owner',
+    'ROBOT',
+    'robot',
+    'Extra',
+  ];
+
+  check(
+    normalizeWinnerBestFor(
+      rawBestFor,
+    ),
+    [
+      'Small Home',
+      'Pet Owner',
+      'ROBOT',
+    ],
+  );
+
+  check(
+    normalizeWinnerBestFor(
+      ['  one   two  '],
+    ),
+    ['one two'],
+  );
+
+  check(
+    normalizeWinnerBestFor(null),
+    [],
+  );
+
+  check(
+    rawBestFor[0],
+    '  Small   Home  ',
+  );
+
+  const {
+    readFileSync: step64ReadFileSync,
+  } = await import('node:fs');
+
+  const step64Results =
+    step64ReadFileSync(
+      'app/advisor/results/ResultsClient.tsx',
+      'utf8',
+    ).replace(/\r\n/g, '\n');
+
+  check(
+    step64Results.includes(
+      'winner.reviewCount',
+    ),
+    true,
+  );
+
+  check(
+    step64Results.includes(
+      'winner.dataCoverage',
+    ),
+    true,
+  );
+
+  check(
+    step64Results.includes(
+      'winner.bestFor',
+    ),
+    true,
+  );
+
+  check(
+    step64Results.includes(
+      'winnerBestFor.length > 0',
+    ),
+    true,
+  );
+
+  check(
+    step64Results.includes(
+      'winnerBestFor.join(',
+    ),
+    true,
+  );
+
+  check(
+    step64Results.includes(
+      '\uCD94\uCC9C \uB300\uC0C1:',
+    ),
+    true,
+  );
+
+  console.log(
+    `STEP 64 FINAL PASS: ${assertions - before} new assertions; ${assertions} shared-counter + 10 STEP19 = ${assertions + 10} total counted assertions. Winner card shows review count, data coverage and normalized best-for context; display-only change.`,
+  );
+}

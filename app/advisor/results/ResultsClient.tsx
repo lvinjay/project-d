@@ -282,6 +282,48 @@ function getSafeBuyUrl(
   }
 }
 
+function normalizeWinnerBestFor(
+  values: unknown,
+): string[] {
+  if (!Array.isArray(values)) {
+    return [];
+  }
+
+  const result: string[] = [];
+  const seen = new Set<string>();
+
+  for (const value of values) {
+    if (typeof value !== "string") {
+      continue;
+    }
+
+    const normalized =
+      value
+        .replace(/\s+/g, " ")
+        .trim();
+
+    if (!normalized) {
+      continue;
+    }
+
+    const key =
+      normalized.toLowerCase();
+
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    result.push(normalized);
+
+    if (result.length >= 3) {
+      break;
+    }
+  }
+
+  return result;
+}
+
 type RecommendationResponse = {
   success: boolean;
   category?: string;
@@ -1463,6 +1505,13 @@ export default function ResultsClient() {
         )
       : null;
 
+  const winnerBestFor =
+    winner
+      ? normalizeWinnerBestFor(
+          winner.bestFor,
+        )
+      : [];
+
     const topCriteria =
     useMemo(
       () =>
@@ -1720,6 +1769,43 @@ export default function ResultsClient() {
                 <p>
                   {winner.summary}
                 </p>
+
+                <div
+                  className="advisorRankMeta"
+                  style={{
+                    marginTop: 12,
+                  }}
+                >
+                  <span>
+                    리뷰{" "}
+                    {winner.reviewCount}
+                    개 분석
+                  </span>
+
+                  <span>
+                    분석 데이터 반영{" "}
+                    {winner.dataCoverage}
+                    %
+                  </span>
+                </div>
+
+                {winnerBestFor.length > 0 ? (
+                  <p
+                    style={{
+                      margin: "10px 0 0",
+                      color: "#475467",
+                      fontSize: 13,
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    <strong>
+                      추천 대상:
+                    </strong>{" "}
+                    {winnerBestFor.join(
+                      " · ",
+                    )}
+                  </p>
+                ) : null}
               </div>
 
               <div className="advisorWinnerScore">
