@@ -1915,10 +1915,22 @@ export async function GET(
           ? product.browserReviewSourceUrl.trim()
           : "";
 
-      const storeMatch =
+      const smartStoreMatch =
         reviewSourceUrl.match(
-          /^https:\/\/smartstore\.naver\.com\/[^/?#]+\/products\/(\d+)/i,
+          /^https:\/\/(?:m\.)?smartstore\.naver\.com\/[^/?#]+\/products\/(\d+)/i,
         );
+
+      const brandStoreMatch =
+        reviewSourceUrl.match(
+          /^https:\/\/(?:m\.)?brand\.naver\.com\/[^/?#]+\/products\/(\d+)/i,
+        );
+
+      const expectedEvidenceSourceType =
+        smartStoreMatch
+          ? "smartstore-native"
+          : brandStoreMatch
+            ? "brand-native"
+            : "";
 
       const channelProductNo =
         typeof product.browserChannelProductNo ===
@@ -1944,6 +1956,13 @@ export async function GET(
           ? product.browserEvidenceSourceType.trim()
           : "";
 
+      const evidenceSourceValid =
+        Boolean(
+          expectedEvidenceSourceType,
+        ) &&
+        evidenceSourceType ===
+          expectedEvidenceSourceType;
+
       const browserReviews =
         Array.isArray(product.browserReviews)
           ? product.browserReviews.filter(
@@ -1968,7 +1987,10 @@ export async function GET(
           : null;
 
       const urlChannelProductNo =
-        storeMatch?.[1] ?? "";
+        (
+          smartStoreMatch ??
+          brandStoreMatch
+        )?.[1] ?? "";
 
       const identityValid =
         Boolean(urlChannelProductNo) &&
@@ -1983,6 +2005,8 @@ export async function GET(
         reviewSourceUrl,
         productTitle,
         evidenceSourceType,
+        expectedEvidenceSourceType,
+        evidenceSourceValid,
         browserReviews:
           browserReviews.slice(0, 20),
         browserReviewTotalCount,
@@ -2002,8 +2026,7 @@ export async function GET(
         );
 
       return (
-        evidence.evidenceSourceType ===
-          "smartstore-native" &&
+        evidence.evidenceSourceValid &&
         evidence.identityValid &&
         evidence.productTitle.length > 0 &&
         evidence.browserReviews.length >= 5 &&
@@ -2193,7 +2216,15 @@ export async function GET(
       const reasons: string[] = [];
       const source = (product.browserReviewSourceUrl ?? "").trim();
       const catalog = /^https:\/\/search\.shopping\.naver\.com\/catalog\/(\d+)/i.test(source);
-      const store = source.match(/^https:\/\/smartstore\.naver\.com\/[^/?#]+\/products\/(\d+)/i);
+      const smartStore = source.match(/^https:\/\/(?:m\.)?smartstore\.naver\.com\/[^/?#]+\/products\/(\d+)/i);
+      const brandStore = source.match(/^https:\/\/(?:m\.)?brand\.naver\.com\/[^/?#]+\/products\/(\d+)/i);
+      const store = smartStore ?? brandStore;
+      const expectedStoreEvidenceSourceType =
+        smartStore
+          ? "smartstore-native"
+          : brandStore
+            ? "brand-native"
+            : "";
       const title = (catalog ? product.browserCatalogTitle : product.browserProductTitle)?.trim() ?? "";
       const reviews = (product.browserReviews ?? []).filter(review => Boolean(review?.text?.trim()));
       const total = Number(product.browserReviewTotalCount ?? (catalog ? product.reviewCount : 0)) || 0;
@@ -2205,7 +2236,10 @@ export async function GET(
       if (!catalog && !store) reasons.push("reviewSourceInvalid");
       if (!title || (catalog
         ? !product.browserSpecs || typeof product.browserSpecs !== "object" || Array.isArray(product.browserSpecs) || Object.keys(product.browserSpecs).length === 0
-        : product.browserEvidenceSourceType !== "smartstore-native" || !product.browserChannelProductNo?.trim() || !product.browserOriginProductNo?.trim())) {
+        : !expectedStoreEvidenceSourceType ||
+          product.browserEvidenceSourceType !== expectedStoreEvidenceSourceType ||
+          !product.browserChannelProductNo?.trim() ||
+          !product.browserOriginProductNo?.trim())) {
         reasons.push("nativeMetadataMissing");
       }
       if ((title && !validateProductMatch(product.name, title, "").matched) ||
@@ -2364,10 +2398,19 @@ export async function GET(
             source,
           );
 
-        const store =
-          /^https:\/\/smartstore\.naver\.com\/[^/?#]+\/products\/(\d+)/i.test(
+        const smartStore =
+          /^https:\/\/(?:m\.)?smartstore\.naver\.com\/[^/?#]+\/products\/(\d+)/i.test(
             source,
           );
+
+        const brandStore =
+          /^https:\/\/(?:m\.)?brand\.naver\.com\/[^/?#]+\/products\/(\d+)/i.test(
+            source,
+          );
+
+        const store =
+          smartStore ||
+          brandStore;
 
         const reviewSampleCount =
           (
@@ -2404,9 +2447,11 @@ export async function GET(
           reviewSourceType:
             catalog
               ? "naver-catalog"
-              : store
+              : smartStore
                 ? "smartstore-native"
-                : "invalid-or-missing",
+                : brandStore
+                  ? "brandstore-native"
+                  : "invalid-or-missing",
 
           nativeMetadataPresent:
             !reasons.includes(

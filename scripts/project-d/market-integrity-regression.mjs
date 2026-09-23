@@ -383,7 +383,7 @@ function withoutPoolDiagnostics(source, restoreCaptureControl = false) {
 }
 for (const [file, expected] of [
   ['tools/project-d-extension/naver-collector.js', '3402418d060d1b3c08e912551f0fecf27b4e66cf5e91223ae9e611d5db0dbc85'],
-  ['app/api/market-candidates-enriched/route.ts', 'b3b2a222624176736757b2f89361c9a885e60c2eff64cda0948f3344f9b4d028'],
+  ['app/api/market-candidates-enriched/route.ts', 'ff42e998d8b6fd4bba89a12d55693dcdb9b0bc2155d77912970c2982507d6368'],
 ]) check(crypto.createHash('sha256').update(withoutPoolDiagnostics(fs.readFileSync(file, 'utf8'), file.endsWith('naver-collector.js'))).digest('hex'), expected);
 
 const { poolDiagnosticRecordCard: recordCard, poolDiagnosticCollectorSummary: collectorSummary } = pureFunctions(
@@ -3129,5 +3129,127 @@ console.log(`STEP 16 RENDER CHECK PASS: ${assertions} counted assertions; all pr
 
   console.log(
     `STEP 70 FINAL PASS: ${assertions - before} new assertions; ${assertions} shared-counter + 10 STEP19 = ${assertions + 10} total counted assertions. Empty display text is normalized and repeated display strings are deduped; ranking/relevance logic unchanged.`,
+  );
+}
+
+// STEP72_BRANDSTORE_ZERO_PAID_GUARDS
+{
+  const before = assertions;
+
+  const step72BrandSource =
+    fs.readFileSync(
+      'tools/project-d-extension/brandstore-review-probe.js',
+      'utf8',
+    ).replace(/\r\n/g, '\n');
+
+  const step72MarketSource =
+    fs.readFileSync(
+      'app/api/market-candidates-enriched/route.ts',
+      'utf8',
+    ).replace(/\r\n/g, '\n');
+
+  check(
+    step72BrandSource.includes(
+      'let nativeTotalCount =',
+    ),
+    true,
+  );
+
+  check(
+    step72BrandSource.includes(
+      'message.data?.totalCount',
+    ),
+    true,
+  );
+
+  check(
+    step72BrandSource.includes(
+      'message.data?.summary?.reviewCount',
+    ),
+    true,
+  );
+
+  check(
+    step72BrandSource.includes(
+      'await waitForNativeResponse(\n          0,\n          3000,\n        );',
+    ),
+    true,
+  );
+
+  check(
+    step72BrandSource.includes(
+      'sourceType:\n            "brand-native",',
+    ),
+    true,
+  );
+
+  check(
+    step72BrandSource.includes(
+      'totalAvailableReviews:\n            nativeTotalCount >',
+    ),
+    true,
+  );
+
+  check(
+    step72MarketSource.includes(
+      'brand\\.naver\\.com',
+    ),
+    true,
+  );
+
+  check(
+    step72MarketSource.includes(
+      'expectedEvidenceSourceType',
+    ) &&
+      step72MarketSource.includes(
+        '"brand-native"',
+      ),
+    true,
+  );
+
+  check(
+    step72MarketSource.includes(
+      'evidence.evidenceSourceValid &&',
+    ),
+    true,
+  );
+
+  check(
+    step72MarketSource.includes(
+      'evidence.identityValid &&',
+    ),
+    true,
+  );
+
+  check(
+    step72MarketSource.includes(
+      'evidence.browserReviews.length >= 5',
+    ),
+    true,
+  );
+
+  check(
+    step72MarketSource.includes(
+      'evidence.browserReviewTotalCount >=\n          MIN_REVIEW_COUNT_FOR_DB',
+    ),
+    true,
+  );
+
+  check(
+    step72MarketSource.includes(
+      'product.price > 0',
+    ),
+    true,
+  );
+
+  check(
+    step72MarketSource.includes(
+      '? "brandstore-native"',
+    ),
+    true,
+  );
+
+  console.log(
+    `STEP 72 FINAL PASS: ${assertions - before} new assertions; ${assertions} shared-counter + 10 STEP19 = ${assertions + 10} total counted assertions. Brand Store shallow native evidence is accepted only with source, identity, review-sample, review-total and price requirements preserved.`,
   );
 }

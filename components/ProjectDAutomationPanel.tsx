@@ -2983,7 +2983,7 @@ reviewCollections.push({
               fontSize: 13,
             }}
           >
-            브라우저에서 동일 상품·리뷰 근거가 검증된 Naver Catalog/SmartStore 상품만 사용해 1~3단계까지만 실행합니다. resolver · Bright Data · OpenAI 호출은 0회로 강제합니다.
+            브라우저에서 동일 상품·리뷰 근거가 검증된 Naver Catalog/SmartStore/Brand Store 상품만 사용해 1~3단계까지만 실행합니다. resolver · Bright Data · OpenAI 호출은 0회로 강제합니다.
           </span>
         </span>
       </label>
