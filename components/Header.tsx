@@ -26,9 +26,9 @@ export default function Header() {
   return (
     <header className="siteHeader">
       <div className="headerInner">
-        <Link href="/" className="brand" aria-label="Project D 홈">
-          Project D
-          <small>Decision AI</small>
+        <Link href="/" className="brand" aria-label="PickVize 홈">
+          PickVize
+          <small>AI Buying Advisor</small>
         </Link>
 
         <button

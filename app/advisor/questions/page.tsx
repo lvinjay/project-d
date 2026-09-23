@@ -6,7 +6,7 @@ export default function Page() {
     <Suspense
       fallback={
         <main style={{ padding: 40 }}>
-          <h2>Project D</h2>
+          <h2>PickVize</h2>
           <p>맞춤 질문을 준비하고 있습니다.</p>
         </main>
       }

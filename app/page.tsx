@@ -13,7 +13,7 @@ const proofPoints = [
 
 const steps = [
   ["01", "무엇을 살지 입력", "제품군이나 고민 중인 모델을 입력합니다."],
-  ["02", "후보를 선택", "비교할 제품 2~5개를 선택합니다."],
+  ["02", "추천 후보 확인", "검증된 대표 제품 5개를 비교합니다."],
   ["03", "내 기준을 설정", "예산과 성능, 소음, 무게 등 우선순위를 정합니다."],
   ["04", "근거 있는 결론 확인", "순위, 추천 이유, 단점과 주의점을 확인합니다."],
 ];
@@ -92,7 +92,7 @@ export default function Home() {
           <h1>
             더 많이 검색하지 말고,
             <br />
-            <em>더 정확하게 결정하세요.</em>
+            <em>더 정확하게 고르세요.</em>
           </h1>
 
           <p>
@@ -165,7 +165,7 @@ export default function Home() {
       <section className="container proofSection" id="value">
         <div className="sectionHeadingRow">
           <div>
-            <span className="eyebrow">WHY PROJECT D</span>
+            <span className="eyebrow">WHY PICKVIZE</span>
 
             <h2 className="sectionTitle">
               검색 결과가 아니라, 구매 결론을 제공합니다.
@@ -217,7 +217,7 @@ export default function Home() {
         </h2>
 
         <p className="sectionLead">
-          준비가 완료된 제품군에서 전체 추천 흐름을 체험할 수 있습니다.
+          현재는 캠핑용 에어컨과 로봇청소기의 전체 추천 흐름을 체험할 수 있습니다.
         </p>
 
         <div className="categoryGrid categoryGridV32">
@@ -260,7 +260,7 @@ export default function Home() {
 
           <h2>후회 없는 구매를 위한 첫 비교를 시작하세요.</h2>
 
-          <p>고민 중인 제품 2개만 있어도 바로 비교할 수 있습니다.</p>
+          <p>구매하려는 제품군만 입력하면 검증된 후보 비교부터 시작할 수 있습니다.</p>
         </div>
 
         <button
@@ -277,10 +277,10 @@ export default function Home() {
 
       <footer className="siteFooter">
         <strong>
-          Project D <small>Decision AI</small>
+          PickVize <small>AI Buying Advisor</small>
         </strong>
 
-        <span>AI Product Decision Platform · MVP v3.2</span>
+        <span>AI Product Decision Platform</span>
       </footer>
     </main>
   );
