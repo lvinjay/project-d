@@ -119,7 +119,7 @@ for (const body of [{}, { dryRun: false }, { dryRun: 'true' },
 for (const body of [{}, { dryRun: false, customPreference: 'quiet' }, { dryRun: 'true' },
   { mode: 'execute', inputFingerprint: 'a'.repeat(64) }]) {
   const before = reads;
-  check((await post(personal, body)).status, 403);
+  check((await post(personal, body)).status, 400);
   check(reads, before);
 }
 const input = { category: 'fixture', productIds: products.map(p => p.id), dryRun: true };
@@ -137,6 +137,19 @@ for (const customPreference of ['', 'quiet']) {
   check(result.success, true); check(result.paidApiCalls, 0);
   check(result.estimatedOpenAiCalls, customPreference ? 1 : 0);
 }
+const customPrecheck = await (await post(personal, { ...input, customPreference: 'quiet' })).json();
+const beforeUnconfirmed = reads;
+const unconfirmed = await post(personal, {
+  category: 'fixture',
+  productIds: products.map(p => p.id),
+  customPreference: 'quiet',
+  inputFingerprint: customPrecheck.inputFingerprint,
+});
+check(unconfirmed.status, 400);
+check(reads, beforeUnconfirmed);
+const unconfirmedBody = await unconfirmed.json();
+check(unconfirmedBody.paidApiCalls, 0);
+check(unconfirmedBody.dbWrites, 0);
 const recommend = compile('app/api/advisor-recommendations/route.ts', 'production', imports).POST;
 const recommendationResponse = await post(recommend, { ...input, budgetChoice: 'no_limit',
   weights: Object.fromEntries(criteria.map(c => [c.key, 5])) });
@@ -150,26 +163,18 @@ for (const path of ['generate-product-scores', 'analyze-personal-preferences']) 
 }
 check(forbiddenCalls, 0);
 
-// UI guards are checked on actual TS AST expressions, including stale session input.
-function customExpression(path) {
-  const tree = ts.createSourceFile(path, read(path), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-  let found;
-  function visit(node) {
-    if (ts.isPropertyAssignment(node) && node.name.getText(tree) === 'customPreference' &&
-        node.initializer.getText(tree).includes('NODE_ENV')) found = node.initializer.getText(tree);
-    ts.forEachChild(node, visit);
-  }
-  visit(tree); assert.ok(found);
-  return found;
-}
-for (const path of ['app/advisor/questions/QuestionsClient.tsx', 'app/advisor/results/ResultsClient.tsx']) {
-  const expression = customExpression(path);
-  for (const environment of ['production', 'development']) {
-    check(vm.runInNewContext(expression, { process: { env: { NODE_ENV: environment } },
-      customPreference: 'old preference', stored: { customPreference: 'old preference' } }),
-    environment === 'production' ? '' : 'old preference');
-  }
-}
-check(read('app/advisor/questions/QuestionsClient.tsx').includes('{process.env.NODE_ENV !== "production" && <section'), true);
-check(read('app/advisor/results/ResultsClient.tsx').includes('if (process.env.NODE_ENV !== "production" && cachedRaw)'), true);
+// Public customer feature gates: additional free-text conditions are visible in
+// production, while execution remains explicit and fingerprint-bound.
+const questionsSource = read('app/advisor/questions/QuestionsClient.tsx');
+const resultsSource = read('app/advisor/results/ResultsClient.tsx');
+const personalSource = read('app/api/analyze-personal-preferences/route.ts');
+check(questionsSource.includes('customPreference: normalizedCustomPreference,'), true);
+check(questionsSource.includes('{process.env.NODE_ENV !== "production" && <section'), false);
+check(resultsSource.includes('process.env.NODE_ENV === "production" ? "" : (stored.customPreference ?? "")'), false);
+check(resultsSource.includes('if (cachedRaw) {'), true);
+check(resultsSource.includes('confirmCustomPreferenceAnalysis: true'), true);
+check(resultsSource.includes('mode: "custom_preference_execute"'), true);
+check(personalSource.includes('body.confirmCustomPreferenceAnalysis !== true'), true);
+check(personalSource.includes('mode !== "custom_preference_execute"'), true);
+check(personalSource.includes('public production never generates AI output'), false);
 console.log(`Production boundary regression PASS: ${count} assertions; external/paid calls 0; DB writes 0.`);

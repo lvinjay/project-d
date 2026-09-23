@@ -16,6 +16,7 @@ type Body = {
   productNames?: unknown;
   dryRun?: unknown;
   inputFingerprint?: unknown;
+  confirmCustomPreferenceAnalysis?: unknown;
 };
 
 const PERSONAL_PREFERENCE_PIPELINE_VERSION =
@@ -440,15 +441,7 @@ export async function POST(request: Request) {
 
   try {
     const body = (await request.json()) as Body;
-    // Budget options and dry-run are read-only; public production never generates AI output.
-    if (process.env.NODE_ENV === "production" &&
-        body.dryRun !== true && text(body.mode) !== "budget_options") {
-      return NextResponse.json(
-        { success: false, paidApiCalls: 0, dbWrites: 0, message: "Not available." },
-        { status: 403 },
-      );
-    }
-    const category = text(body.category);
+const category = text(body.category);
     const mode = text(body.mode);
     const budgetChoice = text(body.budgetChoice) || "no_limit";
     const customPreference = text(body.customPreference).slice(0, 500);
@@ -456,6 +449,28 @@ export async function POST(request: Request) {
     const requestedProductNames = stringList(body.productNames);
     const dryRun = body.dryRun === true;
     const requestedFingerprint = text(body.inputFingerprint);
+
+    // A paid custom-condition analysis is never started by a generic POST.
+    // The public UI must complete dry-run first, then explicitly confirm the
+    // fingerprint-bound execution from the customer-facing button.
+    if (
+      !dryRun &&
+      customPreference &&
+      (
+        mode !== "custom_preference_execute" ||
+        body.confirmCustomPreferenceAnalysis !== true
+      )
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          paidApiCalls: 0,
+          dbWrites: 0,
+          message: "추가 조건 분석을 시작하려면 화면에서 확인 버튼을 눌러 주세요.",
+        },
+        { status: 400 },
+      );
+    }
 
     if (!category) {
       return NextResponse.json(

@@ -155,6 +155,8 @@ export default function QuestionsClient() {
   const [budgetOptions, setBudgetOptions] = useState<Array<{ label: string; value: string }>>([]);
   const [budgetChoice, setBudgetChoice] = useState("");
   const [customPreference, setCustomPreference] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -383,31 +385,161 @@ export default function QuestionsClient() {
   }
 
   async function finishQuestions() {
-    if (questions.length === 0) return;
+    if (questions.length === 0 || submittingRef.current) return;
 
-    let selected;
-    try { selected = await loadSelectedFiveContext(window.sessionStorage, category, selectionIdentity); }
-    catch (error) { setErrorMessage(error instanceof Error ? error.message : "선택 실행이 변경되었습니다."); return; }
-    const payload = {
-      selectionIdentity,
-      runId: selected.manifest.runId,
-      profileRevision: selected.manifest.profileRevision,
-      manualWeightKeys: [...manualWeightKeys.current],
-      category,
-      answers,
-      weights: editableWeights,
-      personalizationQuestions: questions,
-      budgetChoice,
-      budgetOptions,
-      customPreference: process.env.NODE_ENV === "production" ? "" : customPreference.trim(),
-    };
+    submittingRef.current = true;
+    setSubmitting(true);
+    setErrorMessage("");
 
-    window.sessionStorage.setItem(
-      "projectDAdvisorAnswers",
-      JSON.stringify(payload),
-    );
+    try {
+      const selected = await loadSelectedFiveContext(
+        window.sessionStorage,
+        category,
+        selectionIdentity,
+      );
 
-    router.push("/advisor/results");
+      const normalizedCustomPreference = customPreference.trim().slice(0, 500);
+
+      const payload = {
+        selectionIdentity,
+        runId: selected.manifest.runId,
+        profileRevision: selected.manifest.profileRevision,
+        manualWeightKeys: [...manualWeightKeys.current],
+        category,
+        answers,
+        weights: editableWeights,
+        personalizationQuestions: questions,
+        budgetChoice,
+        budgetOptions,
+        customPreference: normalizedCustomPreference,
+      };
+
+      window.sessionStorage.setItem(
+        "projectDAdvisorAnswers",
+        JSON.stringify(payload),
+      );
+
+      if (normalizedCustomPreference) {
+        const productIds = selectedFiveIds(selected.manifest);
+
+        if (
+          productIds.length !== 5 ||
+          new Set(productIds).size !== 5
+        ) {
+          throw new Error("현재 선택한 5개 제품을 확인해 주세요.");
+        }
+
+        const precheckResponse = await fetch(
+          "/api/analyze-personal-preferences",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              category,
+              budgetChoice,
+              customPreference: normalizedCustomPreference,
+              productIds,
+              dryRun: true,
+            }),
+          },
+        );
+
+        const precheck = (await precheckResponse.json()) as {
+          success?: boolean;
+          message?: string;
+          inputFingerprint?: string;
+          estimatedOpenAiCalls?: number;
+          paidApiCalls?: number;
+          [key: string]: unknown;
+        };
+
+        const estimatedOpenAiCalls = Number(
+          precheck.estimatedOpenAiCalls ?? 0,
+        );
+
+        if (
+          !precheckResponse.ok ||
+          !precheck.success ||
+          !precheck.inputFingerprint ||
+          Number(precheck.paidApiCalls ?? 0) !== 0 ||
+          !Number.isSafeInteger(estimatedOpenAiCalls) ||
+          estimatedOpenAiCalls < 0 ||
+          estimatedOpenAiCalls > 1
+        ) {
+          throw new Error(
+            precheck.message ?? "추가 조건 분석을 준비하지 못했습니다.",
+          );
+        }
+
+        if (estimatedOpenAiCalls === 1) {
+          const executeResponse = await fetch(
+            "/api/analyze-personal-preferences",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                category,
+                budgetChoice,
+                customPreference: normalizedCustomPreference,
+                productIds,
+                mode: "custom_preference_execute",
+                confirmCustomPreferenceAnalysis: true,
+                inputFingerprint: precheck.inputFingerprint,
+              }),
+            },
+          );
+
+          const executeResult = (await executeResponse.json()) as {
+            success?: boolean;
+            message?: string;
+            inputFingerprint?: string;
+            paidApiCalls?: number;
+            [key: string]: unknown;
+          };
+
+          if (
+            !executeResponse.ok ||
+            !executeResult.success ||
+            executeResult.inputFingerprint !== precheck.inputFingerprint ||
+            Number(executeResult.paidApiCalls ?? 0) > 1
+          ) {
+            if (Number(executeResult.paidApiCalls ?? 0) > 0) {
+              window.sessionStorage.setItem(
+                "projectDPersonalPreferenceLastFailedPaidResponse",
+                JSON.stringify({
+                  savedAt: new Date().toISOString(),
+                  inputFingerprint: precheck.inputFingerprint,
+                  result: executeResult,
+                }),
+              );
+            }
+
+            throw new Error(
+              executeResult.message ?? "추가 조건 분석에 실패했습니다.",
+            );
+          }
+
+          window.sessionStorage.setItem(
+            "projectDPersonalPreferenceCache",
+            JSON.stringify({
+              key: selected.identity + ":" + precheck.inputFingerprint,
+              result: executeResult,
+            }),
+          );
+        }
+      }
+
+      router.push("/advisor/results");
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "추천 조건을 처리하지 못했습니다.",
+      );
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -570,7 +702,7 @@ export default function QuestionsClient() {
               </div>
             </section>
 
-            {process.env.NODE_ENV !== "production" && <section className="questionBlock">
+            <section className="questionBlock">
               <div className="questionHeading">
                 <h2>추가로 원하는 조건이 있나요?</h2>
                 <p>
@@ -600,7 +732,7 @@ export default function QuestionsClient() {
               <div style={{ marginTop: 8, textAlign: "right", color: "#6b7280", fontSize: 13 }}>
                 {customPreference.length}/500
               </div>
-            </section>}
+            </section>
           </>
         ) : null}
 
@@ -612,8 +744,16 @@ export default function QuestionsClient() {
                 맞춤 질문·중요도·예산·추가 조건을 모두 반영해 제품 순위를 계산합니다.
               </span>
             </div>
-            <button type="button" onClick={finishQuestions}>
-              내게 맞는 제품 추천받기 →
+            <button
+              type="button"
+              onClick={finishQuestions}
+              disabled={submitting}
+            >
+              {submitting
+                ? customPreference.trim()
+                  ? "추가 조건 반영 중..."
+                  : "추천 결과 준비 중..."
+                : "내게 맞는 제품 추천받기 →"}
             </button>
           </div>
         ) : null}

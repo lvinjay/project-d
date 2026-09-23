@@ -216,6 +216,24 @@ export default function AdvisorPage() {
   const [selectionIdentity, setSelectionIdentity] = useState("");
 
   const guideSectionRef = useRef<HTMLElement | null>(null);
+  const advisorSearchFormRef = useRef<HTMLFormElement | null>(null);
+  const autoStartedCategoryRef = useRef(false);
+
+  // PICKVIZE_CATEGORY_AUTOSTART
+  useEffect(() => {
+    const requestedCategory =
+      new URLSearchParams(window.location.search).get("category")?.trim();
+
+    if (!requestedCategory) return;
+
+    const timer = window.setTimeout(() => {
+      if (autoStartedCategoryRef.current) return;
+      autoStartedCategoryRef.current = true;
+      advisorSearchFormRef.current?.requestSubmit();
+    }, 80);
+
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (!activeCategory) {
@@ -474,7 +492,7 @@ return (
             </p>
           )}
 
-          <form
+          <form ref={advisorSearchFormRef}
             className="advisorSearch"
             onSubmit={
               searchCategory

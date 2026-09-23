@@ -519,7 +519,7 @@ async function preparePersonalPreferenceAnalysis(
   ) {
     throw new Error(
       result.message ??
-        "개인 추가조건 AI 분석 무료 사전검증에 실패했습니다.",
+        "추가 조건 분석 준비에 실패했습니다.",
     );
   }
 
@@ -536,7 +536,7 @@ async function preparePersonalPreferenceAnalysis(
     estimatedOpenAiCalls > 1
   ) {
     throw new Error(
-      "개인 추가조건 AI 분석 예상 OpenAI 호출 수가 안전 범위를 벗어났습니다. 유료 분석은 시작하지 않습니다.",
+      "추가 조건 분석을 안전하게 시작할 수 없습니다. 잠시 후 다시 시도해 주세요.",
     );
   }
 
@@ -565,6 +565,8 @@ async function executePersonalPreferenceAnalysis(
       },
       body: JSON.stringify({
         ...plan.input,
+        mode: "custom_preference_execute",
+        confirmCustomPreferenceAnalysis: true,
         inputFingerprint:
           plan.inputFingerprint,
       }),
@@ -597,7 +599,7 @@ async function executePersonalPreferenceAnalysis(
 
     throw new Error(
       result.message ??
-        "개인 추가조건 AI 분석에 실패했습니다. 자동 재시도하지 않습니다.",
+        "추가 조건 분석에 실패했습니다.",
     );
   }
 
@@ -1282,7 +1284,7 @@ export default function ResultsClient() {
               stored.budgetChoice ??
               "no_limit",
             customPreference:
-              process.env.NODE_ENV === "production" ? "" : (stored.customPreference ?? ""),
+              (stored.customPreference ?? "").trim().slice(0, 500),
             productIds:
               currentRunProductIds,
           };
@@ -1304,7 +1306,7 @@ export default function ResultsClient() {
           | PersonalPreferenceResponse
           | null = null;
 
-        if (process.env.NODE_ENV !== "production" && cachedRaw) {
+        if (cachedRaw) {
           try {
             const cached =
               JSON.parse(
@@ -1334,15 +1336,9 @@ export default function ResultsClient() {
             personalResult =
               personalPlan.precheckResult;
           } else {
-            setCategory(
-              nextCategory,
+            throw new Error(
+              "추가 조건 분석 결과가 없습니다. 맞춤 질문부터 다시 진행해 주세요.",
             );
-
-            setPendingPersonalPlan(
-              personalPlan,
-            );
-
-            return;
           }
         }
 
@@ -1503,9 +1499,7 @@ export default function ResultsClient() {
       );
 
       setErrorMessage(
-        error instanceof Error
-          ? `${error.message} 유료 요청이 시작됐을 수 있으므로 자동 재시도하지 않습니다.`
-          : "개인 추가조건 AI 분석에 실패했습니다. 유료 요청이 시작됐을 수 있으므로 자동 재시도하지 않습니다.",
+        "추가 조건 분석에 실패했습니다. 중복 실행을 피하기 위해 자동 재시도하지 않습니다. 잠시 후 다시 시도해 주세요.",
       );
     } finally {
       setIsRunningPersonalPreference(
@@ -1701,32 +1695,16 @@ export default function ResultsClient() {
         isRunningPersonalPreference ? (
           <div className="card advisorResultState">
             {isRunningPersonalPreference
-              ? "승인한 개인 추가조건 AI 분석을 실행하는 중입니다. 자동 재시도는 하지 않습니다."
+              ? "추가 조건을 분석해 추천에 반영하는 중입니다. 잠시만 기다려 주세요."
               : "추천 순위를 계산하는 중입니다."}
           </div>
         ) : pendingPersonalPlan ? (
           <div className="card advisorResultState">
-            <h2>
-              개인 추가조건 AI 분석이
-              필요합니다.
-            </h2>
+            <h2>추가로 적은 조건을 추천에 반영할까요?</h2>
 
             <p>
-              무료 사전검증이
-              완료되었습니다. 결과 화면은
-              유료 OpenAI 호출을 자동으로
-              시작하지 않습니다.
-            </p>
-
-            <p>
-              예상 OpenAI 호출 최대{" "}
-              <strong>
-                {
-                  pendingPersonalPlan
-                    .estimatedOpenAiCalls
-                }
-                회
-              </strong>
+              입력한 추가 조건을 제품 스펙과 실제 리뷰 근거에 맞춰 분석한 뒤
+              추천 순위에 반영합니다.
             </p>
 
             <p>
@@ -1747,7 +1725,7 @@ export default function ResultsClient() {
                 runPendingPersonalPreference
               }
             >
-              개인조건 AI 분석 시작
+              추가 조건 반영하고 추천 보기
             </button>
 
             <p
@@ -1756,9 +1734,7 @@ export default function ResultsClient() {
                 color: "#667085",
               }}
             >
-              버튼을 누른 경우에만 최대
-              1회의 유료 AI 분석을
-              시작합니다.
+              버튼을 누르면 입력한 추가 조건 분석을 시작합니다. 같은 조건의 완료 결과는 이 브라우저 세션에서 다시 사용합니다.
             </p>
           </div>
         ) : errorMessage ? (
