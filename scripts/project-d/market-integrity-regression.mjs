@@ -2936,3 +2936,198 @@ console.log(`STEP 16 RENDER CHECK PASS: ${assertions} counted assertions; all pr
     `STEP 68 FINAL PASS: ${assertions - before} new assertions; ${assertions} shared-counter + 10 STEP19 = ${assertions + 10} total counted assertions. Exact comparator ties use competition ranks; sort order is unchanged.`,
   );
 }
+
+// STEP70_DISPLAY_TEXT_QUALITY_GUARDS
+{
+  const before = assertions;
+
+  const {
+    normalizeDisplayText,
+    uniqueDisplayTexts,
+    uniqueCommonCautions,
+    firstSentences,
+    pointSummaries,
+  } = pureFunctions(
+    'app/api/advisor-recommendations/route.ts',
+    [
+      'normalizeDisplayText',
+      'uniqueDisplayTexts',
+      'uniqueCommonCautions',
+      'firstSentences',
+      'pointSummaries',
+    ],
+  );
+
+  check(
+    normalizeDisplayText(
+      '  Alpha   Beta  ',
+    ),
+    'Alpha Beta',
+  );
+
+  check(
+    normalizeDisplayText(123),
+    '',
+  );
+
+  const rawTexts = [
+    '  Alpha  ',
+    'alpha',
+    'Beta',
+    '   ',
+    'BETA',
+    'Gamma',
+  ];
+
+  check(
+    uniqueDisplayTexts(
+      rawTexts,
+      3,
+    ),
+    ['Alpha', 'Beta', 'Gamma'],
+  );
+
+  check(
+    rawTexts[0],
+    '  Alpha  ',
+  );
+
+  check(
+    uniqueDisplayTexts(
+      rawTexts,
+      2,
+    ),
+    ['Alpha', 'Beta'],
+  );
+
+  check(
+    uniqueDisplayTexts(null, 3),
+    [],
+  );
+
+  check(
+    firstSentences(
+      [
+        '  One  ',
+        'one',
+        'Two',
+        '',
+      ],
+      3,
+    ),
+    ['One', 'Two'],
+  );
+
+  check(
+    pointSummaries(
+      [
+        {
+          topic: '  Noise  ',
+          summary: '  Can   be loud  ',
+        },
+        {
+          topic: 'noise',
+          summary: 'can be loud',
+        },
+        {
+          topic: ' ',
+          summary: ' Battery  life ',
+        },
+      ],
+      3,
+    ),
+    [
+      'Noise: Can be loud',
+      'Battery life',
+    ],
+  );
+
+  const common =
+    uniqueCommonCautions(
+      [
+        {
+          title: ' Noise   issue ',
+          description: ' Can  be loud ',
+          affectedCount: 2,
+        },
+        {
+          title: 'noise issue',
+          description: 'can be loud',
+          affectedCount: 3,
+        },
+        {
+          title: ' Battery ',
+          description: '',
+          affectedCount: 1,
+        },
+      ],
+      3,
+    );
+
+  check(
+    common.length,
+    2,
+  );
+
+  check(
+    common[0].title,
+    'Noise issue',
+  );
+
+  check(
+    common[0].description,
+    'Can be loud',
+  );
+
+  const {
+    readFileSync: step70ReadFileSync,
+  } = await import('node:fs');
+
+  const step70Api =
+    step70ReadFileSync(
+      'app/api/advisor-recommendations/route.ts',
+      'utf8',
+    ).replace(/\r\n/g, '\n');
+
+  check(
+    step70Api.includes(
+      'product.review_analysis\n                  ?.summary,',
+    ),
+    true,
+  );
+
+  check(
+    step70Api.includes(
+      'personalPreferenceReason:\n              normalizeDisplayText(',
+    ),
+    true,
+  );
+
+  check(
+    step70Api.includes(
+      'uniqueCommonCautions(',
+    ),
+    true,
+  );
+
+  check(
+    step70Api.includes(
+      'function rawProductCautions(',
+    ) &&
+      step70Api.includes(
+        'uniqueDisplayTexts(',
+      ),
+    true,
+  );
+
+  check(
+    step70Api.includes(
+      'b.rankingScore - a.rankingScore ||',
+    ),
+    true,
+  );
+
+  console.log(
+    `STEP 70 FINAL PASS: ${assertions - before} new assertions; ${assertions} shared-counter + 10 STEP19 = ${assertions + 10} total counted assertions. Empty display text is normalized and repeated display strings are deduped; ranking/relevance logic unchanged.`,
+  );
+}

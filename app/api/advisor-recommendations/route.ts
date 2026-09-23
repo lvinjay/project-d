@@ -81,6 +81,113 @@ function normalizeText(value: unknown) {
     : "";
 }
 
+function normalizeDisplayText(
+  value: unknown,
+): string {
+  return typeof value === "string"
+    ? value
+        .replace(/\s+/g, " ")
+        .trim()
+    : "";
+}
+
+function uniqueDisplayTexts(
+  values: unknown,
+  limit: number,
+): string[] {
+  if (!Array.isArray(values)) {
+    return [];
+  }
+
+  const safeLimit =
+    Number.isSafeInteger(limit) &&
+    limit > 0
+      ? limit
+      : 0;
+
+  if (safeLimit === 0) {
+    return [];
+  }
+
+  const result: string[] = [];
+  const seen = new Set<string>();
+
+  for (const value of values) {
+    const normalized =
+      normalizeDisplayText(value);
+
+    if (!normalized) {
+      continue;
+    }
+
+    const key =
+      normalized.toLowerCase();
+
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    result.push(normalized);
+
+    if (result.length >= safeLimit) {
+      break;
+    }
+  }
+
+  return result;
+}
+
+function uniqueCommonCautions<
+  T extends {
+    title: string;
+    description: string;
+  },
+>(
+  values: T[],
+  limit: number,
+): T[] {
+  const result: T[] = [];
+  const seen = new Set<string>();
+
+  for (const value of values) {
+    const title =
+      normalizeDisplayText(
+        value.title,
+      );
+
+    const description =
+      normalizeDisplayText(
+        value.description,
+      );
+
+    if (!title && !description) {
+      continue;
+    }
+
+    const key =
+      `${title.toLowerCase()}\u0000${description.toLowerCase()}`;
+
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+
+    result.push({
+      ...value,
+      title,
+      description,
+    });
+
+    if (result.length >= limit) {
+      break;
+    }
+  }
+
+  return result;
+}
+
 function getAdvisorImageUrl(
   detail: ProductDetailAnalysis | null | undefined,
 ): string | null {
@@ -673,22 +780,10 @@ function firstSentences(
   values: unknown,
   limit: number,
 ) {
-  if (!Array.isArray(values)) {
-    return [];
-  }
-
-  return values
-    .filter(
-      (
-        value,
-      ): value is string =>
-        typeof value === "string",
-    )
-    .map((value) =>
-      value.trim(),
-    )
-    .filter(Boolean)
-    .slice(0, limit);
+  return uniqueDisplayTexts(
+    values,
+    limit,
+  );
 }
 
 function pointSummaries(
@@ -699,8 +794,8 @@ function pointSummaries(
     return [];
   }
 
-  return values
-    .map((value) => {
+  const collected =
+    values.map((value) => {
       if (
         !value ||
         typeof value !== "object"
@@ -711,15 +806,25 @@ function pointSummaries(
       const point =
         value as ReviewPoint;
 
-      return [
-        point.topic,
-        point.summary,
-      ]
+      const topic =
+        normalizeDisplayText(
+          point.topic,
+        );
+
+      const summary =
+        normalizeDisplayText(
+          point.summary,
+        );
+
+      return [topic, summary]
         .filter(Boolean)
         .join(": ");
-    })
-    .filter(Boolean)
-    .slice(0, limit);
+    });
+
+  return uniqueDisplayTexts(
+    collected,
+    limit,
+  );
 }
 
 function normalizeIssueText(
@@ -817,31 +922,22 @@ function issuesAreSimilar(
 function rawProductCautions(
   product: ProductRow,
 ) {
-  return [
-    ...firstSentences(
-      product.review_analysis
-        ?.cautions,
-      3,
-    ),
-    ...pointSummaries(
-      product.review_analysis
-        ?.negativePoints,
-      3,
-    ),
-  ]
-    .map((value) =>
-      value.trim(),
-    )
-    .filter(Boolean)
-    .filter(
-      (
-        value,
-        index,
-        array,
-      ) =>
-        array.indexOf(value) ===
-        index,
-    );
+  return uniqueDisplayTexts(
+    [
+      ...firstSentences(
+        product.review_analysis
+          ?.cautions,
+        3,
+      ),
+
+      ...pointSummaries(
+        product.review_analysis
+          ?.negativePoints,
+        3,
+      ),
+    ],
+    6,
+  );
 }
 
 export async function POST(
@@ -1443,7 +1539,8 @@ export async function POST(
             product.product_name.trim();
 
           const commonCautions =
-            savedCommonCautions
+            uniqueCommonCautions(
+savedCommonCautions
               .filter(
                 (item) => {
                   const affected =
@@ -1515,8 +1612,10 @@ export async function POST(
                 (item) =>
                   item.title ||
                   item.description,
-              )
-              .slice(0, 3);
+              ),
+
+              3,
+            );
 
           const rawCautions =
             rawProductCautions(
@@ -1583,8 +1682,10 @@ export async function POST(
               ),
 
             summary:
-              product.review_analysis
-                ?.summary ??
+              normalizeDisplayText(
+                product.review_analysis
+                  ?.summary,
+              ) ||
               (
                 product.product_detail_analysis &&
                 typeof product.product_detail_analysis ===
@@ -1603,8 +1704,9 @@ export async function POST(
               null,
 
             personalPreferenceReason:
-              personal?.reason ??
-              "",
+              normalizeDisplayText(
+                personal?.reason,
+              ),
 
             productPrice,
 
