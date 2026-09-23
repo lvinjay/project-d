@@ -2786,3 +2786,153 @@ console.log(`STEP 16 RENDER CHECK PASS: ${assertions} counted assertions; all pr
     `STEP 66 FINAL PASS: ${assertions - before} new assertions; ${assertions} shared-counter + 10 STEP19 = ${assertions + 10} total counted assertions. Advisor images reuse persisted product_detail_analysis and render only safe HTTP(S) URLs; no paid collection.`,
   );
 }
+
+// STEP68_TRUE_TIE_RANK_GUARDS
+{
+  const before = assertions;
+
+  const { assignCompetitionRanks } =
+    pureFunctions(
+      'app/api/advisor-recommendations/route.ts',
+      ['assignCompetitionRanks'],
+    );
+
+  const exactTie =
+    assignCompetitionRanks([
+      { id: 'a', rankingScore: 90, matchScore: 92, confidence: 80 },
+      { id: 'b', rankingScore: 90, matchScore: 92, confidence: 80 },
+      { id: 'c', rankingScore: 85, matchScore: 90, confidence: 90 },
+      { id: 'd', rankingScore: 85, matchScore: 90, confidence: 90 },
+      { id: 'e', rankingScore: 80, matchScore: 88, confidence: 70 },
+    ]);
+
+  check(
+    exactTie.map((item) => item.rank),
+    [1, 1, 3, 3, 5],
+  );
+
+  check(
+    exactTie.map((item) => item.id),
+    ['a', 'b', 'c', 'd', 'e'],
+  );
+
+  const sameRankingDifferentMatch =
+    assignCompetitionRanks([
+      { id: 'a', rankingScore: 90, matchScore: 95, confidence: 80 },
+      { id: 'b', rankingScore: 90, matchScore: 94, confidence: 80 },
+    ]);
+
+  check(
+    sameRankingDifferentMatch.map((item) => item.rank),
+    [1, 2],
+  );
+
+  const sameRankingAndMatchDifferentConfidence =
+    assignCompetitionRanks([
+      { id: 'a', rankingScore: 90, matchScore: 95, confidence: 90 },
+      { id: 'b', rankingScore: 90, matchScore: 95, confidence: 80 },
+    ]);
+
+  check(
+    sameRankingAndMatchDifferentConfidence.map((item) => item.rank),
+    [1, 2],
+  );
+
+  check(
+    assignCompetitionRanks([]),
+    [],
+  );
+
+  const {
+    isJointRank,
+    getDisplayRankLabel,
+  } = pureFunctions(
+    'app/advisor/results/ResultsClient.tsx',
+    [
+      'isJointRank',
+      'getDisplayRankLabel',
+    ],
+  );
+
+  const displayItems = [
+    { rank: 1 },
+    { rank: 1 },
+    { rank: 3 },
+    { rank: 4 },
+  ];
+
+  check(
+    isJointRank(displayItems, 1),
+    true,
+  );
+
+  check(
+    isJointRank(displayItems, 3),
+    false,
+  );
+
+  check(
+    getDisplayRankLabel(displayItems, 1),
+    '공동 1위',
+  );
+
+  check(
+    getDisplayRankLabel(displayItems, 3),
+    '3위',
+  );
+
+  const {
+    readFileSync: step68ReadFileSync,
+  } = await import('node:fs');
+
+  const step68Api =
+    step68ReadFileSync(
+      'app/api/advisor-recommendations/route.ts',
+      'utf8',
+    ).replace(/\r\n/g, '\n');
+
+  const step68Results =
+    step68ReadFileSync(
+      'app/advisor/results/ResultsClient.tsx',
+      'utf8',
+    ).replace(/\r\n/g, '\n');
+
+  check(
+    step68Api.includes(
+      'b.rankingScore - a.rankingScore ||',
+    ),
+    true,
+  );
+
+  check(
+    step68Api.includes(
+      'b.matchScore -\n              a.matchScore ||',
+    ),
+    true,
+  );
+
+  check(
+    step68Api.includes(
+      'b.confidence -\n              a.confidence',
+    ),
+    true,
+  );
+
+  check(
+    step68Results.includes(
+      '공동 1위 추천',
+    ),
+    true,
+  );
+
+  check(
+    step68Results.includes(
+      'getDisplayRankLabel(',
+    ),
+    true,
+  );
+
+  console.log(
+    `STEP 68 FINAL PASS: ${assertions - before} new assertions; ${assertions} shared-counter + 10 STEP19 = ${assertions + 10} total counted assertions. Exact comparator ties use competition ranks; sort order is unchanged.`,
+  );
+}

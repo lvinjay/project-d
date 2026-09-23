@@ -238,6 +238,27 @@ function getRankingScore(
   );
 }
 
+function isJointRank(
+  recommendations: Recommendation[],
+  rank: number,
+): boolean {
+  return recommendations.filter(
+    (item) => item.rank === rank,
+  ).length > 1;
+}
+
+function getDisplayRankLabel(
+  recommendations: Recommendation[],
+  rank: number,
+): string {
+  return isJointRank(
+    recommendations,
+    rank,
+  )
+    ? `공동 ${rank}위`
+    : `${rank}위`;
+}
+
 function buildAdvisorCategoryHref(
   value: string | null | undefined,
 ) {
@@ -1765,7 +1786,12 @@ export default function ResultsClient() {
             <article className="advisorWinnerCard">
               <div>
                 <span className="advisorWinnerBadge">
-                  1위 추천
+                  {isJointRank(
+                    recommendations,
+                    1,
+                  )
+                    ? "공동 1위 추천"
+                    : "1위 추천"}
                 </span>
 
                 {winnerImageUrl ? (
@@ -2748,9 +2774,10 @@ export default function ResultsClient() {
                       >
                         <div className="advisorRankMain">
                           <div className="advisorRankNumber">
-                            {
-                              item.rank
-                            }
+                            {getDisplayRankLabel(
+                              recommendations,
+                              item.rank,
+                            )}
                           </div>
 
                           <div className="advisorRankContent">

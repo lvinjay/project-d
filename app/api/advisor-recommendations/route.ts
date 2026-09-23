@@ -105,6 +105,46 @@ function getAdvisorImageUrl(
   return null;
 }
 
+function assignCompetitionRanks<
+  T extends {
+    rankingScore: number;
+    matchScore: number;
+    confidence: number;
+  },
+>(
+  items: T[],
+): Array<T & { rank: number }> {
+  let currentRank = 0;
+
+  return items.map(
+    (item, index, array) => {
+      const previous =
+        index > 0
+          ? array[index - 1]
+          : null;
+
+      const tiedWithPrevious =
+        previous !== null &&
+        item.rankingScore ===
+          previous.rankingScore &&
+        item.matchScore ===
+          previous.matchScore &&
+        item.confidence ===
+          previous.confidence;
+
+      if (!tiedWithPrevious) {
+        currentRank =
+          index + 1;
+      }
+
+      return {
+        ...item,
+        rank: currentRank,
+      };
+    },
+  );
+}
+
 function normalizeWeights(value: unknown) {
   if (
     !value ||
@@ -1821,7 +1861,7 @@ export async function POST(
             ]),
       );
 
-    const recommendations =
+    const sortedRecommendations =
       withValueScores
         .sort(
           (a, b) =>
@@ -1831,18 +1871,18 @@ export async function POST(
             b.confidence -
               a.confidence,
         )
-        .slice(0, 5)
-        .map(
-          (item, index) => ({
-            ...item,
-            rank:
-              index + 1,
-            valueRank:
-              valueRankMap.get(
-                item.id,
-              ) ?? null,
-          }),
-        );
+        .slice(0, 5);
+
+    const recommendations =
+      assignCompetitionRanks(
+        sortedRecommendations,
+      ).map((item) => ({
+        ...item,
+        valueRank:
+          valueRankMap.get(
+            item.id,
+          ) ?? null,
+      }));
 
     if (
       recommendations.length ===
