@@ -441,42 +441,74 @@ function getProductKeySpecs(
     product.product_detail_analysis
       ?.keySpecs;
 
-  if (!Array.isArray(raw)) {
-    return [];
-  }
+  const normalizeSpec = (
+    rawName: unknown,
+    rawValue: unknown,
+    rawEvidence: unknown = "",
+    rawSource: unknown = "",
+  ) => {
+    const name =
+      normalizeText(rawName);
 
-  return raw
-    .map((item) => {
-      if (
-        !item ||
-        typeof item !== "object"
-      ) {
-        return null;
-      }
+    const value =
+      normalizeText(rawValue);
 
-      const name =
-        normalizeText(item.name);
+    const evidence =
+      normalizeText(rawEvidence);
 
-      const value =
-        normalizeText(item.value);
+    const source =
+      normalizeText(rawSource);
 
-      const evidence =
-        normalizeText(item.evidence);
+    if (!name || !value) {
+      return null;
+    }
 
-      const source =
-        normalizeText(item.source);
+    return {
+      name,
+      value,
+      evidence,
+      source,
+    };
+  };
 
-      if (!name || !value) {
-        return null;
-      }
+  const normalized =
+    Array.isArray(raw)
+      ? raw.map((item) => {
+          if (
+            !item ||
+            typeof item !== "object" ||
+            Array.isArray(item)
+          ) {
+            return null;
+          }
 
-      return {
-        name,
-        value,
-        evidence,
-        source,
-      };
-    })
+          const row =
+            item as Record<
+              string,
+              unknown
+            >;
+
+          return normalizeSpec(
+            row.name,
+            row.value,
+            row.evidence,
+            row.source,
+          );
+        })
+      : raw &&
+          typeof raw === "object"
+        ? Object.entries(raw).map(
+            ([name, value]) =>
+              normalizeSpec(
+                name,
+                value,
+                "",
+                "product_detail_analysis.keySpecs",
+              ),
+          )
+        : [];
+
+  return normalized
     .filter(
       (
         item,

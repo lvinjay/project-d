@@ -1812,3 +1812,58 @@ console.log(`STEP 16 RENDER CHECK PASS: ${assertions} counted assertions; all pr
       " assertions; schema/validator/paid-failure replay guards.",
   );
 }
+
+// STEP46_PRODUCT_FACTS_GUARDS: execute current source functions without importing endpoints.
+{
+  const before = assertions;
+  const { getProductKeySpecs } = pureFunctions('app/api/advisor-recommendations/route.ts',
+    ['normalizeText', 'getProductKeySpecs']);
+  const { selectDisplaySpecs } = pureFunctions('app/advisor/results/ResultsClient.tsx',
+    ['normalizeSpecName', 'selectDisplaySpecs']);
+  const adapt = keySpecs => getProductKeySpecs({ product_detail_analysis: { keySpecs } });
+
+  const legacy = adapt([{ name: 'Weight', value: '4kg', evidence: 'legacy evidence', source: 'legacy source' }]);
+  check(legacy.length, 1);
+  check(legacy[0].name, 'Weight');
+  check(legacy[0].value, '4kg');
+  check(legacy[0].evidence, 'legacy evidence');
+  check(legacy[0].source, 'legacy source');
+
+  const objectSpecs = adapt({ '흡입력': '10000Pa', '소음': '65dB' });
+  check(objectSpecs.length, 2);
+  check(objectSpecs.find(spec => spec.name === '흡입력'), {
+    name: '흡입력', value: '10000Pa', evidence: '', source: 'product_detail_analysis.keySpecs',
+  });
+  check(objectSpecs.find(spec => spec.name === '소음'), {
+    name: '소음', value: '65dB', evidence: '', source: 'product_detail_analysis.keySpecs',
+  });
+  check(adapt(Object.fromEntries(Array.from({ length: 35 }, (_, index) => [`spec ${index}`, `value ${index}`]))).length, 30);
+
+  // Generic fields deliberately arrive first. Exercise adapter -> actual display selector.
+  const genericSpecs = { '제조사': 'Example', '브랜드': 'Example', '출시년도': '2026' };
+  const robotPriority = ['흡입력', '소음', '사용시간', '배터리용량', '무게'];
+  const robotNames = selectDisplaySpecs(adapt({ ...genericSpecs, '청소방식': '흡입+걸레',
+    '흡입력': '10000Pa', '소음': '65dB', '사용시간': '2시간30분', '배터리용량': '5200mAh', '무게': '4.5kg',
+  }), '로봇청소기').map(spec => spec.name);
+  check(robotNames.slice(0, 5), robotPriority);
+  for (const generic of Object.keys(genericSpecs)) {
+    check(robotPriority.every(name => robotNames.includes(name) &&
+      (!robotNames.includes(generic) || robotNames.indexOf(name) < robotNames.indexOf(generic))), true);
+  }
+
+  const airconPriority = ['냉방능력', '소음', '소비전력', '무게'];
+  const airconNames = selectDisplaySpecs(adapt({ ...genericSpecs, '무게': '12kg',
+    '소비전력': '500W', '소음': '45dB', '냉방능력': '5000BTU',
+  }), '캠핑용 에어컨').map(spec => spec.name);
+  check(airconNames.slice(0, 4), airconPriority);
+  for (const generic of Object.keys(genericSpecs)) {
+    check(airconPriority.every(name => airconNames.includes(name) &&
+      (!airconNames.includes(generic) || airconNames.indexOf(name) < airconNames.indexOf(generic))), true);
+  }
+
+  // Narrow structural guards on extracted functions; no whole-source snapshots.
+  check(/Object\.entries\(\s*raw\s*\)/.test(getProductKeySpecs.toString()), true);
+  check(/Array\.isArray\(\s*raw\s*\)/.test(getProductKeySpecs.toString()), true);
+  check(/isRobotVacuum\s*\?/.test(selectDisplaySpecs.toString()), true);
+  console.log(`STEP 46 FINAL PASS: ${assertions - before} new assertions; ${assertions} shared-counter assertions plus 10 preserved STEP19 guards = ${assertions + 10} total counted assertions. Legacy/object adapter, 30-cap, robot/aircon priority; no endpoint execution.`);
+}

@@ -31,17 +31,112 @@ function criterionScoreLabel(criterion: CriterionBreakdown): string {
   if (typeof criterion.score === "number") return "점수 " + criterion.score + "점";
   return "평가 가능한 점수 없음";
 }
-function selectDisplaySpecs(specs: KeySpec[], category: string): KeySpec[] {
-  const valid = specs.filter(s => typeof s.name === "string" && s.name.trim() && typeof s.value === "string" && s.value.trim())
-    .map(s => ({ ...s, name: s.name.trim(), value: s.value.trim() }));
-  const preferred = /에어컨|냉방/.test(category)
-    ? valid.filter(s => /btu|냉방능력|냉방용량|냉방성능|소음|db|데시벨|소비전력|정격전력|전력소비|watt|와트|무게|중량|kg|제습량|풍량|배터리/i.test(s.name + " " + s.value)) : [];
-  const seen = new Set<string>();
-  return [...preferred, ...valid].filter(s => {
-    const key = normalizeSpecName(s.name);
-    if (!key || seen.has(key)) return false;
-    seen.add(key); return true;
-  }).slice(0, 5);
+function selectDisplaySpecs(
+  specs: KeySpec[],
+  category: string,
+): KeySpec[] {
+  const valid =
+    specs
+      .filter(
+        (spec) =>
+          typeof spec.name === "string" &&
+          spec.name.trim() &&
+          typeof spec.value === "string" &&
+          spec.value.trim(),
+      )
+      .map((spec) => ({
+        ...spec,
+        name: spec.name.trim(),
+        value: spec.value.trim(),
+      }));
+
+  const pickPreferred = (
+    patterns: RegExp[],
+  ) => {
+    const picked: KeySpec[] = [];
+    const pickedNames =
+      new Set<string>();
+
+    for (const pattern of patterns) {
+      for (const spec of valid) {
+        const key =
+          normalizeSpecName(
+            spec.name,
+          );
+
+        if (
+          !key ||
+          pickedNames.has(key) ||
+          !pattern.test(
+            `${spec.name} ${spec.value}`,
+          )
+        ) {
+          continue;
+        }
+
+        pickedNames.add(key);
+        picked.push(spec);
+      }
+    }
+
+    return picked;
+  };
+
+  const isAirConditioner =
+    /\uC5D0\uC5B4\uCEE8|\uB0C9\uBC29/i
+      .test(category);
+
+  const isRobotVacuum =
+    /\uB85C\uBD07\s*\uCCAD\uC18C\uAE30|\uB85C\uCCAD/i
+      .test(category);
+
+  const preferred =
+    isAirConditioner
+      ? pickPreferred([
+          /btu|\uB0C9\uBC29\uB2A5\uB825|\uB0C9\uBC29\uC6A9\uB7C9|\uB0C9\uBC29\uC131\uB2A5/i,
+          /\uC18C\uC74C|db|\uB370\uC2DC\uBCA8/i,
+          /\uC18C\uBE44\uC804\uB825|\uC815\uACA9\uC804\uB825|\uC804\uB825\uC18C\uBE44|watt|\uC640\uD2B8/i,
+          /\uBB34\uAC8C|\uC911\uB7C9|kg/i,
+          /\uC81C\uC2B5\uB7C9|\uD48D\uB7C9|\uBC30\uD130\uB9AC/i,
+        ])
+      : isRobotVacuum
+        ? pickPreferred([
+            /\uD761\uC785\uB825|\uD761\uC785\uC555|(?:^|[^a-z])pa(?:$|[^a-z])/i,
+            /\uC18C\uC74C|db|\uB370\uC2DC\uBCA8/i,
+            /\uC0AC\uC6A9\uC2DC\uAC04|\uCCAD\uC18C\uC2DC\uAC04/i,
+            /\uBC30\uD130\uB9AC\uC6A9\uB7C9|mah/i,
+            /\uBB38\uD131/i,
+            /\uBA3C\uC9C0\uD1B5\uC6A9\uB7C9|\uBB3C\uD1B5\uC6A9\uB7C9|\uAE09\uC218\uD0F1\uD06C|\uC624\uC218\uD0F1\uD06C/i,
+            /\uC18C\uBE44\uC804\uB825|\uC815\uACA9\uC804\uB825|watt|\uC640\uD2B8/i,
+            /\uBB34\uAC8C|\uC911\uB7C9|kg/i,
+          ])
+        : [];
+
+  const seen =
+    new Set<string>();
+
+  return [
+    ...preferred,
+    ...valid,
+  ]
+    .filter((spec) => {
+      const key =
+        normalizeSpecName(
+          spec.name,
+        );
+
+      if (
+        !key ||
+        seen.has(key)
+      ) {
+        return false;
+      }
+
+      seen.add(key);
+
+      return true;
+    })
+    .slice(0, 5);
 }
 
 type KeySpec = {
