@@ -2216,3 +2216,180 @@ console.log(`STEP 16 RENDER CHECK PASS: ${assertions} counted assertions; all pr
     `STEP 58 FINAL PASS: ${assertions - before} new assertions; ${assertions} shared-counter + 10 STEP19 = ${assertions + 10} total counted assertions. Category reentry links follow current selection; no endpoint execution.`,
   );
 }
+
+// STEP60_BUY_URL_SAFETY_GUARDS
+{
+  const before = assertions;
+
+  const {
+    readFileSync: step60ReadFileSync,
+  } = await import('node:fs');
+
+  const step60Vm =
+    await import('node:vm');
+
+  const step60TsModule =
+    await import('typescript');
+
+  const step60Ts =
+    step60TsModule.default ??
+    step60TsModule;
+
+  const step60Results =
+    step60ReadFileSync(
+      'app/advisor/results/ResultsClient.tsx',
+      'utf8',
+    ).replace(/\r\n/g, '\n');
+
+  const step60Sf =
+    step60Ts.createSourceFile(
+      'ResultsClient.tsx',
+      step60Results,
+      step60Ts.ScriptTarget.Latest,
+      true,
+      step60Ts.ScriptKind.TSX,
+    );
+
+  const step60Node =
+    step60Sf.statements.find(
+      (statement) =>
+        step60Ts.isFunctionDeclaration(
+          statement,
+        ) &&
+        statement.name?.text ===
+          'getSafeBuyUrl',
+    );
+
+  if (!step60Node) {
+    throw new Error(
+      'STEP60 getSafeBuyUrl missing',
+    );
+  }
+
+  const step60FunctionSource =
+    step60Node.getText(
+      step60Sf,
+    );
+
+  const step60Transpiled =
+    step60Ts.transpileModule(
+      step60FunctionSource +
+        '\nexport { getSafeBuyUrl };',
+      {
+        compilerOptions: {
+          module:
+            step60Ts.ModuleKind.CommonJS,
+          target:
+            step60Ts.ScriptTarget.ES2022,
+        },
+      },
+    ).outputText;
+
+  const step60Exports = {};
+
+  step60Vm.runInNewContext(
+    step60Transpiled,
+    {
+      exports: step60Exports,
+      URL,
+    },
+  );
+
+  const getSafeBuyUrl =
+    step60Exports.getSafeBuyUrl;
+
+  check(
+    getSafeBuyUrl(
+      'https://example.com/product?id=1',
+    ),
+    'https://example.com/product?id=1',
+  );
+
+  check(
+    getSafeBuyUrl(
+      'http://example.com/item',
+    ),
+    'http://example.com/item',
+  );
+
+  check(
+    getSafeBuyUrl(
+      '  https://example.com/a  ',
+    ),
+    'https://example.com/a',
+  );
+
+  check(
+    getSafeBuyUrl(
+      '/relative/product',
+    ),
+    null,
+  );
+
+  check(
+    getSafeBuyUrl(
+      'javascript:alert(1)',
+    ),
+    null,
+  );
+
+  check(
+    getSafeBuyUrl(
+      'data:text/html,test',
+    ),
+    null,
+  );
+
+  check(
+    getSafeBuyUrl(
+      'ftp://example.com/file',
+    ),
+    null,
+  );
+
+  check(
+    getSafeBuyUrl(
+      '//example.com/product',
+    ),
+    null,
+  );
+
+  check(
+    getSafeBuyUrl(
+      'not a url',
+    ),
+    null,
+  );
+
+  check(
+    /href=\{winner\.sourceUrl\}/.test(
+      step60Results,
+    ),
+    false,
+  );
+
+  check(
+    /href=\{\s*item\.sourceUrl\s*\}/.test(
+      step60Results,
+    ),
+    false,
+  );
+
+  check(
+    step60Results.includes(
+      'href={winnerBuyUrl}',
+    ),
+    true,
+  );
+
+  check(
+    step60Results.includes(
+      'href={buyUrl}',
+    ),
+    true,
+  );
+
+  console.log(
+    `STEP 60 FINAL PASS: ${assertions - before} new assertions; ${assertions} shared-counter + 10 STEP19 = ${assertions + 10} total counted assertions. Buy links allow only parsed absolute HTTP(S) URLs; invalid URLs render no anchor.`,
+  );
+}

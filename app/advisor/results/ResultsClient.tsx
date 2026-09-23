@@ -241,6 +241,36 @@ function buildAdvisorCategoryHref(
     : "/advisor";
 }
 
+function getSafeBuyUrl(
+  value: string | null | undefined,
+): string | null {
+  const normalized =
+    typeof value === "string"
+      ? value.trim()
+      : "";
+
+  if (!normalized) {
+    return null;
+  }
+
+  try {
+    const parsed =
+      new URL(normalized);
+
+    if (
+      (parsed.protocol !== "https:" &&
+        parsed.protocol !== "http:") ||
+      !parsed.hostname
+    ) {
+      return null;
+    }
+
+    return normalized;
+  } catch {
+    return null;
+  }
+}
+
 type RecommendationResponse = {
   success: boolean;
   category?: string;
@@ -1415,6 +1445,13 @@ export default function ResultsClient() {
     recommendations[0] ??
     null;
 
+  const winnerBuyUrl =
+    winner
+      ? getSafeBuyUrl(
+          winner.sourceUrl,
+        )
+      : null;
+
   const topCriteria =
     useMemo(
       () =>
@@ -2326,14 +2363,27 @@ export default function ResultsClient() {
                       : "세부 점수 보기"}
                   </button>
 
-                  <a
-                    href={winner.sourceUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="primaryButton"
-                  >
-                    구매하러 가기 →
-                  </a>
+                  {winnerBuyUrl ? (
+                    <a
+                      href={winnerBuyUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="primaryButton"
+                    >
+                      구매하러 가기 →
+                    </a>
+                  ) : (
+                    <span
+                      className="secondaryButton"
+                      aria-disabled="true"
+                      style={{
+                        opacity: 0.65,
+                        cursor: "not-allowed",
+                      }}
+                    >
+                      구매 링크 확인 불가
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -2546,6 +2596,11 @@ export default function ResultsClient() {
                       expandedId ===
                       item.id;
 
+                    const buyUrl =
+                      getSafeBuyUrl(
+                        item.sourceUrl,
+                      );
+
                     const rankCautions =
                       getRankCardCautions(
                         item,
@@ -2687,19 +2742,31 @@ export default function ResultsClient() {
   </div>
 </div>
 
-                            <a
-                              href={
-                                item.sourceUrl
-                              }
-                              target="_blank"
-                              rel="noreferrer"
-                              className="primaryButton"
-                              style={{
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              구매하러 가기 →
-                            </a>
+                            {buyUrl ? (
+                              <a
+                                href={buyUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="primaryButton"
+                                style={{
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                구매하러 가기 →
+                              </a>
+                            ) : (
+                              <span
+                                className="secondaryButton"
+                                aria-disabled="true"
+                                style={{
+                                  whiteSpace: "nowrap",
+                                  opacity: 0.65,
+                                  cursor: "not-allowed",
+                                }}
+                              >
+                                구매 링크 확인 불가
+                              </span>
+                            )}
                           </div>
                         </div>
 
