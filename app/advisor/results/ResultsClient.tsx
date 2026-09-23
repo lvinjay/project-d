@@ -3267,7 +3267,40 @@ export default function ResultsClient() {
           </>
         ) : null}
       </section>
-    </main>
+
+      <section
+        data-marker="PICKVIZE_RESULTS_PURCHASE_NOTICE"
+        className="container"
+        style={{
+          paddingTop: 8,
+          paddingBottom: 40,
+        }}
+      >
+        <div
+          className="card"
+          style={{
+            padding: 18,
+            fontSize: 13,
+            lineHeight: 1.65,
+            color: "#667085",
+          }}
+        >
+          <strong
+            style={{
+              display: "block",
+              marginBottom: 6,
+              color: "#344054",
+            }}
+          >
+            구매 전 확인
+          </strong>
+          추천 결과는 현재 저장된 제품 스펙, 사용자 리뷰와 입력한 조건을 바탕으로
+          분석한 참고 정보입니다. 가격·재고·구성·제품 사양은 변경될 수 있으므로
+          구매 전 판매처의 최신 정보를 확인해 주세요.
+        </div>
+      </section>
+
+</main>
   );
 }
 

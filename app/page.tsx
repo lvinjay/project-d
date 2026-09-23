@@ -280,7 +280,24 @@ export default function Home() {
           PickVize <small>AI Buying Advisor</small>
         </strong>
 
-        <span>AI Product Decision Platform</span>
+        <span>
+          AI Product Decision Platform
+          <small
+            data-marker="PICKVIZE_PUBLIC_TRUST_COPY"
+            style={{
+              display: "block",
+              marginTop: 6,
+              maxWidth: 520,
+              fontSize: 11,
+              lineHeight: 1.55,
+              opacity: 0.72,
+            }}
+          >
+            AI 추천은 제품 스펙, 사용자 리뷰, 입력 조건을 바탕으로 한 정보 제공용
+            분석입니다. 실제 가격·재고·제품 사양은 구매 전 판매처에서 최종
+            확인해 주세요.
+          </small>
+        </span>
       </footer>
     </main>
   );
