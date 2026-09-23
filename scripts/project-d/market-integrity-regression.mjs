@@ -2004,3 +2004,138 @@ console.log(`STEP 16 RENDER CHECK PASS: ${assertions} counted assertions; all pr
     `STEP 54 FINAL PASS: ${assertions - before} new assertions; ${assertions} shared-counter + 10 STEP19 = ${assertions + 10} total counted assertions. Budget-adjusted ranking score UI aligned; no endpoint execution.`,
   );
 }
+
+// STEP56_RANK_CARD_PRICE_CAUTION_GUARDS
+{
+  const before = assertions;
+
+  const {
+    getRankCardCautions,
+    formatPrice,
+  } = pureFunctions(
+    'app/advisor/results/ResultsClient.tsx',
+    [
+      'getRankCardCautions',
+      'formatPrice',
+    ],
+  );
+
+  const curated =
+    getRankCardCautions({
+      productCautions: [
+        '\uBE0C\uB7EC\uC2DC \uC5C9\uD0B4',
+      ],
+      commonCautions: [
+        {
+          title:
+            '\uC571 \uC5F0\uACB0 \uBD88\uC548\uC815',
+          description: '',
+        },
+      ],
+      cautions: [
+        '\uBC30\uD130\uB9AC \uC8FC\uC758',
+      ],
+    });
+
+  check(
+    curated,
+    [
+      '\uBE0C\uB7EC\uC2DC \uC5C9\uD0B4',
+      '\uC571 \uC5F0\uACB0 \uBD88\uC548\uC815',
+    ],
+  );
+
+  check(
+    getRankCardCautions({
+      productCautions: [
+        '\uAC19\uC740 \uC8FC\uC758',
+        '  \uAC19\uC740   \uC8FC\uC758  ',
+      ],
+      commonCautions: [
+        {
+          title:
+            '\uAC19\uC740 \uC8FC\uC758',
+          description: '',
+        },
+      ],
+      cautions: [
+        '\uB2E4\uB978 \uC8FC\uC758',
+      ],
+    }),
+    [
+      '\uAC19\uC740 \uC8FC\uC758',
+      '\uB2E4\uB978 \uC8FC\uC758',
+    ],
+  );
+
+  check(
+    getRankCardCautions({
+      cautions: [
+        '\uD3F4\uBC31 \uC8FC\uC758',
+      ],
+    }),
+    ['\uD3F4\uBC31 \uC8FC\uC758'],
+  );
+
+  check(
+    getRankCardCautions({
+      productCautions: [
+        'A',
+        'B',
+        'C',
+      ],
+    }).length,
+    2,
+  );
+
+  check(
+    formatPrice(799000),
+    '79.9\uB9CC\uC6D0',
+  );
+
+  check(
+    formatPrice(null),
+    '',
+  );
+
+  const { readFileSync: step56ReadFileSync } =
+    await import('node:fs');
+
+  const step56Results =
+    step56ReadFileSync(
+      'app/advisor/results/ResultsClient.tsx',
+      'utf8',
+    ).replace(/\r\n/g, '\n');
+
+  check(
+    step56Results.includes(
+      'const rankCautions =',
+    ),
+    true,
+  );
+
+  check(
+    /formatPrice\(\s*item\.productPrice,?\s*\)/.test(
+      step56Results,
+    ),
+    true,
+  );
+
+  check(
+    step56Results.includes(
+      '\uAC00\uACA9',
+    ),
+    true,
+  );
+
+  check(
+    step56Results.includes(
+      '\uAD6C\uB9E4 \uC804 \uD655\uC778',
+    ),
+    true,
+  );
+
+  console.log(
+    `STEP 56 FINAL PASS: ${assertions - before} new assertions; ${assertions} shared-counter + 10 STEP19 = ${assertions + 10} total counted assertions. Rank 2+ price and concise cautions rendered; no endpoint execution.`,
+  );
+}

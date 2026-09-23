@@ -556,6 +556,64 @@ function formatPrice(
   ).toLocaleString()}원`;
 }
 
+function getRankCardCautions(
+  recommendation: Recommendation,
+) {
+  const values: string[] = [];
+  const seen = new Set<string>();
+
+  const append = (value: unknown) => {
+    if (typeof value !== "string") {
+      return;
+    }
+
+    const normalized =
+      value
+        .replace(/\s+/g, " ")
+        .trim();
+
+    if (!normalized) {
+      return;
+    }
+
+    const key =
+      normalized.toLowerCase();
+
+    if (seen.has(key)) {
+      return;
+    }
+
+    seen.add(key);
+    values.push(normalized);
+  };
+
+  for (
+    const caution of
+    recommendation.productCautions ?? []
+  ) {
+    append(caution);
+  }
+
+  for (
+    const caution of
+    recommendation.commonCautions ?? []
+  ) {
+    append(
+      caution?.title ||
+        caution?.description,
+    );
+  }
+
+  for (
+    const caution of
+    recommendation.cautions ?? []
+  ) {
+    append(caution);
+  }
+
+  return values.slice(0, 2);
+}
+
 function compactReason(value: string) {
   const normalized = value
     .replace(/\s+/g, " ")
@@ -2473,6 +2531,11 @@ export default function ResultsClient() {
                       expandedId ===
                       item.id;
 
+                    const rankCautions =
+                      getRankCardCautions(
+                        item,
+                      );
+
                     return (
                       <article
                         className="advisorRankCard"
@@ -2517,7 +2580,46 @@ export default function ResultsClient() {
                                 }
                                 %
                               </span>
+
+
+                              {typeof item.productPrice ===
+                                "number" &&
+                              Number.isFinite(
+                                item.productPrice,
+                              ) &&
+                              item.productPrice > 0 ? (
+                                <span>
+                                  가격{" "}
+                                  <b>
+                                    {formatPrice(
+                                      item.productPrice,
+                                    )}
+                                  </b>
+                                </span>
+                              ) : null}
                             </div>
+
+                            {rankCautions.length > 0 ? (
+                              <p
+                                style={{
+                                  margin:
+                                    "8px 0 0",
+                                  color:
+                                    "#667085",
+                                  fontSize:
+                                    13,
+                                  lineHeight:
+                                    1.6,
+                                }}
+                              >
+                                <strong>
+                                  구매 전 확인:{" "}
+                                </strong>
+                                {rankCautions.join(
+                                  " ? ",
+                                )}
+                              </p>
+                            ) : null}
                           </div>
 
                           <div
