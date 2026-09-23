@@ -7,6 +7,7 @@ import {
   FormEvent,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -214,6 +215,8 @@ export default function AdvisorPage() {
 
   const [selectionIdentity, setSelectionIdentity] = useState("");
 
+  const guideSectionRef = useRef<HTMLElement | null>(null);
+
   useEffect(() => {
     if (!activeCategory) {
       return;
@@ -339,6 +342,19 @@ export default function AdvisorPage() {
       return;
     }
 
+    // PICKVIZE_SAME_CATEGORY_SCROLL
+    if (
+      normalized === activeCategory &&
+      profile &&
+      window.matchMedia("(max-width: 768px)").matches
+    ) {
+      guideSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+      return;
+    }
+
     setActiveCategory(
       normalized,
     );
@@ -393,7 +409,28 @@ export default function AdvisorPage() {
         !errorMessage,
     );
 
-  return (
+
+  // PICKVIZE_MOBILE_GUIDE_AUTOSCROLL
+  useEffect(() => {
+    if (!hasGuide) {
+      return;
+    }
+
+    if (!window.matchMedia("(max-width: 768px)").matches) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      guideSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [hasGuide]);
+
+return (
     <main>
       <Header />
 
@@ -459,15 +496,15 @@ export default function AdvisorPage() {
               placeholder="예: 캠핑용 에어컨"
             />
 
-            <button type="submit">
-              구매 가이드 보기
+            <button type="submit" disabled={isLoading}>
+              {isLoading ? "구매 가이드 준비 중..." : "구매 가이드 보기"}
             </button>
           </form>
         </div>
       </section>
 
       {activeCategory ? (
-        <section className="container advisorContainer">
+        <section ref={guideSectionRef} className="container advisorContainer">
           {isLoading ? (
             <div className="card emptyState">
               비교 제품과 구매
