@@ -100,8 +100,10 @@ function selectDisplaySpecs(
           /\uC81C\uC2B5\uB7C9|\uD48D\uB7C9|\uBC30\uD130\uB9AC/i,
         ])
       : isRobotVacuum
-        ? pickPreferred([
-            /\uD761\uC785\uB825|\uD761\uC785\uC555|(?:^|[^a-z])pa(?:$|[^a-z])/i,
+        ? [
+          // Preserve source values/units; suction controls remain in the valid fallback.
+          ...valid.filter((spec) => /^(흡입력|흡입압)$/.test(normalizeSpecName(spec.name))),
+          ...pickPreferred([
             /\uC18C\uC74C|db|\uB370\uC2DC\uBCA8/i,
             /\uC0AC\uC6A9\uC2DC\uAC04|\uCCAD\uC18C\uC2DC\uAC04/i,
             /\uBC30\uD130\uB9AC\uC6A9\uB7C9|mah/i,
@@ -109,7 +111,8 @@ function selectDisplaySpecs(
             /\uBA3C\uC9C0\uD1B5\uC6A9\uB7C9|\uBB3C\uD1B5\uC6A9\uB7C9|\uAE09\uC218\uD0F1\uD06C|\uC624\uC218\uD0F1\uD06C/i,
             /\uC18C\uBE44\uC804\uB825|\uC815\uACA9\uC804\uB825|watt|\uC640\uD2B8/i,
             /\uBB34\uAC8C|\uC911\uB7C9|kg/i,
-          ])
+          ]),
+        ]
         : [];
 
   const seen =

@@ -1867,3 +1867,42 @@ console.log(`STEP 16 RENDER CHECK PASS: ${assertions} counted assertions; all pr
   check(/isRobotVacuum\s*\?/.test(selectDisplaySpecs.toString()), true);
   console.log(`STEP 46 FINAL PASS: ${assertions - before} new assertions; ${assertions} shared-counter assertions plus 10 preserved STEP19 guards = ${assertions + 10} total counted assertions. Legacy/object adapter, 30-cap, robot/aircon priority; no endpoint execution.`);
 }
+
+// STEP49: exact suction names precede controls; preserve original units and comparison policy.
+{
+  const before = assertions;
+  const { selectDisplaySpecs, getSpecComparison } = pureFunctions('app/advisor/results/ResultsClient.tsx',
+    ['normalizeSpecName', 'selectDisplaySpecs', 'getComparableSpecType', 'extractComparableValue',
+      'findComparableSpec', 'getSpecComparison']);
+  const w = selectDisplaySpecs([
+    { name: '흡입력조절', value: '가능' }, { name: '흡입력', value: '5W' },
+    { name: '소음', value: '87dB' }, { name: '사용시간', value: '3시간40분' },
+    { name: '제조사', value: '삼성전자' },
+  ], '로봇청소기');
+  check(w[0], { name: '흡입력', value: '5W' });
+  check(w.findIndex(spec => spec.name === '흡입력조절'), 3);
+  check(w.find(spec => spec.name === '흡입력').value, '5W');
+  const pa = selectDisplaySpecs([
+    { name: '흡입력조절', value: '4단계' }, { name: '흡입력', value: '30000Pa' },
+    { name: '사용시간', value: '3시간' }, { name: '무게', value: '4kg' },
+  ], '로봇청소기');
+  check(pa[0], { name: '흡입력', value: '30000Pa' });
+  check(pa.findIndex(spec => spec.name === '흡입력조절'), 3);
+  const exactNames = selectDisplaySpecs([
+    { name: '기타압력', value: '50000Pa' }, { name: '흡입력조절', value: '4단계' },
+    { name: ' 흡입압 ', value: '22000Pa' }, { name: '소음', value: '65dB' },
+  ], '로봇청소기');
+  check(exactNames.slice(0, 2).map(spec => spec.name), ['흡입압', '소음']);
+  check(exactNames[0].value, '22000Pa');
+  check(selectDisplaySpecs([{ name: '흡입력조절', value: '가능' }], '로봇청소기'),
+    [{ name: '흡입력조절', value: '가능' }]);
+  const comparison = (a, b) => {
+    const spec = { name: '흡입력', value: a };
+    const winner = { id: 'winner', keySpecs: [spec] };
+    return getSpecComparison(winner, spec, [winner, { id: 'other', keySpecs: [{ name: '흡입력', value: b }] }]);
+  };
+  check(comparison('5W', '10000Pa'), '');
+  check(comparison('10000Pa', '5W'), '');
+  console.log(`STEP 49 same-unit observation (not a permanent contract): ${JSON.stringify(comparison('10000Pa', '22000Pa'))}`);
+  console.log(`STEP 49 FINAL PASS: ${assertions - before} new assertions; ${assertions} shared-counter + 10 STEP19 = ${assertions + 10} total counted assertions. No endpoints or paid calls.`);
+}
