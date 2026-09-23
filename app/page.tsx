@@ -1,8 +1,9 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "../components/Header";
+import { checkPublicCategoryReadiness } from "../lib/project-d-public-readiness";
 
 const proofPoints = [
   ["스펙", "제조사 수치와 핵심 성능을 같은 기준으로 정규화"],
@@ -29,6 +30,43 @@ const categories = [
 export default function Home() {
   const router = useRouter();
   const [query, setQuery] = useState("캠핑용 에어컨");
+  const [categoryReadiness, setCategoryReadiness] = useState<
+    Record<string, boolean | null>
+  >(() =>
+    Object.fromEntries(
+      categories.map(([name, , candidate]) => [
+        name,
+        candidate ? null : false,
+      ]),
+    ),
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    const candidates = categories
+      .filter(([, , candidate]) => candidate)
+      .map(([name]) => name);
+
+    void Promise.all(
+      candidates.map(async (name) => {
+        const result = await checkPublicCategoryReadiness(name);
+        return [name, result.ready] as const;
+      }),
+    ).then((entries) => {
+      if (cancelled) {
+        return;
+      }
+
+      setCategoryReadiness((current) => ({
+        ...current,
+        ...Object.fromEntries(entries),
+      }));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function startRecommendation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -179,28 +217,40 @@ export default function Home() {
         </h2>
 
         <p className="sectionLead">
-          현재는 캠핑용 에어컨으로 전체 추천 흐름을 체험할 수 있습니다.
+          준비가 완료된 제품군에서 전체 추천 흐름을 체험할 수 있습니다.
         </p>
 
         <div className="categoryGrid categoryGridV32">
-          {categories.map(([name, description, active]) => (
-            <button
-              type="button"
-              key={name}
-              className={`categoryCard ${
-                active ? "activeCategory" : ""
-              }`}
-              onClick={() =>
-                active &&
-                router.push(`/advisor?category=${encodeURIComponent(name)}`)
-              }
-              disabled={!active}
-            >
-              <span className="categoryIcon">{active ? "↗" : "·"}</span>
-              <strong>{name}</strong>
-              <small>{description}</small>
-            </button>
-          ))}
+          {categories.map(([name, description, candidate]) => {
+            const readiness = categoryReadiness[name];
+            const active = candidate && readiness === true;
+            const displayDescription = candidate
+              ? readiness === null
+                ? "준비 상태 확인 중"
+                : active
+                  ? description
+                  : "데이터 점검 중"
+              : description;
+
+            return (
+              <button
+                type="button"
+                key={name}
+                className={`categoryCard ${
+                  active ? "activeCategory" : ""
+                }`}
+                onClick={() =>
+                  active &&
+                  router.push(`/advisor?category=${encodeURIComponent(name)}`)
+                }
+                disabled={!active}
+              >
+                <span className="categoryIcon">{active ? "↗" : "·"}</span>
+                <strong>{name}</strong>
+                <small>{displayDescription}</small>
+              </button>
+            );
+          })}
         </div>
       </section>
 
@@ -216,8 +266,10 @@ export default function Home() {
         <button
           type="button"
           onClick={() =>
+            categoryReadiness["캠핑용 에어컨"] === true &&
             router.push("/advisor?category=캠핑용%20에어컨")
           }
+          disabled={categoryReadiness["캠핑용 에어컨"] !== true}
         >
           무료로 체험하기
         </button>

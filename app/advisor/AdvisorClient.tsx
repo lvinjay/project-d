@@ -1,6 +1,7 @@
 "use client";
 
-import { loadSelectedFiveContext } from "../../lib/project-d-selected-five-manifest";
+import { loadSelectedFiveContext, selectedFiveIds } from "../../lib/project-d-selected-five-manifest";
+import { assertPublicCategoryReadiness } from "../../lib/project-d-public-readiness";
 
 import {
   FormEvent,
@@ -232,6 +233,10 @@ export default function AdvisorPage() {
 
       try {
         const selected = await loadSelectedFiveContext(window.sessionStorage, activeCategory);
+        await assertPublicCategoryReadiness(
+          activeCategory,
+          selectedFiveIds(selected.manifest),
+        );
         if (controller.signal.aborted) return;
         const nextProfile = selected.profile as unknown as CategoryProfile;
         const catalogResult = { products: selected.products };
@@ -351,7 +356,17 @@ export default function AdvisorPage() {
     }
 
     let selected;
-    try { selected = await loadSelectedFiveContext(window.sessionStorage, profile.category, selectionIdentity); }
+    try {
+      selected = await loadSelectedFiveContext(
+        window.sessionStorage,
+        profile.category,
+        selectionIdentity,
+      );
+      await assertPublicCategoryReadiness(
+        profile.category,
+        selectedFiveIds(selected.manifest),
+      );
+    }
     catch (error) { setErrorMessage(error instanceof Error ? error.message : "현재 선택을 다시 확인해 주세요."); return; }
     const params =
       new URLSearchParams({

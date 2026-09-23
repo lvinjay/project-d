@@ -1270,8 +1270,7 @@ export default function ResultsClient() {
             0 ||
           !scorePlan.cacheHit
         ) {
-          throw new Error(
-            `최종 추천용 제품 점수가 최신이 아닙니다. 무료 사전검증 결과 OpenAI 호출 최대 ${scorePlan.estimatedOpenAiCalls}회가 필요하지만 결과 화면에서는 유료 호출을 자동 실행하지 않습니다. 관리자에서 제품별 점수 생성을 승인한 뒤 다시 추천을 실행해 주세요.`,
+          throw new Error(            "이 제품군의 추천 데이터를 점검 중입니다. 잠시 후 다시 이용해 주세요.",
           );
         }
 
