@@ -103,16 +103,39 @@ export async function GET(
       ).trim();
 
     if (!requestedCategory) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "category is required.",
-        },
-        {
-          status: 400,
-        },
+      const {
+        data: publications,
+        error: publicationsError,
+      } = await supabaseAdmin
+        .from(
+          "project_d_selected_five_publications",
+        )
+        .select(
+          "category",
+        );
+
+      if (publicationsError) {
+        throw publicationsError;
+      }
+
+      const categories = [
+        ...new Set(
+          (publications ?? [])
+            .map((row) =>
+              typeof row.category === "string"
+                ? row.category.trim()
+                : "",
+            )
+            .filter(Boolean),
+        ),
+      ].sort((left, right) =>
+        left.localeCompare(right, "ko"),
       );
+
+      return NextResponse.json({
+        success: true,
+        categories,
+      });
     }
 
     const categoryKey =

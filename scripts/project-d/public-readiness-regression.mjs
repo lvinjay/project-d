@@ -160,6 +160,7 @@ checks += 1;
 const page = read("app/page.tsx");
 const advisor = read("app/advisor/AdvisorClient.tsx");
 const results = read("app/advisor/results/ResultsClient.tsx");
+const selectedFiveRoute = read("app/api/selected-five-manifest/route.ts");
 
 check(
   page.includes("checkPublicCategoryReadiness"),
@@ -170,6 +171,33 @@ check(
   page.includes('readiness === null'),
   true,
   "home pending state present",
+);
+check(
+  page.includes('fetch("/api/selected-five-manifest"'),
+  true,
+  "home discovers published categories",
+);
+check(
+  page.includes("buildHomeCategories"),
+  true,
+  "home merges planned and discovered categories",
+);
+check(
+  page.includes('["무선청소기", "데이터 준비 중", false]'),
+  false,
+  "wireless vacuum is not hardcoded inactive",
+);
+check(
+  page.includes("firstReadyCategory"),
+  true,
+  "primary CTA uses a dynamically ready category",
+);
+check(
+  selectedFiveRoute.includes('"project_d_selected_five_publications"') &&
+    selectedFiveRoute.includes('"category"') &&
+    selectedFiveRoute.includes("categories,"),
+  true,
+  "selected-five GET exposes published category names",
 );
 check(
   advisor.includes("assertPublicCategoryReadiness"),

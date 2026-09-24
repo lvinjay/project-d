@@ -18,55 +18,151 @@ const steps = [
   ["04", "근거 있는 결론 확인", "순위, 추천 이유, 단점과 주의점을 확인합니다."],
 ];
 
-const categories = [
-  ["캠핑용 에어컨", "현재 체험 가능", true],
-  ["노트북", "데이터 준비 중", false],
-  ["로봇청소기", "현재 체험 가능", true],
-  ["유모차", "데이터 준비 중", false],
-  ["공기청정기", "데이터 준비 중", false],
-  ["무선청소기", "데이터 준비 중", false],
+type HomeCategory = {
+  name: string;
+  published: boolean;
+};
+
+const plannedCategoryNames = [
+  "캠핑용 에어컨",
+  "노트북",
+  "로봇청소기",
+  "유모차",
+  "공기청정기",
+  "무선청소기",
 ] as const;
+
+const plannedCategorySet = new Set<string>(plannedCategoryNames);
+
+function buildHomeCategories(publishedNames: string[]): HomeCategory[] {
+  const published = new Set(
+    publishedNames
+      .map((name) => name.trim())
+      .filter(Boolean),
+  );
+
+  const planned = plannedCategoryNames.map((name) => ({
+    name,
+    published: published.has(name),
+  }));
+
+  const discovered = [...published]
+    .filter((name) => !plannedCategorySet.has(name))
+    .sort((left, right) => left.localeCompare(right, "ko"))
+    .map((name) => ({
+      name,
+      published: true,
+    }));
+
+  return [...planned, ...discovered];
+}
 
 export default function Home() {
   const router = useRouter();
   const [query, setQuery] = useState("캠핑용 에어컨");
+  const [categories, setCategories] = useState<HomeCategory[]>(() =>
+    buildHomeCategories([]),
+  );
   const [categoryReadiness, setCategoryReadiness] = useState<
     Record<string, boolean | null>
   >(() =>
     Object.fromEntries(
-      categories.map(([name, , candidate]) => [
-        name,
-        candidate ? null : false,
-      ]),
+      plannedCategoryNames.map((name) => [name, false]),
     ),
   );
 
   useEffect(() => {
     let cancelled = false;
-    const candidates = categories
-      .filter(([, , candidate]) => candidate)
-      .map(([name]) => name);
 
-    void Promise.all(
-      candidates.map(async (name) => {
-        const result = await checkPublicCategoryReadiness(name);
-        return [name, result.ready] as const;
-      }),
-    ).then((entries) => {
-      if (cancelled) {
-        return;
+    async function loadPublicCategories() {
+      try {
+        const response = await fetch("/api/selected-five-manifest", {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        const result = (await response.json()) as {
+          success?: boolean;
+          categories?: unknown;
+          message?: string;
+        };
+
+        if (
+          !response.ok ||
+          result.success !== true ||
+          !Array.isArray(result.categories)
+        ) {
+          throw new Error(
+            result.message ?? "공개 제품군 목록을 불러오지 못했습니다.",
+          );
+        }
+
+        const publishedNames = [
+          ...new Set(
+            result.categories
+              .filter(
+                (value): value is string =>
+                  typeof value === "string" && value.trim().length > 0,
+              )
+              .map((value) => value.trim()),
+          ),
+        ];
+
+        const nextCategories =
+          buildHomeCategories(publishedNames);
+
+        if (cancelled) return;
+
+        setCategories(nextCategories);
+        setCategoryReadiness(
+          Object.fromEntries(
+            nextCategories.map(({ name, published }) => [
+              name,
+              published ? null : false,
+            ]),
+          ),
+        );
+
+        const entries = await Promise.all(
+          publishedNames.map(async (name) => {
+            const readiness =
+              await checkPublicCategoryReadiness(name);
+            return [name, readiness.ready] as const;
+          }),
+        );
+
+        if (cancelled) return;
+
+        setCategoryReadiness((current) => ({
+          ...current,
+          ...Object.fromEntries(entries),
+        }));
+      } catch {
+        if (cancelled) return;
+
+        const fallback = buildHomeCategories([]);
+        setCategories(fallback);
+        setCategoryReadiness(
+          Object.fromEntries(
+            fallback.map(({ name }) => [name, false]),
+          ),
+        );
       }
+    }
 
-      setCategoryReadiness((current) => ({
-        ...current,
-        ...Object.fromEntries(entries),
-      }));
-    });
+    void loadPublicCategories();
 
     return () => {
       cancelled = true;
     };
   }, []);
+
+  const firstReadyCategory =
+    categories.find(
+      ({ name, published }) =>
+        published &&
+        categoryReadiness[name] === true,
+    )?.name ?? "";
 
   function startRecommendation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -217,20 +313,20 @@ export default function Home() {
         </h2>
 
         <p className="sectionLead">
-          현재는 캠핑용 에어컨과 로봇청소기의 전체 추천 흐름을 체험할 수 있습니다.
+          준비가 완료된 제품군은 자동으로 공개되며, 같은 추천 흐름으로 계속 확장됩니다.
         </p>
 
         <div className="categoryGrid categoryGridV32">
-          {categories.map(([name, description, candidate]) => {
+          {categories.map(({ name, published }) => {
             const readiness = categoryReadiness[name];
-            const active = candidate && readiness === true;
-            const displayDescription = candidate
+            const active = published && readiness === true;
+            const displayDescription = published
               ? readiness === null
                 ? "준비 상태 확인 중"
                 : active
-                  ? description
+                  ? "현재 체험 가능"
                   : "데이터 점검 중"
-              : description;
+              : "데이터 준비 중";
 
             return (
               <button
@@ -266,10 +362,12 @@ export default function Home() {
         <button
           type="button"
           onClick={() =>
-            categoryReadiness["캠핑용 에어컨"] === true &&
-            router.push("/advisor?category=캠핑용%20에어컨")
+            firstReadyCategory &&
+            router.push(
+              `/advisor?category=${encodeURIComponent(firstReadyCategory)}`,
+            )
           }
-          disabled={categoryReadiness["캠핑용 에어컨"] !== true}
+          disabled={!firstReadyCategory}
         >
           무료로 체험하기
         </button>
