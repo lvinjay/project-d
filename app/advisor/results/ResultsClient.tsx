@@ -101,6 +101,10 @@ function selectDisplaySpecs(
     /\uB85C\uBD07\s*\uCCAD\uC18C\uAE30|\uB85C\uCCAD/i
       .test(category);
 
+  const isCordlessVacuum =
+    /무선\s*청소기|핸디\s*청소기|스틱\s*청소기/i
+      .test(category);
+
   const preferred =
     isAirConditioner
       ? pickPreferred([
@@ -124,7 +128,16 @@ function selectDisplaySpecs(
             /\uBB34\uAC8C|\uC911\uB7C9|kg/i,
           ]),
         ]
-        : [];
+        : isCordlessVacuum
+          ? pickPreferred([
+              /흡입력|흡입압|pa\b|aw\b/i,
+              /사용시간|연속사용|배터리\s*시간|런타임/i,
+              /배터리용량|mah/i,
+              /무게|중량|kg/i,
+              /먼지통용량|집진통|먼지통/i,
+              /소음|db|데시벨/i,
+            ])
+          : [];
 
   const seen =
     new Set<string>();
@@ -1167,6 +1180,103 @@ function getPriceComparison(
   return `비교 ${values.length}개 중 ${index + 1}번째로 저렴`;
 }
 
+function getComparisonCriterion(
+  recommendation: Recommendation,
+  criterionKey: string,
+): CriterionBreakdown | undefined {
+  return recommendation.criterionBreakdown.find(
+    (criterion) =>
+      criterion.key === criterionKey,
+  );
+}
+
+function getComparisonCriterionScoreText(
+  criterion: CriterionBreakdown | undefined,
+): string {
+  if (!criterion) {
+    return "근거 부족";
+  }
+
+  if (
+    criterion.imputed === true &&
+    criterion.score === null &&
+    typeof criterion.effectiveScore === "number"
+  ) {
+    return `${criterion.effectiveScore}점 · 후보 평균 보완`;
+  }
+
+  if (typeof criterion.score === "number") {
+    return `${criterion.score}점`;
+  }
+
+  return "근거 부족";
+}
+
+function getComparisonCriterionEvidenceText(
+  criterion: CriterionBreakdown | undefined,
+): string {
+  if (!criterion) {
+    return "리뷰 근거 부족";
+  }
+
+  const parts: string[] = [];
+
+  if (
+    typeof criterion.reviewEvidenceCount === "number" &&
+    Number.isFinite(criterion.reviewEvidenceCount) &&
+    criterion.reviewEvidenceCount > 0
+  ) {
+    parts.push(
+      `리뷰 근거 약 ${criterion.reviewEvidenceCount.toLocaleString("ko-KR")}건`,
+    );
+  }
+
+  const summary =
+    compactReason(
+      criterion.evidenceSummary ||
+        criterion.reason ||
+        "",
+    );
+
+  const conciseSummary =
+    summary.length > 72
+      ? `${summary.slice(0, 69).trim()}…`
+      : summary;
+
+  if (conciseSummary) {
+    parts.push(conciseSummary);
+  }
+
+  return parts.length > 0
+    ? parts.join(" · ")
+    : "리뷰 근거 부족";
+}
+
+function getComparisonReviewSummary(
+  recommendation: Recommendation,
+): string {
+  const summary =
+    compactReason(
+      recommendation.summary ?? "",
+    );
+
+  return summary ||
+    "리뷰 기반 요약 근거 부족";
+}
+
+function getComparisonCaution(
+  recommendation: Recommendation,
+): string {
+  const caution =
+    getRankCardCautions(
+      recommendation,
+    )[0];
+
+  return caution
+    ? compactReason(caution)
+    : "표시할 주의점 근거 부족";
+}
+
 export default function ResultsClient() {
   const [
     isLoading,
@@ -1661,6 +1771,81 @@ export default function ResultsClient() {
     }, [
       winner,
       recommendations,
+      category,
+    ]);
+
+  const comparisonProducts =
+    useMemo(
+      () =>
+        recommendations.slice(
+          0,
+          5,
+        ),
+      [recommendations],
+    );
+
+  const comparisonCriteria =
+    useMemo(
+      () =>
+        [
+          ...(winner
+            ?.criterionBreakdown ??
+            []),
+        ]
+          .sort(
+            (a, b) =>
+              b.weight -
+              a.weight,
+          )
+          .slice(0, 5),
+      [winner],
+    );
+
+  const comparisonSpecs =
+    useMemo(() => {
+      if (
+        !winner ||
+        comparisonProducts.length ===
+          0
+      ) {
+        return [];
+      }
+
+      const minimumMatches =
+        Math.min(
+          3,
+          comparisonProducts.length,
+        );
+
+      return selectDisplaySpecs(
+        winner.keySpecs ?? [],
+        category,
+      )
+        .filter((spec) => {
+          const matchCount =
+            comparisonProducts.filter(
+              (product) => {
+                const matched =
+                  findComparableSpec(
+                    product,
+                    spec,
+                  );
+
+                return Boolean(
+                  matched?.value?.trim(),
+                );
+              },
+            ).length;
+
+          return (
+            matchCount >=
+            minimumMatches
+          );
+        })
+        .slice(0, 3);
+    }, [
+      winner,
+      comparisonProducts,
       category,
     ]);
 
@@ -2697,6 +2882,796 @@ export default function ResultsClient() {
                   </div>
                 </div>
               ) : null}
+            </section>
+
+            <section
+              className="advisorRankingSection"
+              data-marker="PICKVIZE_RESULTS_COMPARISON_TABLE"
+              style={{
+                width:
+                  "min(1380px, calc(100vw - 32px))",
+                maxWidth:
+                  "none",
+                position:
+                  "relative",
+                left: "50%",
+                transform:
+                  "translateX(-50%)",
+              }}
+            >
+              <div className="advisorRankingHeading">
+                <div>
+                  <span className="eyebrow">
+                    COMPARE
+                  </span>
+
+                  <h2>
+                    5개 제품 한눈에 비교
+                  </h2>
+                </div>
+
+                <p>
+                  주요 사양과 리뷰 기반 평가를 같은 기준으로 비교합니다.
+                </p>
+              </div>
+
+              <div
+                className="card"
+                style={{
+                  padding: 0,
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    padding:
+                      "16px 18px",
+                    borderBottom:
+                      "1px solid #eaecf0",
+                    background:
+                      "#f8fafc",
+                    color:
+                      "#475467",
+                    fontSize: 13,
+                    lineHeight: 1.6,
+                  }}
+                >
+                  <strong
+                    style={{
+                      display:
+                        "block",
+                      marginBottom: 4,
+                      color:
+                        "#344054",
+                      fontSize: 14,
+                    }}
+                  >
+                    리뷰 기반 실사용 비교
+                  </strong>
+                  직접 실험한 측정값이 아니라 저장된 제품 사양과 실제 리뷰 근거를 바탕으로 정리한 비교입니다.
+                  근거가 부족한 항목은 임의로 채우지 않고 그대로 표시합니다.
+                </div>
+
+                <div
+                  style={{
+                    overflowX:
+                      "auto",
+                    WebkitOverflowScrolling:
+                      "touch",
+                  }}
+                >
+                  <table
+                    style={{
+                      width:
+                        "100%",
+                      minWidth:
+                        995,
+                      borderCollapse:
+                        "separate",
+                      borderSpacing:
+                        0,
+                      tableLayout:
+                        "fixed",
+                      fontSize: 13,
+                    }}
+                  >
+                    <thead>
+                      <tr>
+                        <th
+                          scope="col"
+                          style={{
+                            position:
+                              "sticky",
+                            left: 0,
+                            zIndex: 4,
+                            width: 145,
+                            padding:
+                              "14px 12px",
+                            borderRight:
+                              "1px solid #eaecf0",
+                            borderBottom:
+                              "1px solid #eaecf0",
+                            background:
+                              "#f8fafc",
+                            textAlign:
+                              "left",
+                            color:
+                              "#475467",
+                          }}
+                        >
+                          비교 항목
+                        </th>
+
+                        {comparisonProducts.map(
+                          (
+                            product,
+                            index,
+                          ) => {
+                            const highlighted =
+                              index ===
+                              0;
+
+                            return (
+                              <th
+                                scope="col"
+                                key={
+                                  product.id
+                                }
+                                style={{
+                                  width:
+                                    170,
+                                  padding:
+                                    "14px 12px",
+                                  borderRight:
+                                    "1px solid #eaecf0",
+                                  borderBottom:
+                                    "1px solid #eaecf0",
+                                  borderTop:
+                                    highlighted
+                                      ? "3px solid #2563eb"
+                                      : "3px solid transparent",
+                                  background:
+                                    highlighted
+                                      ? "#eff6ff"
+                                      : "#ffffff",
+                                  textAlign:
+                                    "left",
+                                  verticalAlign:
+                                    "top",
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    marginBottom:
+                                      6,
+                                    fontWeight:
+                                      800,
+                                    color:
+                                      highlighted
+                                        ? "#1d4ed8"
+                                        : "#475467",
+                                  }}
+                                >
+                                  {highlighted
+                                    ? "🏆 "
+                                    : ""}
+                                  {getDisplayRankLabel(
+                                    recommendations,
+                                    product.rank,
+                                  )}
+                                </div>
+
+                                <div
+                                  title={
+                                    product.productName
+                                  }
+                                  style={{
+                                    color:
+                                      "#101828",
+                                    fontWeight:
+                                      800,
+                                    lineHeight:
+                                      1.35,
+                                    wordBreak:
+                                      "keep-all",
+                                    display:
+                                      "-webkit-box",
+                                    WebkitLineClamp:
+                                      3,
+                                    WebkitBoxOrient:
+                                      "vertical",
+                                    overflow:
+                                      "hidden",
+                                  }}
+                                >
+                                  {
+                                    product.productName
+                                  }
+                                </div>
+
+                                <div
+                                  style={{
+                                    marginTop:
+                                      7,
+                                    color:
+                                      "#667085",
+                                    fontSize:
+                                      12,
+                                  }}
+                                >
+                                  데이터 반영{" "}
+                                  {
+                                    product.dataCoverage
+                                  }
+                                  %
+                                </div>
+                              </th>
+                            );
+                          },
+                        )}
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      <tr>
+                        <th
+                          scope="row"
+                          style={{
+                            position:
+                              "sticky",
+                            left: 0,
+                            zIndex: 3,
+                            padding:
+                              "13px 12px",
+                            borderRight:
+                              "1px solid #eaecf0",
+                            borderBottom:
+                              "1px solid #eaecf0",
+                            background:
+                              "#f8fafc",
+                            textAlign:
+                              "left",
+                          }}
+                        >
+                          내게 맞는 점수
+                        </th>
+
+                        {comparisonProducts.map(
+                          (
+                            product,
+                            index,
+                          ) => (
+                            <td
+                              key={
+                                product.id
+                              }
+                              style={{
+                                padding:
+                                  "13px 12px",
+                                borderRight:
+                                  "1px solid #eaecf0",
+                                borderBottom:
+                                  "1px solid #eaecf0",
+                                background:
+                                  index ===
+                                  0
+                                    ? "#eff6ff"
+                                    : "#ffffff",
+                                verticalAlign:
+                                  "top",
+                              }}
+                            >
+                              <strong
+                                style={{
+                                  color:
+                                    index ===
+                                    0
+                                      ? "#1d4ed8"
+                                      : "#101828",
+                                  fontSize:
+                                    18,
+                                }}
+                              >
+                                {getRankingScore(
+                                  product,
+                                )}
+                                점
+                              </strong>
+
+                              {typeof product.valueScore ===
+                              "number" ? (
+                                <div
+                                  style={{
+                                    marginTop:
+                                      4,
+                                    color:
+                                      "#667085",
+                                    fontSize:
+                                      12,
+                                  }}
+                                >
+                                  가성비{" "}
+                                  {
+                                    product.valueScore
+                                  }
+                                  점
+                                </div>
+                              ) : null}
+                            </td>
+                          ),
+                        )}
+                      </tr>
+
+                      <tr>
+                        <th
+                          scope="row"
+                          style={{
+                            position:
+                              "sticky",
+                            left: 0,
+                            zIndex: 3,
+                            padding:
+                              "13px 12px",
+                            borderRight:
+                              "1px solid #eaecf0",
+                            borderBottom:
+                              "1px solid #eaecf0",
+                            background:
+                              "#f8fafc",
+                            textAlign:
+                              "left",
+                          }}
+                        >
+                          가격
+                        </th>
+
+                        {comparisonProducts.map(
+                          (
+                            product,
+                            index,
+                          ) => (
+                            <td
+                              key={
+                                product.id
+                              }
+                              style={{
+                                padding:
+                                  "13px 12px",
+                                borderRight:
+                                  "1px solid #eaecf0",
+                                borderBottom:
+                                  "1px solid #eaecf0",
+                                background:
+                                  index ===
+                                  0
+                                    ? "#eff6ff"
+                                    : "#ffffff",
+                                fontWeight:
+                                  700,
+                              }}
+                            >
+                              {formatPrice(
+                                product.productPrice,
+                              ) ||
+                                "가격 확인 필요"}
+                            </td>
+                          ),
+                        )}
+                      </tr>
+
+                      {comparisonSpecs.map(
+                        (spec) => (
+                          <tr
+                            key={`spec-${normalizeSpecName(
+                              spec.name,
+                            )}`}
+                          >
+                            <th
+                              scope="row"
+                              style={{
+                                position:
+                                  "sticky",
+                                left: 0,
+                                zIndex: 3,
+                                padding:
+                                  "13px 12px",
+                                borderRight:
+                                  "1px solid #eaecf0",
+                                borderBottom:
+                                  "1px solid #eaecf0",
+                                background:
+                                  "#f8fafc",
+                                textAlign:
+                                  "left",
+                              }}
+                            >
+                              {spec.name}
+                            </th>
+
+                            {comparisonProducts.map(
+                              (
+                                product,
+                                index,
+                              ) => {
+                                const matched =
+                                  findComparableSpec(
+                                    product,
+                                    spec,
+                                  );
+
+                                return (
+                                  <td
+                                    key={
+                                      product.id
+                                    }
+                                    style={{
+                                      padding:
+                                        "13px 12px",
+                                      borderRight:
+                                        "1px solid #eaecf0",
+                                      borderBottom:
+                                        "1px solid #eaecf0",
+                                      background:
+                                        index ===
+                                        0
+                                          ? "#eff6ff"
+                                          : "#ffffff",
+                                      verticalAlign:
+                                        "top",
+                                    }}
+                                  >
+                                    <strong>
+                                      {matched?.value?.trim() ||
+                                        "확인 어려움"}
+                                    </strong>
+
+                                    {matched?.evidence ? (
+                                      <div
+                                        style={{
+                                          marginTop:
+                                            5,
+                                          color:
+                                            "#667085",
+                                          fontSize:
+                                            12,
+                                          lineHeight:
+                                            1.45,
+                                        }}
+                                      >
+                                        {compactReason(
+                                          matched.evidence,
+                                        )}
+                                      </div>
+                                    ) : null}
+                                  </td>
+                                );
+                              },
+                            )}
+                          </tr>
+                        ),
+                      )}
+
+                      {comparisonCriteria.map(
+                        (criterion) => (
+                          <tr
+                            key={`criterion-${criterion.key}`}
+                          >
+                            <th
+                              scope="row"
+                              style={{
+                                position:
+                                  "sticky",
+                                left: 0,
+                                zIndex: 3,
+                                padding:
+                                  "13px 12px",
+                                borderRight:
+                                  "1px solid #eaecf0",
+                                borderBottom:
+                                  "1px solid #eaecf0",
+                                background:
+                                  "#f8fafc",
+                                textAlign:
+                                  "left",
+                                verticalAlign:
+                                  "top",
+                              }}
+                            >
+                              <div>
+                                {
+                                  criterion.label
+                                }
+                              </div>
+                              <small
+                                style={{
+                                  display:
+                                    "block",
+                                  marginTop:
+                                    4,
+                                  color:
+                                    "#667085",
+                                  fontWeight:
+                                    500,
+                                }}
+                              >
+                                중요도{" "}
+                                {
+                                  criterion.weight
+                                }
+                                /10
+                              </small>
+                            </th>
+
+                            {comparisonProducts.map(
+                              (
+                                product,
+                                index,
+                              ) => {
+                                const productCriterion =
+                                  getComparisonCriterion(
+                                    product,
+                                    criterion.key,
+                                  );
+
+                                return (
+                                  <td
+                                    key={
+                                      product.id
+                                    }
+                                    style={{
+                                      padding:
+                                        "13px 12px",
+                                      borderRight:
+                                        "1px solid #eaecf0",
+                                      borderBottom:
+                                        "1px solid #eaecf0",
+                                      background:
+                                        index ===
+                                        0
+                                          ? "#eff6ff"
+                                          : "#ffffff",
+                                      verticalAlign:
+                                        "top",
+                                    }}
+                                  >
+                                    <strong
+                                      style={{
+                                        color:
+                                          index ===
+                                          0
+                                            ? "#1d4ed8"
+                                            : "#101828",
+                                      }}
+                                    >
+                                      {getComparisonCriterionScoreText(
+                                        productCriterion,
+                                      )}
+                                    </strong>
+
+                                    <div
+                                      style={{
+                                        marginTop:
+                                          6,
+                                        color:
+                                          "#667085",
+                                        fontSize:
+                                          12,
+                                        lineHeight:
+                                          1.5,
+                                      }}
+                                    >
+                                      {getComparisonCriterionEvidenceText(
+                                        productCriterion,
+                                      )}
+                                    </div>
+                                  </td>
+                                );
+                              },
+                            )}
+                          </tr>
+                        ),
+                      )}
+
+                      <tr>
+                        <th
+                          scope="row"
+                          style={{
+                            position:
+                              "sticky",
+                            left: 0,
+                            zIndex: 3,
+                            padding:
+                              "13px 12px",
+                            borderRight:
+                              "1px solid #eaecf0",
+                            borderBottom:
+                              "1px solid #eaecf0",
+                            background:
+                              "#f8fafc",
+                            textAlign:
+                              "left",
+                          }}
+                        >
+                          리뷰 분석량
+                        </th>
+
+                        {comparisonProducts.map(
+                          (
+                            product,
+                            index,
+                          ) => (
+                            <td
+                              key={
+                                product.id
+                              }
+                              style={{
+                                padding:
+                                  "13px 12px",
+                                borderRight:
+                                  "1px solid #eaecf0",
+                                borderBottom:
+                                  "1px solid #eaecf0",
+                                background:
+                                  index ===
+                                  0
+                                    ? "#eff6ff"
+                                    : "#ffffff",
+                              }}
+                            >
+                              <strong>
+                                {product.reviewCount >
+                                0
+                                  ? `${product.reviewCount.toLocaleString(
+                                      "ko-KR",
+                                    )}건`
+                                  : "확인 어려움"}
+                              </strong>
+                              <div
+                                style={{
+                                  marginTop:
+                                    4,
+                                  color:
+                                    "#667085",
+                                  fontSize:
+                                    12,
+                                }}
+                              >
+                                분석 데이터
+                                반영{" "}
+                                {
+                                  product.dataCoverage
+                                }
+                                %
+                              </div>
+                            </td>
+                          ),
+                        )}
+                      </tr>
+
+                      <tr>
+                        <th
+                          scope="row"
+                          style={{
+                            position:
+                              "sticky",
+                            left: 0,
+                            zIndex: 3,
+                            padding:
+                              "13px 12px",
+                            borderRight:
+                              "1px solid #eaecf0",
+                            borderBottom:
+                              "1px solid #eaecf0",
+                            background:
+                              "#f8fafc",
+                            textAlign:
+                              "left",
+                            verticalAlign:
+                              "top",
+                          }}
+                        >
+                          리뷰 기반
+                          실사용 한줄
+                        </th>
+
+                        {comparisonProducts.map(
+                          (
+                            product,
+                            index,
+                          ) => (
+                            <td
+                              key={
+                                product.id
+                              }
+                              style={{
+                                padding:
+                                  "13px 12px",
+                                borderRight:
+                                  "1px solid #eaecf0",
+                                borderBottom:
+                                  "1px solid #eaecf0",
+                                background:
+                                  index ===
+                                  0
+                                    ? "#eff6ff"
+                                    : "#ffffff",
+                                color:
+                                  "#475467",
+                                lineHeight:
+                                  1.55,
+                                verticalAlign:
+                                  "top",
+                              }}
+                            >
+                              {getComparisonReviewSummary(
+                                product,
+                              )}
+                            </td>
+                          ),
+                        )}
+                      </tr>
+
+                      <tr>
+                        <th
+                          scope="row"
+                          style={{
+                            position:
+                              "sticky",
+                            left: 0,
+                            zIndex: 3,
+                            padding:
+                              "13px 12px",
+                            borderRight:
+                              "1px solid #eaecf0",
+                            background:
+                              "#f8fafc",
+                            textAlign:
+                              "left",
+                            verticalAlign:
+                              "top",
+                          }}
+                        >
+                          주요 주의점
+                        </th>
+
+                        {comparisonProducts.map(
+                          (
+                            product,
+                            index,
+                          ) => (
+                            <td
+                              key={
+                                product.id
+                              }
+                              style={{
+                                padding:
+                                  "13px 12px",
+                                borderRight:
+                                  "1px solid #eaecf0",
+                                background:
+                                  index ===
+                                  0
+                                    ? "#eff6ff"
+                                    : "#ffffff",
+                                color:
+                                  "#475467",
+                                lineHeight:
+                                  1.55,
+                                verticalAlign:
+                                  "top",
+                              }}
+                            >
+                              {getComparisonCaution(
+                                product,
+                              )}
+                            </td>
+                          ),
+                        )}
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </section>
 
             <section className="advisorRankingSection">
