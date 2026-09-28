@@ -24,6 +24,15 @@ import {
   type SavedProductionStageArtifact,
 } from "../../../lib/project-d-review-production-pipeline";
 
+import {
+  EXPERIMENTAL_V6_COMBINED_MODEL,
+  EXPERIMENTAL_V6_COMBINED_PIPELINE_VERSION,
+  EXPERIMENTAL_V6_REVIEW_QUALITY_SOURCE,
+  createExperimentalV6CombinedDryRun,
+  createExperimentalV6CombinedFingerprint,
+  runExperimentalV6CombinedBatch,
+} from "../../../lib/project-d-review-v6-combined-experimental";
+
 export const runtime =
   "nodejs";
 
@@ -45,6 +54,7 @@ type ReviewAnalysisRequest = {
   originProductNo?: string | number;
   useStoredReviews?: boolean;
   dryRun?: boolean;
+  experimentalV6Canary?: boolean;
   executionMode?: string;
   batchIndex?: number;
   batchResults?: unknown;
@@ -4821,7 +4831,7 @@ function applyCriterionEvidenceFloor(
 }
 
 const MAX_REVIEW_COUNT = 1000;
-const REVIEW_BATCH_SIZE = 50;
+const REVIEW_BATCH_SIZE = 100;
 const REVIEW_TEXT_LIMIT = 2500;
 
 type BatchAnalysisResult = {
@@ -6302,20 +6312,21 @@ function validateProductionCheckpoint(
   fingerprint: string,
   keys: string[],
   pipelineVersion: string,
+  reviewQualitySource = PRODUCTION_REVIEW_QUALITY_SOURCE,
 ) {
   const row = asRecord(value), analysis = asRecord(row?.analysis);
   const audit = asRecord(analysis?.classificationAudit), qualityAudit = asRecord(analysis?.reviewQualityAudit);
   const quality = asRecord(analysis?.reviewQuality), evidence = asRecord(analysis?.criterionEvidence);
   if (!row || row.inputFingerprint !== fingerprint || row.pipelineVersion !== pipelineVersion ||
       !analysis || analysis.pipelineVersion !== pipelineVersion ||
-      analysis.reviewQualitySource !== PRODUCTION_REVIEW_QUALITY_SOURCE ||
+      analysis.reviewQualitySource !== reviewQualitySource ||
       audit?.complete !== true || audit.source !== pipelineVersion ||
       audit.invalidSegmentReferenceCount !== 0 || qualityAudit?.countValid !== true ||
-      qualityAudit.mutuallyExclusive !== true || qualityAudit.source !== PRODUCTION_REVIEW_QUALITY_SOURCE || !quality || !evidence) {
+      qualityAudit.mutuallyExclusive !== true || qualityAudit.source !== reviewQualitySource || !quality || !evidence) {
     throw new Error("Invalid/legacy production checkpoint; semantic fallback is forbidden.");
   }
   const count = Number(row.reviewCount), start = Number(row.reviewStart), end = Number(row.reviewEnd);
-  if (!Number.isSafeInteger(count) || count < 1 || count > 50 || !Number.isSafeInteger(start) || start < 1 || end !== start + count - 1 ||
+  if (!Number.isSafeInteger(count) || count < 1 || count > REVIEW_BATCH_SIZE || !Number.isSafeInteger(start) || start < 1 || end !== start + count - 1 ||
       qualityAudit.expectedReviewCount !== count || qualityAudit.classifiedReviewCount !== count) throw new Error("Checkpoint count mismatch.");
   const qualityCounts = [quality.highInformationReviews, quality.lowInformationReviews, quality.promotionalStyleReviews];
   if (qualityCounts.some(n => typeof n !== "number" || !Number.isSafeInteger(n) || n < 0) ||
@@ -6331,7 +6342,9 @@ function validateProductionCheckpoint(
   }
 }
 
-type ProductionCheckpointSource = Awaited<ReturnType<typeof runProductionReviewBatch>>;
+type ProductionCheckpointSource =
+  | Awaited<ReturnType<typeof runProductionReviewBatch>>
+  | Awaited<ReturnType<typeof runExperimentalV6CombinedBatch>>;
 function createProductionCheckpoint(
   production: ProductionCheckpointSource,
   index: number,
@@ -6346,7 +6359,9 @@ function createProductionCheckpoint(
           eligibilityCounts: production.eligibilityCounts, semanticVersions: production.semanticVersions,
           pipelineVersion: production.pipelineVersion, reviewQualitySource: production.reviewQualitySource } };
 }
-function createProductionReplayArtifacts(production: ProductionCheckpointSource) {
+function createProductionReplayArtifacts(
+  production: Awaited<ReturnType<typeof runProductionReviewBatch>>,
+) {
   const artifact = (stage: SavedProductionStageArtifact): SavedProductionStageArtifact => ({
     inputFingerprint: stage.inputFingerprint, rawModelOutputText: stage.rawModelOutputText,
     openAiResponse: stage.openAiResponse, apiUsage: stage.apiUsage,
@@ -6360,7 +6375,7 @@ export async function POST(
   let paidApiCalls = 0;
   const paidUsages: AnalysisUsage[] = [];
   const completedProductionBatches: BatchAnalysisResult[] = [];
-  let latestProduction: Awaited<ReturnType<typeof runProductionReviewBatch>> | null = null;
+  let latestProduction: ProductionCheckpointSource | null = null;
   try {
     const body =
       (
@@ -6386,6 +6401,28 @@ export async function POST(
     const dryRun =
       body.dryRun ===
       true;
+
+    const experimentalV6Canary =
+      body.experimentalV6Canary ===
+      true;
+
+    if (
+      experimentalV6Canary &&
+      process.env.NODE_ENV ===
+        "production"
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          paidApiCalls: 0,
+          message:
+            "V6 experimental canary is disabled in production.",
+        },
+        {
+          status: 404,
+        },
+      );
+    }
 
     const originProductNo =
       Number(
@@ -6751,13 +6788,33 @@ export async function POST(
       );
     }
 
-    const pipelineVersion =
+    const basePipelineVersion =
       productionReviewPipelineVersionForCriteria(
         dynamicCriteria,
       );
 
+    // V6 combined Stage0 + criteria is the production default.
+    // The V5 two-stage core remains only for legacy/offline compatibility.
+    const useV6Production =
+      true as const;
+
+    const pipelineVersion =
+      useV6Production
+        ? EXPERIMENTAL_V6_COMBINED_PIPELINE_VERSION
+        : basePipelineVersion;
+
+    const activeReviewQualitySource =
+      useV6Production
+        ? EXPERIMENTAL_V6_REVIEW_QUALITY_SOURCE
+        : PRODUCTION_REVIEW_QUALITY_SOURCE;
+
+    const activeBatchModel =
+      useV6Production
+        ? EXPERIMENTAL_V6_COMBINED_MODEL
+        : REVIEW_BATCH_MODEL;
+
     const frozenCriteriaPipeline =
-      pipelineVersion ===
+      basePipelineVersion ===
         PRODUCTION_REVIEW_PIPELINE_VERSION;
 
     const criterionKeys =
@@ -6791,6 +6848,25 @@ export async function POST(
       );
     }
 
+    if (
+      useV6Production &&
+      executionMode !== "full" &&
+      executionMode !== "batch" &&
+      executionMode !== "aggregate"
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          paidApiCalls: 0,
+          message:
+            "V6 production review analysis supports executionMode=full, batch, or aggregate. Legacy replay is not available for the V6 production fingerprint.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
     const productionOriginProductNo = storedOriginProductNo ?? (hasOriginProductNo ? originProductNo : null);
     if (productionOriginProductNo === null) return NextResponse.json({ success: false, stage: "precheck", paidApiCalls: 0,
       message: "Production semantics require a valid originProductNo, including request-body input." }, { status: 400 });
@@ -6799,10 +6875,58 @@ export async function POST(
       dbProductId: productionProductId, originProductNo: productionOriginProductNo,
       rawReviews, reviewStart: index * REVIEW_BATCH_SIZE + 1,
       reviewEnd: Math.min((index + 1) * REVIEW_BATCH_SIZE, reviews.length), criteria: dynamicCriteria });
-    const productionDryRuns = batches.map((_, index) => createProductionBatchDryRun(batchInput(index)));
-    const inputFingerprint = createProductionPipelineFingerprint({ category, productName,
-      dbProductId: productionProductId, originProductNo: productionOriginProductNo,
-      rawReviews, collectionStats, criteria: dynamicCriteria, reviewBatchSize: REVIEW_BATCH_SIZE });
+    const productionDryRuns =
+      useV6Production
+        ? batches.map(
+            (_batch, index) =>
+              createExperimentalV6CombinedDryRun({
+                rawReviews,
+                reviewStart:
+                  index * REVIEW_BATCH_SIZE + 1,
+                reviewEnd:
+                  Math.min(
+                    (index + 1) * REVIEW_BATCH_SIZE,
+                    reviews.length,
+                  ),
+                criteria:
+                  dynamicCriteria,
+              }),
+          )
+        : batches.map(
+            (_batch, index) =>
+              createProductionBatchDryRun(
+                batchInput(index),
+              ),
+          );
+
+    const inputFingerprint =
+      useV6Production
+        ? createExperimentalV6CombinedFingerprint({
+            category,
+            productName,
+            dbProductId:
+              productionProductId,
+            originProductNo:
+              productionOriginProductNo,
+            rawReviews,
+            collectionStats,
+            criteria:
+              dynamicCriteria,
+          })
+        : createProductionPipelineFingerprint({
+            category,
+            productName,
+            dbProductId:
+              productionProductId,
+            originProductNo:
+              productionOriginProductNo,
+            rawReviews,
+            collectionStats,
+            criteria:
+              dynamicCriteria,
+            reviewBatchSize:
+              REVIEW_BATCH_SIZE,
+          });
     const requestedInputFingerprint = cleanText(body.inputFingerprint);
     if (requestedInputFingerprint && requestedInputFingerprint !== inputFingerprint) {
       return NextResponse.json({ success: false, stage: "precheck", paidApiCalls: 0, inputFingerprint,
@@ -6814,19 +6938,109 @@ export async function POST(
       return NextResponse.json({ success: false, paidApiCalls: 0, message: "Invalid production batchIndex." }, { status: 400 });
     }
     if (dryRun) {
-      return NextResponse.json({ success: true, dryRun: true, paidApiCalls: 0, executionMode,
-        pipelineVersion, reviewQualitySource: PRODUCTION_REVIEW_QUALITY_SOURCE,
-        analysisModels: { stage0: productionDryRuns[0].stage0.model, batch: productionDryRuns[0].criteria.model, aggregate: REVIEW_AGGREGATE_MODEL },
-        inputFingerprint, requestedBatchIndex: executionMode === "batch" || executionMode === "replay" ? requestedBatchIndex : null,
-        inputSource: useStoredReviews ? "stored-db" : "request-body", category, productName,
-        dbProductId: storedDbProductId, originProductNo: storedOriginProductNo,
-        storedReviewRawDataPresent, storedReviewCount, analyzedReviewCount: reviews.length,
-        collectionStats, criterionCount: dynamicCriteria.length, criterionKeys, batchSize: REVIEW_BATCH_SIZE,
-        batchCount: batches.length, numberingAudit, productionDryRuns,
-        reviewTextLimits: { stage0: 2500, criteria: 5000 },
-        estimatedOpenAiCalls: executionMode === "full" ? 2 * batches.length + 1 : executionMode === "batch" ? 2 : executionMode === "aggregate" ? 1 : 0,
-        replayAvailable: true, replayApiBlocker: false,
-        minimumCriterionEvidence: minimumCriterionEvidence(reviews.length) });
+      return NextResponse.json({
+        success: true,
+        dryRun: true,
+        paidApiCalls: 0,
+        executionMode,
+        v6Production: useV6Production,
+        pipelineVersion,
+        reviewQualitySource:
+          activeReviewQualitySource,
+        analysisModels:
+          useV6Production
+            ? {
+                combined:
+                  EXPERIMENTAL_V6_COMBINED_MODEL,
+                aggregate:
+                  REVIEW_AGGREGATE_MODEL,
+              }
+            : {
+                stage0:
+                  (
+                    productionDryRuns[0] as
+                      ReturnType<typeof createProductionBatchDryRun>
+                  ).stage0.model,
+                batch:
+                  (
+                    productionDryRuns[0] as
+                      ReturnType<typeof createProductionBatchDryRun>
+                  ).criteria.model,
+                aggregate:
+                  REVIEW_AGGREGATE_MODEL,
+              },
+        inputFingerprint,
+        requestedBatchIndex:
+          executionMode === "batch" ||
+          executionMode === "replay"
+            ? requestedBatchIndex
+            : null,
+        inputSource:
+          useStoredReviews
+            ? "stored-db"
+            : "request-body",
+        category,
+        productName,
+        dbProductId:
+          storedDbProductId,
+        originProductNo:
+          storedOriginProductNo,
+        storedReviewRawDataPresent,
+        storedReviewCount,
+        analyzedReviewCount:
+          reviews.length,
+        collectionStats,
+        criterionCount:
+          dynamicCriteria.length,
+        criterionKeys,
+        batchSize:
+          REVIEW_BATCH_SIZE,
+        batchCount:
+          batches.length,
+        numberingAudit,
+        productionDryRuns,
+        reviewTextLimits:
+          useV6Production
+            ? {
+                combined:
+                  5000,
+              }
+            : {
+                stage0:
+                  2500,
+                criteria:
+                  5000,
+              },
+        estimatedOpenAiCalls:
+          useV6Production
+            ? executionMode ===
+                "batch" ||
+              executionMode ===
+                "aggregate"
+              ? 1
+              : batches.length +
+                1
+            : executionMode ===
+                "full"
+              ? 2 *
+                  batches.length +
+                1
+              : executionMode ===
+                  "batch"
+                ? 2
+                : executionMode ===
+                    "aggregate"
+                  ? 1
+                  : 0,
+        replayAvailable:
+          !useV6Production,
+        replayApiBlocker:
+          useV6Production,
+        minimumCriterionEvidence:
+          minimumCriterionEvidence(
+            reviews.length,
+          ),
+      });
     }
     // Offline replay returns before all client construction and paid paths.
     if (executionMode === "replay") {
@@ -6856,52 +7070,305 @@ export async function POST(
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) return NextResponse.json({ success: false, paidApiCalls: 0, message: "OPENAI_API_KEY is required." }, { status: 500 });
     const client = new OpenAI({ apiKey, maxRetries: 0 });
-    const runBatch = async (index: number) => {
-      const priorCalls = paidApiCalls;
-      let production: Awaited<ReturnType<typeof runProductionReviewBatch>>;
-      try {
-        production = await runProductionReviewBatch({ ...batchInput(index), apiKey });
-      } catch (error) {
-        if (error instanceof ProductionPipelineError) {
-          // Adapter errors may carry an internal zero; both stages have already run there.
-          const currentCalls = error.details.stage === "adapter" || error.details.stage === "criteria_validation"
-            ? Math.max(2, error.details.paidApiCalls)
-            : error.details.stage === "stage0_validation" ? Math.max(1, error.details.paidApiCalls) : error.details.paidApiCalls;
-          paidApiCalls = priorCalls + currentCalls;
-          throw new ProductionPipelineError(error.message, { ...error.details, paidApiCalls });
+    const runBatch =
+      async (
+        index: number,
+      ) => {
+        const priorCalls =
+          paidApiCalls;
+
+        let production:
+          ProductionCheckpointSource;
+
+        try {
+          production =
+            useV6Production
+              ? await runExperimentalV6CombinedBatch({
+                  ...batchInput(
+                    index,
+                  ),
+                  apiKey,
+                })
+              : await runProductionReviewBatch({
+                  ...batchInput(
+                    index,
+                  ),
+                  apiKey,
+                });
+        } catch (error) {
+          if (
+            error instanceof
+              ProductionPipelineError
+          ) {
+            const currentCalls =
+              useV6Production
+                ? Math.max(
+                    error.details
+                      .paidApiCalls,
+                    error.details
+                        .stage ===
+                      "precheck"
+                      ? 0
+                      : 1,
+                  )
+                : error.details.stage ===
+                      "adapter" ||
+                    error.details.stage ===
+                      "criteria_validation"
+                  ? Math.max(
+                      2,
+                      error.details
+                        .paidApiCalls,
+                    )
+                  : error.details
+                        .stage ===
+                      "stage0_validation"
+                    ? Math.max(
+                        1,
+                        error.details
+                          .paidApiCalls,
+                      )
+                    : error.details
+                        .paidApiCalls;
+
+            paidApiCalls =
+              priorCalls +
+              currentCalls;
+
+            throw new ProductionPipelineError(
+              error.message,
+              {
+                ...error.details,
+                paidApiCalls,
+              },
+            );
+          }
+
+          paidApiCalls =
+            priorCalls +
+            (
+              useV6Production
+                ? 1
+                : 2
+            );
+
+          throw error;
         }
-        // Unknown module failure: do not claim zero; retain conservative attempted-call ceiling.
-        paidApiCalls = priorCalls + 2;
-        throw error;
-      }
-      latestProduction = production;
-      paidApiCalls = priorCalls + production.paidApiCalls;
-      paidUsages.push(production.stage0.apiUsage);
-      if (production.criteria) paidUsages.push(production.criteria.apiUsage);
-      const checkpoint = createProductionCheckpoint(production, index, inputFingerprint, pipelineVersion);
-      validateProductionCheckpoint(checkpoint, inputFingerprint, criterionKeys, pipelineVersion);
-      completedProductionBatches.push(checkpoint);
-      return { production, checkpoint };
-    };
+
+        latestProduction =
+          production;
+
+        paidApiCalls =
+          priorCalls +
+          production
+            .paidApiCalls;
+
+        if (
+          useV6Production
+        ) {
+          paidUsages.push(
+            (
+              production as Awaited<
+                ReturnType<
+                  typeof runExperimentalV6CombinedBatch
+                >
+              >
+            ).apiUsage,
+          );
+        } else {
+          const standardProduction =
+            production as Awaited<
+              ReturnType<
+                typeof runProductionReviewBatch
+              >
+            >;
+
+          paidUsages.push(
+            standardProduction
+              .stage0.apiUsage,
+          );
+
+          if (
+            standardProduction
+              .criteria
+          ) {
+            paidUsages.push(
+              standardProduction
+                .criteria.apiUsage,
+            );
+          }
+        }
+
+        const checkpoint =
+          createProductionCheckpoint(
+            production,
+            index,
+            inputFingerprint,
+            pipelineVersion,
+          );
+
+        validateProductionCheckpoint(
+          checkpoint,
+          inputFingerprint,
+          criterionKeys,
+          pipelineVersion,
+          activeReviewQualitySource,
+        );
+
+        completedProductionBatches.push(
+          checkpoint,
+        );
+
+        return {
+          production,
+          checkpoint,
+        };
+      };
     if (executionMode === "batch") {
-      const { production, checkpoint } = await runBatch(requestedBatchIndex - 1);
-      return NextResponse.json({ success: true, executionMode, paidApiCalls, inputFingerprint,
-        pipelineVersion, reviewQualitySource: PRODUCTION_REVIEW_QUALITY_SOURCE,
-        inputSource: useStoredReviews ? "stored-db" : "request-body", dbProductId: storedDbProductId,
-        originProductNo: storedOriginProductNo, productName, analyzedReviewCount: reviews.length,
-        batchCount: batches.length, batchResult: checkpoint, stage0: production.stage0, criteria: production.criteria,
-        replayArtifacts: createProductionReplayArtifacts(production),
-        rawModelAnalysis: { stage0: production.stage0.rawModelAnalysis, criteria: production.criteria?.rawModelAnalysis ?? null },
-        rawModelOutputText: { stage0: production.stage0.rawModelOutputText, criteria: production.criteria?.rawModelOutputText ?? null },
-        openAiResponse: { stage0: production.stage0.openAiResponse, criteria: production.criteria?.openAiResponse ?? null },
-        classificationAudit: production.classificationAudit, normalizationVersion: pipelineVersion,
-        apiUsage: summarizeUsage(paidUsages) });
+      const {
+        production,
+        checkpoint,
+      } =
+        await runBatch(
+          requestedBatchIndex -
+            1,
+        );
+
+      if (useV6Production) {
+        const combinedProduction =
+          production as Awaited<
+            ReturnType<
+              typeof runExperimentalV6CombinedBatch
+            >
+          >;
+
+        return NextResponse.json({
+          success: true,
+          v6Production: true,
+          executionMode,
+          paidApiCalls,
+          inputFingerprint,
+          pipelineVersion,
+          reviewQualitySource:
+            activeReviewQualitySource,
+          inputSource:
+            useStoredReviews
+              ? "stored-db"
+              : "request-body",
+          dbProductId:
+            storedDbProductId,
+          originProductNo:
+            storedOriginProductNo,
+          productName,
+          analyzedReviewCount:
+            reviews.length,
+          batchCount:
+            batches.length,
+          batchResult:
+            checkpoint,
+          combined:
+            combinedProduction,
+          apiUsage:
+            summarizeUsage(
+              paidUsages,
+            ),
+        });
+      }
+
+      const standardProduction =
+        production as Awaited<
+          ReturnType<
+            typeof runProductionReviewBatch
+          >
+        >;
+
+      return NextResponse.json({
+        success: true,
+        executionMode,
+        paidApiCalls,
+        inputFingerprint,
+        pipelineVersion,
+        reviewQualitySource:
+          activeReviewQualitySource,
+        inputSource:
+          useStoredReviews
+            ? "stored-db"
+            : "request-body",
+        dbProductId:
+          storedDbProductId,
+        originProductNo:
+          storedOriginProductNo,
+        productName,
+        analyzedReviewCount:
+          reviews.length,
+        batchCount:
+          batches.length,
+        batchResult:
+          checkpoint,
+        stage0:
+          standardProduction
+            .stage0,
+        criteria:
+          standardProduction
+            .criteria,
+        replayArtifacts:
+          createProductionReplayArtifacts(
+            standardProduction,
+          ),
+        rawModelAnalysis: {
+          stage0:
+            standardProduction
+              .stage0.rawModelAnalysis,
+          criteria:
+            standardProduction
+              .criteria
+              ?.rawModelAnalysis ??
+            null,
+        },
+        rawModelOutputText: {
+          stage0:
+            standardProduction
+              .stage0.rawModelOutputText,
+          criteria:
+            standardProduction
+              .criteria
+              ?.rawModelOutputText ??
+            null,
+        },
+        openAiResponse: {
+          stage0:
+            standardProduction
+              .stage0.openAiResponse,
+          criteria:
+            standardProduction
+              .criteria
+              ?.openAiResponse ??
+            null,
+        },
+        classificationAudit:
+          standardProduction
+            .classificationAudit,
+        normalizationVersion:
+          pipelineVersion,
+        apiUsage:
+          summarizeUsage(
+            paidUsages,
+          ),
+      });
     }
     let batchResults: BatchAnalysisResult[];
     const apiUsageCalls = paidUsages;
     if (executionMode === "aggregate") {
       if (!Array.isArray(body.batchResults)) throw new Error("Production checkpoints required.");
-      for (const row of body.batchResults) validateProductionCheckpoint(row, inputFingerprint, criterionKeys, pipelineVersion);
+      for (const row of body.batchResults) {
+        validateProductionCheckpoint(
+          row,
+          inputFingerprint,
+          criterionKeys,
+          pipelineVersion,
+          activeReviewQualitySource,
+        );
+      }
       // Existing structural range/completeness checks only; never old semantic normalization.
       batchResults = normalizeResumeBatchResults(body.batchResults, batches);
     } else {
@@ -6986,7 +7453,7 @@ export async function POST(
       inputFingerprint,
 
       reviewQualitySource:
-        PRODUCTION_REVIEW_QUALITY_SOURCE,
+        activeReviewQualitySource,
 
       criterionEvidenceProvenance:
         batchResults.map(
@@ -7041,7 +7508,11 @@ export async function POST(
 
       reviewQuality,
 
-      reviewQualityAudit: { ...reviewQualityAudit, source: PRODUCTION_REVIEW_QUALITY_SOURCE },
+      reviewQualityAudit: {
+        ...reviewQualityAudit,
+        source:
+          activeReviewQualitySource,
+      },
 
       criterionEvidence,
 
@@ -7052,7 +7523,7 @@ export async function POST(
           pipelineVersion,
 
         batchModel:
-          REVIEW_BATCH_MODEL,
+          activeBatchModel,
 
         aggregateModel:
           REVIEW_AGGREGATE_MODEL,
@@ -7066,7 +7537,18 @@ export async function POST(
         batchCount:
           batches.length,
 
-        reviewTextLimits: { stage0: 2500, criteria: 5000 },
+        reviewTextLimits:
+          useV6Production
+            ? {
+                combined:
+                  5000,
+              }
+            : {
+                stage0:
+                  2500,
+                criteria:
+                  5000,
+              },
       },
     };
 
@@ -7077,7 +7559,8 @@ export async function POST(
 
       paidApiCalls,
       pipelineVersion,
-      reviewQualitySource: PRODUCTION_REVIEW_QUALITY_SOURCE,
+      reviewQualitySource:
+        activeReviewQualitySource,
 
       inputFingerprint,
 
@@ -7100,12 +7583,20 @@ export async function POST(
       analyzedReviewCount:
         reviews.length,
 
-      analysisModels: {
-        batch:
-          REVIEW_BATCH_MODEL,
-        aggregate:
-          REVIEW_AGGREGATE_MODEL,
-      },
+      analysisModels:
+        useV6Production
+          ? {
+              combined:
+                EXPERIMENTAL_V6_COMBINED_MODEL,
+              aggregate:
+                REVIEW_AGGREGATE_MODEL,
+            }
+          : {
+              batch:
+                REVIEW_BATCH_MODEL,
+              aggregate:
+                REVIEW_AGGREGATE_MODEL,
+            },
 
       apiUsage:
         summarizeUsage(
@@ -7114,10 +7605,21 @@ export async function POST(
     });
   } catch (error) {
     if (error instanceof ProductionPipelineError) {
-      return NextResponse.json({ success: false, ...error.details, message: error.message,
+      const providerMessage =
+        typeof error.details.message ===
+          "string"
+          ? error.details.message
+          : "";
+
+      return NextResponse.json({
+        success: false,
+        ...error.details,
+        message: error.message,
+        providerMessage,
         paidApiCalls: Math.max(paidApiCalls, error.details.paidApiCalls),
         completedBatchResults: completedProductionBatches,
-        completedApiUsage: summarizeUsage(paidUsages) }, { status: 502 });
+        completedApiUsage: summarizeUsage(paidUsages),
+      }, { status: 502 });
     }
     if (error instanceof AnalysisResponseError) {
       return NextResponse.json({ success: false, message: error.message, stage: "aggregate_response_validation",

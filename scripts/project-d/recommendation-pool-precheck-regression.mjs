@@ -32,18 +32,12 @@ function check(
 
 const precheckStart =
   component.indexOf(
-    "  async function runRecommendationPoolPrecheck() {",
+    "  async function runRecommendationPoolPrecheck(",
   );
 
 const executionStart =
   component.indexOf(
-    "  async function runRecommendationPoolReviewExecution() {",
-    precheckStart,
-  );
-
-const runStart =
-  component.indexOf(
-    "  async function run() {",
+    "  async function runRecommendationPoolReviewExecution(",
     precheckStart,
   );
 
@@ -53,13 +47,8 @@ check(
   "free precheck function present",
 );
 
-const precheckEnd =
-  executionStart >= 0
-    ? executionStart
-    : runStart;
-
 check(
-  precheckEnd > precheckStart,
+  executionStart > precheckStart,
   true,
   "free precheck boundary resolved",
 );
@@ -67,7 +56,7 @@ check(
 const precheck =
   component.slice(
     precheckStart,
-    precheckEnd,
+    executionStart,
   );
 
 check(
@@ -115,7 +104,34 @@ check(
     "dryRun: true",
   ),
   true,
-  "review analysis remains dry-run in precheck",
+  "review analysis remains dry-run in normal precheck",
+);
+
+check(
+  precheck.includes(
+    "allowMissingCriteria",
+  ) &&
+    precheck.includes(
+      "Math.ceil(",
+    ) &&
+    precheck
+      .replace(/\s+/g, " ")
+      .includes(
+        "reviews.length / 100",
+      ),
+  true,
+  "V4 can calculate review cost from the fixed corpus before criteria exists",
+);
+
+check(
+  precheck.includes(
+    "selectedFiveIds",
+  ) &&
+    precheck.includes(
+      "explicitSelectedFiveIds",
+    ),
+  true,
+  "V4 precise precheck can anchor the current selected five",
 );
 
 check(
@@ -123,7 +139,7 @@ check(
     "inputFingerprint:\n            fingerprint",
   ),
   true,
-  "precheck retains approved fingerprint for later execution",
+  "normal precheck retains exact fingerprint for later execution",
 );
 
 check(
@@ -180,5 +196,5 @@ check(
 );
 
 console.log(
-  `Recommendation pool precheck regression V3 PASS: ${checks} assertions; free precheck paid calls 0; DB writes 0.`,
+  `Recommendation pool precheck regression V4 PASS: ${checks} assertions; free precheck paid calls 0; DB writes 0.`,
 );

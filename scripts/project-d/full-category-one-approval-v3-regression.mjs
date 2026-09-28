@@ -38,10 +38,10 @@ check(
 
 check(
   helper.includes(
-    "FULL_CATEGORY_REVIEW_MAX_CALLS_PER_PRODUCT = 5",
+    "FULL_CATEGORY_REVIEW_MAX_CALLS_PER_PRODUCT = 2",
   ),
   true,
-  "per-product review ceiling remains five",
+  "per-product review ceiling is three under V5 batch-100",
 );
 
 check(

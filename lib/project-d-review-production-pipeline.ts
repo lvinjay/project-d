@@ -131,7 +131,7 @@ namespace Stage0V5Core {
     "server-normalized-nonoverlap-span-v1";
 
   const BATCH_SIZE =
-    50;
+    100;
 
   const REVIEW_TEXT_LIMIT =
     2500;
@@ -5273,7 +5273,7 @@ export function createProductionBatchDryRun(
     input.reviewEnd -
       input.reviewStart +
       1 >
-      50
+      100
   ) {
     throw new ProductionPipelineError(
       "Production batch range precheck failed.",
@@ -5285,7 +5285,7 @@ export function createProductionBatchDryRun(
           0,
 
         message:
-          "reviewStart/reviewEnd must define a valid contiguous batch of at most 50 reviews.",
+          "reviewStart/reviewEnd must define a valid contiguous batch of at most 100 reviews.",
       },
     );
   }
@@ -5446,7 +5446,7 @@ export async function runProductionReviewBatch(
     input.reviewEnd -
       input.reviewStart +
       1 >
-      50
+      100
   ) {
     throw new ProductionPipelineError(
       "Production batch range precheck failed.",
@@ -5458,7 +5458,7 @@ export async function runProductionReviewBatch(
           0,
 
         message:
-          "reviewStart/reviewEnd must define a valid contiguous batch of at most 50 reviews.",
+          "reviewStart/reviewEnd must define a valid contiguous batch of at most 100 reviews.",
       },
     );
   }
@@ -6087,7 +6087,7 @@ async function reconstructProductionReviewBatch(
     input.reviewEnd -
       input.reviewStart +
       1 >
-      50
+      100
   ) {
     throw new ProductionPipelineError(
       "Production batch range precheck failed.",
@@ -6099,7 +6099,7 @@ async function reconstructProductionReviewBatch(
           0,
 
         message:
-          "reviewStart/reviewEnd must define a valid contiguous batch of at most 50 reviews.",
+          "reviewStart/reviewEnd must define a valid contiguous batch of at most 100 reviews.",
       },
     );
   }

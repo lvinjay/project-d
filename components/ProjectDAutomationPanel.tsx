@@ -1014,7 +1014,14 @@ export default function ProjectDAutomationPanel() {
     );
   }
 
-  async function runRecommendationPoolPrecheck() {
+  async function runRecommendationPoolPrecheck(
+    options?: {
+      selectedFiveIds?: string[];
+      allowMissingCriteria?: boolean;
+      planningOnly?: boolean;
+    },
+  ) {
+    // FULL_CATEGORY_ONE_APPROVAL_V4_PRECISE_PLAN
     const normalizedCategory =
       category.trim();
 
@@ -1129,6 +1136,24 @@ export default function ProjectDAutomationPanel() {
               product.id,
           );
 
+      const explicitSelectedFiveIds =
+        Array.isArray(
+          options?.selectedFiveIds,
+        )
+          ? Array.from(
+              new Set(
+                (
+                  options?.selectedFiveIds ??
+                  []
+                )
+                  .map((id) =>
+                    cleanText(id),
+                  )
+                  .filter(Boolean),
+              ),
+            )
+          : [];
+
       const poolPlan =
         planRecommendationPool(
           catalogProducts.map(
@@ -1145,7 +1170,10 @@ export default function ProjectDAutomationPanel() {
           ),
           {
             selectedFiveIds:
-              preparedIds,
+              explicitSelectedFiveIds.length >
+              0
+                ? explicitSelectedFiveIds
+                : preparedIds,
           },
         );
 
@@ -1177,8 +1205,12 @@ export default function ProjectDAutomationPanel() {
 
             if (
               !catalog ||
-              catalog.analyzed ===
-                true
+              (
+                catalog.analyzed ===
+                  true &&
+                options?.allowMissingCriteria !==
+                  true
+              )
             ) {
               return [];
             }
@@ -1342,61 +1374,94 @@ export default function ProjectDAutomationPanel() {
             "full",
         };
 
-        const dryRunResponse =
-          await fetch(
-            "/api/analyze-reviews",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type":
-                  "application/json",
-              },
-              body:
-                JSON.stringify({
-                  ...input,
-                  dryRun: true,
-                }),
-            },
-          );
-
-        const dryRunResult =
-          await readJson(
-            dryRunResponse,
-          );
-
-        const maximum =
-          Number(
-            dryRunResult.estimatedOpenAiCalls,
-          );
-
-        const fingerprint =
-          cleanText(
-            dryRunResult.inputFingerprint,
-          );
+        let maximum: number;
+        let fingerprint: string;
 
         if (
-          !dryRunResponse.ok ||
-          dryRunResult.success !==
-            true ||
-          dryRunResult.dryRun !==
-            true ||
-          Number(
-            dryRunResult.paidApiCalls ??
-              0,
-          ) !== 0 ||
-          !/^[a-f0-9]{64}$/.test(
-            fingerprint,
-          ) ||
+          options?.allowMissingCriteria ===
+          true
+        ) {
+          maximum =
+            Math.ceil(
+              reviews.length /
+                100,
+            ) +
+            1;
+          fingerprint = "";
+        } else {
+          const dryRunResponse =
+            await fetch(
+              "/api/analyze-reviews",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type":
+                    "application/json",
+                },
+                body:
+                  JSON.stringify({
+                    ...input,
+                    dryRun: true,
+                  }),
+              },
+            );
+
+          const dryRunResult =
+            await readJson(
+              dryRunResponse,
+            );
+
+          maximum =
+            Number(
+              dryRunResult.estimatedOpenAiCalls,
+            );
+
+          fingerprint =
+            cleanText(
+              dryRunResult.inputFingerprint,
+            );
+
+          if (
+            !dryRunResponse.ok ||
+            dryRunResult.success !==
+              true ||
+            dryRunResult.dryRun !==
+              true ||
+            Number(
+              dryRunResult.paidApiCalls ??
+                0,
+            ) !== 0 ||
+            !/^[a-f0-9]{64}$/.test(
+              fingerprint,
+            ) ||
+            !Number.isSafeInteger(
+              maximum,
+            ) ||
+            maximum < 1
+          ) {
+            throw new Error(
+              cleanText(
+                dryRunResult.message,
+              ) ||
+                `${planned.productName} 리뷰 분석 무료 사전검증에 실패했습니다.`,
+            );
+          }
+        }
+
+        if (
           !Number.isSafeInteger(
             maximum,
           ) ||
-          maximum < 1
+          maximum < 1 ||
+          maximum >
+            Math.ceil(
+              reviews.length /
+                100,
+            ) +
+            1
         ) {
           throw new Error(
-            cleanText(
-              dryRunResult.message,
-            ) ||
-              `${planned.productName} 리뷰 분석 무료 사전검증에 실패했습니다.`,
+            `${planned.productName} 리뷰 분석 무료 비용계획이 허용 상한을 벗어났습니다.`,
           );
         }
 
@@ -1450,7 +1515,9 @@ export default function ProjectDAutomationPanel() {
           `전체 DB 가격확인 후보 ${poolPlan.sourceCount}개`,
           `Recommendation Pool ${poolPlan.selectedCount}개 · 저가 ${poolPlan.lowCount} / 중가 ${poolPlan.midCount} / 고가 ${poolPlan.highCount}`,
           `기존 분석 준비 ${poolPlan.selectedCount - missingReviewTargets.length}개`,
-          `신규 리뷰 수집 + dry-run 성공 ${nextPlans.length}개`,
+          options?.allowMissingCriteria === true
+            ? `신규 리뷰 corpus + 비용계획 ${nextPlans.length}개`
+            : `신규 리뷰 수집 + dry-run 성공 ${nextPlans.length}개`,
           `리뷰 30개 미만 ${insufficientCount}개`,
           `신규 리뷰 분석 OpenAI 보수적 최대 ${maximumOpenAiCalls}회`,
           "",
@@ -1473,6 +1540,8 @@ export default function ProjectDAutomationPanel() {
           ),
         reviewMaxOpenAiCalls:
           maximumOpenAiCalls,
+        existingAnalyzedProductIds:
+          preparedIds,
         preparedProducts:
           poolPlan.products.map(
             (product) => ({
@@ -2466,6 +2535,18 @@ export default function ProjectDAutomationPanel() {
     async function ensureFullCategoryApproval(
       resolverMaxCalls: number,
       brightDataMaxCalls: number,
+      precise?: {
+        criteriaMaxOpenAiCalls:
+          0 | 1;
+        reviewPlans: Array<{
+          productName: string;
+          reviewCount: number;
+          estimatedOpenAiCalls: number;
+          reusable: boolean;
+        }>;
+        scoreMaxOpenAiCalls:
+          0 | 1;
+      },
     ) {
       const proposed =
         buildFullCategoryOneApprovalPlan({
@@ -2473,6 +2554,12 @@ export default function ProjectDAutomationPanel() {
             normalizedCategory,
           resolverMaxCalls,
           brightDataMaxCalls,
+          criteriaMaxOpenAiCalls:
+            precise?.criteriaMaxOpenAiCalls,
+          preciseReviewPlans:
+            precise?.reviewPlans,
+          scoreMaxOpenAiCalls:
+            precise?.scoreMaxOpenAiCalls,
         });
 
       if (fullApprovalPlan) {
@@ -2480,10 +2567,16 @@ export default function ProjectDAutomationPanel() {
           resolverMaxCalls >
             (fullApprovalPlan as ReturnType<typeof buildFullCategoryOneApprovalPlan>).resolverMaxCalls ||
           brightDataMaxCalls >
-            (fullApprovalPlan as ReturnType<typeof buildFullCategoryOneApprovalPlan>).brightDataMaxCalls
+            (fullApprovalPlan as ReturnType<typeof buildFullCategoryOneApprovalPlan>).brightDataMaxCalls ||
+          proposed.criteriaMaxOpenAiCalls >
+            (fullApprovalPlan as ReturnType<typeof buildFullCategoryOneApprovalPlan>).criteriaMaxOpenAiCalls ||
+          proposed.reviewMaxOpenAiCalls >
+            (fullApprovalPlan as ReturnType<typeof buildFullCategoryOneApprovalPlan>).reviewMaxOpenAiCalls ||
+          proposed.scoreMaxOpenAiCalls >
+            (fullApprovalPlan as ReturnType<typeof buildFullCategoryOneApprovalPlan>).scoreMaxOpenAiCalls
         ) {
           throw new Error(
-            "시장 유료 경로가 이미 승인한 상한을 초과해 추가 유료 호출 없이 중단합니다.",
+            "현재 무료 사전계획이 이미 승인한 상한을 초과해 추가 유료 호출 없이 중단합니다.",
           );
         }
 
@@ -2493,7 +2586,9 @@ export default function ProjectDAutomationPanel() {
       const approved =
         await requestApproval({
           title:
-            "카테고리 전체 한 번 승인 자동 구축",
+            precise
+              ? "카테고리 전체 정밀 비용계획 1회 승인"
+              : "카테고리 전체 한 번 승인 자동 구축",
           lines:
             proposed.approvalLines,
           confirmLabel:
@@ -3229,10 +3324,7 @@ export default function ProjectDAutomationPanel() {
 
           const approvedFreePool =
             fullCategoryOneApprovalMode
-              ? await ensureFullCategoryApproval(
-                  0,
-                  0,
-                )
+              ? true
               : await requestApproval({
               title:
                 "무과금 MARKET POOL 확보",
@@ -3404,12 +3496,6 @@ export default function ProjectDAutomationPanel() {
       if (
         fullCategoryOneApprovalMode
       ) {
-        if (!fullApprovalPlan) {
-          throw new Error(
-            "카테고리 전체 한 번 승인이 확인되지 않았습니다.",
-          );
-        }
-
         fullActualResolverCalls =
           Number(
             enriched.resolverAttempts ??
@@ -3422,14 +3508,25 @@ export default function ProjectDAutomationPanel() {
               0,
           ) || 0;
 
-        if (
-          fullActualResolverCalls >
-            (fullApprovalPlan as ReturnType<typeof buildFullCategoryOneApprovalPlan>).resolverMaxCalls ||
-          fullActualBrightDataCalls >
-            (fullApprovalPlan as ReturnType<typeof buildFullCategoryOneApprovalPlan>).brightDataMaxCalls
+        if (fullApprovalPlan) {
+          if (
+            fullActualResolverCalls >
+              (fullApprovalPlan as ReturnType<typeof buildFullCategoryOneApprovalPlan>).resolverMaxCalls ||
+            fullActualBrightDataCalls >
+              (fullApprovalPlan as ReturnType<typeof buildFullCategoryOneApprovalPlan>).brightDataMaxCalls
+          ) {
+            throw new Error(
+              "실제 시장 유료 호출이 승인 상한을 초과했습니다.",
+            );
+          }
+        } else if (
+          fullActualResolverCalls !==
+            0 ||
+          fullActualBrightDataCalls !==
+            0
         ) {
           throw new Error(
-            "실제 시장 유료 호출이 승인 상한을 초과했습니다.",
+            "V4 정밀 비용계획 승인 전에 시장 유료 호출이 감지되어 중단합니다.",
           );
         }
       }
@@ -4105,6 +4202,119 @@ reviewCollections.push({
 
       assertSelectionRun(window.sessionStorage, selectionRun);
 
+      if (
+        fullCategoryOneApprovalMode
+      ) {
+        let fullCategoryCriteriaAlreadyAvailable =
+          false;
+
+        try {
+          await fetchCategoryProfile(
+            normalizedCategory,
+          );
+          fullCategoryCriteriaAlreadyAvailable =
+            true;
+        } catch {
+          fullCategoryCriteriaAlreadyAvailable =
+            false;
+        }
+
+        const precisePrecheck =
+          await runRecommendationPoolPrecheck({
+            selectedFiveIds:
+              selectedIds,
+            allowMissingCriteria:
+              !fullCategoryCriteriaAlreadyAvailable,
+            planningOnly:
+              true,
+          });
+
+        if (!precisePrecheck) {
+          throw new Error(
+            "V4 정밀 비용계획용 Recommendation Pool 무료 사전검증에 실패했습니다.",
+          );
+        }
+
+        const preciseReviewPlans =
+          precisePrecheck.preparedProducts.map(
+            (product) => {
+              const pending =
+                precisePrecheck.reviewPlans.find(
+                  (plan) =>
+                    plan.dbProductId ===
+                    product.dbProductId,
+                );
+
+              if (pending) {
+                return {
+                  productName:
+                    product.productName,
+                  reviewCount:
+                    pending.reviews.length,
+                  estimatedOpenAiCalls:
+                    pending.estimatedOpenAiCalls,
+                  reusable:
+                    false,
+                };
+              }
+
+              if (
+                fullCategoryCriteriaAlreadyAvailable &&
+                precisePrecheck.existingAnalyzedProductIds.includes(
+                  product.dbProductId,
+                )
+              ) {
+                return {
+                  productName:
+                    product.productName,
+                  reviewCount:
+                    0,
+                  estimatedOpenAiCalls:
+                    0,
+                  reusable:
+                    true,
+                };
+              }
+
+              throw new Error(
+                `${product.productName}: V4 정밀 비용계획에 필요한 30개 이상 native 리뷰 corpus를 확보하지 못했습니다.`,
+              );
+            },
+          );
+
+        const preciseApproved =
+          await ensureFullCategoryApproval(
+            fullApprovalPlan
+              ? (fullApprovalPlan as ReturnType<typeof buildFullCategoryOneApprovalPlan>).resolverMaxCalls
+              : 0,
+            fullApprovalPlan
+              ? (fullApprovalPlan as ReturnType<typeof buildFullCategoryOneApprovalPlan>).brightDataMaxCalls
+              : 0,
+            {
+              criteriaMaxOpenAiCalls:
+                fullCategoryCriteriaAlreadyAvailable
+                  ? 0
+                  : 1,
+              reviewPlans:
+                preciseReviewPlans,
+              scoreMaxOpenAiCalls:
+                1,
+            },
+          );
+
+        if (!preciseApproved) {
+          throw new Error(
+            "V4 정밀 비용계획 승인을 취소했습니다. 이후 OpenAI 유료 호출은 실행하지 않았습니다.",
+          );
+        }
+
+        updateStep(
+          "criteria-first",
+          "working",
+          `V4 정밀 비용계획 승인 완료 · Recommendation Pool ${precisePrecheck.preparedProductIds.length}개 · 리뷰 OpenAI 최대 ${preciseReviewPlans.reduce((sum, plan) => sum + plan.estimatedOpenAiCalls, 0)}회`,
+        );
+      }
+
       let profile: Record<string, unknown>;
 
       if (normalizedCategory !== "로봇청소기") {
@@ -4284,7 +4494,7 @@ reviewCollections.push({
             result.paidApiCalls !== 0 || typeof result.inputFingerprint !== "string" ||
             !/^[a-f0-9]{64}$/.test(result.inputFingerprint) || !pipelineVersion ||
             !reviewQualitySource || !Number.isSafeInteger(maximum) ||
-            maximum < 1 || maximum > 2 * Math.ceil(product.reviews.length / 50) + 1) {
+            maximum < 1 || maximum > Math.ceil(product.reviews.length / 100) + 1) {
           throw new Error(cleanText(result.message) || "리뷰 무료 사전검증 계약이 일치하지 않습니다.");
         }
 
