@@ -15,10 +15,20 @@ const ids = Array.from(
   (_, i) => `00000000-0000-4000-8000-${String(i + 1).padStart(12, "0")}`,
 );
 
+const poolIds = Array.from(
+  { length: 15 },
+  (_, i) => `00000000-0000-4000-8000-${String(i + 1).padStart(12, "0")}`,
+);
+
 const manifest = {
   runId: "00000000-0000-4000-8000-000000000099",
   category: "fixture",
   products: ids.map((id) => ({ dbProductId: id })),
+  recommendationPool: poolIds.map((id, index) => ({
+    dbProductId: id,
+    originProductNo: index + 1,
+    productName: `Fixture ${index + 1}`,
+  })),
 };
 
 let fetchImpl = async () => {
@@ -43,6 +53,11 @@ const sandbox = {
           profile: {},
         }),
         selectedFiveIds: () => [...ids],
+        recommendationPoolIds: (value) =>
+          Array.isArray(value?.recommendationPool) &&
+          value.recommendationPool.length >= 5
+            ? value.recommendationPool.map((product) => product.dbProductId)
+            : [...ids],
       };
     }
     throw new Error(`Unexpected import: ${id}`);
@@ -86,7 +101,12 @@ check(ready.cacheHit, true, "ready cache");
 check(ready.estimatedOpenAiCalls, 0, "ready call count");
 check(lastBody.category, "fixture", "ready category body");
 check(lastBody.dryRun, true, "dry-run enforced");
-check(lastBody.productIds.length, 5, "exact five body");
+check(lastBody.productIds.length, 15, "recommendation pool body");
+check(
+  lastBody.productIds.every((id) => poolIds.includes(id)),
+  true,
+  "recommendation pool ids preserved",
+);
 
 fetchImpl = async () =>
   new Response(

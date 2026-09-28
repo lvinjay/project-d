@@ -485,13 +485,52 @@ const category = text(body.category);
 
     let budgetProductIds: string[] = [];
     if (mode === "budget_options") {
-      if (!Array.isArray(body.productIds) || body.productIds.length !== 5 ||
-          body.productIds.some(id => typeof id !== "string" || !UUID_PATTERN.test(id.trim()))) {
-        return NextResponse.json({ success: false, paidApiCalls: 0, message: "예산 선택지는 정확히 5개의 제품 UUID가 필요합니다." }, { status: 400 });
+      const rawBudgetProductIds =
+        Array.isArray(body.productIds)
+          ? body.productIds
+          : [];
+
+      if (
+        rawBudgetProductIds.length < 5 ||
+        rawBudgetProductIds.length > 15 ||
+        rawBudgetProductIds.some(
+          (id) =>
+            typeof id !== "string" ||
+            !UUID_PATTERN.test(id.trim()),
+        )
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            paidApiCalls: 0,
+            message:
+              "예산 선택지는 5~15개의 제품 UUID가 필요합니다.",
+          },
+          { status: 400 },
+        );
       }
-      budgetProductIds = body.productIds.map(id => String(id).trim().toLowerCase());
-      if (new Set(budgetProductIds).size !== 5) {
-        return NextResponse.json({ success: false, paidApiCalls: 0, message: "중복 제품 UUID는 허용되지 않습니다." }, { status: 400 });
+
+      budgetProductIds =
+        rawBudgetProductIds.map(
+          (id) =>
+            String(id)
+              .trim()
+              .toLowerCase(),
+        );
+
+      if (
+        new Set(budgetProductIds).size !==
+        budgetProductIds.length
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            paidApiCalls: 0,
+            message:
+              "중복 제품 UUID는 허용되지 않습니다.",
+          },
+          { status: 400 },
+        );
       }
     }
     let productsQuery =
@@ -529,11 +568,46 @@ const category = text(body.category);
     if (error) throw error;
 
     const products = data ?? [];
-    if (mode === "budget_options" && (products.length !== 5 ||
-        new Set(products.map(p => p.id)).size !== 5 ||
-        budgetProductIds.some(id => !products.some(p => p.id === id)) ||
-        products.some(p => !budgetProductIds.includes(p.id)))) {
-      return NextResponse.json({ success: false, paidApiCalls: 0, message: "선택한 5개 제품의 카테고리와 UUID가 모두 일치해야 합니다." }, { status: 409 });
+    if (
+      mode === "budget_options" &&
+      (
+        products.length !== budgetProductIds.length ||
+        new Set(
+          products.map(
+            (product) =>
+              String(product.id)
+                .trim()
+                .toLowerCase(),
+          ),
+        ).size !== budgetProductIds.length ||
+        budgetProductIds.some(
+          (id) =>
+            !products.some(
+              (product) =>
+                String(product.id)
+                  .trim()
+                  .toLowerCase() === id,
+            ),
+        ) ||
+        products.some(
+          (product) =>
+            !budgetProductIds.includes(
+              String(product.id)
+                .trim()
+                .toLowerCase(),
+            ),
+        )
+      )
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          paidApiCalls: 0,
+          message:
+            "선택한 추천 준비 풀 제품의 카테고리와 UUID가 모두 일치해야 합니다.",
+        },
+        { status: 409 },
+      );
     }
 
     if (products.length < 2) {

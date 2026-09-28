@@ -8,8 +8,16 @@ export type SelectedProduct = {
   readiness: { runId: string; reviewCount: number; reviewAnalysisSaved: true;
     analysisFingerprint: string; rawCorpusPersisted: true };
 };
+export type RecommendationPoolProduct = {
+  dbProductId: string;
+  originProductNo: number;
+  productName: string;
+};
 export type SelectedFiveManifest = SelectionRun & {
-  schemaVersion: 1; profileRevision: string; products: SelectedProduct[];
+  schemaVersion: 1;
+  profileRevision: string;
+  products: SelectedProduct[];
+  recommendationPool?: RecommendationPoolProduct[];
 };
 function object(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("선택 manifest 형식이 잘못되었습니다.");
@@ -59,6 +67,45 @@ export function validateSelectedFive(value: unknown, run: SelectionRun, revision
     }
     ids.add(p.dbProductId.toLowerCase()); origins.add(p.originProductNo);
   }
+
+  if (row.recommendationPool !== undefined) {
+    if (
+      !Array.isArray(row.recommendationPool) ||
+      row.recommendationPool.length < 5 ||
+      row.recommendationPool.length > 15
+    ) {
+      throw new Error("추천 준비 풀은 고유 제품 5~15개여야 합니다.");
+    }
+
+    const poolIds = new Set<string>();
+    const poolOrigins = new Set<number>();
+
+    for (const item of row.recommendationPool) {
+      const p = object(item);
+      if (
+        typeof p.dbProductId !== "string" ||
+        !UUID_PATTERN.test(p.dbProductId) ||
+        poolIds.has(p.dbProductId.toLowerCase()) ||
+        typeof p.originProductNo !== "number" ||
+        !Number.isSafeInteger(p.originProductNo) ||
+        p.originProductNo <= 0 ||
+        poolOrigins.has(p.originProductNo) ||
+        !text(p.productName)
+      ) {
+        throw new Error("추천 준비 풀의 UUID·원상품 번호가 잘못되었습니다.");
+      }
+
+      poolIds.add(p.dbProductId.toLowerCase());
+      poolOrigins.add(p.originProductNo);
+    }
+
+    for (const selectedId of ids) {
+      if (!poolIds.has(selectedId)) {
+        throw new Error("최종 5개는 추천 준비 풀 안에 모두 포함되어야 합니다.");
+      }
+    }
+  }
+
   return row as SelectedFiveManifest;
 }
 export function beginSelectionRun(storage: Store, category: string): SelectionRun {
@@ -80,6 +127,22 @@ export function readSelectedFive(storage: Store, category?: string) {
 }
 export function selectedFiveIdentity(manifest: SelectedFiveManifest) { return canonical(manifest); }
 export function selectedFiveIds(manifest: SelectedFiveManifest) { return manifest.products.map(p => p.dbProductId); }
+export function recommendationPoolIds(manifest: SelectedFiveManifest) {
+  const pool = Array.isArray(manifest.recommendationPool)
+    ? manifest.recommendationPool
+    : [];
+  return pool.length >= 5 && pool.length <= 15
+    ? pool.map(p => p.dbProductId)
+    : selectedFiveIds(manifest);
+}
+export function assertSameRecommendationPoolIds(
+  ids: readonly string[] | undefined,
+  manifest: SelectedFiveManifest,
+) {
+  if (!ids || canonical(ids) !== canonical(recommendationPoolIds(manifest))) {
+    throw new Error("승인한 추천 준비 풀 UUID와 요청 제품이 다릅니다.");
+  }
+}
 export function assertSameSelectedIds(ids: readonly string[] | undefined, manifest: SelectedFiveManifest) {
   if (!ids || canonical(ids) !== canonical(selectedFiveIds(manifest))) throw new Error("승인한 최종 5개 UUID와 요청 제품이 다릅니다.");
 }

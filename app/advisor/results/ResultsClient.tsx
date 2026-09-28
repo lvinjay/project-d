@@ -1,6 +1,6 @@
 "use client";
 
-import { loadSelectedFiveContext, selectedFiveIds, assertSameSelectedIds } from "../../../lib/project-d-selected-five-manifest";
+import { loadSelectedFiveContext, recommendationPoolIds, assertSameRecommendationPoolIds } from "../../../lib/project-d-selected-five-manifest";
 
 import {
   useEffect,
@@ -359,10 +359,21 @@ function normalizeWinnerBestFor(
   return result;
 }
 
+type BudgetSummary = {
+  active: boolean;
+  label: string;
+  matchedCount: number;
+  candidateCount: number;
+  knownPriceCount: number;
+  unknownPriceCount: number;
+};
+
 type RecommendationResponse = {
   success: boolean;
   category?: string;
   recommendations?: Recommendation[];
+  budgetSummary?: BudgetSummary;
+  budgetAlternatives?: Recommendation[];
   note?: string;
   message?: string;
   needsScoreGeneration?: boolean;
@@ -568,7 +579,7 @@ async function executePersonalPreferenceAnalysis(
 ) {
   if (!plan.selectionIdentity) throw new Error("승인한 선택 실행이 없습니다.");
   const selected = await loadSelectedFiveContext(window.sessionStorage, plan.input.category, plan.selectionIdentity);
-  assertSameSelectedIds(plan.input.productIds, selected.manifest);
+  assertSameRecommendationPoolIds(plan.input.productIds, selected.manifest);
   const response = await fetch(
     "/api/analyze-personal-preferences",
     {
@@ -677,18 +688,9 @@ function formatPrice(
     return "";
   }
 
-  if (value >= 10000) {
-    const manwon =
-      value / 10000;
-
-    return Number.isInteger(manwon)
-      ? `${manwon.toLocaleString()}만원`
-      : `${manwon.toFixed(1)}만원`;
-  }
-
   return `${Math.round(
     value,
-  ).toLocaleString()}원`;
+  ).toLocaleString("ko-KR")}원`;
 }
 
 function getRankCardCautions(
@@ -1277,6 +1279,170 @@ function getComparisonCaution(
     : "표시할 주의점 근거 부족";
 }
 
+function BudgetAlternativesSection({
+  summary,
+  alternatives,
+}: {
+  summary: BudgetSummary;
+  alternatives: Recommendation[];
+}) {
+  if (!summary.active) {
+    return null;
+  }
+
+  return (
+    <section
+      className="card"
+      data-marker="PICKVIZE_BUDGET_HARD_FILTER"
+      style={{
+        padding: 20,
+        marginBottom: 24,
+        border:
+          summary.matchedCount > 0
+            ? "1px solid #b2ddff"
+            : "1px solid #fecdca",
+        background:
+          summary.matchedCount > 0
+            ? "#f5fbff"
+            : "#fff8f7",
+      }}
+    >
+      <span className="eyebrow">
+        BUDGET
+      </span>
+
+      <h2
+        style={{
+          margin:
+            "8px 0 8px",
+        }}
+      >
+        {summary.matchedCount > 0
+          ? `예산 ${summary.label} 안에서 ${summary.matchedCount}개를 찾았습니다.`
+          : `예산 ${summary.label} 안에서 확인 가능한 추천 제품을 찾지 못했습니다.`}
+      </h2>
+
+      <p
+        style={{
+          margin:
+            "0 0 16px",
+          color:
+            "#667085",
+          lineHeight:
+            1.65,
+        }}
+      >
+        현재 검증 완료된 후보{" "}
+        {summary.candidateCount}
+        개 중 가격을 확인할 수 있는 제품에 예산을 엄격 적용했습니다.
+        {summary.unknownPriceCount > 0
+          ? ` 가격 미확인 ${summary.unknownPriceCount}개는 예산 충족 여부를 확인할 수 없어 일반 추천에서 제외했습니다.`
+          : ""}
+      </p>
+
+      {alternatives.length > 0 ? (
+        <>
+          <strong
+            style={{
+              display:
+                "block",
+              marginBottom:
+                10,
+            }}
+          >
+            예산 범위 밖 참고 대안
+          </strong>
+
+          <div
+            style={{
+              display:
+                "grid",
+              gap: 10,
+            }}
+          >
+            {alternatives.map(
+              (item) => {
+                const buyUrl =
+                  getSafeBuyUrl(
+                    item.sourceUrl,
+                  );
+
+                return (
+                  <div
+                    key={
+                      item.id
+                    }
+                    style={{
+                      display:
+                        "flex",
+                      justifyContent:
+                        "space-between",
+                      gap: 14,
+                      alignItems:
+                        "center",
+                      padding:
+                        "12px 14px",
+                      border:
+                        "1px solid #e4e7ec",
+                      borderRadius:
+                        12,
+                      background:
+                        "#fff",
+                    }}
+                  >
+                    <div>
+                      <strong>
+                        {
+                          item.productName
+                        }
+                      </strong>
+                      <div
+                        style={{
+                          marginTop:
+                            4,
+                          color:
+                            "#667085",
+                          fontSize:
+                            13,
+                        }}
+                      >
+                        {formatPrice(
+                          item.productPrice,
+                        ) ||
+                          "가격 확인 필요"}
+                        {" · "}
+                        예산 범위 밖
+                      </div>
+                    </div>
+
+                    {buyUrl ? (
+                      <a
+                        href={
+                          buyUrl
+                        }
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{
+                          whiteSpace:
+                            "nowrap",
+                          fontWeight:
+                            700,
+                        }}
+                      >
+                        제품 보기
+                      </a>
+                    ) : null}
+                  </div>
+                );
+              },
+            )}
+          </div>
+        </>
+      ) : null}
+    </section>
+  );
+}
+
 export default function ResultsClient() {
   const [
     isLoading,
@@ -1308,6 +1474,20 @@ export default function ResultsClient() {
     note,
     setNote,
   ] = useState("");
+
+  const [
+    budgetSummary,
+    setBudgetSummary,
+  ] = useState<BudgetSummary | null>(
+    null,
+  );
+
+  const [
+    budgetAlternatives,
+    setBudgetAlternatives,
+  ] = useState<Recommendation[]>(
+    [],
+  );
 
   const [
     expandedId,
@@ -1362,7 +1542,7 @@ export default function ResultsClient() {
         if (!stored.selectionIdentity) throw new Error("현재 선택 실행의 질문 답변이 없습니다. Advisor부터 다시 진행해 주세요.");
         const selected = await loadSelectedFiveContext(window.sessionStorage, nextCategory, stored.selectionIdentity);
         setSelectionForReentry({ category: selected.manifest.category, runId: selected.manifest.runId });
-        const currentRunProductIds = selectedFiveIds(selected.manifest);
+        const currentRunProductIds = recommendationPoolIds(selected.manifest);
         if (!nextCategory) {
           throw new Error(
             "추천할 카테고리 정보가 없습니다.",
@@ -1468,7 +1648,7 @@ export default function ResultsClient() {
 
         async function requestRecommendations() {
           const current = await loadSelectedFiveContext(window.sessionStorage, nextCategory, selected.identity);
-          assertSameSelectedIds(currentRunProductIds, current.manifest);
+          assertSameRecommendationPoolIds(currentRunProductIds, current.manifest);
           const response =
             await fetch(
               "/api/advisor-recommendations",
@@ -1543,6 +1723,16 @@ export default function ResultsClient() {
 
         setNote(
           result.note ?? "",
+        );
+
+        setBudgetSummary(
+          result.budgetSummary ??
+            null,
+        );
+
+        setBudgetAlternatives(
+          result.budgetAlternatives ??
+            [],
         );
       } catch (error) {
         console.error(
@@ -1940,6 +2130,25 @@ export default function ResultsClient() {
               구매 가이드로 돌아가기
             </Link>
           </div>
+        ) : budgetSummary?.active &&
+          !winner ? (
+          <>
+            <BudgetAlternativesSection
+              summary={
+                budgetSummary
+              }
+              alternatives={
+                budgetAlternatives
+              }
+            />
+
+            <Link
+              href={buildAdvisorCategoryHref(selectionForReentry?.category ?? category)}
+              className="primaryButton"
+            >
+              예산 다시 선택하기
+            </Link>
+          </>
         ) : winner ? (
           <>
             <article className="advisorWinnerCard">
@@ -2884,6 +3093,17 @@ export default function ResultsClient() {
               ) : null}
             </section>
 
+            {budgetSummary?.active ? (
+              <BudgetAlternativesSection
+                summary={
+                  budgetSummary
+                }
+                alternatives={
+                  budgetAlternatives
+                }
+              />
+            ) : null}
+
             <section
               className="advisorRankingSection"
               data-marker="PICKVIZE_RESULTS_COMPARISON_TABLE"
@@ -2906,7 +3126,7 @@ export default function ResultsClient() {
                   </span>
 
                   <h2>
-                    5개 제품 한눈에 비교
+                    {comparisonProducts.length}개 제품 한눈에 비교
                   </h2>
                 </div>
 

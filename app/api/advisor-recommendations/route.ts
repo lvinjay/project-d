@@ -765,6 +765,108 @@ function budgetAdjustment(
   };
 }
 
+function isKnownProductPrice(
+  price: number | null,
+): price is number {
+  return (
+    typeof price === "number" &&
+    Number.isFinite(price) &&
+    price > 0
+  );
+}
+
+function isPriceWithinBudget(
+  price: number | null,
+  rule: BudgetRule,
+): boolean {
+  if (rule.kind === "none") {
+    return true;
+  }
+
+  if (!isKnownProductPrice(price)) {
+    return false;
+  }
+
+  if (rule.kind === "max") {
+    return price <= rule.max;
+  }
+
+  if (rule.kind === "min") {
+    return price >= rule.min;
+  }
+
+  return (
+    price >= rule.min &&
+    price <= rule.max
+  );
+}
+
+function budgetDistance(
+  price: number | null,
+  rule: BudgetRule,
+): number {
+  if (!isKnownProductPrice(price)) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+
+  if (rule.kind === "none") {
+    return 0;
+  }
+
+  if (rule.kind === "max") {
+    return Math.max(
+      0,
+      price - rule.max,
+    );
+  }
+
+  if (rule.kind === "min") {
+    return Math.max(
+      0,
+      rule.min - price,
+    );
+  }
+
+  if (price < rule.min) {
+    return rule.min - price;
+  }
+
+  if (price > rule.max) {
+    return price - rule.max;
+  }
+
+  return 0;
+}
+
+function formatBudgetWon(
+  value: number,
+): string {
+  const manwon =
+    value / 10000;
+
+  return Number.isInteger(manwon)
+    ? `${manwon.toLocaleString("ko-KR")}만원`
+    : `${manwon.toFixed(1)}만원`;
+}
+
+function budgetRuleLabel(
+  rule: BudgetRule,
+): string {
+  if (rule.kind === "none") {
+    return "예산 제한 없음";
+  }
+
+  if (rule.kind === "max") {
+    return `${formatBudgetWon(rule.max)} 이하`;
+  }
+
+  if (rule.kind === "min") {
+    return `${formatBudgetWon(rule.min)} 이상`;
+  }
+
+  return `${formatBudgetWon(rule.min)} ~ ${formatBudgetWon(rule.max)}`;
+}
+
 function isUsableScore(
   value: unknown,
 ): value is number {
@@ -1963,17 +2065,39 @@ savedCommonCautions
             ]),
       );
 
+    const sortByRecommendation =
+      (
+        a: typeof withValueScores[number],
+        b: typeof withValueScores[number],
+      ) =>
+        b.rankingScore - a.rankingScore ||
+        b.matchScore - a.matchScore ||
+        b.confidence - a.confidence;
+
+    const sortedAllRecommendations =
+      [...withValueScores].sort(
+        sortByRecommendation,
+      );
+
+    const hardBudgetActive =
+      budgetRule.kind !== "none";
+
+    const budgetMatchedCandidates =
+      hardBudgetActive
+        ? sortedAllRecommendations.filter(
+            (item) =>
+              isPriceWithinBudget(
+                item.productPrice,
+                budgetRule,
+              ),
+          )
+        : sortedAllRecommendations;
+
     const sortedRecommendations =
-      withValueScores
-        .sort(
-          (a, b) =>
-            b.rankingScore - a.rankingScore ||
-            b.matchScore -
-              a.matchScore ||
-            b.confidence -
-              a.confidence,
-        )
-        .slice(0, 5);
+      budgetMatchedCandidates.slice(
+        0,
+        5,
+      );
 
     const recommendations =
       assignCompetitionRanks(
@@ -1986,9 +2110,77 @@ savedCommonCautions
           ) ?? null,
       }));
 
+    const budgetAlternatives =
+      hardBudgetActive
+        ? sortedAllRecommendations
+            .filter(
+              (item) =>
+                isKnownProductPrice(
+                  item.productPrice,
+                ) &&
+                !isPriceWithinBudget(
+                  item.productPrice,
+                  budgetRule,
+                ),
+            )
+            .sort(
+              (a, b) =>
+                budgetDistance(
+                  a.productPrice,
+                  budgetRule,
+                ) -
+                  budgetDistance(
+                    b.productPrice,
+                    budgetRule,
+                  ) ||
+                sortByRecommendation(
+                  a,
+                  b,
+                ),
+            )
+            .slice(0, 3)
+            .map(
+              (item, index) => ({
+                ...item,
+                rank: index + 1,
+                valueRank:
+                  valueRankMap.get(
+                    item.id,
+                  ) ?? null,
+              }),
+            )
+        : [];
+
+    const knownPriceCount =
+      sortedAllRecommendations.filter(
+        (item) =>
+          isKnownProductPrice(
+            item.productPrice,
+          ),
+      ).length;
+
+    const unknownPriceCount =
+      sortedAllRecommendations.length -
+      knownPriceCount;
+
+    const budgetSummary = {
+      active: hardBudgetActive,
+      label:
+        budgetRuleLabel(
+          budgetRule,
+        ),
+      matchedCount:
+        recommendations.length,
+      candidateCount:
+        sortedAllRecommendations.length,
+      knownPriceCount,
+      unknownPriceCount,
+    };
+
     if (
       recommendations.length ===
-      0
+        0 &&
+      !hardBudgetActive
     ) {
       return NextResponse.json(
         {
@@ -2008,8 +2200,12 @@ savedCommonCautions
       count:
         recommendations.length,
       recommendations,
+      budgetSummary,
+      budgetAlternatives,
       note:
-        "점수가 없는 기준은 후보군의 해당 기준 평균점으로 중립 대체하고 dataCoverage로 실제 근거 비율을 별도 표시합니다. matchScore는 순수 성능·개인화 적합도입니다. valueScore/valueRank는 상대가격 가치 지표이며, 선택 예산은 rankingScore에서 한 번만 반영합니다.",
+        hardBudgetActive
+          ? `선택 예산 ${budgetSummary.label}을 가격 확인 가능한 현재 검증 후보에 엄격 적용했습니다. 예산 밖 제품은 일반 추천 순위에서 제외하고 별도 대안으로 분리합니다.`
+          : "점수가 없는 기준은 후보군의 해당 기준 평균점으로 중립 대체하고 dataCoverage로 실제 근거 비율을 별도 표시합니다. matchScore는 순수 성능·개인화 적합도입니다. valueScore/valueRank는 상대가격 가치 지표입니다.",
     });
   } catch (error) {
     console.error(

@@ -6,6 +6,10 @@ import { fetchCurrentReviewAnalysisSnapshot, storeAndSaveReviewAnalysis, retrySt
 
 import { beginSelectionRun, assertSelectionRun, selectEligibleFive, fetchCategoryProfile, categoryProfileRevision, publishSelectedFive, persistPublishedSelectedFive, type SelectedFiveManifest, type SelectedProduct } from "../lib/project-d-selected-five-manifest";
 
+import { planRecommendationPool } from "../lib/project-d-recommendation-pool";
+import { buildOneApprovalCategoryBuildPlan } from "../lib/project-d-one-approval-category-build";
+import { buildFullCategoryOneApprovalPlan } from "../lib/project-d-full-category-one-approval";
+
 import {
   useRef,
   useState,
@@ -129,6 +133,28 @@ type DeepReviewBridgeResponse = {
     reviewSample?: BrowserReview[];
     reason?: string;
   };
+};
+
+type RecommendationPoolReviewPlan = {
+  category: string;
+  dbProductId: string;
+  originProductNo: number;
+  productName: string;
+  reviewSourceUrl: string;
+  sourceMode:
+    | "smartstore-deep"
+    | "catalog-deep"
+    | "brandstore-deep";
+  reviews: string[];
+  reviewObjects: BrowserReview[];
+  collectionStats: {
+    total: number;
+    ranking: number;
+    latest: number;
+    lowScore: number;
+  };
+  inputFingerprint: string;
+  estimatedOpenAiCalls: number;
 };
 
 type StepStatus =
@@ -754,6 +780,16 @@ export default function ProjectDAutomationPanel() {
   ] = useState("");
 
   const [
+    isPoolPrechecking,
+    setIsPoolPrechecking,
+  ] = useState(false);
+
+  const [
+    poolPrecheckMessage,
+    setPoolPrecheckMessage,
+  ] = useState("");
+
+  const [
     approvalDialog,
     setApprovalDialog,
   ] = useState<ApprovalDialogState | null>(null);
@@ -805,6 +841,31 @@ export default function ProjectDAutomationPanel() {
       approved,
     );
   }
+
+  const [
+    isPoolReviewExecuting,
+    setIsPoolReviewExecuting,
+  ] = useState(false);
+
+  const [
+    poolReviewPlans,
+    setPoolReviewPlans,
+  ] = useState<RecommendationPoolReviewPlan[]>([]);
+
+  const [
+    poolPreparedProductIds,
+    setPoolPreparedProductIds,
+  ] = useState<string[]>([]);
+
+  const [
+    isOneApprovalExecuting,
+    setIsOneApprovalExecuting,
+  ] = useState(false);
+
+  const [
+    isFullCategoryOneApprovalExecuting,
+    setIsFullCategoryOneApprovalExecuting,
+  ] = useState(false);
 
   function updateStep(
     key: string,
@@ -953,9 +1014,1501 @@ export default function ProjectDAutomationPanel() {
     );
   }
 
-  async function run() {
+  async function runRecommendationPoolPrecheck() {
     const normalizedCategory =
       category.trim();
+
+    if (!normalizedCategory) {
+      alert(
+        "제품군을 입력하세요.",
+      );
+      return;
+    }
+
+    setIsPoolPrechecking(true);
+    setPoolPrecheckMessage(
+      "추천 준비 풀 무료 사전검증을 시작합니다. DB 읽기와 네이버 native 리뷰 수집만 수행합니다.",
+    );
+    setPoolReviewPlans([]);
+    setPoolPreparedProductIds([]);
+
+    try {
+      const catalogResponse =
+        await fetch(
+          "/api/catalog-products?category=" +
+            encodeURIComponent(
+              normalizedCategory,
+            ),
+          {
+            cache: "no-store",
+          },
+        );
+
+      const catalogResult =
+        await readJson(
+          catalogResponse,
+        );
+
+      if (
+        !catalogResponse.ok ||
+        catalogResult.success !==
+          true ||
+        !Array.isArray(
+          catalogResult.products,
+        )
+      ) {
+        throw new Error(
+          cleanText(
+            catalogResult.message,
+          ) ||
+            "추천 준비 풀 제품 목록을 불러오지 못했습니다.",
+        );
+      }
+
+      const catalogProducts =
+        (
+          catalogResult.products as Array<{
+            id?: string;
+            productName?: string;
+            price?: string | number;
+            sourceUrl?: string;
+            originProductNo?: number | null;
+            analyzed?: boolean;
+          }>
+        )
+          .map((product) => ({
+            id:
+              cleanText(
+                product.id,
+              ),
+            productName:
+              cleanText(
+                product.productName,
+              ),
+            price:
+              Number(
+                product.price ??
+                  0,
+              ),
+            sourceUrl:
+              cleanText(
+                product.sourceUrl,
+              ),
+            originProductNo:
+              Number(
+                product.originProductNo ??
+                  0,
+              ),
+            analyzed:
+              product.analyzed ===
+              true,
+          }))
+          .filter(
+            (product) =>
+              product.id &&
+              product.productName &&
+              Number.isFinite(
+                product.price,
+              ) &&
+              product.price > 0 &&
+              Number.isSafeInteger(
+                product.originProductNo,
+              ) &&
+              product.originProductNo >
+                0,
+          );
+
+      const preparedIds =
+        catalogProducts
+          .filter(
+            (product) =>
+              product.analyzed,
+          )
+          .map(
+            (product) =>
+              product.id,
+          );
+
+      const poolPlan =
+        planRecommendationPool(
+          catalogProducts.map(
+            (product) => ({
+              dbProductId:
+                product.id,
+              originProductNo:
+                product.originProductNo,
+              productName:
+                product.productName,
+              price:
+                product.price,
+            }),
+          ),
+          {
+            selectedFiveIds:
+              preparedIds,
+          },
+        );
+
+      if (
+        poolPlan.selectedCount < 5
+      ) {
+        throw new Error(
+          `추천 준비 풀을 최소 5개 확보해야 합니다. 현재 ${poolPlan.selectedCount}개입니다.`,
+        );
+      }
+
+      const catalogById =
+        new Map(
+          catalogProducts.map(
+            (product) => [
+              product.id,
+              product,
+            ],
+          ),
+        );
+
+      const missingReviewTargets =
+        poolPlan.products.flatMap(
+          (planned) => {
+            const catalog =
+              catalogById.get(
+                planned.dbProductId,
+              );
+
+            if (
+              !catalog ||
+              catalog.analyzed ===
+                true
+            ) {
+              return [];
+            }
+
+            return [
+              {
+                planned,
+                catalog,
+              },
+            ];
+          },
+        );
+
+      const nextPlans:
+        RecommendationPoolReviewPlan[] =
+        [];
+
+      const resultLines: string[] =
+        [];
+
+      let insufficientCount =
+        0;
+
+      let maximumOpenAiCalls =
+        0;
+
+      for (
+        let index = 0;
+        index <
+        missingReviewTargets.length;
+        index++
+      ) {
+        const {
+          planned,
+          catalog,
+        } =
+          missingReviewTargets[
+            index
+          ];
+
+        const reviewSourceUrl =
+          catalog.sourceUrl;
+
+        const isSmartStore =
+          reviewSourceUrl.startsWith(
+            "https://smartstore.naver.com/",
+          ) ||
+          reviewSourceUrl.startsWith(
+            "https://m.smartstore.naver.com/",
+          );
+
+        const isCatalog =
+          reviewSourceUrl.startsWith(
+            "https://search.shopping.naver.com/catalog/",
+          );
+
+        const isBrandStore =
+          reviewSourceUrl.startsWith(
+            "https://brand.naver.com/",
+          ) ||
+          reviewSourceUrl.startsWith(
+            "https://m.brand.naver.com/",
+          );
+
+        if (
+          !isSmartStore &&
+          !isCatalog &&
+          !isBrandStore
+        ) {
+          resultLines.push(
+            `${index + 1}. ${planned.productName} · native 리뷰 소스 없음`,
+          );
+          continue;
+        }
+
+        setPoolPrecheckMessage(
+          `추천 준비 풀 ${poolPlan.selectedCount}개 · 미분석 ${missingReviewTargets.length}개\n` +
+            `무료 리뷰 수집 ${index + 1}/${missingReviewTargets.length} · ${planned.productName}`,
+        );
+
+        const deepResult =
+          await collectDeepNaverReviews(
+            planned.productName,
+            reviewSourceUrl,
+            100,
+          );
+
+        const reviewObjects =
+          Array.isArray(
+            deepResult.probe
+              ?.reviews,
+          )
+            ? deepResult.probe
+                .reviews
+            : [];
+
+        const reviews =
+          Array.from(
+            new Set(
+              reviewObjects
+                .map((review) =>
+                  cleanText(
+                    review.text ??
+                      review.reviewContent,
+                  ),
+                )
+                .filter(Boolean),
+            ),
+          ).slice(0, 100);
+
+        const lowScore =
+          reviewObjects.filter(
+            (review) => {
+              const rating =
+                Number(
+                  review.rating ??
+                    review.score ??
+                    review.reviewScore ??
+                    0,
+                );
+
+              return (
+                rating > 0 &&
+                rating <= 3
+              );
+            },
+          ).length;
+
+        if (
+          reviews.length < 30
+        ) {
+          insufficientCount++;
+
+          resultLines.push(
+            `${index + 1}. ${planned.productName} · 리뷰 ${reviews.length}개 · 30개 미만으로 분석 대상 제외`,
+          );
+
+          continue;
+        }
+
+        const collectionStats = {
+          total:
+            reviews.length,
+          ranking:
+            reviews.length,
+          latest:
+            0,
+          lowScore,
+        };
+
+        const input = {
+          category:
+            normalizedCategory,
+          productName:
+            planned.productName,
+          originProductNo:
+            planned.originProductNo,
+          reviews,
+          collectionStats,
+          executionMode:
+            "full",
+        };
+
+        const dryRunResponse =
+          await fetch(
+            "/api/analyze-reviews",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+              body:
+                JSON.stringify({
+                  ...input,
+                  dryRun: true,
+                }),
+            },
+          );
+
+        const dryRunResult =
+          await readJson(
+            dryRunResponse,
+          );
+
+        const maximum =
+          Number(
+            dryRunResult.estimatedOpenAiCalls,
+          );
+
+        const fingerprint =
+          cleanText(
+            dryRunResult.inputFingerprint,
+          );
+
+        if (
+          !dryRunResponse.ok ||
+          dryRunResult.success !==
+            true ||
+          dryRunResult.dryRun !==
+            true ||
+          Number(
+            dryRunResult.paidApiCalls ??
+              0,
+          ) !== 0 ||
+          !/^[a-f0-9]{64}$/.test(
+            fingerprint,
+          ) ||
+          !Number.isSafeInteger(
+            maximum,
+          ) ||
+          maximum < 1
+        ) {
+          throw new Error(
+            cleanText(
+              dryRunResult.message,
+            ) ||
+              `${planned.productName} 리뷰 분석 무료 사전검증에 실패했습니다.`,
+          );
+        }
+
+        maximumOpenAiCalls +=
+          maximum;
+
+        nextPlans.push({
+          category:
+            normalizedCategory,
+          dbProductId:
+            planned.dbProductId,
+          originProductNo:
+            planned.originProductNo,
+          productName:
+            planned.productName,
+          reviewSourceUrl,
+          sourceMode:
+            isCatalog
+              ? "catalog-deep"
+              : isBrandStore
+                ? "brandstore-deep"
+                : "smartstore-deep",
+          reviews,
+          reviewObjects,
+          collectionStats,
+          inputFingerprint:
+            fingerprint,
+          estimatedOpenAiCalls:
+            maximum,
+        });
+
+        resultLines.push(
+          `${index + 1}. ${planned.productName} · 리뷰 ${reviews.length}개 · OpenAI 최대 ${maximum}회`,
+        );
+      }
+
+      setPoolReviewPlans(
+        nextPlans,
+      );
+      setPoolPreparedProductIds(
+        poolPlan.products.map(
+          (product) =>
+            product.dbProductId,
+        ),
+      );
+
+      setPoolPrecheckMessage(
+        [
+          "===== 추천 준비 풀 무료 사전검증 완료 =====",
+          `카테고리 ${normalizedCategory}`,
+          `전체 DB 가격확인 후보 ${poolPlan.sourceCount}개`,
+          `Recommendation Pool ${poolPlan.selectedCount}개 · 저가 ${poolPlan.lowCount} / 중가 ${poolPlan.midCount} / 고가 ${poolPlan.highCount}`,
+          `기존 분석 준비 ${poolPlan.selectedCount - missingReviewTargets.length}개`,
+          `신규 리뷰 수집 + dry-run 성공 ${nextPlans.length}개`,
+          `리뷰 30개 미만 ${insufficientCount}개`,
+          `신규 리뷰 분석 OpenAI 보수적 최대 ${maximumOpenAiCalls}회`,
+          "",
+          ...resultLines,
+          "",
+          "여기까지 OpenAI 0회 · SerpApi 0회 · Bright Data 0회 · DB 쓰기 0회",
+          "실제 리뷰 분석은 아래 실행 버튼에서 별도 확인 후 필요한 제품만 수행합니다.",
+        ].join("\n"),
+      );
+      // ONE_APPROVAL_PRECHECK_RETURN
+      return {
+        category:
+          normalizedCategory,
+        reviewPlans:
+          nextPlans,
+        preparedProductIds:
+          poolPlan.products.map(
+            (product) =>
+              product.dbProductId,
+          ),
+        reviewMaxOpenAiCalls:
+          maximumOpenAiCalls,
+        preparedProducts:
+          poolPlan.products.map(
+            (product) => ({
+              dbProductId:
+                product.dbProductId,
+              originProductNo:
+                product.originProductNo,
+              productName:
+                product.productName,
+            }),
+          ),
+      };
+    } catch (error) {
+      setPoolReviewPlans([]);
+      setPoolPreparedProductIds([]);
+
+      setPoolPrecheckMessage(
+        "추천 준비 풀 무료 사전검증 실패 · " +
+          (
+            error instanceof Error
+              ? error.message
+              : "알 수 없는 오류"
+          ),
+      );
+      return null;
+    } finally {
+      setIsPoolPrechecking(false);
+    }
+  }
+
+  async function runRecommendationPoolReviewExecution(
+    options?: {
+      reviewPlans?:
+        RecommendationPoolReviewPlan[];
+      preparedProductIds?:
+        string[];
+      skipApproval?:
+        boolean;
+      executeScoreAfterPreflight?:
+        boolean;
+      approvedReviewMaxOpenAiCalls?:
+        number;
+      approvedScoreMaxOpenAiCalls?:
+        number;
+      approvedTotalMaxOpenAiCalls?:
+        number;
+    },
+  ) {
+    // ONE_APPROVAL_EXECUTION_OPTIONS
+    const normalizedCategory =
+      category.trim();
+
+    const activeReviewPlans =
+      options?.reviewPlans ??
+      poolReviewPlans;
+
+    const activePreparedProductIds =
+      options?.preparedProductIds ??
+      poolPreparedProductIds;
+
+    const oneApprovalMode =
+      options?.skipApproval ===
+      true;
+
+    if (
+      (
+        !oneApprovalMode &&
+        activeReviewPlans.length === 0
+      ) ||
+      activePreparedProductIds.length < 5
+    ) {
+      setPoolPrecheckMessage(
+        "먼저 현재 카테고리의 추천 준비 풀 무료 사전검증을 실행해 주세요.",
+      );
+      return;
+    }
+
+    if (
+      activeReviewPlans.some(
+        (plan) =>
+          plan.category !==
+          normalizedCategory,
+      )
+    ) {
+      setPoolPrecheckMessage(
+        "사전검증 후 카테고리가 변경되었습니다. 무료 사전검증부터 다시 실행해 주세요.",
+      );
+      return;
+    }
+
+    const maximumOpenAiCalls =
+      activeReviewPlans.reduce(
+        (sum, plan) =>
+          sum +
+          plan.estimatedOpenAiCalls,
+        0,
+      );
+
+    const approved =
+      oneApprovalMode
+        ? true
+        : window.confirm(
+        `${normalizedCategory} 추천 준비 풀의 필요한 리뷰만 분석할까요?\n\n` +
+          `Recommendation Pool ${activePreparedProductIds.length}개\n` +
+          `신규 리뷰 분석 필요 ${activeReviewPlans.length}개\n` +
+          `OpenAI 보수적 최대 ${maximumOpenAiCalls}회\n\n` +
+          activeReviewPlans
+            .map(
+              (plan) =>
+                `${plan.productName} · 리뷰 ${plan.reviews.length}개 · 최대 ${plan.estimatedOpenAiCalls}회`,
+            )
+            .join("\n") +
+          "\n\n기존 분석 제품은 다시 분석하지 않습니다.\n" +
+          "승인된 fingerprint와 동일한 입력만 실제 분석합니다.\n" +
+          "리뷰 완료 뒤 제품점수는 무료 dry-run만 하고 별도 승인 전에는 생성하지 않습니다.",
+      );
+
+    if (!approved) {
+      setPoolPrecheckMessage(
+        "추천 준비 풀 유료 리뷰 분석을 취소했습니다. 실제 OpenAI 호출을 시작하지 않았습니다.",
+      );
+      return;
+    }
+
+    setIsPoolReviewExecuting(true);
+
+    try {
+      let completed =
+        0;
+
+      let actualReviewPaidApiCalls =
+        0;
+
+      for (
+        const plan of
+        activeReviewPlans
+      ) {
+        setPoolPrecheckMessage(
+          `추천 준비 풀 유료 리뷰 분석 ${completed + 1}/${activeReviewPlans.length}\n${plan.productName}`,
+        );
+
+        const identity = {
+          category:
+            plan.category,
+          dbProductId:
+            plan.dbProductId,
+          originProductNo:
+            plan.originProductNo,
+          productName:
+            plan.productName,
+        };
+
+        const retried =
+          await retryStoredReviewAnalysisPersistence(
+            identity,
+            plan.inputFingerprint,
+          );
+
+        if (!retried) {
+          const expectedReviewAnalysis =
+            await fetchCurrentReviewAnalysisSnapshot(
+              identity,
+            );
+
+          const analysisResponse =
+            await fetch(
+              "/api/analyze-reviews",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type":
+                    "application/json",
+                },
+                body:
+                  JSON.stringify({
+                    category:
+                      plan.category,
+                    productName:
+                      plan.productName,
+                    originProductNo:
+                      plan.originProductNo,
+                    reviews:
+                      plan.reviews,
+                    collectionStats:
+                      plan.collectionStats,
+                    executionMode:
+                      "full",
+                    inputFingerprint:
+                      plan.inputFingerprint,
+                  }),
+              },
+            );
+
+          const analysisResult =
+            await readJson(
+              analysisResponse,
+            );
+
+          const reviewPaidApiCalls =
+            Number(
+              analysisResult.paidApiCalls ??
+                0,
+            );
+
+          if (
+            !Number.isSafeInteger(
+              reviewPaidApiCalls,
+            ) ||
+            reviewPaidApiCalls < 0 ||
+            reviewPaidApiCalls >
+              plan.estimatedOpenAiCalls
+          ) {
+            throw new Error(
+              `${plan.productName} 리뷰 분석의 실제 OpenAI 호출 수가 승인 상한을 벗어났습니다.`,
+            );
+          }
+
+          actualReviewPaidApiCalls +=
+            reviewPaidApiCalls;
+
+          if (
+            Number.isSafeInteger(
+              options?.approvedReviewMaxOpenAiCalls,
+            ) &&
+            actualReviewPaidApiCalls >
+              Number(
+                options?.approvedReviewMaxOpenAiCalls,
+              )
+          ) {
+            throw new Error(
+              "리뷰 분석의 누적 OpenAI 호출 수가 한 번 승인 상한을 벗어났습니다.",
+            );
+          }
+
+          const analysis =
+            analysisResult.analysis &&
+            typeof analysisResult.analysis ===
+              "object" &&
+            !Array.isArray(
+              analysisResult.analysis,
+            )
+              ? analysisResult.analysis as Record<string, unknown>
+              : null;
+
+          if (
+            !analysisResponse.ok ||
+            analysisResult.success !==
+              true ||
+            cleanText(
+              analysisResult.inputFingerprint,
+            ) !==
+              plan.inputFingerprint ||
+            !analysis ||
+            Number(
+              analysis.reviewCount ??
+                0,
+            ) !==
+              plan.reviews.length
+          ) {
+            throw new Error(
+              cleanText(
+                analysisResult.message,
+              ) ||
+                `${plan.productName} 유료 리뷰 분석 결과가 승인된 입력과 일치하지 않습니다.`,
+            );
+          }
+
+          await storeAndSaveReviewAnalysis({
+            ...identity,
+            expectedReviewAnalysis,
+            analysis,
+            inputFingerprint:
+              plan.inputFingerprint,
+          });
+        }
+
+        const rawSaveResponse =
+          await fetch(
+            "/api/save-review-raw-batch",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+              body:
+                JSON.stringify({
+                  category:
+                    plan.category,
+                  products: [
+                    {
+                      dbProductId:
+                        plan.dbProductId,
+                      originProductNo:
+                        plan.originProductNo,
+                      productName:
+                        plan.productName,
+                      reviews:
+                        plan.reviews,
+                      collectionStats:
+                        plan.collectionStats,
+                      sourceMode:
+                        plan.sourceMode,
+                      reviewSourceUrl:
+                        plan.reviewSourceUrl,
+                      inputFingerprint:
+                        plan.inputFingerprint,
+                      collectionMetadata: {
+                        reviewObjects:
+                          plan.reviewObjects,
+                      },
+                    },
+                  ],
+                }),
+            },
+          );
+
+        const rawSaved =
+          await readJson(
+            rawSaveResponse,
+          );
+
+        if (
+          !rawSaveResponse.ok ||
+          rawSaved.success !==
+            true ||
+          Number(
+            rawSaved.successCount ??
+              0,
+          ) !== 1
+        ) {
+          throw new Error(
+            cleanText(
+              rawSaved.message,
+            ) ||
+              `${plan.productName} 리뷰 원문 저장에 실패했습니다.`,
+          );
+        }
+
+        completed++;
+      }
+
+      const scoreDryRunResponse =
+        await fetch(
+          "/api/generate-product-scores",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body:
+              JSON.stringify({
+                category:
+                  normalizedCategory,
+                productIds:
+                  activePreparedProductIds,
+                dryRun:
+                  true,
+              }),
+          },
+        );
+
+      const scoreDryRun =
+        await readJson(
+          scoreDryRunResponse,
+        );
+
+      const scoreEstimatedCalls =
+        Number(
+          scoreDryRun.estimatedOpenAiCalls ??
+            -1,
+        );
+
+      if (
+        !scoreDryRunResponse.ok ||
+        scoreDryRun.success !==
+          true ||
+        scoreDryRun.dryRun !==
+          true ||
+        Number(
+          scoreDryRun.paidApiCalls ??
+            0,
+        ) !== 0 ||
+        !Number.isSafeInteger(
+          scoreEstimatedCalls,
+        ) ||
+        scoreEstimatedCalls < 0 ||
+        scoreEstimatedCalls > 1
+      ) {
+        throw new Error(
+          cleanText(
+            scoreDryRun.message,
+          ) ||
+            "추천 준비 풀 제품점수 무료 사전검증에 실패했습니다.",
+        );
+      }
+
+      if (
+        options?.executeScoreAfterPreflight ===
+        true
+      ) {
+        const approvedScoreMax =
+          Number(
+            options
+              ?.approvedScoreMaxOpenAiCalls ??
+              0,
+          );
+
+        if (
+          !Number.isSafeInteger(
+            approvedScoreMax,
+          ) ||
+          approvedScoreMax < 0 ||
+          approvedScoreMax > 1 ||
+          scoreEstimatedCalls >
+            approvedScoreMax
+        ) {
+          throw new Error(
+            "제품점수 무료 사전검증 결과가 한 번 승인된 호출 상한을 벗어났습니다.",
+          );
+        }
+
+        let scorePaidApiCalls =
+          0;
+
+        let scoreExecutionMessage =
+          scoreDryRun.cacheHit ===
+          true
+            ? "기존 상대점수 cache HIT"
+            : "상대점수 생성 불필요";
+
+        if (
+          scoreEstimatedCalls >
+          0
+        ) {
+          const scoreFingerprint =
+            cleanText(
+              scoreDryRun
+                .inputFingerprint,
+            );
+
+          if (
+            !/^[a-f0-9]{64}$/.test(
+              scoreFingerprint,
+            )
+          ) {
+            throw new Error(
+              "제품점수 무료 사전검증 fingerprint가 유효하지 않습니다.",
+            );
+          }
+
+          const scoreResponse =
+            await fetch(
+              "/api/generate-product-scores",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type":
+                    "application/json",
+                },
+                body:
+                  JSON.stringify({
+                    category:
+                      normalizedCategory,
+                    productIds:
+                      activePreparedProductIds,
+                    inputFingerprint:
+                      scoreFingerprint,
+                  }),
+              },
+            );
+
+          const scoreResult =
+            await readJson(
+              scoreResponse,
+            );
+
+          scorePaidApiCalls =
+            Number(
+              scoreResult
+                .paidApiCalls ??
+                0,
+            );
+
+          if (
+            !scoreResponse.ok ||
+            scoreResult.success !==
+              true ||
+            !Number.isSafeInteger(
+              scorePaidApiCalls,
+            ) ||
+            scorePaidApiCalls < 0 ||
+            scorePaidApiCalls >
+              approvedScoreMax
+          ) {
+            throw new Error(
+              cleanText(
+                scoreResult.message,
+              ) ||
+                "Recommendation Pool 전체 상대점수 생성에 실패했습니다.",
+            );
+          }
+
+          scoreExecutionMessage =
+            cleanText(
+              scoreResult.message,
+            ) ||
+            "Recommendation Pool 전체 상대점수 생성 완료";
+        }
+
+        const actualTotalPaidApiCalls =
+          actualReviewPaidApiCalls +
+          scorePaidApiCalls;
+
+        const approvedTotalMax =
+          Number(
+            options
+              ?.approvedTotalMaxOpenAiCalls ??
+              0,
+          );
+
+        if (
+          !Number.isSafeInteger(
+            approvedTotalMax,
+          ) ||
+          approvedTotalMax < 0 ||
+          actualTotalPaidApiCalls >
+            approvedTotalMax
+        ) {
+          throw new Error(
+            "실제 누적 OpenAI 호출 수가 한 번 승인 총 상한을 벗어났습니다.",
+          );
+        }
+
+        const verifyResponse =
+          await fetch(
+            "/api/generate-product-scores",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+              body:
+                JSON.stringify({
+                  category:
+                    normalizedCategory,
+                  productIds:
+                    activePreparedProductIds,
+                  dryRun:
+                    true,
+                }),
+            },
+          );
+
+        const verifyResult =
+          await readJson(
+            verifyResponse,
+          );
+
+        if (
+          !verifyResponse.ok ||
+          verifyResult.success !==
+            true ||
+          verifyResult.dryRun !==
+            true ||
+          verifyResult.cacheHit !==
+            true ||
+          Number(
+            verifyResult
+              .estimatedOpenAiCalls ??
+              -1,
+          ) !== 0 ||
+          Number(
+            verifyResult
+              .paidApiCalls ??
+              0,
+          ) !== 0
+        ) {
+          throw new Error(
+            cleanText(
+              verifyResult.message,
+            ) ||
+              "Recommendation Pool 상대점수 저장 후 무료 검증에 실패했습니다.",
+          );
+        }
+
+        setPoolReviewPlans([]);
+
+        setPoolPrecheckMessage(
+          [
+            "===== 추천 준비 풀 한 번 승인 완료 =====",
+            `카테고리 ${normalizedCategory}`,
+            `Recommendation Pool ${activePreparedProductIds.length}개`,
+            `신규 리뷰 분석 ${completed}개 완료`,
+            `실제 리뷰 분석 OpenAI ${actualReviewPaidApiCalls}회`,
+            `실제 제품점수 OpenAI ${scorePaidApiCalls}회`,
+            `실제 총 OpenAI ${actualTotalPaidApiCalls}회 / 승인 최대 ${approvedTotalMax}회`,
+            `제품점수 cacheHit YES`,
+            "",
+            scoreExecutionMessage,
+            "추천 고객 흐름에서 즉시 재사용 가능한 상태입니다.",
+          ].join("\n"),
+        );
+
+        return {
+          completed,
+          actualReviewPaidApiCalls,
+          scorePaidApiCalls,
+          actualTotalPaidApiCalls,
+          cacheHit:
+            true,
+        };
+      }
+
+      setPoolReviewPlans([]);
+
+      setPoolPrecheckMessage(
+        [
+          "===== 추천 준비 풀 리뷰 준비 완료 =====",
+          `카테고리 ${normalizedCategory}`,
+          `Recommendation Pool ${activePreparedProductIds.length}개`,
+          `이번 실행 신규 리뷰 분석 ${completed}개 완료`,
+          `제품점수 무료 사전검증 OpenAI 최대 ${scoreEstimatedCalls}회`,
+          `제품점수 cacheHit ${scoreDryRun.cacheHit === true ? "YES" : "NO"}`,
+          "",
+          "리뷰 분석과 원문 저장은 완료했습니다.",
+          "제품점수는 아직 실제 생성하지 않았습니다.",
+          "다음 단계에서 Recommendation Pool 전체 상대평가 점수 생성을 별도 승인받습니다.",
+        ].join("\n"),
+      );
+    } catch (error) {
+      setPoolPrecheckMessage(
+        "추천 준비 풀 리뷰 분석 중단 · " +
+          (
+            error instanceof Error
+              ? error.message
+              : "알 수 없는 오류"
+          ),
+      );
+    } finally {
+      setIsPoolReviewExecuting(false);
+    }
+  }
+
+  async function runOneApprovalRecommendationPoolBuild() {
+    if (
+      isOneApprovalExecuting ||
+      isRunning ||
+      isPoolPrechecking ||
+      isPoolReviewExecuting
+    ) {
+      return;
+    }
+
+    setIsOneApprovalExecuting(
+      true,
+    );
+
+    try {
+      const precheck =
+        await runRecommendationPoolPrecheck();
+
+      if (!precheck) {
+        return;
+      }
+
+      const approvalPlan =
+        buildOneApprovalCategoryBuildPlan({
+          category:
+            precheck.category,
+          poolProductIds:
+            precheck.preparedProductIds,
+          reviewPlans:
+            precheck.reviewPlans.map(
+              (plan) => ({
+                productId:
+                  plan.dbProductId,
+                productName:
+                  plan.productName,
+                inputFingerprint:
+                  plan.inputFingerprint,
+                estimatedOpenAiCalls:
+                  plan.estimatedOpenAiCalls,
+              }),
+            ),
+          scoreMaxOpenAiCalls:
+            1,
+        });
+
+      const approved =
+        await requestApproval({
+          title:
+            "추천 준비 풀 한 번 승인",
+          lines:
+            approvalPlan
+              .approvalText
+              .split("\n"),
+          confirmLabel:
+            "한 번 승인 후 실행",
+          cancelLabel:
+            "취소",
+        });
+
+      if (!approved) {
+        setPoolPrecheckMessage(
+          "한 번 승인 실행을 취소했습니다. 실제 OpenAI 호출을 시작하지 않았습니다.",
+        );
+        return;
+      }
+
+      await runRecommendationPoolReviewExecution({
+        reviewPlans:
+          precheck.reviewPlans,
+        preparedProductIds:
+          precheck.preparedProductIds,
+        skipApproval:
+          true,
+        executeScoreAfterPreflight:
+          true,
+        approvedReviewMaxOpenAiCalls:
+          approvalPlan.reviewMaxOpenAiCalls,
+        approvedScoreMaxOpenAiCalls:
+          approvalPlan.scoreMaxOpenAiCalls,
+        approvedTotalMaxOpenAiCalls:
+          approvalPlan.totalMaxOpenAiCalls,
+      });
+    } catch (error) {
+      setPoolPrecheckMessage(
+        "추천 준비 풀 한 번 승인 실행 중단 · " +
+          (
+            error instanceof Error
+              ? error.message
+              : "알 수 없는 오류"
+          ),
+      );
+    } finally {
+      setIsOneApprovalExecuting(
+        false,
+      );
+    }
+  }
+
+  async function runFullCategoryOneApprovalBuild() {
+    if (
+      isFullCategoryOneApprovalExecuting ||
+      isOneApprovalExecuting ||
+      isRunning ||
+      isPoolPrechecking ||
+      isPoolReviewExecuting
+    ) {
+      return;
+    }
+
+    setIsFullCategoryOneApprovalExecuting(
+      true,
+    );
+
+    try {
+      const initial =
+        await run({
+          fullCategoryOneApprovalMode:
+            true,
+        });
+
+      if (!initial) {
+        return;
+      }
+
+      const precheck =
+        await runRecommendationPoolPrecheck();
+
+      if (!precheck) {
+        throw new Error(
+          "전체 구축 후 Recommendation Pool 무료 사전검증에 실패했습니다.",
+        );
+      }
+
+      const selectedFiveIds =
+        new Set(
+          initial.manifest.products.map(
+            (product) =>
+              product.dbProductId,
+          ),
+        );
+
+      const preparedIdSet =
+        new Set(
+          precheck.preparedProductIds,
+        );
+
+      if (
+        [...selectedFiveIds].some(
+          (id) =>
+            !preparedIdSet.has(
+              id,
+            ),
+        )
+      ) {
+        throw new Error(
+          "최종 selected-five가 확장 Recommendation Pool에 모두 포함되지 않았습니다.",
+        );
+      }
+
+      const remainingReviewMax =
+        initial.approvalPlan
+          .reviewMaxOpenAiCalls -
+        initial
+          .accountedInitialReviewOpenAiCalls;
+
+      if (
+        remainingReviewMax < 0 ||
+        precheck.reviewMaxOpenAiCalls >
+          remainingReviewMax
+      ) {
+        throw new Error(
+          "확장 Recommendation Pool 리뷰 계획이 이미 승인한 리뷰 상한을 초과했습니다.",
+        );
+      }
+
+      const remainingTotalMax =
+        initial.approvalPlan
+          .totalMaxOpenAiCalls -
+        initial
+          .accountedCriteriaOpenAiCalls -
+        initial
+          .accountedInitialReviewOpenAiCalls;
+
+      if (
+        remainingTotalMax <
+        initial.approvalPlan
+          .scoreMaxOpenAiCalls
+      ) {
+        throw new Error(
+          "제품점수까지 실행할 남은 OpenAI 승인 상한이 부족합니다.",
+        );
+      }
+
+      const poolExecution =
+        await runRecommendationPoolReviewExecution({
+          reviewPlans:
+            precheck.reviewPlans,
+          preparedProductIds:
+            precheck.preparedProductIds,
+          skipApproval:
+            true,
+          executeScoreAfterPreflight:
+            true,
+          approvedReviewMaxOpenAiCalls:
+            remainingReviewMax,
+          approvedScoreMaxOpenAiCalls:
+            initial.approvalPlan
+              .scoreMaxOpenAiCalls,
+          approvedTotalMaxOpenAiCalls:
+            remainingTotalMax,
+        });
+
+      if (
+        !poolExecution ||
+        poolExecution.cacheHit !==
+          true
+      ) {
+        throw new Error(
+          "Recommendation Pool 전체 상대점수 완료/cache HIT 검증에 실패했습니다.",
+        );
+      }
+
+      const totalAccountedOpenAiCalls =
+        initial
+          .accountedCriteriaOpenAiCalls +
+        initial
+          .accountedInitialReviewOpenAiCalls +
+        poolExecution
+          .actualTotalPaidApiCalls;
+
+      if (
+        totalAccountedOpenAiCalls >
+        initial.approvalPlan
+          .totalMaxOpenAiCalls
+      ) {
+        throw new Error(
+          "카테고리 전체 실제/계상 OpenAI 호출이 한 번 승인 총 상한을 초과했습니다.",
+        );
+      }
+
+      const expandedManifest:
+        SelectedFiveManifest = {
+          ...initial.manifest,
+          recommendationPool:
+            precheck.preparedProducts.map(
+              (product) => ({
+                dbProductId:
+                  product.dbProductId,
+                originProductNo:
+                  product.originProductNo,
+                productName:
+                  product.productName,
+              }),
+            ),
+        };
+
+      await persistPublishedSelectedFive(
+        expandedManifest,
+      );
+
+      publishSelectedFive(
+        window.sessionStorage,
+        expandedManifest,
+      );
+
+      setPoolPrecheckMessage(
+        [
+          "===== 카테고리 전체 한 번 승인 자동 구축 완료 =====",
+          `카테고리 ${initial.category}`,
+          `Recommendation Pool ${precheck.preparedProductIds.length}개`,
+          `시장 실제 resolver ${initial.actualResolverCalls}회 / 승인 최대 ${initial.approvalPlan.resolverMaxCalls}회`,
+          `시장 실제 Bright Data ${initial.actualBrightDataCalls}회 / 승인 최대 ${initial.approvalPlan.brightDataMaxCalls}회`,
+          `구매기준 계상 OpenAI ${initial.accountedCriteriaOpenAiCalls}회`,
+          `초기 리뷰 계상 OpenAI ${initial.accountedInitialReviewOpenAiCalls}회`,
+          `확장 풀 리뷰+점수 실제 OpenAI ${poolExecution.actualTotalPaidApiCalls}회`,
+          `전체 OpenAI 계상/실제 합계 ${totalAccountedOpenAiCalls}회 / 승인 최대 ${initial.approvalPlan.totalMaxOpenAiCalls}회`,
+          "제품점수 cacheHit YES",
+          "",
+          "시장 수집 → DB 등록 → 구매기준 → 리뷰 분석/재사용 → Recommendation Pool 확장 → 전체 상대점수 → 발행까지 완료했습니다.",
+        ].join("\n"),
+      );
+
+      setFinalMessage(
+        `완료 · ${initial.category} 카테고리 전체 한 번 승인 자동 구축 · Recommendation Pool ${precheck.preparedProductIds.length}개 · 제품점수 cache HIT`,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "알 수 없는 오류";
+
+      setPoolPrecheckMessage(
+        "카테고리 전체 한 번 승인 자동 구축 중단 · " +
+          message,
+      );
+
+      setFinalMessage(
+        "중단됨 · " +
+          message,
+      );
+    } finally {
+      setIsFullCategoryOneApprovalExecuting(
+        false,
+      );
+    }
+  }
+
+  async function run(
+    options?: {
+      fullCategoryOneApprovalMode?:
+        boolean;
+    },
+  ) {
+    // FULL_CATEGORY_ONE_APPROVAL_V3
+    const normalizedCategory =
+      category.trim();
+
+    const fullCategoryOneApprovalMode =
+      options?.fullCategoryOneApprovalMode ===
+      true;
+
+    const effectiveSafePilotMode =
+      fullCategoryOneApprovalMode
+        ? false
+        : safePilotMode;
+
+    let fullApprovalPlan:
+      ReturnType<
+        typeof buildFullCategoryOneApprovalPlan
+      > | null =
+      null;
+
+    let fullAccountedCriteriaOpenAiCalls =
+      0;
+
+    let fullAccountedReviewOpenAiCalls =
+      0;
+
+    let fullActualResolverCalls =
+      0;
+
+    let fullActualBrightDataCalls =
+      0;
+
+    async function ensureFullCategoryApproval(
+      resolverMaxCalls: number,
+      brightDataMaxCalls: number,
+    ) {
+      const proposed =
+        buildFullCategoryOneApprovalPlan({
+          category:
+            normalizedCategory,
+          resolverMaxCalls,
+          brightDataMaxCalls,
+        });
+
+      if (fullApprovalPlan) {
+        if (
+          resolverMaxCalls >
+            (fullApprovalPlan as ReturnType<typeof buildFullCategoryOneApprovalPlan>).resolverMaxCalls ||
+          brightDataMaxCalls >
+            (fullApprovalPlan as ReturnType<typeof buildFullCategoryOneApprovalPlan>).brightDataMaxCalls
+        ) {
+          throw new Error(
+            "시장 유료 경로가 이미 승인한 상한을 초과해 추가 유료 호출 없이 중단합니다.",
+          );
+        }
+
+        return true;
+      }
+
+      const approved =
+        await requestApproval({
+          title:
+            "카테고리 전체 한 번 승인 자동 구축",
+          lines:
+            proposed.approvalLines,
+          confirmLabel:
+            "이번 카테고리 1회 승인",
+          cancelLabel:
+            "취소",
+        });
+
+      if (approved) {
+        fullApprovalPlan =
+          proposed;
+      }
+
+      return approved;
+    }
 
     if (!normalizedCategory) {
       alert(
@@ -1440,7 +2993,7 @@ export default function ProjectDAutomationPanel() {
         Record<string, unknown> | null =
         null;
 
-      if (safePilotMode) {
+      if (effectiveSafePilotMode) {
         enrichedParams.set(
           "zeroPaidOnly",
           "1",
@@ -1675,7 +3228,12 @@ export default function ProjectDAutomationPanel() {
 
 
           const approvedFreePool =
-            await requestApproval({
+            fullCategoryOneApprovalMode
+              ? await ensureFullCategoryApproval(
+                  0,
+                  0,
+                )
+              : await requestApproval({
               title:
                 "무과금 MARKET POOL 확보",
               lines: [
@@ -1754,7 +3312,12 @@ export default function ProjectDAutomationPanel() {
             ) || 0;
 
           const approvedPaidEnrichment =
-            await requestApproval({
+            fullCategoryOneApprovalMode
+              ? await ensureFullCategoryApproval(
+                  singleResolverUpper,
+                  singleBrightDataUpper,
+                )
+              : await requestApproval({
               title:
                 "무료 FULL 5개까지 1개만 유료 보충",
               lines: [
@@ -1839,7 +3402,40 @@ export default function ProjectDAutomationPanel() {
       }
 
       if (
-        safePilotMode &&
+        fullCategoryOneApprovalMode
+      ) {
+        if (!fullApprovalPlan) {
+          throw new Error(
+            "카테고리 전체 한 번 승인이 확인되지 않았습니다.",
+          );
+        }
+
+        fullActualResolverCalls =
+          Number(
+            enriched.resolverAttempts ??
+              0,
+          ) || 0;
+
+        fullActualBrightDataCalls =
+          Number(
+            enriched.brightDataCalls ??
+              0,
+          ) || 0;
+
+        if (
+          fullActualResolverCalls >
+            (fullApprovalPlan as ReturnType<typeof buildFullCategoryOneApprovalPlan>).resolverMaxCalls ||
+          fullActualBrightDataCalls >
+            (fullApprovalPlan as ReturnType<typeof buildFullCategoryOneApprovalPlan>).brightDataMaxCalls
+        ) {
+          throw new Error(
+            "실제 시장 유료 호출이 승인 상한을 초과했습니다.",
+          );
+        }
+      }
+
+      if (
+        effectiveSafePilotMode &&
         (
           Number(
             enriched.resolverAttempts ??
@@ -1856,7 +3452,7 @@ export default function ProjectDAutomationPanel() {
         );
       }
 
-      if (safePilotMode) setPoolDiagnosticView(current => current?.captureId === captureId
+      if (effectiveSafePilotMode) setPoolDiagnosticView(current => current?.captureId === captureId
         ? { ...current, free: enriched.diagnostics } : current);
       const returnedCandidates =
         Array.isArray(
@@ -1886,7 +3482,7 @@ export default function ProjectDAutomationPanel() {
         ? `제품군 적합성: 적합 ${Number(relevanceDiagnostics.eligibleCount ?? 0)}개 / 제외 ${Number(relevanceDiagnostics.excludedCount ?? 0)}개 / 검토 필요 ${Number(relevanceDiagnostics.needsReviewCount ?? 0)}개`
         : "제품군 적합성 진단 없음";
       if (
-        !safePilotMode &&
+        !effectiveSafePilotMode &&
         Number(
           enriched.paidCandidateLimit ??
             -1,
@@ -1998,7 +3594,7 @@ export default function ProjectDAutomationPanel() {
         mappedProducts.set(originProductNo, { dbProductId: cleanText(item.product.id), originProductNo, productName: cleanText(item.product.product_name) });
       }
 
-      if (safePilotMode) {
+      if (effectiveSafePilotMode) {
         updateStep(
           "criteria-first",
           "done",
@@ -2385,6 +3981,128 @@ reviewCollections.push({
         return [{ ...collection, ...mapping, ...selectionRun }];
       });
       const selected = selectEligibleFive(eligible, selectionRun);
+
+      const catalogResponseForPool =
+        await fetch(
+          "/api/catalog-products?category=" +
+            encodeURIComponent(
+              normalizedCategory,
+            ),
+          { cache: "no-store" },
+        );
+
+      const catalogResultForPool =
+        await readJson(
+          catalogResponseForPool,
+        );
+
+      if (
+        !catalogResponseForPool.ok ||
+        catalogResultForPool.success !== true ||
+        !Array.isArray(
+          catalogResultForPool.products,
+        )
+      ) {
+        throw new Error(
+          cleanText(
+            catalogResultForPool.message,
+          ) ||
+            "추천 준비 풀 제품 목록을 확인하지 못했습니다.",
+        );
+      }
+
+      const eligibleById =
+        new Map(
+          eligible.map(
+            (product) => [
+              product.dbProductId,
+              product,
+            ],
+          ),
+        );
+
+      const selectedIds =
+        selected.map(
+          (product) =>
+            product.dbProductId,
+        );
+
+      const currentEligiblePoolCandidates =
+        (
+          catalogResultForPool.products as Array<{
+            id?: string;
+            productName?: string;
+            price?: string | number;
+            originProductNo?: number | null;
+          }>
+        )
+          .map((product) => ({
+            dbProductId:
+              cleanText(
+                product.id,
+              ),
+            originProductNo:
+              Number(
+                product.originProductNo ??
+                  0,
+              ),
+            productName:
+              cleanText(
+                product.productName,
+              ),
+            price:
+              Number(
+                product.price ??
+                  0,
+              ),
+          }))
+          .filter(
+            (product) =>
+              eligibleById.has(
+                product.dbProductId,
+              ) &&
+              product.productName &&
+              Number.isSafeInteger(
+                product.originProductNo,
+              ) &&
+              product.originProductNo > 0 &&
+              Number.isFinite(
+                product.price,
+              ) &&
+              product.price > 0,
+          );
+
+      const automationPoolPlan =
+        planRecommendationPool(
+          currentEligiblePoolCandidates,
+          {
+            selectedFiveIds:
+              selectedIds,
+          },
+        );
+
+      const analysisTargets =
+        automationPoolPlan.products.flatMap(
+          (planned) => {
+            const product =
+              eligibleById.get(
+                planned.dbProductId,
+              );
+
+            return product
+              ? [product]
+              : [];
+          },
+        );
+
+      if (
+        analysisTargets.length < 5
+      ) {
+        throw new Error(
+          `추천 준비 풀 리뷰 근거가 최소 5개 필요합니다. 현재 ${analysisTargets.length}개입니다.`,
+        );
+      }
+
       assertSelectionRun(window.sessionStorage, selectionRun);
 
       let profile: Record<string, unknown>;
@@ -2431,8 +4149,24 @@ reviewCollections.push({
             selectionRun,
           );
 
+          if (
+            fullCategoryOneApprovalMode &&
+            (
+              !fullApprovalPlan ||
+              criteriaPlan.estimatedOpenAiCalls >
+                (fullApprovalPlan as ReturnType<typeof buildFullCategoryOneApprovalPlan>).criteriaMaxOpenAiCalls
+            )
+          ) {
+            throw new Error(
+              "구매기준 무료 preflight 결과가 한 번 승인 상한을 초과했습니다.",
+            );
+          }
+
           const approvedCriteria =
-            await requestApproval({
+            fullCategoryOneApprovalMode
+              ? fullApprovalPlan !==
+                null
+              : await requestApproval({
               title:
                 "카테고리 구매기준이 없습니다. 선택한 5개 제품으로 최초 생성할까요?",
               lines: [
@@ -2460,9 +4194,42 @@ reviewCollections.push({
             selectionRun,
           );
 
-          await executeCategoryCriteria(
-            criteriaPlan,
-          );
+          const criteriaExecutionResult =
+            await executeCategoryCriteria(
+              criteriaPlan,
+            );
+
+          if (
+            fullCategoryOneApprovalMode
+          ) {
+            const reportedCriteriaCalls =
+              Number(
+                criteriaExecutionResult
+                  .paidApiCalls,
+              );
+
+            const accountedCriteriaCalls =
+              Number.isSafeInteger(
+                reportedCriteriaCalls,
+              ) &&
+              reportedCriteriaCalls >= 0
+                ? reportedCriteriaCalls
+                : criteriaPlan
+                    .estimatedOpenAiCalls;
+
+            if (
+              !fullApprovalPlan ||
+              accountedCriteriaCalls >
+                (fullApprovalPlan as ReturnType<typeof buildFullCategoryOneApprovalPlan>).criteriaMaxOpenAiCalls
+            ) {
+              throw new Error(
+                "구매기준 실제 OpenAI 호출이 한 번 승인 상한을 초과했습니다.",
+              );
+            }
+
+            fullAccountedCriteriaOpenAiCalls +=
+              accountedCriteriaCalls;
+          }
 
           assertSelectionRun(
             window.sessionStorage,
@@ -2500,7 +4267,7 @@ reviewCollections.push({
       reviewProgress.total = selected.length;
       showReviewProgress("무료 사전검증 시작", "무료 사전검증 실패");
       const plans = [];
-      for (const product of selected) {
+      for (const product of analysisTargets) {
         showReviewProgress("무료 사전검증 중", "무료 사전검증 실패", product.productName);
         const input = { category: normalizedCategory, productName: product.productName,
           originProductNo: product.originProductNo, reviews: product.reviews,
@@ -2555,8 +4322,22 @@ reviewCollections.push({
         paidMaximum === 0 ? "기존 동일 분석 재사용 준비" : "무료 사전검증 완료 · 실행 승인 대기",
         "실행 승인 확인 실패",
       );
+      if (
+        fullCategoryOneApprovalMode &&
+        (
+          !fullApprovalPlan ||
+          paidMaximum >
+            (fullApprovalPlan as ReturnType<typeof buildFullCategoryOneApprovalPlan>).reviewMaxOpenAiCalls
+        )
+      ) {
+        throw new Error(
+          "리뷰 무료 preflight 계획이 한 번 승인 상한을 초과했습니다.",
+        );
+      }
+
       const approved =
         paidMaximum === 0 ||
+        fullCategoryOneApprovalMode ||
         await requestApproval({
           title:
             "현재 실행의 최종 후보 5개 리뷰를 분석할까요?",
@@ -2614,6 +4395,37 @@ reviewCollections.push({
               body: JSON.stringify({ ...plan.input, inputFingerprint: plan.fingerprint }),
             });
             const result = await readJson(response);
+
+            if (
+              fullCategoryOneApprovalMode
+            ) {
+              const reportedReviewCalls =
+                Number(
+                  result.paidApiCalls,
+                );
+
+              const accountedReviewCalls =
+                Number.isSafeInteger(
+                  reportedReviewCalls,
+                ) &&
+                reportedReviewCalls >= 0
+                  ? reportedReviewCalls
+                  : plan.maximum;
+
+              fullAccountedReviewOpenAiCalls +=
+                accountedReviewCalls;
+
+              if (
+                !fullApprovalPlan ||
+                fullAccountedReviewOpenAiCalls >
+                  (fullApprovalPlan as ReturnType<typeof buildFullCategoryOneApprovalPlan>).reviewMaxOpenAiCalls
+              ) {
+                throw new Error(
+                  "리뷰 실제 OpenAI 호출 누계가 한 번 승인 상한을 초과했습니다.",
+                );
+              }
+            }
+
             const analysis = result.analysis as Record<string, unknown> | undefined;
             if (!response.ok || result.success !== true || result.inputFingerprint !== plan.fingerprint ||
                 !analysis || analysis.reviewCount !== plan.product.reviews.length) {
@@ -2797,7 +4609,31 @@ reviewCollections.push({
         ...selectionRun,
         schemaVersion: 1,
         profileRevision,
-        products: readyProducts,
+        products: selected.map(
+          (product) => {
+            const ready =
+              readyProducts.find(
+                (item) =>
+                  item.dbProductId ===
+                  product.dbProductId,
+              );
+
+            if (!ready) {
+              throw new Error(
+                "selected-five 제품의 리뷰 준비 상태를 추천 준비 풀 결과에서 찾지 못했습니다.",
+              );
+            }
+
+            return ready;
+          },
+        ),
+        recommendationPool: analysisTargets.map(
+          (product) => ({
+            dbProductId: product.dbProductId,
+            originProductNo: product.originProductNo,
+            productName: product.productName,
+          }),
+        ),
       };
 
       showReviewProgress("제품 처리 완료 · 최종 선택 실행 검증 중", "최종 선택 실행 검증 실패");
@@ -2816,11 +4652,38 @@ reviewCollections.push({
         window.sessionStorage,
         selectedFiveManifest,
       );
-      updateStep("save-reviews", "done", "현재 실행의 5개 분석 + 동일 fingerprint review corpus 저장 완료");
+      updateStep("save-reviews", "done", `추천 준비 풀 ${analysisTargets.length}개 분석 준비 + 동일 fingerprint review corpus 저장 완료`);
       reviewProgress.active = false;
       // Do not regenerate the profile after binding review analysis to its revision.
       updateStep("criteria-final", "done", "분석에 사용한 프로필 revision으로 최종 5개 고정");
-      setFinalMessage("최종 5개 준비 완료. 관리자에서 같은 5개 UUID의 점수 생성을 승인한 뒤 Advisor로 진행해 주세요.");
+      setFinalMessage(`최종 5개 호환 발행 + 추천 준비 풀 ${analysisTargets.length}개 리뷰 준비 완료. 다음은 추천 준비 풀 전체 제품점수 사전검증/승인 단계입니다.`);
+
+      if (
+        fullCategoryOneApprovalMode
+      ) {
+        if (!fullApprovalPlan) {
+          throw new Error(
+            "카테고리 전체 한 번 승인 상태를 찾지 못했습니다.",
+          );
+        }
+
+        return {
+          category:
+            normalizedCategory,
+          approvalPlan:
+            fullApprovalPlan,
+          actualResolverCalls:
+            fullActualResolverCalls,
+          actualBrightDataCalls:
+            fullActualBrightDataCalls,
+          accountedCriteriaOpenAiCalls:
+            fullAccountedCriteriaOpenAiCalls,
+          accountedInitialReviewOpenAiCalls:
+            fullAccountedReviewOpenAiCalls,
+          manifest:
+            selectedFiveManifest,
+        };
+      }
     } catch (error) {
       const message =
         error instanceof Error
@@ -2868,6 +4731,12 @@ reviewCollections.push({
       setFinalMessage(
         `중단됨 · ${progressError ?? message}`,
       );
+
+      if (
+        fullCategoryOneApprovalMode
+      ) {
+        throw error;
+      }
     } finally {
       setIsRunning(false);
     }
@@ -3109,11 +4978,121 @@ reviewCollections.push({
 
       <button
         type="button"
+        onClick={() =>
+          void runRecommendationPoolPrecheck()
+        }
+        disabled={
+          isRunning ||
+          isPoolPrechecking
+        }
+        style={{
+          width: "100%",
+          marginTop: 20,
+        }}
+      >
+        {isPoolPrechecking
+          ? "추천 준비 풀 무료 사전검증 중..."
+          : "추천 준비 풀 15개 무료 사전검증"}
+      </button>
+
+      <button
+        type="button"
+        className="primaryButton"
+        data-marker="PROJECT_D_FULL_CATEGORY_ONE_APPROVAL_BUILD"
+        onClick={() =>
+          void runFullCategoryOneApprovalBuild()
+        }
+        disabled={
+          isFullCategoryOneApprovalExecuting ||
+          isOneApprovalExecuting ||
+          isRunning ||
+          isPoolPrechecking ||
+          isPoolReviewExecuting
+        }
+        style={{
+          width: "100%",
+          marginTop: 20,
+        }}
+      >
+        {isFullCategoryOneApprovalExecuting
+          ? "카테고리 전체 한 번 승인 자동 구축 중..."
+          : "카테고리 전체 한 번 승인 자동 구축"}
+      </button>
+
+      <button
+        type="button"
+        data-marker="PROJECT_D_ONE_APPROVAL_CATEGORY_BUILD"
+        onClick={() =>
+          void runOneApprovalRecommendationPoolBuild()
+        }
+        disabled={
+          isRunning ||
+          isPoolPrechecking ||
+          isPoolReviewExecuting ||
+          isOneApprovalExecuting
+        }
+        style={{
+          width: "100%",
+          marginTop: 12,
+        }}
+      >
+        {isOneApprovalExecuting
+          ? "추천 준비 풀 한 번 승인 실행 중..."
+          : "추천 준비 풀 한 번 승인으로 완료"}
+      </button>
+
+      {poolPrecheckMessage ? (
+        <div
+          data-marker="PROJECT_D_RECOMMENDATION_POOL_PRECHECK"
+          style={{
+            marginTop: 12,
+            padding: 14,
+            borderRadius: 10,
+            border:
+              "1px solid #D0D5DD",
+            background:
+              "#F9FAFB",
+            whiteSpace:
+              "pre-wrap",
+            lineHeight: 1.6,
+            fontSize: 13,
+          }}
+        >
+          {poolPrecheckMessage}
+        </div>
+      ) : null}
+
+      <button
+        type="button"
+        data-marker="PROJECT_D_RECOMMENDATION_POOL_EXECUTE"
+        onClick={() =>
+          void runRecommendationPoolReviewExecution()
+        }
+        disabled={
+          isRunning ||
+          isPoolPrechecking ||
+          isPoolReviewExecuting ||
+          poolReviewPlans.length === 0
+        }
+        style={{
+          width: "100%",
+          marginTop: 12,
+        }}
+      >
+        {isPoolReviewExecuting
+          ? "추천 준비 풀 필요한 리뷰 분석 실행 중..."
+          : poolReviewPlans.length > 0
+            ? `추천 준비 풀 필요한 리뷰 ${poolReviewPlans.length}개 분석 실행`
+            : "추천 준비 풀 무료 사전검증 후 실행 가능"}
+      </button>
+
+      <button
+        type="button"
         className="primaryButton"
         onClick={() =>
           void run()
         }
-        disabled={isRunning}
+        disabled={isRunning || isPoolPrechecking || isPoolReviewExecuting}
         style={{
           width: "100%",
           marginTop: 20,

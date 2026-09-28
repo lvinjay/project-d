@@ -1,6 +1,6 @@
 import {
   fetchPublishedSelectedFive,
-  selectedFiveIds,
+  recommendationPoolIds,
 } from "./project-d-selected-five-manifest";
 
 type ProductScorePreflightResponse = {
@@ -23,12 +23,12 @@ export type PublicCategoryReadiness = {
 const PUBLIC_NOT_READY_MESSAGE =
   "이 제품군의 추천 데이터를 점검 중입니다. 잠시 후 다시 이용해 주세요.";
 
-function uniqueFive(productIds: readonly string[]): string[] | null {
+function uniquePool(productIds: readonly string[]): string[] | null {
   const cleaned = productIds
     .map((value) => value.trim())
     .filter(Boolean);
 
-  if (cleaned.length !== 5 || new Set(cleaned).size !== 5) {
+  if (cleaned.length < 5 || cleaned.length > 15 || new Set(cleaned).size !== cleaned.length) {
     return null;
   }
 
@@ -40,7 +40,7 @@ export async function checkProductScoreReadiness(
   productIds: readonly string[],
 ): Promise<PublicCategoryReadiness> {
   const normalizedCategory = category.trim();
-  const exactProductIds = uniqueFive(productIds);
+  const exactProductIds = uniquePool(productIds);
 
   if (!normalizedCategory || !exactProductIds) {
     return {
@@ -119,7 +119,7 @@ export async function checkPublicCategoryReadiness(
 
     return await checkProductScoreReadiness(
       published.manifest.category,
-      selectedFiveIds(published.manifest),
+      recommendationPoolIds(published.manifest),
     );
   } catch {
     return {

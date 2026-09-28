@@ -1,5 +1,10 @@
 import OpenAI from "openai";
 import {
+  PRODUCT_SCORE_PROMPT_CHAR_LIMIT,
+  buildProductScoreEvidenceProducts,
+  buildProductScorePrompt,
+} from "../../../lib/project-d-product-score-prompt";
+import {
   createHash,
   createHmac,
   timingSafeEqual,
@@ -20,7 +25,7 @@ export const dynamic =
   "force-dynamic";
 
 const PRODUCT_SCORE_PIPELINE_VERSION =
-  "project-d-product-score-v2-cost-guard-no-derived-feedback";
+  "project-d-product-score-v3-recommendation-pool-compact-evidence";
 
 type RequestBody = {
   category?: unknown;
@@ -988,6 +993,70 @@ export async function POST(
       });
     }
 
+    const scoreEvidenceProducts =
+      buildProductScoreEvidenceProducts(
+        products as unknown as Array<Record<string, unknown>>,
+        criterionKeys,
+      );
+
+    const scorePrompt =
+      buildProductScorePrompt({
+        category,
+        criteria:
+          criteria as unknown as Array<Record<string, unknown>>,
+        evidenceProducts:
+          scoreEvidenceProducts,
+        criterionKeys,
+      });
+
+    const promptCharacters =
+      scorePrompt.length;
+
+    const promptUtf8Bytes =
+      Buffer.byteLength(
+        scorePrompt,
+        "utf8",
+      );
+
+    if (
+      promptCharacters >
+      PRODUCT_SCORE_PROMPT_CHAR_LIMIT
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          dryRun,
+          cacheHit: false,
+          category,
+          pipelineVersion:
+            PRODUCT_SCORE_PIPELINE_VERSION,
+          productCount:
+            products.length,
+          criterionCount:
+            criteria.length,
+          inputFingerprint:
+            fingerprint,
+          promptCharacters,
+          promptUtf8Bytes,
+          promptCharacterLimit:
+            PRODUCT_SCORE_PROMPT_CHAR_LIMIT,
+          promptWithinSafeLimit:
+            false,
+          estimatedOpenAiCalls:
+            0,
+          paidApiCalls:
+            0,
+          dbWrites:
+            0,
+          message:
+            "제품 점수 입력이 안전 한도를 초과해 OpenAI 호출 전에 차단했습니다. 근거 압축 규칙을 조정해 주세요.",
+        },
+        {
+          status: 413,
+        },
+      );
+    }
+
     if (dryRun) {
       return NextResponse.json({
         success: true,
@@ -1008,8 +1077,14 @@ export async function POST(
           0,
         dbWrites:
           0,
+        promptCharacters,
+        promptUtf8Bytes,
+        promptCharacterLimit:
+          PRODUCT_SCORE_PROMPT_CHAR_LIMIT,
+        promptWithinSafeLimit:
+          true,
         message:
-          "제품별 점수 생성 무료 사전검증이 완료되었습니다. 실제 AI 평가는 아직 실행되지 않았습니다.",
+          "제품별 점수 생성 무료 사전검증이 완료되었습니다. 압축 근거 입력이 안전 한도 안이며 실제 AI 평가는 아직 실행되지 않았습니다.",
       });
     }
 
@@ -1381,152 +1456,11 @@ export async function POST(
       );
     }
 
-    const evidenceProducts =
-      products.map(
-        (
-          product,
-        ) => ({
-          productId:
-            product.id,
-
-          productName:
-            product.product_name,
-
-          sourceUrl:
-            product.source_url,
-
-          productDetailAnalysis:
-            product.product_detail_analysis,
-
-          evaluationEvidence:
-            product.product_detail_analysis &&
-            typeof product.product_detail_analysis ===
-              "object" &&
-            !Array.isArray(
-              product.product_detail_analysis,
-            )
-              ? (
-                  product.product_detail_analysis as Record<
-                    string,
-                    unknown
-                  >
-                ).evaluationEvidence ??
-                {}
-              : {},
-
-          reviewAnalysis:
-            reviewAnalysisEvidenceOnly(
-              product.review_analysis,
-            ),
-        }),
-      );
-
     const client =
       new OpenAI({
         apiKey,
         maxRetries: 0,
       });
-
-    const prompt = `
-당신은 Project D의 제품 상대평가 엔진입니다.
-
-카테고리:
-${category}
-
-현재 카테고리의 핵심 구매기준:
-${JSON.stringify(
-  criteria,
-  null,
-  2,
-)}
-
-비교 대상 제품과 확보된 실제 근거:
-${JSON.stringify(
-  evidenceProducts,
-  null,
-  2,
-)}
-
-평가 목표:
-
-같은 카테고리의 제품들을 서로 직접 비교하여
-각 제품을 각 구매기준별로 0~100점으로 평가하세요.
-
-중요 원칙:
-
-1. 모든 제품을 같은 기준과 같은 척도로 평가하세요.
-2. productDetailAnalysis, evaluationEvidence, reviewAnalysis에 있는 근거만 사용하세요.
-3. evaluationEvidence는 제조사 공식 상세페이지에서 추출한 실제 기능/사양 근거이며, 각 key는 현재 criteria key와 직접 대응합니다. 해당 criterion 점수 산정에 적극 사용하세요.
-4. reviewAnalysis가 비어 있더라도 evaluationEvidence에 해당 기준의 구체적인 공식 근거가 있으면 null로 두지 말고 그 근거만으로 보수적으로 점수를 산정하세요.
-5. evaluationEvidence와 reviewAnalysis 모두 해당 기준에 근거가 없을 때만 null을 사용하세요.
-6. 근거가 없는 사양이나 성능은 추측하지 마세요.
-7. 제품 상세페이지의 일반 광고문구보다 구체적 수치·기능 설명과 실제 리뷰 분석을 더 중요하게 보세요.
-8. 리뷰에서 반복적으로 확인된 장점과 단점은 점수에 적극 반영하세요.
-9. 한두 리뷰에서만 나타난 문제는 지나치게 크게 반영하지 마세요.
-10. 같은 문제가 여러 제품에 공통적으로 존재한다면 특정 제품만 과도하게 감점하지 마세요.
-11. 특정 제품에서 반복적으로 나타나는 고유한 오류·불편은 해당 기준 점수에 반영하세요.
-12. 현재 5개 제품 사이에서 실제 상대적 차이가 드러나도록 평가하세요.
-13. 점수 차이를 억지로 만들지는 마세요.
-14. 두 제품의 근거 수준과 실제 성능이 비슷하면 비슷한 점수를 줄 수 있습니다.
-15. 현재 확보된 근거만으로 판단할 수 없는 기준은 null을 사용하세요.
-16. 가격 자체는 구매기준에 포함되어 있지 않다면 점수에 임의 반영하지 마세요.
-17. 리뷰 수가 많은 것은 정보 신뢰성을 높이는 보조근거일 뿐, 제품 성능 자체와 동일시하지 마세요.
-18. criterionReasons는 왜 그 점수를 줬는지 제품 간 차이를 중심으로 1~2문장으로 설명하세요.
-19. 반드시 아래 5개의 실제 criteria key만 사용하세요.
-20. JSON만 출력하세요. 마크다운은 사용하지 마세요.
-
-점수 기준:
-
-90~100:
-현재 비교 제품 중 해당 기준에서 매우 강하고 반복적인 긍정 근거가 있음
-
-75~89:
-강점이 뚜렷하고 일부 단점은 있으나 전체적으로 우수함
-
-60~74:
-평균 이상이지만 뚜렷한 제약이나 혼재된 평가가 있음
-
-40~59:
-약점 또는 불확실성이 비교적 큼
-
-0~39:
-반복적인 심각한 문제나 뚜렷한 열위 근거가 있음
-
-근거 부족:
-null
-
-반드시 사용해야 하는 criteria key:
-
-${criterionKeys.join(
-  ", ",
-)}
-
-반환 형식:
-
-{
-  "products": [
-    {
-      "productId": "입력으로 제공된 실제 UUID productId",
-      "criterionScores": {
-        "${criterionKeys[0]}": 0,
-        "${criterionKeys[1]}": 0,
-        "${criterionKeys[2]}": 0,
-        "${criterionKeys[3]}": 0,
-        "${criterionKeys[4]}": 0
-      },
-      "criterionReasons": {
-        "${criterionKeys[0]}": "점수 근거",
-        "${criterionKeys[1]}": "점수 근거",
-        "${criterionKeys[2]}": "점수 근거",
-        "${criterionKeys[3]}": "점수 근거",
-        "${criterionKeys[4]}": "점수 근거"
-      }
-    }
-  ]
-}
-
-반드시 비교 대상 모든 제품을 반환하세요.
-`;
 
     paidApiCalls += 1;
 
@@ -1536,7 +1470,7 @@ ${criterionKeys.join(
           model:
             "gpt-5",
           input:
-            prompt,
+            scorePrompt,
         },
       );
 

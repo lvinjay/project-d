@@ -36,7 +36,7 @@ check(fs.readdirSync('app/api').filter(p => fs.existsSync(`app/api/${p}/route.ts
 
 function compile(path, environment, imports = {}) {
   const sandbox = { exports: {}, process: { env: { NODE_ENV: environment } }, console,
-    URL, URLSearchParams, Request, Response,
+    URL, URLSearchParams, Request, Response, Buffer,
     require(id) {
       if (id === 'next/server') return { NextResponse };
       if (id === 'node:crypto') return crypto;
@@ -103,6 +103,25 @@ const imports = {
   '../../../lib/supabaseAdmin': { supabaseAdmin: db },
   '../../../lib/supabase': { supabase: db },
   '../../../lib/project-d-selected-five-manifest': { UUID_PATTERN: /^[a-f0-9-]{36}$/ },
+  '../../../lib/project-d-product-score-prompt': {
+    PRODUCT_SCORE_PROMPT_CHAR_LIMIT: 140000,
+    buildProductScoreEvidenceProducts: (rows, criterionKeys) =>
+      rows.map((row) => ({
+        productId: row.id,
+        productName: row.product_name,
+        officialEvidence: Object.fromEntries(
+          criterionKeys.map((key) => [key, {}]),
+        ),
+        reviewEvidence: null,
+      })),
+    buildProductScorePrompt: ({ category, criteria, evidenceProducts, criterionKeys }) =>
+      JSON.stringify({
+        category,
+        criteria,
+        evidenceProducts,
+        criterionKeys,
+      }),
+  },
 };
 async function post(handler, body) {
   return handler(new Request('http://fixture.invalid', { method: 'POST',

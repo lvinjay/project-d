@@ -17,7 +17,7 @@ const checks = [
   ],
   [
     source.includes(
-      "5개 제품 한눈에 비교",
+      "{comparisonProducts.length}개 제품 한눈에 비교",
     ),
     "comparison heading",
   ],

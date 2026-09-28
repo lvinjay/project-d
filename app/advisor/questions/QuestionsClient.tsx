@@ -1,6 +1,6 @@
 "use client";
 
-import { loadSelectedFiveContext, selectedFiveIds } from "../../../lib/project-d-selected-five-manifest";
+import { loadSelectedFiveContext, recommendationPoolIds } from "../../../lib/project-d-selected-five-manifest";
 
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -154,6 +154,7 @@ export default function QuestionsClient() {
   const [errorMessage, setErrorMessage] = useState("");
   const [budgetOptions, setBudgetOptions] = useState<Array<{ label: string; value: string }>>([]);
   const [budgetChoice, setBudgetChoice] = useState("");
+  const [directBudgetWon, setDirectBudgetWon] = useState("");
   const [customPreference, setCustomPreference] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
@@ -303,8 +304,8 @@ export default function QuestionsClient() {
 
         const budgetContext = await loadSelectedFiveContext(window.sessionStorage, category, selected.identity);
         if (cancelled) return;
-        const productIds = selectedFiveIds(budgetContext.manifest);
-        if (productIds.length !== 5 || new Set(productIds).size !== 5) throw new Error("현재 선택한 5개 제품을 확인해 주세요.");
+        const productIds = recommendationPoolIds(budgetContext.manifest);
+        if (productIds.length < 5 || productIds.length > 15 || new Set(productIds).size !== productIds.length) throw new Error("현재 추천 준비 풀 제품을 확인해 주세요.");
         const budgetResponse = await fetch("/api/analyze-personal-preferences", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -337,15 +338,46 @@ export default function QuestionsClient() {
           (option) => option.value === storedBudgetChoice,
         );
 
-        setBudgetChoice(
-          savedBudgetIsValid
-            ? storedBudgetChoice
-            : nextBudgetOptions.find(
-                  (option) => option.value === "no_limit",
-                )?.value ??
-                nextBudgetOptions[0]?.value ??
-                "",
-        );
+        const storedDirectBudgetMatch =
+          /^up_to_(\d+)$/.exec(
+            storedBudgetChoice,
+          );
+
+        if (savedBudgetIsValid) {
+          setDirectBudgetWon("");
+          setBudgetChoice(
+            storedBudgetChoice,
+          );
+        } else if (
+          storedDirectBudgetMatch &&
+          Number.isSafeInteger(
+            Number(
+              storedDirectBudgetMatch[1],
+            ),
+          ) &&
+          Number(
+            storedDirectBudgetMatch[1],
+          ) > 0
+        ) {
+          setDirectBudgetWon(
+            storedDirectBudgetMatch[1],
+          );
+          setBudgetChoice(
+            storedBudgetChoice,
+          );
+        } else {
+          setDirectBudgetWon("");
+          setBudgetChoice(
+            nextBudgetOptions.find(
+              (option) =>
+                option.value ===
+                "no_limit",
+            )?.value ??
+              nextBudgetOptions[0]
+                ?.value ??
+              "",
+          );
+        }
       } catch (error) {
         if (cancelled) return;
         setErrorMessage(
@@ -384,6 +416,38 @@ export default function QuestionsClient() {
     }));
   }
 
+  function updateDirectBudgetWon(
+    rawValue: string,
+  ) {
+    const digits =
+      rawValue
+        .replace(/\D/g, "")
+        .slice(0, 10);
+
+    setDirectBudgetWon(digits);
+
+    if (!digits) {
+      setBudgetChoice(
+        "no_limit",
+      );
+      return;
+    }
+
+    const won =
+      Number(digits);
+
+    if (
+      !Number.isSafeInteger(won) ||
+      won <= 0
+    ) {
+      return;
+    }
+
+    setBudgetChoice(
+      `up_to_${won}`,
+    );
+  }
+
   async function finishQuestions() {
     if (questions.length === 0 || submittingRef.current) return;
 
@@ -420,13 +484,12 @@ export default function QuestionsClient() {
       );
 
       if (normalizedCustomPreference) {
-        const productIds = selectedFiveIds(selected.manifest);
+        const productIds = recommendationPoolIds(selected.manifest);
 
         if (
-          productIds.length !== 5 ||
-          new Set(productIds).size !== 5
+          productIds.length < 5 || productIds.length > 15 || new Set(productIds).size !== productIds.length
         ) {
-          throw new Error("현재 선택한 5개 제품을 확인해 주세요.");
+          throw new Error("현재 추천 준비 풀 제품을 확인해 주세요.");
         }
 
         const precheckResponse = await fetch(
@@ -694,11 +757,111 @@ export default function QuestionsClient() {
                     key={option.value}
                     type="button"
                     className={`questionOption ${budgetChoice === option.value ? "selected" : ""}`}
-                    onClick={() => setBudgetChoice(option.value)}
+                    onClick={() => {
+                      setDirectBudgetWon("");
+                      setBudgetChoice(
+                        option.value,
+                      );
+                    }}
                   >
                     <strong>{option.label}</strong>
                   </button>
                 ))}
+              </div>
+
+              <div
+                style={{
+                  marginTop: 18,
+                  padding: 16,
+                  border:
+                    directBudgetWon
+                      ? "2px solid #2563eb"
+                      : "1px solid #d8dfeb",
+                  borderRadius: 16,
+                  background: "#ffffff",
+                }}
+              >
+                <div
+                  style={{
+                    fontWeight: 800,
+                    marginBottom: 6,
+                  }}
+                >
+                  최대 예산 직접 입력
+                </div>
+                <p
+                  style={{
+                    margin:
+                      "0 0 12px",
+                    color: "#6b7280",
+                    fontSize: 14,
+                  }}
+                >
+                  위 구간이 너무 넓다면 원하는 최대 금액을 원 단위로 직접 입력하세요.
+                </p>
+
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    aria-label="최대 예산 직접 입력"
+                    placeholder="예: 300000"
+                    value={
+                      directBudgetWon
+                        ? Number(
+                            directBudgetWon,
+                          ).toLocaleString(
+                            "ko-KR",
+                          )
+                        : ""
+                    }
+                    onChange={(event) =>
+                      updateDirectBudgetWon(
+                        event.target.value,
+                      )
+                    }
+                    style={{
+                      width: 220,
+                      maxWidth: "100%",
+                      padding:
+                        "13px 14px",
+                      borderRadius: 12,
+                      border:
+                        "1px solid #cbd5e1",
+                      font: "inherit",
+                      fontWeight: 700,
+                      boxSizing:
+                        "border-box",
+                    }}
+                  />
+                  <strong>원 이하</strong>
+                </div>
+
+                {directBudgetWon ? (
+                  <div
+                    style={{
+                      marginTop: 10,
+                      color: "#1d4ed8",
+                      fontSize: 14,
+                      fontWeight: 700,
+                    }}
+                  >
+                    현재 최대 예산:{" "}
+                    {Number(
+                      directBudgetWon,
+                    ).toLocaleString(
+                      "ko-KR",
+                    )}
+                    원
+                  </div>
+                ) : null}
               </div>
             </section>
 

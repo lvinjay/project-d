@@ -38,9 +38,9 @@ export async function GET(request: Request) {
 
     const scoped = searchParams.has("productIds");
     const productIds = (searchParams.get("productIds") ?? "").split(",");
-    if (scoped && (!category || productIds.length < 1 || productIds.length > 5 ||
+    if (scoped && (!category || productIds.length < 1 || productIds.length > 15 ||
         productIds.some(id => !UUID_PATTERN.test(id)) || new Set(productIds.map(id => id.toLowerCase())).size !== productIds.length)) {
-      return NextResponse.json({ success: false, message: "1~5개의 고유 UUID와 category가 필요합니다." }, { status: 400 });
+      return NextResponse.json({ success: false, message: "1~15개의 고유 UUID와 category가 필요합니다." }, { status: 400 });
     }
     let productsQuery = supabase
         .from("products")

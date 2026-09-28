@@ -75,6 +75,16 @@ function finishMarketProbe(requestId, deadlineReached = false) {
     candidates: candidates.map((candidate, index) => ({ ...candidate,
       smartstoreReviewProbe: probes[index],
       browserReviews: probes[index].reviews || probes[index].reviewSample || [],
+      browserSpecs:
+        probes[index]?.specs &&
+        typeof probes[index].specs === "object" &&
+        !Array.isArray(probes[index].specs)
+          ? probes[index].specs
+          : {},
+      browserCatalogTitle:
+        typeof probes[index]?.catalogTitle === "string"
+          ? probes[index].catalogTitle
+          : "",
     })),
     smartstoreReviewProbes: probes,
     browserReviewSummary: {
@@ -111,6 +121,15 @@ function openCurrentCandidate(requestId) {
   const index = state.currentIndex;
   if (index >= state.result.candidates.length) return finishMarketProbe(requestId);
   const candidate = state.result.candidates[index];
+
+  console.log("PD_DIAG_OPEN_CANDIDATE", {
+    requestId,
+    index,
+    candidateCount: state.result.candidates.length,
+    candidateUrl: String(candidate?.url || ""),
+    probeTabId: state.probeTabId || null,
+  });
+
   // Probe scripts echo requestId. Give each candidate its own ID, while Admin keeps the parent ID.
   const token = requestId + ":candidate:" + index;
   state.probeToken = token;
@@ -142,9 +161,21 @@ function openCurrentCandidate(requestId) {
   }
   if (state.creatingTab) return; // Never start a second tab while create is unresolved.
   state.creatingTab = true;
+  console.log("PD_DIAG_CREATE_PRODUCT_TAB", {
+    requestId,
+    index,
+    probeUrl,
+  });
+
   chrome.tabs.create({ url: probeUrl, active: true }, tab => {
     const error = chrome.runtime.lastError;
     state.creatingTab = false;
+
+    console.log("PD_DIAG_CREATE_PRODUCT_TAB_RESULT", {
+      requestId,
+      tabId: tab?.id || null,
+      error: error?.message || "",
+    });
     if (pending.get(requestId)?.probeToken !== token) {
       closeProbeTab(tab?.id);
       return;
@@ -370,6 +401,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const adminTabId = Number(message.adminTabId);
     const requestId = String(message.requestId || "");
     const result = message.result;
+
+    console.log("PD_DIAG_MARKET_DONE", {
+      requestId,
+      success: message.success === true,
+      candidateCount: Array.isArray(result?.candidates)
+        ? result.candidates.length
+        : -1,
+      senderTabId: sender.tab?.id || null,
+    });
 
     if (!Number.isFinite(adminTabId) || !requestId) return;
 
@@ -713,12 +753,112 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   const currentUrl = String(tab?.url || changeInfo.url || "");
   if (!currentUrl) return;
   state.lastObservedUrl = currentUrl;
-  let host;
-  try { host = new URL(currentUrl).hostname; } catch { return; }
+  let parsedCurrentUrl;
+  try {
+    parsedCurrentUrl = new URL(currentUrl);
+  } catch {
+    return;
+  }
+
+  const host = parsedCurrentUrl.hostname;
+
   if (host === "cr.shopping.naver.com" || host === "ader.naver.com") {
     state.probeStage = "redirect";
     return; // Intermediate advertising page; watchdog bounds the remaining wait.
   }
+
+  /*
+   * Naver can intermittently route a valid shopping target through
+   * nidlogin.login during rapid sequential probe navigation.
+   * Recover only once per candidate, and only to approved Naver
+   * product destinations carried in the login gate's url parameter.
+   */
+  if (
+    host === "nid.naver.com" &&
+    parsedCurrentUrl.pathname === "/nidlogin.login"
+  ) {
+    const recoveryUrl = String(
+      parsedCurrentUrl.searchParams.get("url") || "",
+    );
+
+    let recoveryTarget = null;
+
+    try {
+      recoveryTarget = recoveryUrl
+        ? new URL(recoveryUrl)
+        : null;
+    } catch {
+      recoveryTarget = null;
+    }
+
+    const recoveryHost =
+      recoveryTarget?.hostname || "";
+
+    const recoveryPath =
+      recoveryTarget?.pathname || "";
+
+    const allowedRecovery =
+      recoveryTarget?.protocol === "https:" &&
+      (
+        (
+          recoveryHost === "search.shopping.naver.com" &&
+          recoveryPath.startsWith("/catalog/")
+        ) ||
+        recoveryHost === "smartstore.naver.com" ||
+        recoveryHost === "m.smartstore.naver.com" ||
+        recoveryHost === "brand.naver.com" ||
+        recoveryHost === "m.brand.naver.com"
+      );
+
+    if (
+      allowedRecovery &&
+      state.loginRecoveryIndex !== index
+    ) {
+      state.loginRecoveryIndex = index;
+      state.probeStage = "login-recovery";
+      state.navigationReady = false;
+
+      console.log("PD_NID_LOGIN_RECOVERY", {
+        requestId,
+        index,
+        from: currentUrl,
+        to: recoveryUrl,
+      });
+
+      chrome.tabs.update(
+        tabId,
+        {
+          url: recoveryUrl,
+          active: true,
+        },
+        () => {
+          const error =
+            chrome.runtime.lastError;
+
+          if (
+            error &&
+            pending.get(requestId)?.probeToken === token
+          ) {
+            completeMarketCandidate(
+              requestId,
+              token,
+              {
+                success: false,
+                reason:
+                  "네이버 로그인 게이트 복구 이동 실패: " +
+                  error.message,
+                finalUrl: currentUrl,
+                reviews: [],
+              },
+            );
+          }
+        },
+      );
+
+      return;
+    }
+  }
+
   state.processingNavigationIndex = index;
   const isSmartStore = /^https:\/\/(?:m\.)?smartstore\.naver\.com\//.test(currentUrl);
   const isBrandStore = /^https:\/\/(?:m\.)?brand\.naver\.com\//.test(currentUrl);

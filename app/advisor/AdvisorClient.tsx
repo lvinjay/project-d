@@ -1,6 +1,6 @@
 "use client";
 
-import { loadSelectedFiveContext, selectedFiveIds } from "../../lib/project-d-selected-five-manifest";
+import { loadSelectedFiveContext, recommendationPoolIds } from "../../lib/project-d-selected-five-manifest";
 import { assertPublicCategoryReadiness } from "../../lib/project-d-public-readiness";
 
 import {
@@ -256,7 +256,7 @@ export default function AdvisorPage() {
         const selected = await loadSelectedFiveContext(window.sessionStorage, activeCategory);
         await assertPublicCategoryReadiness(
           activeCategory,
-          selectedFiveIds(selected.manifest),
+          recommendationPoolIds(selected.manifest),
         );
         if (controller.signal.aborted) return;
         const nextProfile = selected.profile as unknown as CategoryProfile;
@@ -398,7 +398,7 @@ export default function AdvisorPage() {
       );
       await assertPublicCategoryReadiness(
         profile.category,
-        selectedFiveIds(selected.manifest),
+        recommendationPoolIds(selected.manifest),
       );
     }
     catch (error) { setErrorMessage(error instanceof Error ? error.message : "현재 선택을 다시 확인해 주세요."); return; }
