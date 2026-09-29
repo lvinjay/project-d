@@ -30,7 +30,7 @@ check(route.includes("reviewTextLimits:\n          useV6Production"), true,
   "production dry-run advertises the combined text limit");
 check(route.includes("replayAvailable:\n          !useV6Production"), true,
   "legacy replay is disabled for the V6 production fingerprint");
-check(v6.includes("stage0-v6-combined-dynamic-c1c5-v3-production"), true,
+check(v6.includes("stage0-v6-combined-dynamic-c1c5-v4-production"), true,
   "V6 production semantic version is distinct from canary fingerprints");
 check((v6.match(/await client\.responses\.create\(/g) ?? []).length, 1,
   "combined V6 stage has one direct OpenAI call site");

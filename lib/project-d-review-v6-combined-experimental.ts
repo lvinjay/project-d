@@ -8,10 +8,10 @@ import {
 } from "./project-d-review-production-pipeline";
 
 export const EXPERIMENTAL_V6_COMBINED_PIPELINE_VERSION =
-  "stage0-v6-combined-dynamic-c1c5-v3-production";
+  "stage0-v6-combined-dynamic-c1c5-v4-production";
 
 export const EXPERIMENTAL_V6_REVIEW_QUALITY_SOURCE =
-  "stage0-v6-combined-compatibility-mapping-v1";
+  "stage0-v6-combined-compatibility-mapping-v2";
 
 export const EXPERIMENTAL_V6_COMBINED_MODEL =
   process.env.REVIEW_ANALYSIS_BATCH_MODEL?.trim() || "gpt-5-mini";
@@ -276,29 +276,52 @@ function deriveEligibility(row: RawRow, review: ReviewEvidence): { e: Eligibilit
   const performanceVerified = !!resolveSegment(review, row.performanceEvidenceSegmentId);
   const notUsedVerified = !!resolveSegment(review, row.notUsedEvidenceSegmentId);
 
-  const requireAnchor = (claim: boolean, id: string, verified: boolean, label: string) => {
-    if (claim && (!id || !verified)) throw new Error(`R${row.n}: ${label} requires a valid same-review segment anchor.`);
-    if (!claim && id) throw new Error(`R${row.n}: ${label} anchor must be empty when the fact is not asserted.`);
-  };
+  const mismatchClaimed =
+    row.explicitCurrentProductMismatch === "present";
+  const firstHandClaimed =
+    row.currentTargetFirstHand === "operation" ||
+    row.currentTargetFirstHand === "observation";
+  const performanceClaimed =
+    row.concretePerformanceResult === "present";
+  const notUsedClaimed =
+    row.explicitNotUsedCurrentProduct === "present";
 
-  requireAnchor(row.explicitCurrentProductMismatch === "present", row.mismatchEvidenceSegmentId, mismatchVerified, "mismatch");
-  requireAnchor(row.currentTargetFirstHand === "operation" || row.currentTargetFirstHand === "observation", row.firstHandEvidenceSegmentId, firstHandVerified, "firstHand");
-  requireAnchor(row.concretePerformanceResult === "present", row.performanceEvidenceSegmentId, performanceVerified, "performance");
-  requireAnchor(row.explicitNotUsedCurrentProduct === "present", row.notUsedEvidenceSegmentId, notUsedVerified, "notUsed");
+  // Fail closed on model-supplied Stage0 facts whose claimed evidence
+  // cannot be resolved against the server-owned same-review segments.
+  // Do not discard the whole paid batch: the review becomes uncertain,
+  // and validateAndAdapt's existing non-direct sanitizer discards all
+  // criterion events from that review.
+  const invalidAssertedAnchor =
+    (mismatchClaimed && !mismatchVerified) ||
+    (firstHandClaimed && !firstHandVerified) ||
+    (performanceClaimed && !performanceVerified) ||
+    (notUsedClaimed && !notUsedVerified);
 
-  const firstHand = (row.currentTargetFirstHand === "operation" || row.currentTargetFirstHand === "observation") && firstHandVerified;
-  const performance = row.concretePerformanceResult === "present" && performanceVerified;
-  const notUsed = row.explicitNotUsedCurrentProduct === "present" && notUsedVerified;
+  if (invalidAssertedAnchor) {
+    return {
+      e: "uncertain",
+      reasonCode:
+        "unverifiable_evidence_anchor",
+    };
+  }
 
-  if (row.explicitCurrentProductMismatch === "present" && mismatchVerified) return { e: "product_mismatch", reasonCode: "current_product_mismatch" };
+  const firstHand =
+    firstHandClaimed &&
+    firstHandVerified;
+  const performance =
+    performanceClaimed &&
+    performanceVerified;
+  const notUsed =
+    notUsedClaimed &&
+    notUsedVerified;
+
+  if (mismatchClaimed && mismatchVerified) return { e: "product_mismatch", reasonCode: "current_product_mismatch" };
   if (notUsed && (firstHand || performance)) return { e: "uncertain", reasonCode: "contradictory_current_use" };
   if (notUsed && row.currentTargetFirstHand === "none" && row.concretePerformanceResult === "none") return { e: "spec_only", reasonCode: "spec_or_expectation_only" };
   if (firstHand && performance) return { e: "direct", reasonCode: "direct_current_target_firsthand_concrete" };
   if (row.experienceSource === "other_person" && row.currentTargetFirstHand === "none") return { e: "indirect", reasonCode: "other_person_only" };
   if (row.concretePerformanceResult === "none") return { e: "spec_only", reasonCode: "spec_or_expectation_only" };
-  const missingPositiveAnchor = ((row.currentTargetFirstHand === "operation" || row.currentTargetFirstHand === "observation") && !firstHandVerified) ||
-    (row.concretePerformanceResult === "present" && !performanceVerified);
-  return { e: "uncertain", reasonCode: missingPositiveAnchor ? "unverifiable_evidence_anchor" : "uncertain_identity_or_evidence" };
+  return { e: "uncertain", reasonCode: "uncertain_identity_or_evidence" };
 }
 
 function validateAndAdapt(
@@ -321,6 +344,17 @@ function validateAndAdapt(
   let droppedNonDirectCriterionEventCount = 0;
   const droppedNonDirectCriterionReviewNumbers: number[] = [];
 
+  // Dedicated fail-closed sanitizer accounting.
+  // Legacy invalidRejectedCandidateCount and
+  // invalidSegmentReferenceCount keep their existing semantics.
+  let stage0InvalidAnchorDiscardedCount = 0;
+  let invalidCriterionSlotDiscardedCount = 0;
+  let duplicateCriterionSlotDiscardedCount = 0;
+  let missingCriterionSlotSynthesizedCount = 0;
+  let invalidCriterionEventDiscardedCount = 0;
+  let invalidCriterionSegmentDiscardedCount = 0;
+  let neutralOverlapDiscardedCount = 0;
+
   for (const item of rows) {
     const record = asRecord(item);
     if (!record) throw new Error("V6 combined row must be an object.");
@@ -328,19 +362,74 @@ function validateAndAdapt(
     if (!Number.isSafeInteger(row.n) || seen.has(row.n) || !evidenceByReview.has(row.n)) throw new Error("V6 combined review number invalid or duplicated.");
     seen.add(row.n);
     const review = evidenceByReview.get(row.n)!;
+
+    stage0InvalidAnchorDiscardedCount +=
+      Number(
+        row.explicitCurrentProductMismatch === "present" &&
+          !resolveSegment(review, row.mismatchEvidenceSegmentId),
+      ) +
+      Number(
+        (
+          row.currentTargetFirstHand === "operation" ||
+          row.currentTargetFirstHand === "observation"
+        ) &&
+          !resolveSegment(review, row.firstHandEvidenceSegmentId),
+      ) +
+      Number(
+        row.concretePerformanceResult === "present" &&
+          !resolveSegment(review, row.performanceEvidenceSegmentId),
+      ) +
+      Number(
+        row.explicitNotUsedCurrentProduct === "present" &&
+          !resolveSegment(review, row.notUsedEvidenceSegmentId),
+      );
+
     const derived = deriveEligibility(row, review);
     eligibilityCounts[derived.e]++;
 
-    if (!Array.isArray(row.a) || row.a.length !== REQUIRED_CRITERION_COUNT) throw new Error(`R${row.n}: exactly five criterion slots required.`);
+    const rawSlots = Array.isArray(row.a) ? row.a : [];
+
+    if (
+      !Array.isArray(row.a) ||
+      row.a.length !== REQUIRED_CRITERION_COUNT
+    ) {
+      invalidCriterionSlotDiscardedCount++;
+    }
+
     const slotByAlias = new Map<string, RawRow["a"][number]>();
-    for (const slot of row.a) {
-      if (!slot || !aliases.includes(slot.c) || slotByAlias.has(slot.c) || !Array.isArray(slot.e)) throw new Error(`R${row.n}: invalid or duplicate criterion slot.`);
+    const duplicateAliases = new Set<string>();
+
+    for (const slot of rawSlots) {
+      if (
+        !slot ||
+        !aliases.includes(slot.c) ||
+        !Array.isArray(slot.e)
+      ) {
+        invalidCriterionSlotDiscardedCount++;
+        continue;
+      }
+
+      if (slotByAlias.has(slot.c)) {
+        duplicateCriterionSlotDiscardedCount++;
+        duplicateAliases.add(slot.c);
+        continue;
+      }
+
       slotByAlias.set(slot.c, slot);
     }
+
     for (let index = 0; index < criteria.length; index++) {
       const alias = aliases[index];
-      const slot = slotByAlias.get(alias);
-      if (!slot) throw new Error(`R${row.n}: missing ${alias}.`);
+      const storedSlot = slotByAlias.get(alias);
+
+      if (!storedSlot) {
+        missingCriterionSlotSynthesizedCount++;
+      }
+
+      const slot =
+        !storedSlot || duplicateAliases.has(alias)
+          ? { c: alias, e: [] }
+          : storedSlot;
       if (
         derived.e !== "direct" &&
         slot.e.length > 0
@@ -358,19 +447,39 @@ function validateAndAdapt(
       const ids: Record<"+" | "-" | "neutral", string[]> = { "+": [], "-": [], neutral: [] };
       const seenEvents = new Set<string>();
       for (const event of slot.e) {
-        if (!event || typeof event.s !== "string" || !["+", "-", "neutral"].includes(event.v)) throw new Error(`R${row.n}: invalid criterion event.`);
+        if (
+          !event ||
+          typeof event.s !== "string" ||
+          !["+", "-", "neutral"].includes(event.v)
+        ) {
+          invalidCriterionEventDiscardedCount++;
+          continue;
+        }
+
         const quote = resolveSegment(review, event.s);
-        if (!quote) throw new Error(`R${row.n}: invalid cross-review or unknown criterion segment ${event.s}.`);
+
+        if (!quote) {
+          invalidCriterionSegmentDiscardedCount++;
+          continue;
+        }
         const key = `${event.s}:${event.v}`;
         if (seenEvents.has(key)) continue;
         seenEvents.add(key);
         ids[event.v].push(event.s);
       }
       const directional = new Set([...ids["+"], ...ids["-"]]);
-      if (ids.neutral.some(id => directional.has(id))) throw new Error(`R${row.n}: neutral event overlaps directional evidence.`);
+
+      const safeNeutral =
+        ids.neutral.filter(
+          id => !directional.has(id),
+        );
+
+      neutralOverlapDiscardedCount +=
+        ids.neutral.length -
+        safeNeutral.length;
       const positiveIds = ids["+"].slice(0, MAX_SELECTED_SEGMENTS_PER_POLARITY);
       const negativeIds = ids["-"].slice(0, MAX_SELECTED_SEGMENTS_PER_POLARITY);
-      const neutralIds = ids.neutral.slice(0, MAX_SELECTED_SEGMENTS_PER_POLARITY);
+      const neutralIds = safeNeutral.slice(0, MAX_SELECTED_SEGMENTS_PER_POLARITY);
       const hasPositive = positiveIds.length > 0;
       const hasNegative = negativeIds.length > 0;
       const hasNeutral = neutralIds.length > 0;
@@ -412,6 +521,13 @@ function validateAndAdapt(
     eligibilityCounts,
     criterionEvidence,
     acceptedEvidenceCount,
+    stage0InvalidAnchorDiscardedCount,
+    invalidCriterionSlotDiscardedCount,
+    duplicateCriterionSlotDiscardedCount,
+    missingCriterionSlotSynthesizedCount,
+    invalidCriterionEventDiscardedCount,
+    invalidCriterionSegmentDiscardedCount,
+    neutralOverlapDiscardedCount,
     droppedNonDirectCriterionEventCount,
     droppedNonDirectCriterionReviewNumbers:
       Array.from(
@@ -558,8 +674,27 @@ export async function runExperimentalV6CombinedBatch(input: {
       complete: true,
       acceptedEvidenceCount: adapted.acceptedEvidenceCount,
       candidateUnaccountedCount: 0,
+
+      // Legacy production accounting contract.
       invalidRejectedCandidateCount: 0,
       invalidSegmentReferenceCount: 0,
+
+      // Dedicated V6 fail-closed sanitizer accounting.
+      stage0InvalidAnchorDiscardedCount:
+        adapted.stage0InvalidAnchorDiscardedCount,
+      invalidCriterionSlotDiscardedCount:
+        adapted.invalidCriterionSlotDiscardedCount,
+      duplicateCriterionSlotDiscardedCount:
+        adapted.duplicateCriterionSlotDiscardedCount,
+      missingCriterionSlotSynthesizedCount:
+        adapted.missingCriterionSlotSynthesizedCount,
+      invalidCriterionEventDiscardedCount:
+        adapted.invalidCriterionEventDiscardedCount,
+      invalidCriterionSegmentDiscardedCount:
+        adapted.invalidCriterionSegmentDiscardedCount,
+      neutralOverlapDiscardedCount:
+        adapted.neutralOverlapDiscardedCount,
+
       nonDirectCriterionEventsDiscarded:
         adapted.droppedNonDirectCriterionEventCount,
       nonDirectCriterionReviewsDiscarded:
@@ -569,7 +704,7 @@ export async function runExperimentalV6CombinedBatch(input: {
     semanticVersions: {
       combined: {
         engineVersion: EXPERIMENTAL_V6_COMBINED_PIPELINE_VERSION,
-        decisionPolicyVersion: "stage0-server-derived-plus-c1c5-events-v1",
+        decisionPolicyVersion: "stage0-server-derived-plus-c1c5-events-v2",
         segmentVersion: "shared-server-segment-anchor-v1",
         model: EXPERIMENTAL_V6_COMBINED_MODEL,
       },

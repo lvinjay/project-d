@@ -21,7 +21,7 @@ function check(value, message) {
 
 check(
   experimental.includes(
-    "stage0-v6-combined-dynamic-c1c5-v3-production",
+    "stage0-v6-combined-dynamic-c1c5-v4-production",
   ),
   "V6 production semantic version must be active after promotion.",
 );

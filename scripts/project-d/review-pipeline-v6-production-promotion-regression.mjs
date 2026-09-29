@@ -17,7 +17,7 @@ check(route.includes("createExperimentalV6CombinedDryRun"), "V6 free preflight m
 check(route.includes("createExperimentalV6CombinedFingerprint"), "V6 production fingerprint must be present.");
 check(route.includes("runExperimentalV6CombinedBatch"), "V6 paid combined engine must be present.");
 check(route.includes("activeReviewQualitySource"), "V6 checkpoint source validation must remain explicit.");
-check(v6.includes("stage0-v6-combined-dynamic-c1c5-v3-production"), "V6 production semantic version missing.");
+check(v6.includes("stage0-v6-combined-dynamic-c1c5-v4-production"), "V6 production semantic version missing.");
 check(v6.includes("nonDirectCriterionEventsDiscarded"), "Non-direct sanitizer audit missing.");
 check(v6.includes("invalidRejectedCandidateCount: 0"), "Sanitizer discards must remain separate from invalid candidate accounting.");
 check(helper.includes("FULL_CATEGORY_REVIEW_MAX_CALLS_PER_PRODUCT = 2"), "Approval helper must cap 100-review products at two calls.");
