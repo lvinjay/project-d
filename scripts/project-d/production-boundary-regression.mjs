@@ -103,6 +103,18 @@ const imports = {
   '../../../lib/supabaseAdmin': { supabaseAdmin: db },
   '../../../lib/supabase': { supabase: db },
   '../../../lib/project-d-selected-five-manifest': { UUID_PATTERN: /^[a-f0-9-]{36}$/ },
+  '../../../lib/project-d-product-score-id-recovery': {
+    repairSingleSplicedProductId: (results) => ({
+      results,
+      audit: {
+        repaired: false,
+        missingProductId: null,
+        extraProductId: null,
+        donorProductId: null,
+        reason: 'production-boundary-mock-no-repair',
+      },
+    }),
+  },
   '../../../lib/project-d-product-score-prompt': {
     PRODUCT_SCORE_PROMPT_CHAR_LIMIT: 140000,
     buildProductScoreEvidenceProducts: (rows, criterionKeys) =>

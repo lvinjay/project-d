@@ -11,6 +11,14 @@ import {
   createProductionPipelineFingerprint,
 } from "../../../lib/project-d-review-production-pipeline";
 
+import {
+  createExperimentalV6CombinedFingerprint,
+} from "../../../lib/project-d-review-v6-combined-experimental";
+
+import {
+  resolveReviewRawInputFingerprint,
+} from "../../../lib/project-d-review-raw-fingerprint";
+
 export const runtime =
   "nodejs";
 
@@ -416,7 +424,7 @@ export async function POST(
       const analysisDbProductId =
         `request-body:${originProductNo}`;
 
-      const inputFingerprint =
+      const legacyInputFingerprint =
         createProductionPipelineFingerprint({
           category,
           productName,
@@ -431,9 +439,34 @@ export async function POST(
             REVIEW_BATCH_SIZE,
         });
 
+      const v6InputFingerprint =
+        createExperimentalV6CombinedFingerprint({
+          category,
+          productName,
+          dbProductId:
+            analysisDbProductId,
+          originProductNo,
+          rawReviews:
+            rawReviews as string[],
+          collectionStats,
+          criteria:
+            dynamicCriteria,
+        });
+
+      const fingerprintResolution =
+        resolveReviewRawInputFingerprint(
+          requestedInputFingerprint,
+          legacyInputFingerprint,
+          v6InputFingerprint,
+        );
+
+      const inputFingerprint =
+        fingerprintResolution
+          .inputFingerprint;
+
       if (
-        inputFingerprint !==
-        requestedInputFingerprint
+        !fingerprintResolution
+          .accepted
       ) {
         results.push({
           success: false,

@@ -5,6 +5,9 @@ import {
   buildProductScorePrompt,
 } from "../../../lib/project-d-product-score-prompt";
 import {
+  repairSingleSplicedProductId,
+} from "../../../lib/project-d-product-score-id-recovery";
+import {
   createHash,
   createHmac,
   timingSafeEqual,
@@ -35,6 +38,8 @@ type RequestBody = {
   inputFingerprint?: unknown;
   persistenceOnly?: unknown;
   persistenceRetry?: unknown;
+  recoveryResponseId?: unknown;
+  recoveryRawOutputSha256?: unknown;
 };
 
 type Criterion = {
@@ -1437,6 +1442,43 @@ export async function POST(
       });
     }
 
+    const recoveryResponseId =
+      normalizeText(
+        body.recoveryResponseId,
+      );
+
+    const recoveryRawOutputSha256 =
+      normalizeText(
+        body.recoveryRawOutputSha256,
+      ).toLowerCase();
+
+    if (
+      Boolean(
+        recoveryResponseId,
+      ) !==
+        Boolean(
+          recoveryRawOutputSha256,
+        ) ||
+      (
+        recoveryRawOutputSha256 &&
+        !/^[a-f0-9]{64}$/.test(
+          recoveryRawOutputSha256,
+        )
+      )
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          paidApiCalls: 0,
+          message:
+            "Recovery response id and raw-output SHA-256 must be supplied together.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
     const apiKey =
       process.env
         .OPENAI_API_KEY;
@@ -1462,17 +1504,28 @@ export async function POST(
         maxRetries: 0,
       });
 
-    paidApiCalls += 1;
+    let response;
 
-    const response =
-      await client.responses.create(
-        {
-          model:
-            "gpt-5",
-          input:
-            scorePrompt,
-        },
-      );
+    if (
+      recoveryResponseId
+    ) {
+      response =
+        await client.responses.retrieve(
+          recoveryResponseId,
+        );
+    } else {
+      paidApiCalls += 1;
+
+      response =
+        await client.responses.create(
+          {
+            model:
+              "gpt-5",
+            input:
+              scorePrompt,
+          },
+        );
+    }
 
     const responseRecord =
       response as unknown as
@@ -1480,6 +1533,49 @@ export async function POST(
           string,
           unknown
         >;
+
+    if (
+      recoveryResponseId
+    ) {
+      const retrievedId =
+        normalizeText(
+          responseRecord.id,
+        );
+
+      const retrievedStatus =
+        normalizeText(
+          responseRecord.status,
+        );
+
+      const retrievedOutput =
+        response.output_text ??
+        "";
+
+      const retrievedSha256 =
+        createHash(
+          "sha256",
+        )
+          .update(
+            retrievedOutput,
+            "utf8",
+          )
+          .digest(
+            "hex",
+          );
+
+      if (
+        retrievedId !==
+          recoveryResponseId ||
+        retrievedStatus !==
+          "completed" ||
+        retrievedSha256 !==
+          recoveryRawOutputSha256
+      ) {
+        throw new Error(
+          "Recovered OpenAI response failed immutable id/status/output-hash verification.",
+        );
+      }
+    }
 
     paidResponseAudit = {
       responseId:
@@ -1521,9 +1617,28 @@ export async function POST(
         ),
       );
 
+    const productIdRecovery =
+      repairSingleSplicedProductId(
+        parsed.products,
+        products.map(
+          (product) =>
+            product.id,
+        ),
+      );
+
+    if (
+      productIdRecovery
+        .audit.repaired
+    ) {
+      console.warn(
+        "Product score productId recovered from a uniquely proven single UUID splice.",
+        productIdRecovery.audit,
+      );
+    }
+
     const scoreResults =
       normalizeResults(
-        parsed.products,
+        productIdRecovery.results,
         productIds,
         criterionKeys,
       );
@@ -1717,6 +1832,18 @@ export async function POST(
 
       scores:
         scoreResults,
+
+      productIdRepairAudit:
+        productIdRecovery.audit,
+
+      recoveryResponseReused:
+        Boolean(
+          recoveryResponseId,
+        ),
+
+      recoveryResponseId:
+        recoveryResponseId ||
+        null,
 
       message:
         `${products.length}개 제품을 구매기준 ${criteria.length}개로 상대평가해 점수와 근거를 저장했습니다.`,
