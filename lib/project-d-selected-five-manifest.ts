@@ -6,7 +6,7 @@ export type SelectionRun = { runId: string; category: string };
 export type SelectedProduct = {
   dbProductId: string; originProductNo: number; productName: string;
   readiness: { runId: string; reviewCount: number; reviewAnalysisSaved: true;
-    analysisFingerprint: string; rawCorpusPersisted: true };
+    analysisFingerprint: string; rawCorpusPersisted: boolean };
 };
 export type RecommendationPoolProduct = {
   dbProductId: string;
@@ -45,65 +45,168 @@ export function categoryProfileRevision(value: unknown): string {
   return canonical(Object.fromEntries(["id", "category", "updated_at", "title", "introduction", "criteria",
     "personalization_questions", "use_cases", "candidate_limit"].map(key => [key, row[key]])));
 }
-export function validateSelectedFive(value: unknown, run: SelectionRun, revision?: string): SelectedFiveManifest {
+export function validateSelectedFive(
+  value: unknown,
+  run: SelectionRun,
+  revision?: string,
+): SelectedFiveManifest {
   const row = object(value);
-  if (row.schemaVersion !== 1 || !UUID_PATTERN.test(String(row.runId)) || row.runId !== run.runId ||
-      !text(row.category) || row.category !== run.category || !text(row.profileRevision) ||
-      (revision !== undefined && row.profileRevision !== revision) ||
-      !Array.isArray(row.products) || row.products.length !== 5) {
-    throw new Error("현재 실행·카테고리·프로필에 맞는 최종 5개가 없습니다. 다시 준비해 주세요.");
-  }
-  const ids = new Set<string>(), origins = new Set<number>();
-  for (const item of row.products) {
-    const p = object(item), ready = object(p.readiness);
-    if (typeof p.dbProductId !== "string" || !UUID_PATTERN.test(p.dbProductId) ||
-        ids.has(p.dbProductId.toLowerCase()) || typeof p.originProductNo !== "number" ||
-        !Number.isSafeInteger(p.originProductNo) || p.originProductNo <= 0 || origins.has(p.originProductNo) ||
-        !text(p.productName) || ready.runId !== run.runId || ready.reviewAnalysisSaved !== true ||
-        ready.rawCorpusPersisted !== true || !Number.isSafeInteger(ready.reviewCount) ||
-        Number(ready.reviewCount) < 30 || Number(ready.reviewCount) > 1000 ||
-        typeof ready.analysisFingerprint !== "string" || !/^[a-f0-9]{64}$/.test(ready.analysisFingerprint)) {
-      throw new Error("최종 5개 제품의 UUID·원상품 번호·현재 실행 준비 상태가 잘못되었습니다.");
-    }
-    ids.add(p.dbProductId.toLowerCase()); origins.add(p.originProductNo);
+
+  if (
+    row.schemaVersion !== 1 ||
+    !UUID_PATTERN.test(String(row.runId)) ||
+    row.runId !== run.runId ||
+    !text(row.category) ||
+    row.category !== run.category ||
+    !text(row.profileRevision) ||
+    (
+      revision !== undefined &&
+      row.profileRevision !== revision
+    ) ||
+    !Array.isArray(row.products)
+  ) {
+    throw new Error(
+      "Published Recommendation Pool manifest is invalid.",
+    );
   }
 
-  if (row.recommendationPool !== undefined) {
+  if (row.products.length > 15) {
+    throw new Error(
+      "Recommendation Pool cannot contain more than 15 ready products.",
+    );
+  }
+
+  const readyIds =
+    new Set<string>();
+
+  const readyOrigins =
+    new Set<number>();
+
+  for (const item of row.products) {
+    const p =
+      object(item);
+
+    const ready =
+      object(p.readiness);
+
     if (
-      !Array.isArray(row.recommendationPool) ||
+      typeof p.dbProductId !== "string" ||
+      !UUID_PATTERN.test(p.dbProductId) ||
+      readyIds.has(
+        p.dbProductId.toLowerCase(),
+      ) ||
+      typeof p.originProductNo !== "number" ||
+      !Number.isSafeInteger(
+        p.originProductNo,
+      ) ||
+      p.originProductNo <= 0 ||
+      readyOrigins.has(
+        p.originProductNo,
+      ) ||
+      !text(p.productName) ||
+      ready.runId !== run.runId ||
+      ready.reviewAnalysisSaved !== true ||
+      typeof ready.rawCorpusPersisted !== "boolean" ||
+      !Number.isSafeInteger(
+        ready.reviewCount,
+      ) ||
+      Number(ready.reviewCount) < 30 ||
+      Number(ready.reviewCount) > 1000 ||
+      typeof ready.analysisFingerprint !==
+        "string" ||
+      !/^[a-f0-9]{64}$/.test(
+        ready.analysisFingerprint,
+      )
+    ) {
+      throw new Error(
+        "Recommendation Pool ready-product identity is invalid.",
+      );
+    }
+
+    readyIds.add(
+      p.dbProductId.toLowerCase(),
+    );
+
+    readyOrigins.add(
+      p.originProductNo,
+    );
+  }
+
+  if (
+    row.recommendationPool !== undefined
+  ) {
+    if (
+      !Array.isArray(
+        row.recommendationPool,
+      ) ||
       row.recommendationPool.length < 5 ||
       row.recommendationPool.length > 15
     ) {
-      throw new Error("추천 준비 풀은 고유 제품 5~15개여야 합니다.");
+      throw new Error(
+        "Recommendation Pool must contain 5 to 15 unique products.",
+      );
     }
 
-    const poolIds = new Set<string>();
-    const poolOrigins = new Set<number>();
+    const poolIds =
+      new Set<string>();
 
-    for (const item of row.recommendationPool) {
-      const p = object(item);
+    const poolOrigins =
+      new Set<number>();
+
+    for (
+      const item of
+        row.recommendationPool
+    ) {
+      const p =
+        object(item);
+
       if (
-        typeof p.dbProductId !== "string" ||
-        !UUID_PATTERN.test(p.dbProductId) ||
-        poolIds.has(p.dbProductId.toLowerCase()) ||
-        typeof p.originProductNo !== "number" ||
-        !Number.isSafeInteger(p.originProductNo) ||
+        typeof p.dbProductId !==
+          "string" ||
+        !UUID_PATTERN.test(
+          p.dbProductId,
+        ) ||
+        poolIds.has(
+          p.dbProductId.toLowerCase(),
+        ) ||
+        typeof p.originProductNo !==
+          "number" ||
+        !Number.isSafeInteger(
+          p.originProductNo,
+        ) ||
         p.originProductNo <= 0 ||
-        poolOrigins.has(p.originProductNo) ||
+        poolOrigins.has(
+          p.originProductNo,
+        ) ||
         !text(p.productName)
       ) {
-        throw new Error("추천 준비 풀의 UUID·원상품 번호가 잘못되었습니다.");
+        throw new Error(
+          "Recommendation Pool product identity is invalid.",
+        );
       }
 
-      poolIds.add(p.dbProductId.toLowerCase());
-      poolOrigins.add(p.originProductNo);
+      poolIds.add(
+        p.dbProductId.toLowerCase(),
+      );
+
+      poolOrigins.add(
+        p.originProductNo,
+      );
     }
 
-    for (const selectedId of ids) {
-      if (!poolIds.has(selectedId)) {
-        throw new Error("최종 5개는 추천 준비 풀 안에 모두 포함되어야 합니다.");
+    for (const readyId of readyIds) {
+      if (!poolIds.has(readyId)) {
+        throw new Error(
+          "Ready products must belong to the Recommendation Pool.",
+        );
       }
     }
+  } else if (
+    row.products.length < 5
+  ) {
+    throw new Error(
+      "Recommendation Pool must contain at least 5 products.",
+    );
   }
 
   return row as SelectedFiveManifest;
@@ -125,47 +228,113 @@ export function readSelectedFive(storage: Store, category?: string) {
   if (!text(run.runId) || !text(run.category) || (category && normalizeCategoryKey(run.category) !== normalizeCategoryKey(category))) throw new Error("현재 선택 실행이 없습니다.");
   return validateSelectedFive(JSON.parse(storage.getItem(SELECTED_FIVE_KEY) ?? "null"), run as SelectionRun);
 }
-export function selectedFiveIdentity(manifest: SelectedFiveManifest) { return canonical(manifest); }
-export function selectedFiveIds(manifest: SelectedFiveManifest) { return manifest.products.map(p => p.dbProductId); }
-export function recommendationPoolIds(manifest: SelectedFiveManifest) {
-  const pool = Array.isArray(manifest.recommendationPool)
-    ? manifest.recommendationPool
-    : [];
-  return pool.length >= 5 && pool.length <= 15
-    ? pool.map(p => p.dbProductId)
-    : selectedFiveIds(manifest);
+export function selectedFiveIdentity(
+  manifest: SelectedFiveManifest,
+) {
+  return canonical(manifest);
 }
+
+export function recommendationPoolProducts(
+  manifest: SelectedFiveManifest,
+): RecommendationPoolProduct[] {
+  const legacyPool =
+    Array.isArray(
+      manifest.recommendationPool,
+    )
+      ? manifest.recommendationPool
+      : [];
+
+  if (
+    legacyPool.length >= 5 &&
+    legacyPool.length <= 15
+  ) {
+    return legacyPool;
+  }
+
+  return manifest.products.map(
+    (product) => ({
+      dbProductId:
+        product.dbProductId,
+      originProductNo:
+        product.originProductNo,
+      productName:
+        product.productName,
+    }),
+  );
+}
+
+export function recommendationPoolIds(
+  manifest: SelectedFiveManifest,
+) {
+  return recommendationPoolProducts(
+    manifest,
+  ).map(
+    (product) =>
+      product.dbProductId,
+  );
+}
+
+/*
+ * Temporary compatibility aliases.
+ * They no longer mean "top five".
+ */
+export function selectedFiveIds(
+  manifest: SelectedFiveManifest,
+) {
+  return recommendationPoolIds(
+    manifest,
+  );
+}
+
 export function assertSameRecommendationPoolIds(
   ids: readonly string[] | undefined,
   manifest: SelectedFiveManifest,
 ) {
-  if (!ids || canonical(ids) !== canonical(recommendationPoolIds(manifest))) {
-    throw new Error("승인한 추천 준비 풀 UUID와 요청 제품이 다릅니다.");
+  if (
+    !ids ||
+    canonical(ids) !==
+      canonical(
+        recommendationPoolIds(
+          manifest,
+        ),
+      )
+  ) {
+    throw new Error(
+      "Approved Recommendation Pool IDs do not match the request.",
+    );
   }
 }
-export function assertSameSelectedIds(ids: readonly string[] | undefined, manifest: SelectedFiveManifest) {
-  if (!ids || canonical(ids) !== canonical(selectedFiveIds(manifest))) throw new Error("승인한 최종 5개 UUID와 요청 제품이 다릅니다.");
+
+export function assertSameSelectedIds(
+  ids: readonly string[] | undefined,
+  manifest: SelectedFiveManifest,
+) {
+  assertSameRecommendationPoolIds(
+    ids,
+    manifest,
+  );
 }
-export function publishSelectedFive(storage: Store, manifest: SelectedFiveManifest) {
-  assertSelectionRun(storage, manifest);
-  validateSelectedFive(manifest, manifest);
-  storage.setItem(SELECTED_FIVE_KEY, JSON.stringify(manifest));
+
+export function publishSelectedFive(
+  storage: Store,
+  manifest: SelectedFiveManifest,
+) {
+  assertSelectionRun(
+    storage,
+    manifest,
+  );
+
+  validateSelectedFive(
+    manifest,
+    manifest,
+  );
+
+  storage.setItem(
+    SELECTED_FIVE_KEY,
+    JSON.stringify(manifest),
+  );
 }
-export function selectEligibleFive<T extends SelectionRun & {
-  dbProductId: string; originProductNo: number; productName: string; reviews: string[];
-}>(pool: T[], run: SelectionRun): T[] {
-  const ids = new Set<string>(), origins = new Set<number>(), selected: T[] = [];
-  for (const p of pool) {
-    if (p.runId !== run.runId || p.category !== run.category || !UUID_PATTERN.test(p.dbProductId) ||
-        !Number.isSafeInteger(p.originProductNo) || p.originProductNo <= 0 || !text(p.productName) ||
-        !Array.isArray(p.reviews) || p.reviews.length < 30 || p.reviews.length > 1000 ||
-        p.reviews.some(r => typeof r !== "string" || !r.trim()) ||
-        ids.has(p.dbProductId.toLowerCase()) || origins.has(p.originProductNo)) continue;
-    selected.push(p); ids.add(p.dbProductId.toLowerCase()); origins.add(p.originProductNo);
-    if (selected.length === 5) return selected;
-  }
-  throw new Error("현재 실행에서 DB 매핑과 리뷰가 준비된 고유 제품 5개를 확보하지 못했습니다.");
-}
+
 export async function fetchCategoryProfile(category: string): Promise<Record<string, unknown>> {
   const response = await fetch("/api/category-profile?category=" + encodeURIComponent(category), { cache: "no-store" });
   const data = await response.json();
@@ -364,53 +533,218 @@ export type SelectedCatalogProduct = {
   id: string; originProductNo: number; category: string; productName: string;
   sourceUrl: string; price: string; representativeImageUrl: string; analyzed: boolean;
 };
-export async function loadSelectedFiveContext(storage: Store, category?: string, expectedIdentity?: string) {
-  let manifest: SelectedFiveManifest | null = null;
-  let publishedProfile: Record<string, unknown> | null = null;
+export async function loadSelectedFiveContext(
+  storage: Store,
+  category?: string,
+  expectedIdentity?: string,
+) {
+  let manifest:
+    SelectedFiveManifest | null =
+      null;
+
+  let publishedProfile:
+    Record<string, unknown> | null =
+      null;
 
   try {
-    manifest = readSelectedFive(storage, category);
+    manifest =
+      readSelectedFive(
+        storage,
+        category,
+      );
   } catch (localError) {
-    if (!category) throw localError;
+    if (!category) {
+      throw localError;
+    }
   }
 
   if (category) {
-    let published: PublishedSelectedFive | null = null;
+    let published:
+      PublishedSelectedFive | null =
+        null;
+
     try {
-      published = await fetchPublishedSelectedFive(category);
+      published =
+        await fetchPublishedSelectedFive(
+          category,
+        );
     } catch (publishedError) {
-      // A validated local selection remains usable when publication is unavailable.
-      if (!manifest) throw publishedError;
+      if (!manifest) {
+        throw publishedError;
+      }
     }
+
     if (published) {
-      publishedProfile = published.profile;
-      if (!manifest || selectedFiveIdentity(manifest) !== selectedFiveIdentity(published.manifest)) {
-        storage.setItem(CURRENT_RUN_KEY, JSON.stringify({
-          runId: published.manifest.runId, category: published.manifest.category,
-        }));
-        storage.setItem(SELECTED_FIVE_KEY, JSON.stringify(published.manifest));
-        manifest = readSelectedFive(storage, published.manifest.category);
+      publishedProfile =
+        published.profile;
+
+      if (
+        !manifest ||
+        selectedFiveIdentity(
+          manifest,
+        ) !==
+          selectedFiveIdentity(
+            published.manifest,
+          )
+      ) {
+        storage.setItem(
+          CURRENT_RUN_KEY,
+          JSON.stringify({
+            runId:
+              published.manifest.runId,
+            category:
+              published.manifest.category,
+          }),
+        );
+
+        storage.setItem(
+          SELECTED_FIVE_KEY,
+          JSON.stringify(
+            published.manifest,
+          ),
+        );
+
+        manifest =
+          readSelectedFive(
+            storage,
+            published.manifest.category,
+          );
       }
     }
   }
 
-  if (!manifest) throw new Error("현재 선택 실행이 없습니다.");
-  const identity = selectedFiveIdentity(manifest);
-  if (expectedIdentity !== undefined && identity !== expectedIdentity) throw new Error("최종 5개 선택이 변경되었습니다. 다시 시작해 주세요.");
-  const profile = publishedProfile ?? await fetchCategoryProfile(manifest.category);
-  validateSelectedFive(manifest, manifest, categoryProfileRevision(profile));
-  const params = new URLSearchParams({ category: manifest.category, analyzedOnly: "true", productIds: selectedFiveIds(manifest).join(",") });
-  const response = await fetch("/api/catalog-products?" + params, { cache: "no-store" });
-  const data = await response.json();
-  if (!response.ok || data.success !== true || !Array.isArray(data.products) || data.products.length !== 5) throw new Error(data.message ?? "최종 제품을 확인하지 못했습니다.");
-  const rows = data.products as SelectedCatalogProduct[];
-  const products = manifest.products.map(p => {
-    const matches = rows.filter(row => row.id === p.dbProductId);
-    if (matches.length !== 1 || matches[0].category !== manifest.category ||
-        matches[0].originProductNo !== p.originProductNo || matches[0].productName !== p.productName ||
-        matches[0].analyzed !== true) throw new Error("최종 제품의 DB identity 또는 준비 상태가 변경되었습니다.");
-    return matches[0];
-  });
-  if (selectedFiveIdentity(readSelectedFive(storage, manifest.category)) !== identity) throw new Error("확인 도중 선택 실행이 변경되었습니다.");
-  return { manifest, identity, profile, products };
+  if (!manifest) {
+    throw new Error(
+      "No current Recommendation Pool exists.",
+    );
+  }
+
+  const identity =
+    selectedFiveIdentity(
+      manifest,
+    );
+
+  if (
+    expectedIdentity !== undefined &&
+    identity !== expectedIdentity
+  ) {
+    throw new Error(
+      "Recommendation Pool changed. Start again.",
+    );
+  }
+
+  const profile =
+    publishedProfile ??
+    await fetchCategoryProfile(
+      manifest.category,
+    );
+
+  validateSelectedFive(
+    manifest,
+    manifest,
+    categoryProfileRevision(
+      profile,
+    ),
+  );
+
+  const poolProducts =
+    recommendationPoolProducts(
+      manifest,
+    );
+
+  const params =
+    new URLSearchParams({
+      category:
+        manifest.category,
+      analyzedOnly:
+        "true",
+      productIds:
+        poolProducts
+          .map(
+            (product) =>
+              product.dbProductId,
+          )
+          .join(","),
+    });
+
+  const response =
+    await fetch(
+      "/api/catalog-products?" +
+        params,
+      {
+        cache:
+          "no-store",
+      },
+    );
+
+  const data =
+    await response.json();
+
+  if (
+    !response.ok ||
+    data.success !== true ||
+    !Array.isArray(
+      data.products,
+    ) ||
+    data.products.length !==
+      poolProducts.length
+  ) {
+    throw new Error(
+      data.message ??
+      "Recommendation Pool products could not be verified.",
+    );
+  }
+
+  const rows =
+    data.products as
+      SelectedCatalogProduct[];
+
+  const products =
+    poolProducts.map(
+      (product) => {
+        const matches =
+          rows.filter(
+            (row) =>
+              row.id ===
+              product.dbProductId,
+          );
+
+        if (
+          matches.length !== 1 ||
+          matches[0].category !==
+            manifest.category ||
+          matches[0].originProductNo !==
+            product.originProductNo ||
+          matches[0].productName !==
+            product.productName ||
+          matches[0].analyzed !== true
+        ) {
+          throw new Error(
+            "Recommendation Pool DB identity or analysis state changed.",
+          );
+        }
+
+        return matches[0];
+      },
+    );
+
+  if (
+    selectedFiveIdentity(
+      readSelectedFive(
+        storage,
+        manifest.category,
+      ),
+    ) !== identity
+  ) {
+    throw new Error(
+      "Recommendation Pool changed during verification.",
+    );
+  }
+
+  return {
+    manifest,
+    identity,
+    profile,
+    products,
+  };
 }

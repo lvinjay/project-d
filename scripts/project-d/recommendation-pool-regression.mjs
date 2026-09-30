@@ -98,15 +98,6 @@ const candidates =
 const plan =
   planRecommendationPool(
     candidates,
-    {
-      selectedFiveIds: [
-        ids[5],
-        ids[10],
-        ids[12],
-        ids[14],
-        ids[15],
-      ],
-    },
   );
 
 assert.equal(
@@ -163,15 +154,16 @@ assert.ok(
   "wireless-vacuum-like fixture should retain at least five <=280k products",
 );
 
-assert.ok(
+assert.equal(
   plan.products.some(
     (row) =>
-      row.dbProductId ===
-        ids[5] &&
-      row.selectedFiveAnchor ===
-        true,
+      Object.prototype.hasOwnProperty.call(
+        row,
+        "selectedFiveAnchor",
+      ),
   ),
-  "eligible selected-five anchor should be preserved",
+  false,
+  "pool-only planner must not emit selected-five anchor metadata",
 );
 
 const small =

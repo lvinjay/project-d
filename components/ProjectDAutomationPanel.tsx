@@ -4,7 +4,7 @@ import { ProjectDApprovalDialog, type ApprovalDialogState } from "./ProjectDAppr
 
 import { fetchCurrentReviewAnalysisSnapshot, storeAndSaveReviewAnalysis, retryStoredReviewAnalysisPersistence } from "../lib/project-d-review-cas-client";
 
-import { beginSelectionRun, assertSelectionRun, selectEligibleFive, fetchCategoryProfile, categoryProfileRevision, publishSelectedFive, persistPublishedSelectedFive, type SelectedFiveManifest, type SelectedProduct } from "../lib/project-d-selected-five-manifest";
+import { beginSelectionRun, assertSelectionRun, fetchCategoryProfile, categoryProfileRevision, publishSelectedFive, persistPublishedSelectedFive, type SelectedFiveManifest, type SelectedProduct } from "../lib/project-d-selected-five-manifest";
 
 import { planRecommendationPool } from "../lib/project-d-recommendation-pool";
 import { buildOneApprovalCategoryBuildPlan } from "../lib/project-d-one-approval-category-build";
@@ -94,6 +94,16 @@ type BrowserBridgeResponse = MarketProbeDiagnostics & {
 };
 
 type FinalCandidate = {
+  /*
+   * The enrich API preserves the market candidate evidence
+   * while adding relevance/detail fields.
+   */
+  price?: string | number;
+  reviewCount?: number;
+  rating?: number;
+  browserReviewTotalCount?: number;
+  priceVerified?: boolean;
+
   relevance?: { status?: "eligible" | "excluded" | "needs-review" };
   detail?: {
     productId?: string;
@@ -209,7 +219,7 @@ const INITIAL_STEPS: Step[] = [
   },
   {
     key: "criteria-final",
-    label: "7. 최종 5개 프로필 연결 확인",
+    label: "7. Recommendation Pool 프로필 연결 확인",
     status: "idle",
     message: "",
   },
@@ -701,18 +711,12 @@ function poolDiagnosticCandidateLines(
 }
 
 /*
-  Advisor FIVE review-control primitives.
+  Recommendation Pool review-control primitives.
 
   These functions are intentionally pure so the regression
   suite can execute the exact production control contract
   without browser/API/DB access.
 */
-function shouldStopAdvisorReview(
-  readyCount: number,
-) {
-  return readyCount >= 5;
-}
-
 function isAdvisorReviewIdentityReady(
   mapping: {
     dbProductId: string;
@@ -1016,7 +1020,6 @@ export default function ProjectDAutomationPanel() {
 
   async function runRecommendationPoolPrecheck(
     options?: {
-      selectedFiveIds?: string[];
       allowMissingCriteria?: boolean;
       planningOnly?: boolean;
     },
@@ -1136,23 +1139,6 @@ export default function ProjectDAutomationPanel() {
               product.id,
           );
 
-      const explicitSelectedFiveIds =
-        Array.isArray(
-          options?.selectedFiveIds,
-        )
-          ? Array.from(
-              new Set(
-                (
-                  options?.selectedFiveIds ??
-                  []
-                )
-                  .map((id) =>
-                    cleanText(id),
-                  )
-                  .filter(Boolean),
-              ),
-            )
-          : [];
 
       const poolPlan =
         planRecommendationPool(
@@ -1168,13 +1154,6 @@ export default function ProjectDAutomationPanel() {
                 product.price,
             }),
           ),
-          {
-            selectedFiveIds:
-              explicitSelectedFiveIds.length >
-              0
-                ? explicitSelectedFiveIds
-                : preparedIds,
-          },
         );
 
       if (
@@ -2321,32 +2300,6 @@ export default function ProjectDAutomationPanel() {
         );
       }
 
-      const selectedFiveIds =
-        new Set(
-          initial.manifest.products.map(
-            (product) =>
-              product.dbProductId,
-          ),
-        );
-
-      const preparedIdSet =
-        new Set(
-          precheck.preparedProductIds,
-        );
-
-      if (
-        [...selectedFiveIds].some(
-          (id) =>
-            !preparedIdSet.has(
-              id,
-            ),
-        )
-      ) {
-        throw new Error(
-          "최종 selected-five가 확장 Recommendation Pool에 모두 포함되지 않았습니다.",
-        );
-      }
-
       const remainingReviewMax =
         initial.approvalPlan
           .reviewMaxOpenAiCalls -
@@ -3300,7 +3253,8 @@ export default function ProjectDAutomationPanel() {
               0,
           ) || 0;
 
-        if (zeroPaidFullCount >= 5) {        const freePoolPreviewNames =
+        if (zeroPaidFullCount >= 15) {
+          const freePoolPreviewNames =
           zeroPaidPreviewCandidates
             .slice(
               0,
@@ -3333,8 +3287,8 @@ export default function ProjectDAutomationPanel() {
                 `같은 캡처 무과금 실제 검증 FULL ${zeroPaidFullCount}개`,
                 `제품군 적합성: 적합 ${zeroPaidEligibleCount}개 / 제외 ${zeroPaidExcludedCount}개 / 검토 필요 ${zeroPaidNeedsReviewCount}개`,
                 "",
-                "검증된 FULL 상품은 5개로 자르지 않고 MARKET POOL 전체를 DB에 등록합니다.",
-                "Advisor 단계는 이 MARKET POOL에서 현재 실행의 정확한 5개만 준비합니다.",
+                "검증된 FULL 상품은 임의의 고정 개수로 자르지 않고 MARKET POOL 전체를 DB에 등록합니다.",
+                "Advisor 단계는 이 MARKET POOL에서 추천 적합도와 커버리지를 기준으로 Recommendation Pool 최대 15개를 준비합니다.",
                 ...freePoolPreviewNames,
                 ...(
                   freePoolRemainingCount >
@@ -3345,7 +3299,7 @@ export default function ProjectDAutomationPanel() {
                     : []
                 ),
                 "",
-                "확인하면 유료 시장 검증은 건너뛰고 검증된 MARKET POOL 전체를 DB 등록한 뒤, Advisor FIVE가 준비될 때까지만 심층리뷰를 확인합니다.",
+                "확인하면 유료 시장 검증은 건너뛰고 검증된 MARKET POOL 전체를 DB 등록한 뒤, Recommendation Pool이 준비될 때까지만 심층리뷰를 확인합니다.",
                 "OpenAI는 별도 승인창 전에는 호출되지 않습니다.",
                 "취소하면 이 실행을 중단하며 resolver/Bright Data/OpenAI 호출은 0회입니다.",
               ],
@@ -3411,11 +3365,11 @@ export default function ProjectDAutomationPanel() {
                 )
               : await requestApproval({
               title:
-                "무료 FULL 5개까지 1개만 유료 보충",
+                "무료 FULL 15개 미만 · 유료 후보 1개만 보충",
               lines: [
                 `검증 후보 ${planCandidateCount}개`,
                 `같은 캡처 무과금 실제 검증 FULL ${zeroPaidFullCount}개`,
-                `최종 5개까지 부족 ${Math.max(0, 5 - zeroPaidFullCount)}개`,
+                `Recommendation Pool 최소 15개까지 부족 ${Math.max(0, 15 - zeroPaidFullCount)}개`,
                 `유료 가능 후보 ${paidPossibleCount}개`,
                 "",
                 "이번 실행은 유료 가능 후보를 전부 검사하지 않습니다.",
@@ -3440,10 +3394,6 @@ export default function ProjectDAutomationPanel() {
           }
 
           enrichedParams.set(
-            "executionTargetCount",
-            "5",
-          );
-          enrichedParams.set(
             "paidCandidateLimit",
             "1",
           );
@@ -3455,7 +3405,7 @@ export default function ProjectDAutomationPanel() {
           updateStep(
             "enrich",
             "working",
-            `무과금 FULL ${zeroPaidFullCount}개 + 유료 후보 최대 1개만 검증 · 최종 5개에서 즉시 중단`,
+            `무과금 FULL ${zeroPaidFullCount}개 + 유료 후보 최대 1개만 검증 · 시장 후보 목표까지 진행`,
           );
         }
       }
@@ -3578,19 +3528,14 @@ export default function ProjectDAutomationPanel() {
       const relevanceSummary = relevanceDiagnostics
         ? `제품군 적합성: 적합 ${Number(relevanceDiagnostics.eligibleCount ?? 0)}개 / 제외 ${Number(relevanceDiagnostics.excludedCount ?? 0)}개 / 검토 필요 ${Number(relevanceDiagnostics.needsReviewCount ?? 0)}개`
         : "제품군 적합성 진단 없음";
+
       if (
         !effectiveSafePilotMode &&
-        Number(
-          enriched.paidCandidateLimit ??
-            -1,
-        ) === 1 &&
-        finalCandidates.length < 5
+        finalCandidates.length < 15
       ) {
-        throw new Error(
-          `유료 후보 1개만 검증했지만 FULL은 ${finalCandidates.length}개입니다. ` +
+        throw `Recommendation Pool 최소 15개가 필요하지만 FULL 유효 상품은 ${finalCandidates.length}개입니다. ` +
           `이번 실제 호출: resolver ${Number(enriched.resolverAttempts ?? 0)}회 · Bright Data ${Number(enriched.brightDataCalls ?? 0)}회. ` +
-          "두 번째 유료 후보는 자동 호출하지 않았습니다.",
-        );
+          "추가 유료 후보는 자동 호출하지 않았습니다.";
       }
 
       if (
@@ -3729,15 +3674,164 @@ export default function ProjectDAutomationPanel() {
 
         중요:
         - MARKET POOL 전체를 무조건 1,000개씩 수집하지 않는다.
-        - DB mapping이 확인된 상품만 Advisor FIVE 후보로 검토한다.
+        - DB mapping이 확인된 상품만 Recommendation Pool 후보로 검토한다.
         - SmartStore, Naver Catalog, Brand Store reviewSource는 deep mode를 사용한다.
-        - 고유한 리뷰 준비 상품 5개가 확보되는 즉시 다음 MARKET POOL 상품의 심층 수집을 중단한다.
+        - Recommendation Pool 목표 수가 확보되는 즉시 다음 MARKET POOL 상품의 심층 수집을 중단한다.
       */
       updateStep(
         "reviews",
         "working",
-        `MARKET POOL ${finalCandidates.length}개 중 Advisor FIVE 준비를 위한 리뷰 소스를 확인하는 중...`,
+        `MARKET POOL ${finalCandidates.length}개 중 Recommendation Pool 준비를 위한 리뷰 소스를 확인하는 중...`,
       );
+
+
+      const reviewPriorityCandidates =
+        finalCandidates.flatMap(
+          (
+            candidate,
+            marketIndex,
+          ) => {
+            const detail =
+              candidate.detail ??
+              {};
+
+            const productId =
+              cleanText(
+                detail.productId,
+              );
+
+            const productName =
+              cleanText(
+                detail.productName,
+              );
+
+            const originProductNo =
+              Number(
+                productId,
+              );
+
+            const mapping =
+              mappedProducts.get(
+                originProductNo,
+              );
+
+            const price =
+              Number(
+                candidate.price ??
+                0,
+              );
+
+            if (
+              !mapping ||
+              mapping.productName !==
+                productName ||
+              !Number.isSafeInteger(
+                originProductNo,
+              ) ||
+              originProductNo <= 0 ||
+              !Number.isFinite(
+                price,
+              ) ||
+              price <= 0
+            ) {
+              return [];
+            }
+
+            return [
+              {
+                dbProductId:
+                  mapping.dbProductId,
+
+                originProductNo,
+
+                productName,
+
+                price,
+
+                reviewCount:
+                  Number(
+                    candidate
+                      .browserReviewTotalCount ??
+                    candidate.reviewCount ??
+                    0,
+                  ),
+
+                rating:
+                  Number(
+                    candidate.rating ??
+                    0,
+                  ),
+
+                marketRank:
+                  marketIndex +
+                  1,
+
+                priceVerified:
+                  candidate.priceVerified ===
+                  true,
+              },
+            ];
+          },
+        );
+
+      const reviewPriorityPlan =
+        planRecommendationPool(
+          reviewPriorityCandidates,
+        );
+
+      const priorityOrigins =
+        new Set(
+          reviewPriorityPlan.products.map(
+            product =>
+              product.originProductNo,
+          ),
+        );
+
+      const candidateByOrigin =
+        new Map(
+          finalCandidates.map(
+            candidate => [
+              Number(
+                cleanText(
+                  (
+                    candidate.detail ??
+                    {}
+                  ).productId,
+                ),
+              ),
+              candidate,
+            ],
+          ),
+        );
+
+      const reviewQueue = [
+        ...reviewPriorityPlan.products.flatMap(
+          product => {
+            const candidate =
+              candidateByOrigin.get(
+                product.originProductNo,
+              );
+
+            return candidate
+              ? [candidate]
+              : [];
+          },
+        ),
+
+        ...finalCandidates.filter(
+          candidate =>
+            !priorityOrigins.has(
+              Number(
+                cleanText(
+                  (
+                    candidate.detail ??
+                    {}
+                  ).productId,
+                ),
+              ),
+            ),
+        ),
+      ];
 
       const reviewCollections:
         Array<{
@@ -3780,20 +3874,18 @@ export default function ProjectDAutomationPanel() {
       for (
         let index = 0;
         index <
-        finalCandidates.length;
+        reviewQueue.length;
         index++
       ) {
-        // ADVISOR FIVE REVIEW EARLY STOP
         if (
-          shouldStopAdvisorReview(
-            reviewCollections.length,
-          )
+          reviewCollections.length >=
+          reviewPriorityPlan.selectedCount
         ) {
           break;
         }
 
         const candidate =
-          finalCandidates[index];
+          reviewQueue[index];
 
         const detail =
           candidate.detail ?? {};
@@ -3825,13 +3917,13 @@ export default function ProjectDAutomationPanel() {
           updateStep(
             "reviews",
             "working",
-            `${index + 1}/${finalCandidates.length} · ${productName || "상품명 없음"} · 현재 실행 DB mapping 없음 → Advisor FIVE 대상 제외`,
+            `${index + 1}/${finalCandidates.length} · ${productName || "상품명 없음"} · 현재 실행 DB mapping 없음 → Recommendation Pool 대상 제외`,
           );
 
           continue;
         }
 
-        // ADVISOR FIVE PRE-DEEP IDENTITY GATE
+        // RECOMMENDATION POOL PRE-DEEP IDENTITY GATE
         if (
           isAdvisorReviewIdentityReady(
             currentPoolMapping,
@@ -3842,7 +3934,7 @@ export default function ProjectDAutomationPanel() {
           updateStep(
             "reviews",
             "working",
-            `${index + 1}/${finalCandidates.length} · ${productName} · 현재 Advisor FIVE 준비 identity와 중복 → 심층리뷰 수집 생략`,
+            `${index + 1}/${finalCandidates.length} · ${productName} · 현재 Recommendation Pool 준비 identity와 중복 → 심층리뷰 수집 생략`,
           );
 
           continue;
@@ -4077,7 +4169,6 @@ reviewCollections.push({
         if (!mapping || mapping.productName !== collection.productName) return [];
         return [{ ...collection, ...mapping, ...selectionRun }];
       });
-      const selected = selectEligibleFive(eligible, selectionRun);
 
       const catalogResponseForPool =
         await fetch(
@@ -4118,11 +4209,6 @@ reviewCollections.push({
           ),
         );
 
-      const selectedIds =
-        selected.map(
-          (product) =>
-            product.dbProductId,
-        );
 
       const currentEligiblePoolCandidates =
         (
@@ -4172,10 +4258,6 @@ reviewCollections.push({
       const automationPoolPlan =
         planRecommendationPool(
           currentEligiblePoolCandidates,
-          {
-            selectedFiveIds:
-              selectedIds,
-          },
         );
 
       const analysisTargets =
@@ -4191,6 +4273,14 @@ reviewCollections.push({
               : [];
           },
         );
+
+      if (
+        analysisTargets.length !== 15
+      ) {
+        throw new Error(
+          `Recommendation Pool은 정확히 15개가 필요하지만 현재 ${analysisTargets.length}개만 준비되었습니다. 현재 실행은 중단하며 추가 유료 호출은 자동 실행하지 않습니다.`,
+        );
+      }
 
       if (
         analysisTargets.length < 5
@@ -4221,8 +4311,6 @@ reviewCollections.push({
 
         const precisePrecheck =
           await runRecommendationPoolPrecheck({
-            selectedFiveIds:
-              selectedIds,
             allowMissingCriteria:
               !fullCategoryCriteriaAlreadyAvailable,
             planningOnly:
@@ -4330,22 +4418,27 @@ reviewCollections.push({
             "기존 카테고리 구매기준 5개 재사용 · OpenAI 0회",
           );
         } catch {
+          // Temporary legacy criteria evidence sample only.
+          // This is NOT a recommendation top-five selection.
+          const criteriaEvidenceProducts =
+            [...analysisTargets];
+
           const productIds =
-            selected.map(
+            criteriaEvidenceProducts.map(
               (product) =>
                 product.dbProductId,
             );
 
-          if (productIds.length !== 5) {
+          if (productIds.length < 5 || productIds.length > 15) {
             throw new Error(
-              "기준 생성에는 현재 실행의 정확한 5개가 필요합니다.",
+              "\uAD6C\uB9E4\uAE30\uC900 \uC0DD\uC131\uC6A9 Recommendation Pool\uC740 5~15\uAC1C\uC5EC\uC57C \uD569\uB2C8\uB2E4.",
             );
           }
 
           updateStep(
             "criteria-first",
             "working",
-            "카테고리 구매기준이 없어 선택한 5개 제품으로 무료 사전검증 중...",
+            "\uCE74\uD14C\uACE0\uB9AC \uAD6C\uB9E4\uAE30\uC900\uC774 \uC5C6\uC5B4 Recommendation Pool \uC804\uCCB4\uB85C \uBB34\uB8CC \uC0AC\uC804\uAC80\uC99D \uC911...",
           );
 
           const criteriaPlan =
@@ -4378,9 +4471,9 @@ reviewCollections.push({
                 null
               : await requestApproval({
               title:
-                "카테고리 구매기준이 없습니다. 선택한 5개 제품으로 최초 생성할까요?",
+                "\uCE74\uD14C\uACE0\uB9AC \uAD6C\uB9E4\uAE30\uC900\uC774 \uC5C6\uC2B5\uB2C8\uB2E4. Recommendation Pool \uC804\uCCB4 \uADFC\uAC70\uB85C \uCD5C\uCD08 \uC0DD\uC131\uD560\uAE4C\uC694?",
               lines: [
-                ...selected.map(
+                ...criteriaEvidenceProducts.map(
                   (product) =>
                     `${product.productName} (${product.dbProductId})`,
                 ),
@@ -4474,7 +4567,7 @@ reviewCollections.push({
         categoryProfileRevision(
           profile,
         );
-      reviewProgress.total = selected.length;
+      reviewProgress.total = analysisTargets.length;
       showReviewProgress("무료 사전검증 시작", "무료 사전검증 실패");
       const plans = [];
       for (const product of analysisTargets) {
@@ -4550,7 +4643,7 @@ reviewCollections.push({
         fullCategoryOneApprovalMode ||
         await requestApproval({
           title:
-            "현재 실행의 최종 후보 5개 리뷰를 분석할까요?",
+            "현재 실행의 Recommendation Pool 리뷰를 분석할까요?",
           lines: [
             ...plans.map(
               (plan) =>
@@ -4813,38 +4906,37 @@ reviewCollections.push({
       }
       showReviewProgress("제품 처리 완료 · 최종 프로필 검증 중", "최종 프로필 검증 실패", "");
       if (categoryProfileRevision(await fetchCategoryProfile(normalizedCategory)) !== profileRevision) {
-        throw new Error("프로필 revision이 변경되어 최종 5개를 발행하지 않습니다.");
+        throw new Error("프로필 revision이 변경되어 Recommendation Pool을 발행하지 않습니다.");
       }
-      const selectedFiveManifest: SelectedFiveManifest = {
-        ...selectionRun,
-        schemaVersion: 1,
-        profileRevision,
-        products: selected.map(
-          (product) => {
-            const ready =
-              readyProducts.find(
-                (item) =>
-                  item.dbProductId ===
-                  product.dbProductId,
-              );
+      const poolReadyProducts:
+        SelectedProduct[] =
+          analysisTargets.map(
+            (product) => {
+              const ready =
+                readyProducts.find(
+                  (item) =>
+                    item.dbProductId ===
+                    product.dbProductId,
+                );
 
-            if (!ready) {
-              throw new Error(
-                "selected-five 제품의 리뷰 준비 상태를 추천 준비 풀 결과에서 찾지 못했습니다.",
-              );
-            }
+              if (!ready) {
+                throw new Error(
+                  "Recommendation Pool readiness is missing.",
+                );
+              }
 
-            return ready;
-          },
-        ),
-        recommendationPool: analysisTargets.map(
-          (product) => ({
-            dbProductId: product.dbProductId,
-            originProductNo: product.originProductNo,
-            productName: product.productName,
-          }),
-        ),
-      };
+              return ready;
+            },
+          );
+
+      const recommendationPoolManifest:
+        SelectedFiveManifest = {
+          ...selectionRun,
+          schemaVersion: 1,
+          profileRevision,
+          products:
+            poolReadyProducts,
+        };
 
       showReviewProgress("제품 처리 완료 · 최종 선택 실행 검증 중", "최종 선택 실행 검증 실패");
       assertSelectionRun(
@@ -4854,19 +4946,19 @@ reviewCollections.push({
 
       showReviewProgress("제품 처리 완료 · 최종 선택 발행 중", "최종 선택 발행 확인 실패");
       await persistPublishedSelectedFive(
-        selectedFiveManifest,
+        recommendationPoolManifest,
       );
 
       showReviewProgress("제품 처리 완료 · 발행된 선택 로컬 반영 중", "발행된 선택 로컬 반영 실패");
       publishSelectedFive(
         window.sessionStorage,
-        selectedFiveManifest,
+        recommendationPoolManifest,
       );
       updateStep("save-reviews", "done", `추천 준비 풀 ${analysisTargets.length}개 분석 준비 + 동일 fingerprint review corpus 저장 완료`);
       reviewProgress.active = false;
       // Do not regenerate the profile after binding review analysis to its revision.
-      updateStep("criteria-final", "done", "분석에 사용한 프로필 revision으로 최종 5개 고정");
-      setFinalMessage(`최종 5개 호환 발행 + 추천 준비 풀 ${analysisTargets.length}개 리뷰 준비 완료. 다음은 추천 준비 풀 전체 제품점수 사전검증/승인 단계입니다.`);
+      updateStep("criteria-final", "done", "분석에 사용한 프로필 revision으로 Recommendation Pool 고정");
+      setFinalMessage(`Recommendation Pool 발행 + 추천 준비 풀 ${analysisTargets.length}개 리뷰 준비 완료. 다음은 추천 준비 풀 전체 제품점수 사전검증/승인 단계입니다.`);
 
       if (
         fullCategoryOneApprovalMode
@@ -4891,7 +4983,7 @@ reviewCollections.push({
           accountedInitialReviewOpenAiCalls:
             fullAccountedReviewOpenAiCalls,
           manifest:
-            selectedFiveManifest,
+            recommendationPoolManifest,
         };
       }
     } catch (error) {

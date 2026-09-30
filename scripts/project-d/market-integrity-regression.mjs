@@ -1155,11 +1155,6 @@ assert.match(
 
 assert.match(
   panel,
-  /shouldStopAdvisorReview\(\s*reviewCollections\.length,?\s*\)[\s\S]*?break;/s,
-);
-
-assert.match(
-  panel,
   /const currentPoolMapping\s*=\s*mappedProducts\.get\([\s\S]*?Number\(\s*productId/s,
 );
 
@@ -1170,32 +1165,43 @@ assert.match(
 
 assert.match(
   panel,
-  /ADVISOR FIVE PRE-DEEP IDENTITY GATE[\s\S]*?isAdvisorReviewIdentityReady\(\s*currentPoolMapping,[\s\S]*?advisorReviewDbIds,[\s\S]*?advisorReviewOrigins/s,
+  /const reviewPriorityPlan\s*=\s*planRecommendationPool\(/,
 );
-assert.match(panel, /enrichedParams\.set\(\s*"executionTargetCount",\s*"5",?\s*\)/);
-assert.match(panel, /enrichedParams\.set\(\s*"paidCandidateLimit",\s*"1",?\s*\)/);
-assert.match(panel, /enrichedParams\.set\(\s*"paidCandidateOffset",\s*"0",?\s*\)/);
-assert.match(panel, /index <\s*finalCandidates\.length/);
-assert.match(panel, /const selected = selectEligibleFive\(eligible, selectionRun\)/);
-// STEP6_SELECTED_FIVE_CONTRACT_GUARD
+
+assert.match(
+  panel,
+  /const reviewQueue\s*=\s*\[/,
+);
+
+assert.match(
+  panel,
+  /index\s*<\s*reviewQueue\.length/,
+);
+
+assert.match(
+  panel,
+  /reviewCollections\.length\s*>=\s*reviewPriorityPlan\.selectedCount/,
+);
+
+assert.doesNotMatch(
+  panel,
+  /selectEligibleFive\(/,
+);
+
 assert.match(
   panel,
   /const eligible = reviewCollections\.flatMap/,
 );
 
-assert.match(
-  panel,
-  /const selected = selectEligibleFive\(eligible, selectionRun\)/,
-);
-// STEP7_ADVISOR_REVIEW_CONTROL_FIXTURES
+// STEP7_RECOMMENDATION_POOL_REVIEW_CONTROL_FIXTURES
 
 /*
-  Execute the exact production pure control functions.
+  Execute the production identity controls while the fixture
+  mirrors the production dynamic stop:
+  ready.length >= reviewPriorityPlan.selectedCount.
   No browser, route, API or DB code is invoked here.
 */
 const {
-  shouldStopAdvisorReview:
-    stopAdvisorReviewForTest,
   isAdvisorReviewIdentityReady:
     advisorIdentityReadyForTest,
   markAdvisorReviewIdentityReady:
@@ -1203,14 +1209,14 @@ const {
 } = pureFunctions(
   'components/ProjectDAutomationPanel.tsx',
   [
-    'shouldStopAdvisorReview',
     'isAdvisorReviewIdentityReady',
     'markAdvisorReviewIdentityReady',
   ],
 );
 
-function runAdvisorReviewControlFixture(
+function runRecommendationPoolReviewControlFixture(
   rows,
+  targetCount = 15,
 ) {
   const dbIds =
     new Set();
@@ -1226,9 +1232,8 @@ function runAdvisorReviewControlFixture(
 
   for (const row of rows) {
     if (
-      stopAdvisorReviewForTest(
-        ready.length,
-      )
+      ready.length >=
+      targetCount
     ) {
       break;
     }
@@ -1256,10 +1261,6 @@ function runAdvisorReviewControlFixture(
       continue;
     }
 
-    /*
-      This represents the exact point where production is
-      now allowed to call collectDeepNaverReviews().
-    */
     deepCalls.push(
       row.name,
     );
@@ -1309,150 +1310,159 @@ function step7Row(
 
 /*
   CASE 1:
-  6개 모두 정상.
-  앞 5개가 준비되면 6번째는 deep 호출 자체가 없어야 한다.
+  16 valid rows, dynamic target 15.
+  The 16th must not trigger deep review collection.
 */
 const step7AllReady =
-  runAdvisorReviewControlFixture(
-    [
-      step7Row(1),
-      step7Row(2),
-      step7Row(3),
-      step7Row(4),
-      step7Row(5),
-      step7Row(6),
-    ],
+  runRecommendationPoolReviewControlFixture(
+    Array.from(
+      { length: 16 },
+      (_, index) =>
+        step7Row(index + 1),
+    ),
+    15,
   );
 
 check(
   step7AllReady.ready,
-  [
-    'P1',
-    'P2',
-    'P3',
-    'P4',
-    'P5',
-  ],
+  Array.from(
+    { length: 15 },
+    (_, index) =>
+      `P${index + 1}`,
+  ),
 );
 
 check(
   step7AllReady.deepCalls,
-  [
-    'P1',
-    'P2',
-    'P3',
-    'P4',
-    'P5',
-  ],
+  Array.from(
+    { length: 15 },
+    (_, index) =>
+      `P${index + 1}`,
+  ),
 );
 
 /*
   CASE 2:
-  세 번째 후보가 리뷰 30개 미만.
-  6번째까지 inspect해서 최종 ready 5개를 채워야 한다.
+  One insufficient row requires scanning the 16th
+  so the dynamic target still reaches 15 ready rows.
 */
+const insufficientRows =
+  Array.from(
+    { length: 16 },
+    (_, index) =>
+      step7Row(index + 1),
+  );
+
+insufficientRows[2] =
+  step7Row(
+    3,
+    29,
+  );
+
 const step7Insufficient =
-  runAdvisorReviewControlFixture(
-    [
-      step7Row(11),
-      step7Row(12),
-      step7Row(
-        13,
-        29,
-      ),
-      step7Row(14),
-      step7Row(15),
-      step7Row(16),
-    ],
+  runRecommendationPoolReviewControlFixture(
+    insufficientRows,
+    15,
   );
 
 check(
-  step7Insufficient.ready,
-  [
-    'P11',
-    'P12',
-    'P14',
-    'P15',
-    'P16',
-  ],
+  step7Insufficient.ready.length,
+  15,
 );
 
 check(
-  step7Insufficient.deepCalls,
-  [
-    'P11',
-    'P12',
-    'P13',
-    'P14',
-    'P15',
-    'P16',
-  ],
+  step7Insufficient.deepCalls.length,
+  16,
+);
+
+check(
+  step7Insufficient.ready.includes(
+    'P3',
+  ),
+  false,
+);
+
+check(
+  step7Insufficient.ready.at(-1),
+  'P16',
 );
 
 /*
   CASE 3:
-  5번째 후보가 1번째와 같은 DB UUID/origin.
-  중복 후보는 deep 호출 자체가 없어야 하고,
-  6번째가 다섯 번째 ready 자리를 채워야 한다.
+  Duplicate identity must be skipped before deep collection,
+  and a later unique row fills the dynamic target.
 */
+const duplicateRows =
+  Array.from(
+    { length: 16 },
+    (_, index) =>
+      step7Row(index + 1),
+  );
+
+duplicateRows[4] =
+  step7Row(
+    5,
+    30,
+    {
+      dbProductId:
+        step7Row(1).dbProductId,
+      originProductNo:
+        1,
+    },
+  );
+
 const step7Duplicate =
-  runAdvisorReviewControlFixture(
-    [
-      step7Row(21),
-      step7Row(22),
-      step7Row(23),
-      step7Row(24),
-      step7Row(
-        25,
-        30,
-        {
-          dbProductId:
-            step7Row(21).dbProductId,
-          originProductNo:
-            21,
-        },
-      ),
-      step7Row(26),
-    ],
+  runRecommendationPoolReviewControlFixture(
+    duplicateRows,
+    15,
   );
 
 check(
-  step7Duplicate.ready,
-  [
-    'P21',
-    'P22',
-    'P23',
-    'P24',
-    'P26',
-  ],
+  step7Duplicate.ready.length,
+  15,
 );
 
 check(
-  step7Duplicate.deepCalls,
-  [
-    'P21',
-    'P22',
-    'P23',
-    'P24',
-    'P26',
-  ],
+  step7Duplicate.deepCalls.length,
+  15,
+);
+
+check(
+  step7Duplicate.deepCalls.includes(
+    'P5',
+  ),
+  false,
+);
+
+check(
+  step7Duplicate.ready.at(-1),
+  'P16',
 );
 
 assert.match(
   panel,
-  /ADVISOR FIVE PRE-DEEP IDENTITY GATE[\s\S]*?isAdvisorReviewIdentityReady[\s\S]*?const reviewSourceUrl/s,
+  /RECOMMENDATION POOL PRE-DEEP IDENTITY GATE[\s\S]*?isAdvisorReviewIdentityReady[\s\S]*?const reviewSourceUrl/s,
+);
+
+assert.doesNotMatch(
+  panel,
+  /function shouldStopAdvisorReview/,
 );
 
 assert.ok(
   panel.indexOf(
-    'ADVISOR FIVE PRE-DEEP IDENTITY GATE',
+    'RECOMMENDATION POOL PRE-DEEP IDENTITY GATE',
   ) <
   panel.indexOf(
     'collectDeepNaverReviews(',
     panel.indexOf(
-      'ADVISOR FIVE REVIEW EARLY STOP',
+      'RECOMMENDATION POOL PRE-DEEP IDENTITY GATE',
     ),
   ),
+);
+
+console.log(
+  `STEP 7 POOL-ONLY PASS: ${assertions} counted assertions; external calls and DB writes: 0.`,
 );
 
 const { poolDiagnosticLines: diagnosticLines } = pureFunctions('components/ProjectDAutomationPanel.tsx', ['poolDiagnosticLines']);
@@ -2090,7 +2100,7 @@ console.log(`STEP 16 RENDER CHECK PASS: ${assertions} counted assertions; all pr
 
   check(
     formatPrice(799000),
-    '79.9\uB9CC\uC6D0',
+    '799,000\uC6D0',
   );
 
   check(
@@ -2188,7 +2198,7 @@ console.log(`STEP 16 RENDER CHECK PASS: ${assertions} counted assertions; all pr
 
   check(
     step58Results.split(dynamicHref).length - 1,
-    2,
+    3,
   );
 
   check(
@@ -2905,15 +2915,15 @@ console.log(`STEP 16 RENDER CHECK PASS: ${assertions} counted assertions; all pr
   );
 
   check(
-    step68Api.includes(
-      'b.matchScore -\n              a.matchScore ||',
+    /b\.matchScore\s*-\s*a\.matchScore\s*\|\|/.test(
+      step68Api,
     ),
     true,
   );
 
   check(
-    step68Api.includes(
-      'b.confidence -\n              a.confidence',
+    /b\.confidence\s*-\s*a\.confidence/.test(
+      step68Api,
     ),
     true,
   );

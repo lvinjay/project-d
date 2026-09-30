@@ -209,21 +209,21 @@ check(
 
 check(
   panel.includes(
-    "selectedFiveIds?: string[]",
+    "allowMissingCriteria?: boolean",
   ) &&
-    panel.includes(
-      "allowMissingCriteria?: boolean",
+    !panel.includes(
+      "selectedFiveIds?: string[]",
     ),
   true,
-  "pool precheck accepts V4 planning inputs",
+  "pool precheck accepts pool-only planning inputs",
 );
 
 check(
   panel.includes(
     "explicitSelectedFiveIds",
   ),
-  true,
-  "current selected five are anchored during precise planning",
+  false,
+  "precise planning no longer anchors a selected-five subset",
 );
 
 check(
@@ -255,10 +255,16 @@ check(
 
 check(
   panel.includes(
-    "await runRecommendationPoolPrecheck({\n            selectedFiveIds:\n              selectedIds",
-  ),
+    "await runRecommendationPoolPrecheck({",
+  ) &&
+    panel.includes(
+      "allowMissingCriteria:",
+    ) &&
+    panel.includes(
+      "planningOnly:",
+    ),
   true,
-  "full-category run performs precise full-pool free precheck before OpenAI",
+  "full-category run performs precise pool-only free precheck before OpenAI",
 );
 
 check(

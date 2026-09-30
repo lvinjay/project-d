@@ -11,14 +11,17 @@ export type RecommendationPoolCandidate = {
   originProductNo: number;
   productName: string;
   price: number;
+
+  reviewCount?: number;
+  rating?: number;
+  marketRank?: number;
+  priceVerified?: boolean;
 };
 
 export type RecommendationPoolSelection =
   RecommendationPoolCandidate & {
     priceBand:
       RecommendationPoolBand;
-    selectedFiveAnchor:
-      boolean;
   };
 
 export type RecommendationPoolPlan = {
@@ -30,6 +33,7 @@ export type RecommendationPoolPlan = {
   highCount: number;
   minPrice: number | null;
   maxPrice: number | null;
+
   products:
     RecommendationPoolSelection[];
 };
@@ -43,6 +47,17 @@ function cleanText(
   return typeof value === "string"
     ? value.trim()
     : "";
+}
+
+function numeric(
+  value: unknown,
+): number | undefined {
+  const parsed =
+    Number(value);
+
+  return Number.isFinite(parsed)
+    ? parsed
+    : undefined;
 }
 
 function validCandidate(
@@ -85,8 +100,15 @@ function uniqueValidCandidates(
     RecommendationPoolCandidate[] =
     [];
 
-  for (const candidate of candidates) {
-    if (!validCandidate(candidate)) {
+  for (
+    const candidate of
+      candidates
+  ) {
+    if (
+      !validCandidate(
+        candidate,
+      )
+    ) {
       continue;
     }
 
@@ -105,19 +127,66 @@ function uniqueValidCandidates(
     }
 
     ids.add(id);
+
     origins.add(
       candidate.originProductNo,
     );
 
+    const reviewCount =
+      numeric(
+        candidate.reviewCount,
+      );
+
+    const rating =
+      numeric(
+        candidate.rating,
+      );
+
+    const marketRank =
+      numeric(
+        candidate.marketRank,
+      );
+
     result.push({
       dbProductId:
         candidate.dbProductId.trim(),
+
       originProductNo:
         candidate.originProductNo,
+
       productName:
         candidate.productName.trim(),
+
       price:
         candidate.price,
+
+      reviewCount:
+        reviewCount !== undefined
+          ? Math.max(
+              0,
+              reviewCount,
+            )
+          : undefined,
+
+      rating:
+        rating !== undefined
+          ? Math.max(
+              0,
+              rating,
+            )
+          : undefined,
+
+      marketRank:
+        marketRank !== undefined &&
+        marketRank > 0
+          ? marketRank
+          : undefined,
+
+      priceVerified:
+        typeof candidate.priceVerified ===
+        "boolean"
+          ? candidate.priceVerified
+          : undefined,
     });
   }
 
@@ -165,11 +234,13 @@ function splitBands(
         0,
         lowEnd,
       ),
+
     mid:
       sorted.slice(
         lowEnd,
         midEnd,
       ),
+
     high:
       sorted.slice(
         midEnd,
@@ -191,14 +262,20 @@ function quotaForTarget(
   return {
     low:
       base +
-      (remainder > 0
-        ? 1
-        : 0),
+      (
+        remainder > 0
+          ? 1
+          : 0
+      ),
+
     mid:
       base +
-      (remainder > 1
-        ? 1
-        : 0),
+      (
+        remainder > 1
+          ? 1
+          : 0
+      ),
+
     high:
       base,
   };
@@ -219,7 +296,9 @@ function evenlySpaced(
   if (
     rows.length <= count
   ) {
-    return [...rows];
+    return [
+      ...rows,
+    ];
   }
 
   if (count === 1) {
@@ -247,9 +326,17 @@ function evenlySpaced(
   ) {
     const raw =
       Math.round(
-        (index *
-          (rows.length - 1)) /
-          (count - 1),
+        (
+          index *
+          (
+            rows.length -
+            1
+          )
+        ) /
+          (
+            count -
+            1
+          ),
       );
 
     let position =
@@ -271,6 +358,7 @@ function evenlySpaced(
     }
 
     used.add(position);
+
     selected.push(
       rows[position],
     );
@@ -279,65 +367,442 @@ function evenlySpaced(
   return selected;
 }
 
+function hasFitnessSignal(
+  candidate:
+    RecommendationPoolCandidate,
+) {
+  return (
+    (
+      Number(
+        candidate.reviewCount ??
+        0
+      ) >
+      0
+    ) ||
+    (
+      Number(
+        candidate.rating ??
+        0
+      ) >
+      0
+    ) ||
+    (
+      Number(
+        candidate.marketRank ??
+        0
+      ) >
+      0
+    ) ||
+    typeof candidate.priceVerified ===
+      "boolean"
+  );
+}
+
+function modelKey(
+  productName: string,
+) {
+  const tokens =
+    productName
+      .toLowerCase()
+      .replace(
+        /[^a-z0-9\uac00-\ud7a3]+/g,
+        " ",
+      )
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+  const modelToken =
+    tokens.find(
+      token =>
+        /\d/.test(
+          token,
+        ),
+    );
+
+  if (modelToken) {
+    return modelToken;
+  }
+
+  return tokens
+    .slice(
+      0,
+      3,
+    )
+    .join("|") ||
+    productName
+      .toLowerCase();
+}
+
+type FitnessContext = {
+  maxReviewCount: number;
+  maxMarketRank: number;
+};
+
+function buildFitnessContext(
+  rows:
+    RecommendationPoolCandidate[],
+): FitnessContext {
+  return {
+    maxReviewCount:
+      Math.max(
+        0,
+        ...rows.map(
+          row =>
+            Number(
+              row.reviewCount ??
+              0,
+            ),
+        ),
+      ),
+
+    maxMarketRank:
+      Math.max(
+        0,
+        ...rows.map(
+          row =>
+            Number(
+              row.marketRank ??
+              0,
+            ),
+        ),
+      ),
+  };
+}
+
+function clamp01(
+  value: number,
+) {
+  return Math.max(
+    0,
+    Math.min(
+      1,
+      value,
+    ),
+  );
+}
+
+function fitnessScore(
+  candidate:
+    RecommendationPoolCandidate,
+  context:
+    FitnessContext,
+) {
+  let weighted =
+    0;
+
+  let weight =
+    0;
+
+  const reviewCount =
+    Number(
+      candidate.reviewCount ??
+      0,
+    );
+
+  if (
+    reviewCount > 0 &&
+    context.maxReviewCount >
+      0
+  ) {
+    weighted +=
+      (
+        Math.log1p(
+          reviewCount,
+        ) /
+        Math.log1p(
+          context.maxReviewCount,
+        )
+      ) *
+      0.45;
+
+    weight +=
+      0.45;
+  }
+
+  const rating =
+    Number(
+      candidate.rating ??
+      0,
+    );
+
+  if (
+    rating > 0
+  ) {
+    weighted +=
+      clamp01(
+        rating / 5,
+      ) *
+      0.30;
+
+    weight +=
+      0.30;
+  }
+
+  const marketRank =
+    Number(
+      candidate.marketRank ??
+      0,
+    );
+
+  if (
+    marketRank > 0
+  ) {
+    const marketScore =
+      context.maxMarketRank >
+        1
+        ? clamp01(
+            1 -
+              (
+                marketRank -
+                1
+              ) /
+                (
+                  context.maxMarketRank -
+                  1
+                ),
+          )
+        : 1;
+
+    weighted +=
+      marketScore *
+      0.15;
+
+    weight +=
+      0.15;
+  }
+
+  if (
+    typeof candidate.priceVerified ===
+    "boolean"
+  ) {
+    weighted +=
+      (
+        candidate.priceVerified
+          ? 1
+          : 0
+      ) *
+      0.10;
+
+    weight +=
+      0.10;
+  }
+
+  if (
+    weight === 0
+  ) {
+    return 0.5;
+  }
+
+  return (
+    weighted /
+    weight
+  );
+}
+
+function fitnessComparator(
+  context:
+    FitnessContext,
+) {
+  return (
+    a:
+      RecommendationPoolCandidate,
+    b:
+      RecommendationPoolCandidate,
+  ) => {
+    const scoreDiff =
+      fitnessScore(
+        b,
+        context,
+      ) -
+      fitnessScore(
+        a,
+        context,
+      );
+
+    if (
+      Math.abs(
+        scoreDiff,
+      ) >
+      1e-9
+    ) {
+      return scoreDiff;
+    }
+
+    const reviewDiff =
+      Number(
+        b.reviewCount ??
+        0,
+      ) -
+      Number(
+        a.reviewCount ??
+        0,
+      );
+
+    if (
+      reviewDiff !== 0
+    ) {
+      return reviewDiff;
+    }
+
+    const ratingDiff =
+      Number(
+        b.rating ??
+        0,
+      ) -
+      Number(
+        a.rating ??
+        0,
+      );
+
+    if (
+      ratingDiff !== 0
+    ) {
+      return ratingDiff;
+    }
+
+    const aRank =
+      Number(
+        a.marketRank ??
+        Number.MAX_SAFE_INTEGER,
+      );
+
+    const bRank =
+      Number(
+        b.marketRank ??
+        Number.MAX_SAFE_INTEGER,
+      );
+
+    return (
+      aRank -
+        bRank ||
+      a.price -
+        b.price ||
+      a.productName.localeCompare(
+        b.productName,
+        "ko",
+      )
+    );
+  };
+}
+
 function chooseBand(
   rows:
     RecommendationPoolCandidate[],
   quota: number,
-  anchorIds:
-    Set<string>,
+  context:
+    FitnessContext,
 ): RecommendationPoolCandidate[] {
-  if (quota <= 0) {
+  if (
+    quota <= 0
+  ) {
     return [];
   }
 
-  const anchors =
-    rows.filter(
-      (row) =>
-        anchorIds.has(
-          row.dbProductId
-            .toLowerCase(),
-        ),
-    );
-
-  const anchorSlice =
-    anchors.slice(
-      0,
+  if (
+    !rows.some(
+      hasFitnessSignal,
+    )
+  ) {
+    return evenlySpaced(
+      rows,
       quota,
     );
-
-  const remaining =
-    quota -
-    anchorSlice.length;
-
-  if (remaining <= 0) {
-    return anchorSlice;
   }
 
-  const anchorSet =
+  const ranked =
+    [
+      ...rows,
+    ].sort(
+      fitnessComparator(
+        context,
+      ),
+    );
+
+  const picked:
+    RecommendationPoolCandidate[] =
+      [];
+
+  const pickedIds =
     new Set(
-      anchorSlice.map(
-        (row) =>
+      picked.map(
+        row =>
           row.dbProductId
             .toLowerCase(),
       ),
     );
 
-  const others =
-    rows.filter(
-      (row) =>
-        !anchorSet.has(
-          row.dbProductId
-            .toLowerCase(),
-        ),
+  const usedModels =
+    new Set(
+      picked.map(
+        row =>
+          modelKey(
+            row.productName,
+          ),
+      ),
     );
 
-  return [
-    ...anchorSlice,
-    ...evenlySpaced(
-      others,
-      remaining,
-    ),
-  ];
+  for (
+    const row of ranked
+  ) {
+    if (
+      picked.length >=
+      quota
+    ) {
+      break;
+    }
+
+    const key =
+      modelKey(
+        row.productName,
+      );
+
+    if (
+      usedModels.has(
+        key,
+      )
+    ) {
+      continue;
+    }
+
+    picked.push(row);
+
+    pickedIds.add(
+      row.dbProductId
+        .toLowerCase(),
+    );
+
+    usedModels.add(
+      key,
+    );
+  }
+
+  for (
+    const row of ranked
+  ) {
+    if (
+      picked.length >=
+      quota
+    ) {
+      break;
+    }
+
+    const id =
+      row.dbProductId
+        .toLowerCase();
+
+    if (
+      pickedIds.has(id)
+    ) {
+      continue;
+    }
+
+    picked.push(row);
+
+    pickedIds.add(id);
+  }
+
+  return picked;
 }
 
 export function planRecommendationPool(
@@ -345,8 +810,6 @@ export function planRecommendationPool(
     RecommendationPoolCandidate[],
   options?: {
     targetCount?: number;
-    selectedFiveIds?:
-      readonly string[];
   },
 ): RecommendationPoolPlan {
   const sorted =
@@ -375,27 +838,19 @@ export function planRecommendationPool(
       ),
     );
 
-  const anchorIds =
-    new Set(
-      (
-        options
-          ?.selectedFiveIds ??
-        []
-      )
-        .map(
-          (id) =>
-            cleanText(id)
-              .toLowerCase(),
-        )
-        .filter(Boolean),
-    );
-
   const bands =
-    splitBands(sorted);
+    splitBands(
+      sorted,
+    );
 
   const quota =
     quotaForTarget(
       targetCount,
+    );
+
+  const context =
+    buildFitnessContext(
+      sorted,
     );
 
   const chosen = [
@@ -405,42 +860,50 @@ export function planRecommendationPool(
         quota.low,
         bands.low.length,
       ),
-      anchorIds,
-    ).map((row) => ({
-      ...row,
-      priceBand:
-        "low" as const,
-    })),
+      context,
+    ).map(
+      row => ({
+        ...row,
+        priceBand:
+          "low" as const,
+      }),
+    ),
+
     ...chooseBand(
       bands.mid,
       Math.min(
         quota.mid,
         bands.mid.length,
       ),
-      anchorIds,
-    ).map((row) => ({
-      ...row,
-      priceBand:
-        "mid" as const,
-    })),
+      context,
+    ).map(
+      row => ({
+        ...row,
+        priceBand:
+          "mid" as const,
+      }),
+    ),
+
     ...chooseBand(
       bands.high,
       Math.min(
         quota.high,
         bands.high.length,
       ),
-      anchorIds,
-    ).map((row) => ({
-      ...row,
-      priceBand:
-        "high" as const,
-    })),
+      context,
+    ).map(
+      row => ({
+        ...row,
+        priceBand:
+          "high" as const,
+      }),
+    ),
   ];
 
   const chosenIds =
     new Set(
       chosen.map(
-        (row) =>
+        row =>
           row.dbProductId
             .toLowerCase(),
       ),
@@ -452,7 +915,7 @@ export function planRecommendationPool(
   ) {
     const leftovers =
       sorted.filter(
-        (row) =>
+        row =>
           !chosenIds.has(
             row.dbProductId
               .toLowerCase(),
@@ -460,16 +923,28 @@ export function planRecommendationPool(
       );
 
     const fill =
-      evenlySpaced(
-        leftovers,
-        targetCount -
-          chosen.length,
-      );
+      leftovers.some(
+        hasFitnessSignal,
+      )
+        ? chooseBand(
+            leftovers,
+            targetCount -
+              chosen.length,
+            context,
+          )
+        : evenlySpaced(
+            leftovers,
+            targetCount -
+              chosen.length,
+          );
 
-    for (const row of fill) {
+    for (
+      const row of
+        fill
+    ) {
       const index =
         sorted.findIndex(
-          (candidate) =>
+          candidate =>
             candidate.dbProductId ===
             row.dbProductId,
         );
@@ -483,6 +958,7 @@ export function planRecommendationPool(
 
       chosen.push({
         ...row,
+
         priceBand:
           index < lowEnd
             ? "low"
@@ -504,16 +980,6 @@ export function planRecommendationPool(
         0,
         targetCount,
       )
-      .map(
-        (row) => ({
-          ...row,
-          selectedFiveAnchor:
-            anchorIds.has(
-              row.dbProductId
-                .toLowerCase(),
-            ),
-        }),
-      )
       .sort(
         (a, b) =>
           a.price -
@@ -527,31 +993,38 @@ export function planRecommendationPool(
   return {
     sourceCount:
       sorted.length,
+
     targetCount,
+
     selectedCount:
       products.length,
+
     lowCount:
       products.filter(
-        (row) =>
+        row =>
           row.priceBand ===
           "low",
       ).length,
+
     midCount:
       products.filter(
-        (row) =>
+        row =>
           row.priceBand ===
           "mid",
       ).length,
+
     highCount:
       products.filter(
-        (row) =>
+        row =>
           row.priceBand ===
           "high",
       ).length,
+
     minPrice:
       products.length > 0
         ? products[0].price
         : null,
+
     maxPrice:
       products.length > 0
         ? products[
@@ -559,6 +1032,7 @@ export function planRecommendationPool(
               1
           ].price
         : null,
+
     products,
   };
 }
